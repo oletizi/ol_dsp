@@ -1,15 +1,12 @@
 #include <iostream>
-#include <juce_core/juce_core.h>
-#include <juce_audio_devices/juce_audio_devices.h>
 #include "MyCallback.h"
 
 int main() {
-    //juce::MessageManager::
+
     juce::initialiseJuce_GUI();
     juce::AudioDeviceManager deviceManager = juce::AudioDeviceManager();
     deviceManager.initialiseWithDefaultDevices(2, 2);
-    MyCallback callback;
-    deviceManager.addAudioCallback(&callback);
+    MyCallback callback = MyCallback(&deviceManager);
     std::cout << "Hello, World!" << std::endl;
     std::cout << "t: play test sound" << std::endl;
     std::cout << "q: quit" << std::endl;

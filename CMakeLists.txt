@@ -4,6 +4,7 @@ project(juce_test VERSION 0.1)
 set(CMAKE_CXX_STANDARD 17)
 
 add_subdirectory(JUCE)
+add_subdirectory(DaisySP)
 juce_add_console_app(juce-test
         PRODUCT_NAME "Console App Example")
 target_sources(juce-test
@@ -22,6 +23,8 @@ target_link_libraries(juce-test
         juce::juce_core
         juce::juce_audio_devices
         PUBLIC
+        DaisySP
         juce::juce_recommended_config_flags
         juce::juce_recommended_warning_flags)
+include_directories(juce-test DaisySP/Source)
 #add_executable(juce_test main.cpp)

@@ -1,3 +1,6 @@
 [submodule "JUCE"]
 	path = JUCE
 	url = git@github.com:juce-framework/JUCE.git
+[submodule "DaisySP"]
+	path = DaisySP
+	url = git@github.com:electro-smith/DaisySP.git
