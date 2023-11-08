@@ -1,18 +1,20 @@
 cmake_minimum_required(VERSION 3.26)
 set(CMAKE_CXX_COMPILER "/usr/bin/clang")
-project(juce_test VERSION 0.1)
+project(ol_dsp VERSION 0.1)
 set(CMAKE_CXX_STANDARD 17)
 
 add_subdirectory(JUCE)
 add_subdirectory(DaisySP)
 
-add_library(synthlib ./synthlib/Voice.cc)
+add_library(synthlib ./synthlib/Voice.cpp)
 target_include_directories(synthlib PUBLIC ./synthlib)
 add_subdirectory(test/googletest)
 enable_testing()
 find_package(GTest REQUIRED)
 add_executable(gtest_run test/basic_test.cpp)
 target_link_libraries(gtest_run ${GTEST_BOTH_LIBRARIES} synthlib DaisySP)
+add_test(basic_test gtest_run)
+
 
 juce_add_console_app(juce-test
         PRODUCT_NAME "Console App Example")
