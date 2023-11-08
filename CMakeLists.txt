@@ -5,6 +5,15 @@ set(CMAKE_CXX_STANDARD 17)
 
 add_subdirectory(JUCE)
 add_subdirectory(DaisySP)
+
+add_library(synthlib ./synthlib/Voice.cc)
+target_include_directories(synthlib PUBLIC ./synthlib)
+add_subdirectory(test/googletest)
+enable_testing()
+find_package(GTest REQUIRED)
+add_executable(gtest_run test/basic_test.cpp)
+target_link_libraries(gtest_run ${GTEST_BOTH_LIBRARIES} synthlib DaisySP)
+
 juce_add_console_app(juce-test
         PRODUCT_NAME "Console App Example")
 target_sources(juce-test
@@ -24,6 +33,7 @@ target_link_libraries(juce-test
         juce::juce_audio_devices
         PUBLIC
         DaisySP
+        synthlib
         juce::juce_recommended_config_flags
         juce::juce_recommended_warning_flags)
 include_directories(juce-test DaisySP/Source)
