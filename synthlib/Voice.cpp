@@ -18,7 +18,10 @@ t_sample ol::synthlib::Voice::Process() {
             osc1_.SetWaveform(daisysp::Oscillator::WAVE_POLYBLEP_SAW);
             break;
     }
-    osc1_.SetFreq(freq_);
+    portamento_.SetHtime(control_panel_->portamento.Value());
+    t_sample port = portamento_.Process(freq_);
+
+    osc1_.SetFreq(port);
     t_sample value = osc1_.Process();
 
     // Filter
@@ -45,6 +48,7 @@ t_sample ol::synthlib::Voice::Process() {
     float amp = env_amp_.Process(notes_on_ > 0);
     value *= amp;
     if (counter_ % 2200 == 0) {
+        std::cout << "Portamento: " << port << "; htime: " << portamento_.GetHtime() << std::endl;
         counter_ = 0;
     }
     float volume = control_panel_->master_volume.Value();

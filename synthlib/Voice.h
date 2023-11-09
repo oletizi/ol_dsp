@@ -23,6 +23,7 @@ namespace ol::synthlib {
             filt_1_.Init(sample_rate);
             env_filt_.Init(sample_rate);
             env_amp_.Init(sample_rate);
+            portamento_.Init(sample_rate, control_panel_->portamento.Value());
         }
 
         // XXX: This should be separated into note and gate
@@ -56,6 +57,10 @@ namespace ol::synthlib {
 
         // Amplifier
         daisysp::Adsr env_amp_;
+
+        // Portamento
+        daisysp::Port portamento_;
+
         // Controls
         ControlPanel *control_panel_;
         int counter_ = 0;
