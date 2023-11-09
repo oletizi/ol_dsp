@@ -13,7 +13,7 @@ enable_testing()
 find_package(GTest REQUIRED)
 add_executable(gtest_run test/basic_test.cpp)
 target_link_libraries(gtest_run ${GTEST_BOTH_LIBRARIES} synthlib DaisySP)
-add_test(basic_test gtest_run)
+add_test(gtest_run gtest_run)
 
 
 juce_add_console_app(juce-test
