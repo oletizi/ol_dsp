@@ -12,10 +12,10 @@ t_sample ol::synthlib::Voice::Process() {
     switch (control_panel_->wave_form) {
 
         case ControlPanel::WAVE_SIN:
-            osc1_.SetWaveform(osc1_.WAVE_SIN);
+            osc1_.SetWaveform(daisysp::Oscillator::WAVE_SIN);
             break;
         case ControlPanel::WAVE_SAW:
-            osc1_.SetWaveform(osc1_.WAVE_POLYBLEP_SAW);
+            osc1_.SetWaveform(daisysp::Oscillator::WAVE_POLYBLEP_SAW);
             break;
     }
     osc1_.SetFreq(freq_);
@@ -29,7 +29,9 @@ t_sample ol::synthlib::Voice::Process() {
     float env_filt_value = env_filt_.Process(notes_on_ > 0);
     control_panel_->filter_cutoff.UpdateCv(env_filt_value);
     float filt_freq = control_panel_->filter_cutoff.Value();
+    float filt_res = control_panel_->filter_resonance.Value();
     filt_1_.SetFreq(filt_freq);
+    filt_1_.SetRes(filt_res);
     filt_1_.Process(value);
     value = filt_1_.Low();
 
