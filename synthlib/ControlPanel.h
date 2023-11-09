@@ -43,6 +43,9 @@ namespace ol::synthlib {
                 case CC_FILT_Q:
                     filter_resonance.UpdateValueMidi(val);
                     break;
+                case CC_FILT_DRIVE:
+                    filter_drive.UpdateValueMidi(val);
+                    break;
                 case CC_ENV_FILT_AMT:
                     filter_cutoff.UpdateCvAmountMidi(val);
                     break;
@@ -57,6 +60,7 @@ namespace ol::synthlib {
         Control filter_cutoff = Control(Scale(0, 1, 0, FILTER_CUTOFF_MAX, 1),
                                         Scale(0, 127, 0, FILTER_CUTOFF_MAX, 1), FILTER_CUTOFF_MAX);
         Control filter_resonance = Control();
+        Control filter_drive = Control();
 
         // Filter envelope
         Control env_filt_A = Control();

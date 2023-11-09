@@ -30,8 +30,10 @@ t_sample ol::synthlib::Voice::Process() {
     control_panel_->filter_cutoff.UpdateCv(env_filt_value);
     float filt_freq = control_panel_->filter_cutoff.Value();
     float filt_res = control_panel_->filter_resonance.Value();
+    float filt_drive = control_panel_->filter_drive.Value();
     filt_1_.SetFreq(filt_freq);
     filt_1_.SetRes(filt_res);
+    filt_1_.SetDrive(filt_drive);
     filt_1_.Process(value);
     value = filt_1_.Low();
 
