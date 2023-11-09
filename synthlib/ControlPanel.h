@@ -12,12 +12,8 @@
 #define DEFAULT_MIDI_SCALE Scale(0, 127, 0, 1, 1)
 
 namespace ol::synthlib {
-    struct ControlPanel {
-        // Oscillator
-        // XXX: Control or Scale needs support for midi to frequency
-        //      Probably also make some default instances.
-        Control osc_frequency = Control(Scale(0, 20000, 0, 20000, 1),
-                                        Scale(0, 127, 0, 20000, 1));
+    class ControlPanel {
+    public:
 
         // Filter
         Control filter_cutoff = Control(Scale(0, 1, 0, FILTER_CUTOFF_MAX, 1),
@@ -35,6 +31,19 @@ namespace ol::synthlib {
         Control env_amp_D = Control();
         Control env_amp_S = Control(DEFAULT_HARDWARE_SCALE, DEFAULT_MIDI_SCALE, 1);
         Control env_amp_R = Control();
+
+        ControlPanel() {
+            // default envelope settins
+            env_filt_A.UpdateValueHardware(0.2f);
+            env_filt_D.UpdateValueHardware(0);
+            env_filt_S.UpdateValueHardware(1);
+            env_filt_R.UpdateValueHardware(0.3f);
+
+            env_amp_A.UpdateValueHardware(0.2f);
+            env_amp_D.UpdateValueHardware(0);
+            env_amp_S.UpdateValueHardware(1);
+            env_amp_R.UpdateValueHardware(0.3f);
+        }
 
     };
 }

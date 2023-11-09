@@ -1,5 +1,4 @@
 #include <iostream>
-#include <daisysp.h>
 #include <ol_synthlib.h>
 #include "MyCallback.h"
 
@@ -7,26 +6,26 @@ using namespace ol::synthlib;
 
 class MyMidiCallback : public juce::MidiInputCallback {
 public:
-    explicit MyMidiCallback(ControlPanel *control_panel) : control_panel_(control_panel) {}
+    explicit MyMidiCallback(ControlPanel *control_panel, Voice *voice) : control_panel_(control_panel), voice_(voice) {}
 
     void handleIncomingMidiMessage(juce::MidiInput *source, const juce::MidiMessage &message) override {
         if (message.isNoteOn()) {
             std::cout << "NoteOn: " << message.getNoteNumber() << std::endl;
-            control_panel_->osc_frequency.UpdateValueHardware(daisysp::mtof(static_cast<uint8_t>(message.getNoteNumber())));
+            voice_->NoteOn(static_cast<uint8_t>(message.getNoteNumber()), message.getVelocity());
         } else if (message.isNoteOff()) {
             std::cout << "NoteOff: " << message.getNoteNumber() << std::endl;
+            voice_->NoteOff(static_cast<uint8_t>(message.getNoteNumber()));
         }
     }
 
 private:
     ControlPanel *control_panel_;
+    Voice *voice_;
 };
 
 int main() {
     ControlPanel control_panel;
     Voice voice = Voice(&control_panel);
-    t_sample frequency = 440;
-    control_panel.osc_frequency.UpdateValueHardware(frequency);
 
     juce::initialiseJuce_GUI();
     juce::AudioDeviceManager deviceManager = juce::AudioDeviceManager();
@@ -35,7 +34,7 @@ int main() {
     auto midiDevices = juce::MidiInput::getAvailableDevices();
     std::cout << "MIDI inputs:" << std::endl;
 
-    MyMidiCallback midi_callback(&control_panel);
+    MyMidiCallback midi_callback(&control_panel, &voice);
 
     for (const auto &input: midiDevices) {
         deviceManager.setMidiInputDeviceEnabled(input.identifier, true);
@@ -46,10 +45,8 @@ int main() {
 
     MyCallback callback = MyCallback(&deviceManager, &voice);
 
-    std::cout << "Hello, World!" << std::endl;
-    std::cout << "u: increase frequency" << std::endl;
-    std::cout << "d: decrease frequency" << std::endl;
-    std::cout << "t: play test sound" << std::endl;
+    std::cout << "Send me some " << std::endl;
+        std::cout << "t: play test sound" << std::endl;
     std::cout << "q: quit" << std::endl;
     while (auto c = getchar()) {
         if (c == 't') {
@@ -57,16 +54,6 @@ int main() {
         }
         if (c == 'q' || c == 'Q') {
             break;
-        }
-        if (c == 'u') {
-            frequency *= 2;
-            control_panel.osc_frequency.UpdateValueHardware(frequency);
-            std::cout << "New frequency: " << frequency << std::endl;
-        }
-        if (c == 'd') {
-            frequency /= 2;
-            control_panel.osc_frequency.UpdateValueHardware(frequency);
-            std::cout << "New frequency: " << frequency << std::endl;
         }
     }
     std::cout << "Goodbye!" << std::endl;
