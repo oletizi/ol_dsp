@@ -14,11 +14,13 @@ namespace ol::synthlib {
     class Voice {
 
     public:
-        explicit Voice(ControlPanel *control_panel) : control_panel_(control_panel) {}
+        explicit Voice(ControlPanel *control_panel) : control_panel_(control_panel) {
+        }
 
         void Init(t_sample sample_rate) {
             sample_rate_ = sample_rate;
             osc1_.Init(sample_rate);
+            filt_1_.Init(sample_rate);
             env_filt_.Init(sample_rate);
             env_amp_.Init(sample_rate);
         }
