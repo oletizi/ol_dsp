@@ -45,8 +45,8 @@ t_sample ol::synthlib::Voice::Process() {
     float amp = env_amp_.Process(notes_on_ > 0);
     value *= amp;
     if (counter_ % 2200 == 0) {
-        //std::cout << "filt freq: " << filt_freq << std::endl;
         counter_ = 0;
     }
-    return value;
+    float volume = control_panel_->master_volume.Value();
+    return value * volume;
 }

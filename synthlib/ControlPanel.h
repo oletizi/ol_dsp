@@ -10,8 +10,8 @@
 #define FILTER_CUTOFF_MAX 20000
 #define DEFAULT_HARDWARE_SCALE Scale(0, 1, 0, 1, 1)
 #define DEFAULT_MIDI_SCALE Scale(0, 127, 0, 1, 1)
-#define CC_CTL_1 7
-#define CC_CTL_2 71
+#define CC_CTL_MOD_WHEEL 1
+#define CC_CTL_VOLUME 7
 #define CC_FILT_CUTOFF 70
 #define CC_FILT_Q 71
 #define CC_FILT_DRIVE 72
@@ -34,9 +34,12 @@ namespace ol::synthlib {
             WAVE_SIN,
             WAVE_SAW
         };
+        // TODO: Move this to .cpp file and implement swappable mapping. Maybe even midi learn?
         void UpdateMidi(int ctl, int val){
-            std::cout << "ControlPanel: ctl num: " << ctl << "; ctl val: " << val << std::endl;
             switch (ctl) {
+                case CC_CTL_VOLUME:
+                    master_volume.UpdateValueMidi(val);
+                    break;
                 case CC_FILT_CUTOFF:
                     filter_cutoff.UpdateValueMidi(val);
                     break;
@@ -98,6 +101,7 @@ namespace ol::synthlib {
         Control env_amp_S = Control(DEFAULT_HARDWARE_SCALE, DEFAULT_MIDI_SCALE, 1);
         Control env_amp_R = Control();
 
+        Control master_volume = Control();
         ControlPanel() {
             // default filter settings
             filter_cutoff.UpdateValueHardware(0.5);
@@ -113,6 +117,9 @@ namespace ol::synthlib {
             env_amp_D.UpdateValueHardware(0);
             env_amp_S.UpdateValueHardware(1);
             env_amp_R.UpdateValueHardware(0.3f);
+
+            // default master volume
+            master_volume.UpdateValueHardware(0.8f);
         }
 
     };
