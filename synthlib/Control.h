@@ -22,8 +22,8 @@ namespace ol::synthlib {
             return value_ + (cv_value_ * cv_amount_);
         }
 
-        void UpdateValueMidi(uint8_t new_midi_value) {
-            t_sample scaled_value = midi_scale_.Process(new_midi_value);
+        void UpdateValueMidi(int new_midi_value) {
+            t_sample scaled_value = midi_scale_.Process(static_cast<t_sample>(new_midi_value));
             // Since MIDI updates are event based, a new MIDI value is an intent to
             // update the value, so always update to incoming MIDI values.
             UpdateValue(scaled_value);
@@ -45,13 +45,13 @@ namespace ol::synthlib {
             cv_value_ = new_cv_value;
         }
 
-        void UpdateCvAmountMidi(uint8_t new_cv_amount) {
-            cv_amount_ = midi_scale_.Process(new_cv_amount);
+        void UpdateCvAmountMidi(int new_cv_amount) {
+            cv_amount_ = midi_scale_.Process(static_cast<t_sample>(new_cv_amount));
         }
 
-        t_sample GetCv() const { return cv_value_; }
+        [[nodiscard]] t_sample GetCv() const { return cv_value_; }
 
-        t_sample GetCvAmount() const { return cv_amount_; }
+        [[nodiscard]] t_sample GetCvAmount() const { return cv_amount_; }
 
 
     private:
