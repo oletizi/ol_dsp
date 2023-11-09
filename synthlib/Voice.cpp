@@ -3,3 +3,7 @@
 //
 
 #include "Voice.h"
+
+t_sample ol::synthlib::Voice::Process() {
+    return osc1_.Process();
+}

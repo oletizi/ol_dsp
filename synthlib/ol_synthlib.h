@@ -4,10 +4,8 @@
 
 #ifndef JUCE_TEST_OL_SYNTHLIB_H
 #define JUCE_TEST_OL_SYNTHLIB_H
-
-namespace ol::synthlib {
-    typedef float t_sample;
-
-}
+#include "Voice.h"
+#include "ol_synthlib_core.h"
+namespace ol::synthlib {}
 
 #endif //JUCE_TEST_OL_SYNTHLIB_H
