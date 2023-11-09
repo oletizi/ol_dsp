@@ -61,6 +61,18 @@ namespace ol::synthlib {
                 case CC_ENV_FILT_R:
                     env_filt_R.UpdateValueMidi(val);
                     break;
+                case CC_ENV_AMP_A:
+                    env_amp_A.UpdateValueMidi(val);
+                    break;
+                case CC_ENV_AMP_D:
+                    env_amp_D.UpdateValueMidi(val);
+                    break;
+                case CC_ENV_AMP_S:
+                    env_amp_S.UpdateValueMidi(val);
+                    break;
+                case CC_ENV_AMP_R:
+                    env_amp_R.UpdateValueMidi(val);
+                    break;
                 default:
                     std::cout << "CC not mapped: " << ctl << std::endl;
                     break;

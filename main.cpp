@@ -16,8 +16,6 @@ public:
             std::cout << "NoteOff: " << message.getNoteNumber() << std::endl;
             voice_->NoteOff(static_cast<uint8_t>(message.getNoteNumber()));
         } else if (message.isController()) {
-            std::cout << "Controller: name: " << message.getControllerName(message.getControllerNumber()) <<
-                      "; num:" << message.getControllerNumber() << "; val: " << message.getControllerValue() << std::endl;
             control_panel_->UpdateMidi(message.getControllerNumber(),
                                        message.getControllerValue());
         }
