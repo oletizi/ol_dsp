@@ -25,6 +25,8 @@
 #define CC_ENV_AMP_D 109
 #define CC_ENV_AMP_S 110
 #define CC_ENV_AMP_R 111
+#define CC_VOICE_GAIN 112
+#define CC_OSC_1_WAVEFORM 113
 
 namespace ol::synthlib {
     class ControlPanel {
@@ -33,11 +35,14 @@ namespace ol::synthlib {
         // Oscillator
         enum WaveForm {
             WAVE_SIN,
-            WAVE_SAW
+            WAVE_TRI,
+            WAVE_SAW,
+            WAVE_SQUARE
         };
 
         // TODO: Move this to .cpp file and implement swappable mapping. Maybe even midi learn?
         void UpdateMidi(int ctl, int val) {
+            std::cout << "ctl: " << ctl << "; val: " << val << std::endl;
             switch (ctl) {
                 case CC_CTL_VOLUME:
                     master_volume.UpdateValueMidi(val);
@@ -81,13 +86,44 @@ namespace ol::synthlib {
                 case CC_ENV_AMP_R:
                     env_amp_R.UpdateValueMidi(val);
                     break;
+                case CC_VOICE_GAIN:
+                    voice_gain.UpdateValueMidi(val);
+                    break;
+                case CC_OSC_1_WAVEFORM:
+                    osc_1_waveform.UpdateValueMidi(val);
+                    std::cout << "Waveform CC val: " << val << "; Waveform ctl val: " << osc_1_waveform.Value() << "; Waveform: " << GetOsc1Waveform() << std::endl;
+                    break;
                 default:
                     std::cout << "CC not mapped: " << ctl << std::endl;
                     break;
             }
         }
 
-        WaveForm wave_form = WAVE_SAW;
+        [[nodiscard]] WaveForm GetOsc1Waveform() const {
+            WaveForm rv = WAVE_SAW;
+            int val = (int) osc_1_waveform.Value() % 4;
+            switch (val) {
+                case 0:
+                    rv = WAVE_SAW;
+                    break;
+                case 1:
+                    rv = WAVE_SIN;
+                    break;
+                case 2:
+                    rv = WAVE_TRI;
+                    break;
+                case 3:
+                    rv = WAVE_SQUARE;
+                    break;
+                default: break;
+            }
+            return rv;
+        }
+
+        //WaveForm wave_form = WAVE_SAW;
+
+        Control osc_1_waveform = Control(Scale(0, 1, 0, 4, 1),
+                                         Scale(0, 127, 0, 127, 1));
 
         // Filter
         Control filter_cutoff = Control(Scale(0, 1, 0, FILTER_CUTOFF_MAX, 1),
@@ -107,12 +143,17 @@ namespace ol::synthlib {
         Control env_amp_S = Control(DEFAULT_HARDWARE_SCALE, DEFAULT_MIDI_SCALE, 1);
         Control env_amp_R = Control();
 
-        Control portamento = Control(Scale(0, 1, 0, 0.1, 1.1f),
-                                     Scale(0, 127, 0, 0.1, 1.1f)
+        Control portamento = Control(Scale(0, 1, 0, 0.1f, 1.1f),
+                                     Scale(0, 127, 0, 0.1f, 1.1f)
         );
+        Control voice_gain = Control(Scale(0, 1, 0, 100, 1.05f),
+                                     Scale(0, 127, 0, 100, 1.05f));
         Control master_volume = Control();
 
         ControlPanel() {
+            // Oscillator waveforms
+            osc_1_waveform.UpdateValueHardware(0);
+
             // default filter settings
             filter_cutoff.UpdateValueHardware(0.5);
             filter_resonance.UpdateValueHardware(0);
@@ -131,8 +172,12 @@ namespace ol::synthlib {
             // default portamento
             portamento.UpdateValueHardware(0.5f);
 
+            // default voice gain
+            voice_gain.UpdateValueHardware(0.1f);
+
             // default master volume
             master_volume.UpdateValueHardware(0.8f);
+
         }
 
     };

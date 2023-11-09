@@ -10,10 +10,8 @@ public:
 
     void handleIncomingMidiMessage(juce::MidiInput *source, const juce::MidiMessage &message) override {
         if (message.isNoteOn()) {
-            std::cout << "NoteOn: " << message.getNoteNumber() << std::endl;
             voice_->NoteOn(static_cast<uint8_t>(message.getNoteNumber()), message.getVelocity());
         } else if (message.isNoteOff()) {
-            std::cout << "NoteOff: " << message.getNoteNumber() << std::endl;
             voice_->NoteOff(static_cast<uint8_t>(message.getNoteNumber()));
         } else if (message.isController()) {
             control_panel_->UpdateMidi(message.getControllerNumber(),
