@@ -14,7 +14,10 @@
 namespace ol::synthlib {
     struct ControlPanel {
         // Oscillator
-        Control osc_frequency = Control();
+        // XXX: Control or Scale needs support for midi to frequency
+        //      Probably also make some default instances.
+        Control osc_frequency = Control(Scale(0, 20000, 0, 20000, 1),
+                                        Scale(0, 127, 0, 20000, 1));
 
         // Filter
         Control filter_cutoff = Control(Scale(0, 1, 0, FILTER_CUTOFF_MAX, 1),
