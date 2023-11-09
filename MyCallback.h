@@ -11,11 +11,16 @@
 class MyCallback : public juce::AudioIODeviceCallback {
 private:
     uint32_t counter_ = 0;
+    juce::AudioDeviceManager * device_manager_;
     daisysp::Oscillator osc_;
 public:
-    explicit MyCallback(juce::AudioDeviceManager *device_manager) {
+    explicit MyCallback(juce::AudioDeviceManager *device_manager) : device_manager_(device_manager){
         std::cout << "MyCallback ctor" << std::endl;
         device_manager->addAudioCallback(this);
+    }
+
+    ~MyCallback() override {
+        device_manager_->removeAudioCallback(this);
     }
 
     void audioDeviceIOCallbackWithContext(const float *const *inputChannelData,

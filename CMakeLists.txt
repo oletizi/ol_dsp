@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.26)
-set(CMAKE_CXX_COMPILER "/usr/bin/clang")
+#set(CMAKE_CXX_COMPILER "/usr/bin/clang")
 project(ol_dsp VERSION 0.1)
 set(CMAKE_CXX_STANDARD 17)
 
