@@ -27,7 +27,8 @@ t_sample ol::synthlib::Voice::Process() {
     env_filt_.SetSustainLevel(control_panel_->env_filt_S.Value());
     env_filt_.SetReleaseTime(control_panel_->env_filt_R.Value());
     float env_filt_value = env_filt_.Process(notes_on_ > 0);
-    float filt_freq = freq_ * env_filt_value;
+    control_panel_->filter_cutoff.UpdateCv(env_filt_value);
+    float filt_freq = control_panel_->filter_cutoff.Value();
     filt_1_.SetFreq(filt_freq);
     filt_1_.Process(value);
     value = filt_1_.Low();
@@ -39,7 +40,8 @@ t_sample ol::synthlib::Voice::Process() {
     env_amp_.SetReleaseTime(control_panel_->env_amp_R.Value());
     float amp = env_amp_.Process(notes_on_ > 0);
     value *= amp;
-    if (counter_ % 2200 == 0){
+    if (counter_ % 2200 == 0) {
+        //std::cout << "filt freq: " << filt_freq << std::endl;
         counter_ = 0;
     }
     return value;

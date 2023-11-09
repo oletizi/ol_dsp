@@ -10,6 +10,20 @@
 #define FILTER_CUTOFF_MAX 20000
 #define DEFAULT_HARDWARE_SCALE Scale(0, 1, 0, 1, 1)
 #define DEFAULT_MIDI_SCALE Scale(0, 127, 0, 1, 1)
+#define CC_CTL_1 7
+#define CC_CTL_2 71
+#define CC_FILT_CUTOFF 70
+#define CC_FILT_Q 71
+#define CC_FILT_DRIVE 72
+#define CC_ENV_FILT_AMT 73
+#define CC_ENV_FILT_A 74
+#define CC_ENV_FILT_D 75
+#define CC_ENV_FILT_S 76
+#define CC_ENV_FILT_R 77
+#define CC_ENV_AMP_A 108
+#define CC_ENV_AMP_D 109
+#define CC_ENV_AMP_S 110
+#define CC_ENV_AMP_R 111
 
 namespace ol::synthlib {
     class ControlPanel {
@@ -20,7 +34,23 @@ namespace ol::synthlib {
             WAVE_SIN,
             WAVE_SAW
         };
-
+        void UpdateMidi(int ctl, int val){
+            std::cout << "ControlPanel: ctl num: " << ctl << "; ctl val: " << val << std::endl;
+            switch (ctl) {
+                case CC_FILT_CUTOFF:
+                    filter_cutoff.UpdateValueMidi(val);
+                    break;
+                case CC_FILT_Q:
+                    filter_resonance.UpdateValueMidi(val);
+                    break;
+                case CC_ENV_FILT_AMT:
+                    filter_cutoff.UpdateCvAmountMidi(val);
+                    break;
+                default:
+                    std::cout << "CC not mapped: " << ctl << std::endl;
+                    break;
+            }
+        }
         WaveForm wave_form = WAVE_SAW;
 
         // Filter

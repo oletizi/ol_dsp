@@ -15,6 +15,11 @@ public:
         } else if (message.isNoteOff()) {
             std::cout << "NoteOff: " << message.getNoteNumber() << std::endl;
             voice_->NoteOff(static_cast<uint8_t>(message.getNoteNumber()));
+        } else if (message.isController()) {
+            std::cout << "Controller: name: " << message.getControllerName(message.getControllerNumber()) <<
+                      "; num:" << message.getControllerNumber() << "; val: " << message.getControllerValue() << std::endl;
+            control_panel_->UpdateMidi(message.getControllerNumber(),
+                                       message.getControllerValue());
         }
     }
 
@@ -46,7 +51,7 @@ int main() {
     MyCallback callback = MyCallback(&deviceManager, &voice);
 
     std::cout << "Send me some " << std::endl;
-        std::cout << "t: play test sound" << std::endl;
+    std::cout << "t: play test sound" << std::endl;
     std::cout << "q: quit" << std::endl;
     while (auto c = getchar()) {
         if (c == 't') {
