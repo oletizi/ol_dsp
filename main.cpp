@@ -9,9 +9,13 @@ int main() {
     juce::initialiseJuce_GUI();
     juce::AudioDeviceManager deviceManager = juce::AudioDeviceManager();
     deviceManager.initialiseWithDefaultDevices(2, 2);
+
+    ControlPanel control_panel;
+    Voice voice = Voice(&control_panel);
     t_sample frequency = 440;
-    Voice voice = Voice();
-    voice.SetFrequency(frequency);
+    control_panel.osc_frequency.UpdateValueHardware(frequency);
+
+
     MyCallback callback = MyCallback(&deviceManager, &voice);
 
     std::cout << "Hello, World!" << std::endl;
@@ -28,12 +32,12 @@ int main() {
         }
         if (c == 'u') {
             frequency *= 2;
-            voice.SetFrequency(frequency);
+            control_panel.osc_frequency.UpdateValueHardware(frequency);
             std::cout << "New frequency: " << frequency << std::endl;
         }
         if (c == 'd') {
             frequency /= 2;
-            voice.SetFrequency(frequency);
+            control_panel.osc_frequency.UpdateValueHardware(frequency);
             std::cout << "New frequency: " << frequency << std::endl;
         }
     }
