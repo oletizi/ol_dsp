@@ -23,8 +23,12 @@ namespace ol::synthlib {
             sample_rate_ = sample_rate;
             slop_lfo_1.Init(sample_rate_);
             slop_lfo_2.Init(sample_rate_);
+            slop_lfo_3.Init(sample_rate_);
+            slop_lfo_4.Init(sample_rate_);
             slop_lfo_1.SetFreq(0.0001f);
             slop_lfo_2.SetFreq(0.00009f);
+            slop_lfo_3.SetFreq( 0.00008f);
+            slop_lfo_4.SetFreq(0.00011f);
             for (auto &oscillator: oscillators) {
                 oscillator.Init(sample_rate);
             }
@@ -58,6 +62,8 @@ namespace ol::synthlib {
 
         daisysp::Oscillator slop_lfo_1;
         daisysp::Oscillator slop_lfo_2;
+        daisysp::Oscillator slop_lfo_3;
+        daisysp::Oscillator slop_lfo_4;
 
         // Oscillator
         daisysp::Oscillator oscillators[4] = {daisysp::Oscillator(), daisysp::Oscillator(), daisysp::Oscillator(),

@@ -31,6 +31,10 @@
 #define CC_OSC_2_VOLUME 115
 #define CC_OSC_3_VOLUME 116
 #define CC_OSC_4_VOLUME 117
+#define CC_OSC_1_SLOP 118
+#define CC_OSC_2_SLOP 119
+#define CC_OSC_3_SLOP 120
+#define CC_OSC_4_SLOP 121
 
 namespace ol::synthlib {
     class ControlPanel {
@@ -108,6 +112,18 @@ namespace ol::synthlib {
                 case CC_OSC_4_VOLUME:
                     osc_4_volume.UpdateValueMidi(val);
                     break;
+                case CC_OSC_1_SLOP:
+                    osc_1_slop.UpdateValueMidi(val);
+                    break;
+                case CC_OSC_2_SLOP:
+                    osc_2_slop.UpdateValueMidi(val);
+                    break;
+                case CC_OSC_3_SLOP:
+                    osc_3_slop.UpdateValueMidi(val);
+                    break;
+                case CC_OSC_4_SLOP:
+                    osc_4_slop.UpdateValueMidi(val);
+                    break;
                 default:
                     std::cout << "CC not mapped: " << ctl << std::endl;
                     break;
@@ -139,10 +155,17 @@ namespace ol::synthlib {
         // Oscillator waveforms
         Control osc_1_waveform = Control(Scale(0, 1, 0, 4, 1),
                                          Scale(0, 127, 0, 127, 1));
+        // Oscillator mix
         Control osc_1_volume = Control();
         Control osc_2_volume = Control();
         Control osc_3_volume = Control();
         Control osc_4_volume = Control();
+
+        // Oscillator slop
+        Control osc_1_slop = Control();
+        Control osc_2_slop = Control();
+        Control osc_3_slop = Control();
+        Control osc_4_slop = Control();
 
         // Filter
         Control filter_cutoff = Control(Scale(0, 1, 0, FILTER_CUTOFF_MAX, 1),
@@ -165,17 +188,24 @@ namespace ol::synthlib {
         Control portamento = Control(Scale(0, 1, 0, 0.1f, 1.1f),
                                      Scale(0, 127, 0, 0.1f, 1.1f)
         );
-        Control voice_gain = Control(Scale(0, 1, 0, 100, 1.05f),
-                                     Scale(0, 127, 0, 100, 1.05f));
+        Control voice_gain = Control();
         Control master_volume = Control();
 
         ControlPanel() {
-            // Oscillator waveforms
+            // Oscillator waveform defaults
             osc_1_waveform.UpdateValueHardware(0);
+
+            // Oscillator mix defaults
             osc_1_volume.UpdateValueHardware(0.25f);
             osc_2_volume.UpdateValueHardware(0.25f);
             osc_3_volume.UpdateValueHardware(0.25f);
             osc_4_volume.UpdateValueHardware(0.25f);
+
+            // Oscillator slop defaults
+            osc_1_slop.UpdateValueHardware(0.5f);
+            osc_2_slop.UpdateValueHardware(0.5f);
+            osc_3_slop.UpdateValueHardware(0.5f);
+            osc_4_slop.UpdateValueHardware(0.5f);
 
             // default filter settings
             filter_cutoff.UpdateValueHardware(0.5);

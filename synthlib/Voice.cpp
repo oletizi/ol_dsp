@@ -17,9 +17,6 @@ t_sample ol::synthlib::Voice::Process() {
     setOscillatorFrequency(port);
 
     t_sample value = processOscillators();//osc_1_.Process();
-    float voice_gain = control_panel_->voice_gain.Value();
-    float voice_clip = daisysp::SoftClip(voice_gain * value);
-    value = voice_clip;
 
     // Filter
     env_filt_.SetAttackTime(control_panel_->env_filt_A.Value());
@@ -43,7 +40,7 @@ t_sample ol::synthlib::Voice::Process() {
     env_amp_.SetReleaseTime(control_panel_->env_amp_R.Value());
     float amp = env_amp_.Process(notes_on_ > 0);
     value *= amp;
-    if (counter_ % 22000 == 0) {
+    if (counter_ % 40000 == 0) {
         counter_ = 0;
     }
     float volume = control_panel_->master_volume.Value();
@@ -75,21 +72,40 @@ void ol::synthlib::Voice::setOscillatorFrequency(t_sample freq) {
     }
 }
 
+#define SLOP_FACTOR 0.001f
 t_sample ol::synthlib::Voice::processOscillators() {
     t_sample rv = 0;
 
     t_sample slop_lfo_1_value = slop_lfo_1.Process();
     t_sample slop_lfo_2_value = slop_lfo_2.Process();
+    t_sample slop_lfo_3_value = slop_lfo_3.Process();
+    t_sample slop_lfo_4_value = slop_lfo_4.Process();
+
     //oscillators[0].PhaseAdd(slop_lfo_1_value * 0.0000005f);
     //oscillators[0].SetFreq(control_panel_->)
-    oscillators[0].SetFreq(freq_ * slop_lfo_1_value * 0.001f);
-    oscillators[2].SetFreq(freq_ * slop_lfo_2_value * 0.002f);
-    //slop_lfo_1.PhaseAdd(slop_lfo_1_value * 0.000001f);
+    t_sample osc_1_slop_freq = freq_ + freq_ * slop_lfo_1_value * SLOP_FACTOR * control_panel_->osc_1_slop.Value();
+    t_sample osc_2_slop_freq = freq_ - freq_ * slop_lfo_2_value * SLOP_FACTOR * control_panel_->osc_2_slop.Value();
+    t_sample osc_3_slop_freq = freq_ + freq_ * slop_lfo_3_value * SLOP_FACTOR * control_panel_->osc_3_slop.Value();
+    t_sample osc_4_slop_freq = freq_ - freq_ * slop_lfo_4_value * SLOP_FACTOR * control_panel_->osc_4_slop.Value();
+    slop_lfo_1.PhaseAdd(slop_lfo_1_value * 0.000001f);
+    slop_lfo_2.PhaseAdd(slop_lfo_2_value * 0.0000009f);
 
+    oscillators[0].SetFreq(osc_1_slop_freq);
+    oscillators[1].SetFreq(osc_2_slop_freq);
+    oscillators[2].SetFreq(osc_3_slop_freq);
+    oscillators[3].SetFreq(osc_4_slop_freq);
     rv += oscillators[0].Process() * control_panel_->osc_1_volume.Value();
     rv += oscillators[1].Process() * control_panel_->osc_2_volume.Value();
     rv += oscillators[2].Process() * control_panel_->osc_3_volume.Value();
     rv += oscillators[3].Process() * control_panel_->osc_4_volume.Value();
-
+//    if (counter_ % 40000 == 0) {
+//        std::cout << "freq_, osc 1 slop freq: " << freq_ << ", " << osc_1_slop_freq << std::endl;
+//        std::cout << "freq_, osc 2 slop freq: " << freq_ << ", " << osc_2_slop_freq << std::endl;
+//        std::cout << "freq_, osc 3 slop freq: " << freq_ << ", " << osc_3_slop_freq << std::endl;
+//        std::cout << "freq_, osc 4 slop freq: " << freq_ << ", " << osc_4_slop_freq << std::endl;
+//    }
+//    float voice_gain = control_panel_->voice_gain.Value();
+//    float voice_clip = daisysp::SoftClip(voice_gain + rv);
+//    rv = voice_clip;
     return rv;
 }
