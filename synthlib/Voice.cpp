@@ -9,26 +9,14 @@ t_sample ol::synthlib::Voice::Process() {
     counter_++;
 
     // Oscillator
-    switch (control_panel_->GetOsc1Waveform()) {
-        case ControlPanel::WAVE_SIN:
-            osc1_.SetWaveform(daisysp::Oscillator::WAVE_SIN);
-            break;
-        case ControlPanel::WAVE_SAW:
-            osc1_.SetWaveform(daisysp::Oscillator::WAVE_POLYBLEP_SAW);
-            break;
-        case ControlPanel::WAVE_TRI:
-            osc1_.SetWaveform(daisysp::Oscillator::WAVE_POLYBLEP_TRI);
-            break;
-        case ControlPanel::WAVE_SQUARE:
-            osc1_.SetWaveform(daisysp::Oscillator::WAVE_POLYBLEP_SQUARE);
-            break;
-    }
+    updateWaveform();
+
     portamento_.SetHtime(control_panel_->portamento.Value());
     t_sample port = portamento_.Process(freq_);
 
-    osc1_.SetFreq(port);
-    t_sample value = osc1_.Process();
-    float pre_gain = value;
+    setOscillatorFrequency(port);
+
+    t_sample value = processOscillators();//osc_1_.Process();
     float voice_gain = control_panel_->voice_gain.Value();
     float voice_clip = daisysp::SoftClip(voice_gain * value);
     value = voice_clip;
@@ -48,9 +36,6 @@ t_sample ol::synthlib::Voice::Process() {
     filt_1_.SetDrive(filt_drive);
     filt_1_.Process(value);
     value = filt_1_.Low();
-
-    //value = daisysp::SoftClip(value * voice_gain);
-
     // Amplifier
     env_amp_.SetAttackTime(control_panel_->env_amp_A.Value());
     env_amp_.SetDecayTime(control_panel_->env_amp_D.Value());
@@ -59,10 +44,52 @@ t_sample ol::synthlib::Voice::Process() {
     float amp = env_amp_.Process(notes_on_ > 0);
     value *= amp;
     if (counter_ % 22000 == 0) {
-        //std::cout << "Portamento: " << port << "; htime: " << portamento_.GetHtime() << std::endl;
-        //`std::cout << "Gain: " << voice_gain << "; Clip: " << voice_clip << "; Pre gain: " << pre_gain << std::endl;
         counter_ = 0;
     }
     float volume = control_panel_->master_volume.Value();
     return value * volume;
+}
+
+void ol::synthlib::Voice::updateWaveform() {
+    for (auto &oscillator: oscillators) {
+        switch (control_panel_->GetOsc1Waveform()) {
+            case ControlPanel::WAVE_SIN:
+                oscillator.SetWaveform(daisysp::Oscillator::WAVE_SIN);
+                break;
+            case ControlPanel::WAVE_SAW:
+                oscillator.SetWaveform(daisysp::Oscillator::WAVE_POLYBLEP_SAW);
+                break;
+            case ControlPanel::WAVE_TRI:
+                oscillator.SetWaveform(daisysp::Oscillator::WAVE_POLYBLEP_TRI);
+                break;
+            case ControlPanel::WAVE_SQUARE:
+                oscillator.SetWaveform(daisysp::Oscillator::WAVE_POLYBLEP_SQUARE);
+                break;
+        }
+    }
+}
+
+void ol::synthlib::Voice::setOscillatorFrequency(t_sample freq) {
+    for (auto &oscillator: oscillators) {
+        oscillator.SetFreq(freq);
+    }
+}
+
+t_sample ol::synthlib::Voice::processOscillators() {
+    t_sample rv = 0;
+
+    t_sample slop_lfo_1_value = slop_lfo_1.Process();
+    t_sample slop_lfo_2_value = slop_lfo_2.Process();
+    //oscillators[0].PhaseAdd(slop_lfo_1_value * 0.0000005f);
+    //oscillators[0].SetFreq(control_panel_->)
+    oscillators[0].SetFreq(freq_ * slop_lfo_1_value * 0.001f);
+    oscillators[2].SetFreq(freq_ * slop_lfo_2_value * 0.002f);
+    //slop_lfo_1.PhaseAdd(slop_lfo_1_value * 0.000001f);
+
+    rv += oscillators[0].Process() * control_panel_->osc_1_volume.Value();
+    rv += oscillators[1].Process() * control_panel_->osc_2_volume.Value();
+    rv += oscillators[2].Process() * control_panel_->osc_3_volume.Value();
+    rv += oscillators[3].Process() * control_panel_->osc_4_volume.Value();
+
+    return rv;
 }

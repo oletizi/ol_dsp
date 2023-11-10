@@ -27,6 +27,10 @@
 #define CC_ENV_AMP_R 111
 #define CC_VOICE_GAIN 112
 #define CC_OSC_1_WAVEFORM 113
+#define CC_OSC_1_VOLUME 114
+#define CC_OSC_2_VOLUME 115
+#define CC_OSC_3_VOLUME 116
+#define CC_OSC_4_VOLUME 117
 
 namespace ol::synthlib {
     class ControlPanel {
@@ -91,7 +95,18 @@ namespace ol::synthlib {
                     break;
                 case CC_OSC_1_WAVEFORM:
                     osc_1_waveform.UpdateValueMidi(val);
-                    std::cout << "Waveform CC val: " << val << "; Waveform ctl val: " << osc_1_waveform.Value() << "; Waveform: " << GetOsc1Waveform() << std::endl;
+                    break;
+                case CC_OSC_1_VOLUME:
+                    osc_1_volume.UpdateValueMidi(val);
+                    break;
+                case CC_OSC_2_VOLUME:
+                    osc_2_volume.UpdateValueMidi(val);
+                    break;
+                case CC_OSC_3_VOLUME:
+                    osc_3_volume.UpdateValueMidi(val);
+                    break;
+                case CC_OSC_4_VOLUME:
+                    osc_4_volume.UpdateValueMidi(val);
                     break;
                 default:
                     std::cout << "CC not mapped: " << ctl << std::endl;
@@ -115,15 +130,19 @@ namespace ol::synthlib {
                 case 3:
                     rv = WAVE_SQUARE;
                     break;
-                default: break;
+                default:
+                    break;
             }
             return rv;
         }
 
-        //WaveForm wave_form = WAVE_SAW;
-
+        // Oscillator waveforms
         Control osc_1_waveform = Control(Scale(0, 1, 0, 4, 1),
                                          Scale(0, 127, 0, 127, 1));
+        Control osc_1_volume = Control();
+        Control osc_2_volume = Control();
+        Control osc_3_volume = Control();
+        Control osc_4_volume = Control();
 
         // Filter
         Control filter_cutoff = Control(Scale(0, 1, 0, FILTER_CUTOFF_MAX, 1),
@@ -153,6 +172,10 @@ namespace ol::synthlib {
         ControlPanel() {
             // Oscillator waveforms
             osc_1_waveform.UpdateValueHardware(0);
+            osc_1_volume.UpdateValueHardware(0.25f);
+            osc_2_volume.UpdateValueHardware(0.25f);
+            osc_3_volume.UpdateValueHardware(0.25f);
+            osc_4_volume.UpdateValueHardware(0.25f);
 
             // default filter settings
             filter_cutoff.UpdateValueHardware(0.5);

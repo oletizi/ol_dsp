@@ -9,6 +9,8 @@
 #include "ol_synthlib_core.h"
 #include "ControlPanel.h"
 
+#define OSCILLATOR_COUNT 4
+
 namespace ol::synthlib {
 
     class Voice {
@@ -19,7 +21,14 @@ namespace ol::synthlib {
 
         void Init(t_sample sample_rate) {
             sample_rate_ = sample_rate;
-            osc1_.Init(sample_rate);
+            slop_lfo_1.Init(sample_rate_);
+            slop_lfo_2.Init(sample_rate_);
+            slop_lfo_1.SetFreq(0.0001f);
+            slop_lfo_2.SetFreq(0.00009f);
+            for (auto &oscillator: oscillators) {
+                oscillator.Init(sample_rate);
+            }
+
             filt_1_.Init(sample_rate);
             env_filt_.Init(sample_rate);
             env_amp_.Init(sample_rate);
@@ -47,8 +56,12 @@ namespace ol::synthlib {
 
         uint8_t notes_on_ = 0;
 
+        daisysp::Oscillator slop_lfo_1;
+        daisysp::Oscillator slop_lfo_2;
+
         // Oscillator
-        daisysp::Oscillator osc1_;
+        daisysp::Oscillator oscillators[4] = {daisysp::Oscillator(), daisysp::Oscillator(), daisysp::Oscillator(),
+                                              daisysp::Oscillator()};
         t_sample freq_ = 0;
 
         // Filter
@@ -64,6 +77,12 @@ namespace ol::synthlib {
         // Controls
         ControlPanel *control_panel_;
         int counter_ = 0;
+
+        void updateWaveform();
+
+        void setOscillatorFrequency(t_sample freq);
+
+        t_sample processOscillators();
     };
 }
 #endif //JUCE_TEST_VOICE_H
