@@ -3,7 +3,8 @@ juce_add_console_app(fx-workout
         PRODUCT_NAME "FX Workout")
 target_sources(fx-workout
         PRIVATE
-        fx_main.cpp)
+        fx_main.cpp
+        FxAudioCallback.cpp)
 target_compile_definitions(fx-workout
         PRIVATE
         JUCE_WEB_BROWSER=0

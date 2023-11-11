@@ -27,7 +27,7 @@ int main() {
 
     SynthAudioCallback callback = SynthAudioCallback(&deviceManager, &voice);
 
-    std::cout << "Send me some " << std::endl;
+    std::cout << "Send me some MIDI" << std::endl;
     std::cout << "t: play test sound" << std::endl;
     std::cout << "q: quit" << std::endl;
     while (auto c = getchar()) {
