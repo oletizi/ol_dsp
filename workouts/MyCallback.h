@@ -5,8 +5,8 @@
 #ifndef JUCE_TEST_MYCALLBACK_H
 #define JUCE_TEST_MYCALLBACK_H
 
-#include <daisysp.h>
-#include <juce_audio_devices/juce_audio_devices.h>
+#include "daisysp.h"
+#include "juce_audio_devices/juce_audio_devices.h"
 #include "Voice.h"
 
 class MyCallback : public juce::AudioIODeviceCallback {
