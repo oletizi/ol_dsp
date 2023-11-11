@@ -1,5 +1,6 @@
 enable_testing()
+add_subdirectory(googletest)
 find_package(GTest REQUIRED)
-add_executable(gtest_run test/basic_test.cpp)
+add_executable(gtest_run basic_test.cpp)
 target_link_libraries(gtest_run ${GTEST_BOTH_LIBRARIES} fxlib synthlib DaisySP)
 add_test(gtest_run gtest_run)

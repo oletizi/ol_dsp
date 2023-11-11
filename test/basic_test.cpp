@@ -1,5 +1,6 @@
 #include "gtest/gtest.h"
-#include "ol_synthlib.h"
+#include <ol_synthlib.h>
+#include <ol_fxlib.h>
 
 using namespace ol::synthlib;
 TEST(BasicTestSuite, BasicTest) {
