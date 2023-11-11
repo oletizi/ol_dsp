@@ -12,17 +12,13 @@ add_library(synthlib ./synthlib/Voice.cpp
         synthlib/Control.cpp
         synthlib/ControlPanel.h)
 target_include_directories(synthlib PUBLIC ./synthlib)
+
 add_subdirectory(test/googletest)
-enable_testing()
-find_package(GTest REQUIRED)
-add_executable(gtest_run test/basic_test.cpp)
-target_link_libraries(gtest_run ${GTEST_BOTH_LIBRARIES} fxlib synthlib DaisySP)
-add_test(gtest_run gtest_run)
 
 
+# Workout executables
 juce_add_console_app(fx-workout
         PRODUCT_NAME "FX Workout")
-
 target_sources(fx-workout PRIVATE fx_main.cpp)
 target_compile_definitions(fx-workout PRIVATE JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0)
 target_link_libraries(fx-workout
