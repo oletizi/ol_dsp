@@ -9,10 +9,15 @@ int main() {
     std::cout << "Hello, world!" << std::endl;
     juce::initialiseJuce_GUI();
     juce::AudioDeviceManager deviceManager = juce::AudioDeviceManager();
-    deviceManager.initialiseWithDefaultDevices(2, 2);
+    try {
+        deviceManager.initialiseWithDefaultDevices(2, 2);
+    } catch (std::exception &e) {
+        std::cerr << "Exception initializing device manager: " << e.what() << std::endl;
+    }
     FxControlPanel cp;
     FxChain fx;
     FxAudioCallback audio_callback(&deviceManager, &fx);
+
     std::cout << "Send me some audio!" << std::endl;
     std::cout << "t: play test sound" << std::endl;
     std::cout << "q: quit" << std::endl;

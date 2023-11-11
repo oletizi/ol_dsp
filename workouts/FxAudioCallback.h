@@ -14,7 +14,9 @@ class FxAudioCallback : public juce::AudioIODeviceCallback {
 public:
     explicit FxAudioCallback(juce::AudioDeviceManager *device_manager, FxChain *fx)
             : device_manager_(device_manager), fx_(fx){
+        std::cout << "FxAudioCallback: adding myself to device manager..." << std::endl;
         device_manager->addAudioCallback(this);
+        std::cout << "FxAudioCallback: done adding myself to device manager." << std::endl;
     }
     void audioDeviceAboutToStart (juce::AudioIODevice* device) override;
     void audioDeviceStopped() override;
