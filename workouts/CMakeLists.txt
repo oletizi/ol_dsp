@@ -39,4 +39,4 @@ target_link_libraries(synth-workout
         DaisySP
         juce::juce_recommended_config_flags
         juce::juce_recommended_warning_flags)
-include_directories(synth-workout DaisySP/Source)
+#include_directories(synth-workout DaisySP/Source)
