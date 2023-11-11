@@ -32,9 +32,9 @@ namespace ol::fxlib {
 
         Delay delay1_;
         sample_t delay_time_ = 30000;
-        sample_t delay_feedback_ = 0.5;
+        sample_t delay_feedback_ = 0.3;
         sample_t delay_cutoff_ = 5000;
-        sample_t delay_resonance_ = 0.0f;
+        sample_t delay_resonance_ = 0.3f;
         sample_t delay_balance_ = 0.7;
     };
 
