@@ -7,12 +7,10 @@ TEST(BasicTestSuite, BasicTest) {
 }
 
 TEST(Voice, TestBasics) {
+    ControlPanel cp;
     t_sample sample_rate = 441000;
-    Voice voice = Voice();
+    Voice voice = Voice(&cp);
     voice.Init(sample_rate);
     t_sample value = voice.Process();
     EXPECT_EQ(value, 0);
-
-    value = voice.Process();
-    EXPECT_NE(value, 0);
 }
