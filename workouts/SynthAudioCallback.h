@@ -16,7 +16,6 @@ private:
 public:
     explicit SynthAudioCallback(juce::AudioDeviceManager *device_manager, ol::synthlib::Voice *pVoice)
             : device_manager_(device_manager), voice_(pVoice){
-        std::cout << "MyCallback ctor" << std::endl;
         device_manager->addAudioCallback(this);
     }
 
@@ -40,12 +39,10 @@ public:
     }
 
     void audioDeviceAboutToStart(juce::AudioIODevice *device) override {
-        std::cout << "Device about to start..." << std::endl;
         voice_->Init(static_cast<float>(device->getCurrentSampleRate()));
     }
 
     void audioDeviceStopped() override {
-        std::cout << "Device stopped." << std::endl;
     }
 
 private:
