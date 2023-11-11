@@ -6,6 +6,7 @@
 
 void FxAudioCallback::audioDeviceAboutToStart(juce::AudioIODevice *device) {
     std::cout << "Audio device about to start..." << std::endl;
+    fx_->Init(device->getCurrentSampleRate());
 }
 
 void FxAudioCallback::audioDeviceStopped() {
@@ -16,9 +17,31 @@ void FxAudioCallback::audioDeviceIOCallbackWithContext(const float *const *input
                                                        float *const *outputChannelData, int numOutputChannels,
                                                        int numSamples,
                                                        const juce::AudioIODeviceCallbackContext &context) {
-    for (int i=0; i<numInputChannels; i++) {
-        for (int j=0; j<numSamples; j++) {
-            outputChannelData[i][j] = inputChannelData[i][j];
+    int errors = 0;
+    int successes = 0;
+
+    for (int i = 0; i < numSamples; i++) {
+        count_++;
+        if (fx_->Process(inputChannelData[0][i],
+                         inputChannelData[1][i],
+                         &outputChannelData[0][i],
+                         &outputChannelData[1][i])) {
+            outputChannelData[0][i] = inputChannelData[0][i];
+            outputChannelData[1][i] = inputChannelData[1][i];
+            errors++;
+        } else {
+            successes++;
         }
+    }
+
+//    for (int i = 0; i< numSamples; i++) {
+//        outputChannelData[0][i] = inputChannelData[0][i];
+//        outputChannelData[1][i] = inputChannelData[0][i];
+//    }
+
+    if (count_ % 4000 == 0) {
+        std::cout << "num samples: " << numSamples << std::endl;
+        std::cout << "verb errors: " << errors << "; successes: " << successes << std::endl;
+        count_ = 0;
     }
 }

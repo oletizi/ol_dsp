@@ -7,11 +7,13 @@
 
 #include <juce_audio_devices/juce_audio_devices.h>
 #include "ol_fxlib.h"
+#include "FxChain.h"
 
 using namespace ol::fxlib;
 class FxAudioCallback : public juce::AudioIODeviceCallback {
 public:
-    explicit FxAudioCallback(juce::AudioDeviceManager *device_manager) : device_manager_(device_manager){
+    explicit FxAudioCallback(juce::AudioDeviceManager *device_manager, FxChain *fx)
+            : device_manager_(device_manager), fx_(fx){
         device_manager->addAudioCallback(this);
     }
     void audioDeviceAboutToStart (juce::AudioIODevice* device) override;
@@ -25,6 +27,8 @@ public:
 
 private:
     juce::AudioDeviceManager *device_manager_;
+    FxChain *fx_;
+    uint64_t count_;
 };
 
 

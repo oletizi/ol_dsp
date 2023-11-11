@@ -1,6 +1,7 @@
 #include <iostream>
 #include <ol_fxlib.h>
 #include "FxAudioCallback.h"
+#include "FxChain.h"
 
 using namespace ol::fxlib;
 
@@ -10,7 +11,8 @@ int main() {
     juce::AudioDeviceManager deviceManager = juce::AudioDeviceManager();
     deviceManager.initialiseWithDefaultDevices(2, 2);
     FxControlPanel cp;
-    FxAudioCallback audio_callback(&deviceManager);
+    FxChain fx;
+    FxAudioCallback audio_callback(&deviceManager, &fx);
     std::cout << "Send me some audio!" << std::endl;
     std::cout << "t: play test sound" << std::endl;
     std::cout << "q: quit" << std::endl;
