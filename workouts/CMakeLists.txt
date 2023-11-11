@@ -23,7 +23,7 @@ juce_add_console_app(synth-workout
 target_sources(synth-workout
         PRIVATE
         synth_main.cpp
-        MyCallback.h)
+        SynthAudioCallback.h)
 target_compile_definitions(synth-workout
         PRIVATE
         # JUCE_WEB_BROWSER and JUCE_USE_CURL would be on by default, but you might not need them.

@@ -9,18 +9,18 @@
 #include "juce_audio_devices/juce_audio_devices.h"
 #include "Voice.h"
 
-class MyCallback : public juce::AudioIODeviceCallback {
+class SynthAudioCallback : public juce::AudioIODeviceCallback {
 private:
     uint32_t counter_ = 0;
     juce::AudioDeviceManager * device_manager_;
 public:
-    explicit MyCallback(juce::AudioDeviceManager *device_manager, ol::synthlib::Voice *pVoice)
+    explicit SynthAudioCallback(juce::AudioDeviceManager *device_manager, ol::synthlib::Voice *pVoice)
             : device_manager_(device_manager), voice_(pVoice){
         std::cout << "MyCallback ctor" << std::endl;
         device_manager->addAudioCallback(this);
     }
 
-    ~MyCallback() override {
+    ~SynthAudioCallback() override {
         device_manager_->removeAudioCallback(this);
     }
 
