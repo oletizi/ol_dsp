@@ -9,7 +9,7 @@
 #include "ol_fxlib.h"
 #include "FxChain.h"
 
-using namespace ol::fxlib;
+using namespace ol::fx;
 class FxAudioCallback : public juce::AudioIODeviceCallback {
 public:
     explicit FxAudioCallback(juce::AudioDeviceManager *device_manager, FxChain *fx)

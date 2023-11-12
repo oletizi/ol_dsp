@@ -8,7 +8,7 @@
 #include <cstdint>
 #include "ol_corelib.h"
 
-namespace ol::synthlib {
+namespace ol::ctl {
     /**
  * Abstraction for control over a parameter. Probably rename.
  */

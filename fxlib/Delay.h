@@ -6,7 +6,7 @@
 #define OL_DSP_DELAY_H
 #include "ol_fxlib_core.h"
 
-namespace ol::fxlib {
+namespace ol::fx {
     class Delay {
     public:
         void Init(t_sample sample_rate) {

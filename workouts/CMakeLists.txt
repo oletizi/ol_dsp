@@ -4,7 +4,8 @@ juce_add_console_app(fx-workout
 target_sources(fx-workout
         PRIVATE
         fx_main.cpp
-        FxAudioCallback.cpp)
+        FxAudioCallback.cpp
+        FxMidiCallback.cpp)
 target_compile_definitions(fx-workout
         PRIVATE
         JUCE_WEB_BROWSER=0

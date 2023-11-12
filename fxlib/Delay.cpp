@@ -5,7 +5,7 @@
 #include "ol_fxlib_core.h"
 #include "Delay.h"
 
-t_sample ol::fxlib::Delay::Process(t_sample in) {
+t_sample ol::fx::Delay::Process(t_sample in) {
     counter_++;
     t_sample out;
     delay_.SetDelay(delay_time_);
@@ -22,25 +22,24 @@ t_sample ol::fxlib::Delay::Process(t_sample in) {
     out = (feedback_ * out) + ((1.0f - feedback_) * in);
 
     if (counter_ % 30000 == 0) {
-        std::cout << "Delay input, delay out,  filt out: " << delay_input << ", " << out << ", " << filt_out << std::endl;
         counter_ = 0;
     }
 
     return out;
 }
 
-void ol::fxlib::Delay::UpdateCutoff(t_sample cutoff) {
+void ol::fx::Delay::UpdateCutoff(t_sample cutoff) {
     cutoff_ = cutoff;
 }
 
-void ol::fxlib::Delay::UpdateResonance(t_sample resonance) {
+void ol::fx::Delay::UpdateResonance(t_sample resonance) {
     resonance_ = resonance;
 }
 
-void ol::fxlib::Delay::UpdateDelayTime(float delay_time) {
+void ol::fx::Delay::UpdateDelayTime(float delay_time) {
     delay_time_ = delay_time;
 }
 
-void ol::fxlib::Delay::UpdateFeedback(float feedback) {
+void ol::fx::Delay::UpdateFeedback(float feedback) {
     feedback_ = feedback;
 }
