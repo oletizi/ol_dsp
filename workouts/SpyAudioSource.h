@@ -29,6 +29,7 @@ public:
 
 private:
     uint64_t counter_;
+    uint64_t processed_;
     juce::AudioFormatReaderSource *source_;
 };
 
