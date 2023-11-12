@@ -1,5 +1,6 @@
 #include "juce_audio_formats/juce_audio_formats.h"
 #include "juce_audio_devices/juce_audio_devices.h"
+#include "SpyAudioSource.h"
 
 int main(int argc, char *argv[]) {
     std::cout << "Hello!" << std::endl;
@@ -44,9 +45,17 @@ int main(int argc, char *argv[]) {
     std::cout << "  created AudioFormatReader." << std::endl;
     juce::AudioFormatReaderSource f_reader_source(f_reader, true);
     std::cout << "  created AudioFormatReaderSource." << std::endl;
-    player.setSource(&f_reader_source);
-    std::cout << "  set AudioFormatReaderSource as source for AudioSourcePlayer." << std::endl;
-    player.setGain(0.5);
+
+    SpyAudioSource my_spy_audio_source(&f_reader_source);
+    std::cout << "  created SpyAudioSource around AudioFormatReaderSource." << std::endl;
+
+    player.setSource(&my_spy_audio_source);
+    //player.setSource(&f_reader_source);
+    //std::cout << "  set AudioFormatReaderSource as source for AudioSourcePlayer." << std::endl;
+
+    //player.setGain(0.5);
+
+    // Add audio callbacks
     deviceManager.addAudioCallback(&player);
 
     std::cout << "Playing an audio file: " << file.getFileName() << std::endl;

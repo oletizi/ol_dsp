@@ -50,8 +50,10 @@ juce_add_console_app(player-workout
 target_sources(player-workout
         PRIVATE
         player_main.cpp
+        SpyAudioSource.cpp
         FxAudioCallback.cpp
         FxMidiCallback.cpp)
+target_include_directories(player-workout PUBLIC .)
 target_compile_definitions(player-workout
         PRIVATE
         JUCE_WEB_BROWSER=0
