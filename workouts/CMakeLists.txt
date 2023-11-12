@@ -14,7 +14,8 @@ target_link_libraries(fx-workout
         juce::juce_core
         juce::juce_audio_devices
         PUBLIC
-        fxlib
+        ol_corelib
+        ol_fxlib
         DaisySP
         juce::juce_recommended_config_flags
         juce::juce_recommended_config_flags)
@@ -36,7 +37,9 @@ target_link_libraries(synth-workout
         juce::juce_core
         juce::juce_audio_devices
         PUBLIC
-        synthlib
+        ol_corelib
+        ol_ctllib
+        ol_synthlib
         DaisySP
         juce::juce_recommended_config_flags
         juce::juce_recommended_warning_flags)

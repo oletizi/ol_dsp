@@ -6,7 +6,7 @@
 #define OL_DSP_CONTROL_H
 
 #include <cstdint>
-#include "ol_synthlib_core.h"
+#include "ol_corelib.h"
 
 namespace ol::synthlib {
     /**
@@ -14,8 +14,9 @@ namespace ol::synthlib {
  */
     class Control {
     public:
-        explicit Control(Scale hardware_scale = Scale(0, 1, 0, 1, 1), Scale midi_scale = Scale(0, 127, 0, 1, 1),
-                t_sample initial_value = 0)
+        explicit Control(core::Scale hardware_scale = core::Scale(0, 1, 0, 1, 1),
+                         core::Scale midi_scale = core::Scale(0, 127, 0, 1, 1),
+                         t_sample initial_value = 0)
                 : hardware_scale_(hardware_scale), midi_scale_(midi_scale), value_(initial_value) {}
 
         [[nodiscard]] t_sample Value() const {
@@ -59,8 +60,8 @@ namespace ol::synthlib {
             value_ = new_value;
         }
 
-        Scale hardware_scale_;
-        Scale midi_scale_;
+        core::Scale hardware_scale_;
+        core::Scale midi_scale_;
         t_sample hardware_value_ = 0;
         t_sample cv_value_ = 0;
         t_sample cv_amount_ = 0;

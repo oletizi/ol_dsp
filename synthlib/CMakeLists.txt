@@ -1,5 +1,4 @@
-add_library(synthlib Voice.cpp
-        Control.cpp
+add_library(ol_synthlib Voice.cpp
         ControlPanel.h)
-target_link_libraries(synthlib DaisySP)
-target_include_directories(synthlib PUBLIC .)
+target_link_libraries(ol_synthlib ol_corelib ol_ctllib DaisySP)
+target_include_directories(ol_synthlib PUBLIC .)

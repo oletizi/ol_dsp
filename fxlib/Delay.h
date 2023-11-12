@@ -9,7 +9,7 @@
 namespace ol::fxlib {
     class Delay {
     public:
-        void Init(sample_t sample_rate) {
+        void Init(t_sample sample_rate) {
             sample_rate_ = sample_rate;
             delay_.Init();
             delay_.SetDelay(delay_time_);
@@ -18,22 +18,22 @@ namespace ol::fxlib {
             filt_.SetRes(resonance_);
         }
 
-        void UpdateDelayTime(sample_t delay_time);
-        void UpdateFeedback(sample_t feedback);
-        sample_t Process(sample_t in);
+        void UpdateDelayTime(t_sample delay_time);
+        void UpdateFeedback(t_sample feedback);
+        t_sample Process(t_sample in);
 
-        void UpdateCutoff(sample_t cutoff);
-        void UpdateResonance(sample_t resonance);
+        void UpdateCutoff(t_sample cutoff);
+        void UpdateResonance(t_sample resonance);
 
     private:
         uint64_t counter_;
-        sample_t sample_rate_;
-        sample_t delay_time_;
-        sample_t feedback_;
-        daisysp::DelayLine<sample_t, 48000> delay_;
+        t_sample sample_rate_;
+        t_sample delay_time_;
+        t_sample feedback_;
+        daisysp::DelayLine<t_sample, 48000> delay_;
         daisysp::Svf filt_;
-        sample_t cutoff_;
-        sample_t resonance_;
+        t_sample cutoff_;
+        t_sample resonance_;
     };
 }
 

@@ -1,4 +1,4 @@
-add_library(fxlib ol_fxlib.h
+add_library(ol_fxlib ol_fxlib.h
         FxControlPanel.h
         FxControlPanel.cpp
         ol_fxlib_core.h
@@ -6,5 +6,5 @@ add_library(fxlib ol_fxlib.h
         FxChain.cpp
         Delay.cpp
         Delay.h)
-target_link_libraries(fxlib DaisySP)
-target_include_directories(fxlib PUBLIC . DaisySP/Source)
+target_link_libraries(ol_fxlib ol_corelib ol_ctllib DaisySP)
+target_include_directories(ol_fxlib PUBLIC .)

@@ -4,6 +4,8 @@ set(CMAKE_CXX_STANDARD 17)
 
 add_subdirectory(JUCE)
 add_subdirectory(DaisySP)
+add_subdirectory(corelib)
+add_subdirectory(ctllib)
 add_subdirectory(fxlib)
 add_subdirectory(synthlib)
 

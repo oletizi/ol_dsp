@@ -11,7 +11,7 @@
 namespace ol::fxlib {
     class FxChain {
     public:
-        void Init(sample_t sample_rate) {
+        void Init(t_sample sample_rate) {
             verb_.Init(sample_rate);
             verb_.SetFeedback(verb_feedback_);
             verb_.SetLpFreq(verb_cutoff_);
@@ -21,7 +21,7 @@ namespace ol::fxlib {
             updateDelays();
         }
 
-        int Process(const sample_t &in1, const sample_t &in2, sample_t *out1, sample_t *out2);
+        int Process(const t_sample &in1, const t_sample &in2, t_sample *out1, t_sample *out2);
 
     private:
 
@@ -39,17 +39,17 @@ namespace ol::fxlib {
             delay_2_.UpdateCutoff(delay_cutoff_);
         }
         daisysp::ReverbSc verb_;
-        sample_t verb_feedback_ = 0.75;
-        sample_t verb_cutoff_ = 5000;
-        sample_t verb_balance_ = 0.5;
+        t_sample verb_feedback_ = 0.75;
+        t_sample verb_cutoff_ = 5000;
+        t_sample verb_balance_ = 0.5;
 
         Delay delay_1_;
         Delay delay_2_;
-        sample_t delay_time_ = 30000;
-        sample_t delay_feedback_ = 0.3;
-        sample_t delay_cutoff_ = 5000;
-        sample_t delay_resonance_ = 0.3f;
-        sample_t delay_balance_ = 0.7;
+        t_sample delay_time_ = 30000;
+        t_sample delay_feedback_ = 0.3;
+        t_sample delay_cutoff_ = 5000;
+        t_sample delay_resonance_ = 0.3f;
+        t_sample delay_balance_ = 0.7;
     };
 
 }

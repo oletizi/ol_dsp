@@ -5,18 +5,18 @@
 #include "ol_fxlib_core.h"
 #include "Delay.h"
 
-sample_t ol::fxlib::Delay::Process(sample_t in) {
+t_sample ol::fxlib::Delay::Process(t_sample in) {
     counter_++;
-    sample_t out;
+    t_sample out;
     delay_.SetDelay(delay_time_);
     filt_.SetFreq(cutoff_);
     filt_.SetRes(resonance_);
 
     out = delay_.Read();
     filt_.Process(out);
-    sample_t filt_out = filt_.Low();
-    // sample_t delay_input = (feedback_ * out) + in;
-    sample_t delay_input = (feedback_ * filt_out) + in;
+    t_sample filt_out = filt_.Low();
+    // t_sample delay_input = (feedback_ * out) + in;
+    t_sample delay_input = (feedback_ * filt_out) + in;
 
     delay_.Write(delay_input);
     out = (feedback_ * out) + ((1.0f - feedback_) * in);
@@ -29,11 +29,11 @@ sample_t ol::fxlib::Delay::Process(sample_t in) {
     return out;
 }
 
-void ol::fxlib::Delay::UpdateCutoff(sample_t cutoff) {
+void ol::fxlib::Delay::UpdateCutoff(t_sample cutoff) {
     cutoff_ = cutoff;
 }
 
-void ol::fxlib::Delay::UpdateResonance(sample_t resonance) {
+void ol::fxlib::Delay::UpdateResonance(t_sample resonance) {
     resonance_ = resonance;
 }
 

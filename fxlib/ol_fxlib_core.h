@@ -6,5 +6,5 @@
 #define OL_DSP_OL_FXLIB_CORE_H
 #include <iostream>
 #include "daisysp.h"
-#define sample_t float
+#include "ol_corelib.h"
 #endif //OL_DSP_OL_FXLIB_CORE_H
