@@ -23,6 +23,7 @@ int main(int argc, char *argv[]) {
     juce::AudioFormatManager afm;
     std::unique_ptr<juce::AudioFormatReaderSource> readerSource;
     juce::AudioSourcePlayer player;
+    juce::AudioTransportSource transport;
 
     afm.registerBasicFormats();
     juce::AudioFormat *fmt = nullptr;
@@ -52,10 +53,11 @@ int main(int argc, char *argv[]) {
     ol::fx::FxChain fx(&cp);
     SpyAudioSource my_spy_audio_source(&fx, &f_reader_source);
     std::cout << "  created SpyAudioSource around AudioFormatReaderSource." << std::endl;
+    transport.setSource(&my_spy_audio_source);
+    player.setSource(&transport);
 
-    player.setSource(&my_spy_audio_source);
     auto midiDevices = juce::MidiInput::getAvailableDevices();
-    std::cout << "MIDI inputs:" << std::endl;
+    std::cout << "MIDI inputs: " << std::endl;
 
     FxMidiCallback midi_callback(&cp);
     for (const auto &input: midiDevices) {
@@ -64,7 +66,12 @@ int main(int argc, char *argv[]) {
         std::cout << " name: " << input.name << "; identifier: " << input.identifier << std::endl;
     }
 
+    transport.setLooping(true);
+    f_reader_source.setLooping(true);
+
     deviceManager.addAudioCallback(&player);
+    transport.start();
+
 
     std::cout << "Playing an audio file: " << file.getFileName() << std::endl;
     std::cout << "t: play test sound" << std::endl;
