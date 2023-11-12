@@ -1,6 +1,8 @@
 #include "juce_audio_formats/juce_audio_formats.h"
 #include "juce_audio_devices/juce_audio_devices.h"
+#include "ol_fxlib.h"
 #include "SpyAudioSource.h"
+#include "FxMidiCallback.h"
 
 int main(int argc, char *argv[]) {
     std::cout << "Hello!" << std::endl;
@@ -46,16 +48,22 @@ int main(int argc, char *argv[]) {
     juce::AudioFormatReaderSource f_reader_source(f_reader, true);
     std::cout << "  created AudioFormatReaderSource." << std::endl;
 
-    SpyAudioSource my_spy_audio_source(&f_reader_source);
+    ol::fx::FxControlPanel cp;
+    ol::fx::FxChain fx(&cp);
+    SpyAudioSource my_spy_audio_source(&fx, &f_reader_source);
     std::cout << "  created SpyAudioSource around AudioFormatReaderSource." << std::endl;
 
     player.setSource(&my_spy_audio_source);
-    //player.setSource(&f_reader_source);
-    //std::cout << "  set AudioFormatReaderSource as source for AudioSourcePlayer." << std::endl;
+    auto midiDevices = juce::MidiInput::getAvailableDevices();
+    std::cout << "MIDI inputs:" << std::endl;
 
-    //player.setGain(0.5);
+    FxMidiCallback midi_callback(&cp);
+    for (const auto &input: midiDevices) {
+        deviceManager.setMidiInputDeviceEnabled(input.identifier, true);
+        deviceManager.addMidiInputDeviceCallback(input.identifier, &midi_callback);
+        std::cout << " name: " << input.name << "; identifier: " << input.identifier << std::endl;
+    }
 
-    // Add audio callbacks
     deviceManager.addAudioCallback(&player);
 
     std::cout << "Playing an audio file: " << file.getFileName() << std::endl;

@@ -7,4 +7,5 @@
 #include <daisysp.h>
 #include "ol_fxlib_core.h"
 #include "FxControlPanel.h"
+#include "FxChain.h"
 #endif //OL_DSP_OL_FXLIB_H

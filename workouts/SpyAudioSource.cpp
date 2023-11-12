@@ -3,7 +3,7 @@
 //
 #include "SpyAudioSource.h"
 
-SpyAudioSource::SpyAudioSource(juce::AudioFormatReaderSource *source) : source_(source), counter_(0), processed_(0) {}
+SpyAudioSource::SpyAudioSource(ol::fx::FxChain *fx, juce::AudioFormatReaderSource *source) : fx_(fx), source_(source), counter_(0), processed_(0) {}
 
 void SpyAudioSource::prepareToPlay(int samplesPerBlockExpected, double sampleRate) {
     source_->prepareToPlay(samplesPerBlockExpected, sampleRate);
@@ -20,6 +20,11 @@ void SpyAudioSource::getNextAudioBlock(const juce::AudioSourceChannelInfo &buffe
     if (processed_ >= source_->getTotalLength()) {
         counter_ = 0;
         processed_ = 0;
+    }
+    juce::AudioBuffer<float> *buf = bufferToFill.buffer;
+
+    for (int i=0; i<bufferToFill.numSamples; i++) {
+
     }
     if (counter_ % 100 == 0) {
         std::cout << "Buffer size: " << bufferToFill.numSamples << std::endl;
