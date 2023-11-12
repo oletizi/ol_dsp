@@ -36,6 +36,7 @@
 #define CC_OSC_3_SLOP 120
 #define CC_OSC_4_SLOP 121
 
+using namespace ol::ctl;
 namespace ol::synthlib {
     class ControlPanel {
     public:

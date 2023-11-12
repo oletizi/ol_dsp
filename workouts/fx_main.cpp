@@ -9,11 +9,8 @@ int main() {
     std::cout << "Hello, world!" << std::endl;
     juce::initialiseJuce_GUI();
     juce::AudioDeviceManager deviceManager = juce::AudioDeviceManager();
-    try {
-        deviceManager.initialiseWithDefaultDevices(2, 2);
-    } catch (std::exception &e) {
-        std::cerr << "Exception initializing device manager: " << e.what() << std::endl;
-    }
+    deviceManager.initialiseWithDefaultDevices(2, 2);
+
     FxControlPanel cp;
     FxChain fx(&cp);
     auto midiDevices = juce::MidiInput::getAvailableDevices();

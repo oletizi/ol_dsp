@@ -44,4 +44,26 @@ target_link_libraries(synth-workout
         DaisySP
         juce::juce_recommended_config_flags
         juce::juce_recommended_warning_flags)
-#include_directories(synth-workout DaisySP/Source)
+
+juce_add_console_app(player-workout
+        PRODUCT_NAME "Player Workout")
+target_sources(player-workout
+        PRIVATE
+        player_main.cpp
+        FxAudioCallback.cpp
+        FxMidiCallback.cpp)
+target_compile_definitions(player-workout
+        PRIVATE
+        JUCE_WEB_BROWSER=0
+        JUCE_USE_CURL=0)
+target_link_libraries(player-workout
+        PRIVATE
+        juce::juce_core
+        juce::juce_audio_devices
+        juce::juce_audio_formats
+        PUBLIC
+        ol_corelib
+        ol_fxlib
+        DaisySP
+        juce::juce_recommended_config_flags
+        juce::juce_recommended_config_flags)
