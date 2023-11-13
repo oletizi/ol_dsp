@@ -9,6 +9,7 @@ SpyAudioSource::SpyAudioSource(ol::fx::FxChain *fx, juce::AudioFormatReaderSourc
 
 void SpyAudioSource::prepareToPlay(int samplesPerBlockExpected, double sampleRate) {
     source_->prepareToPlay(samplesPerBlockExpected, sampleRate);
+    fx_->Init(sampleRate);
 }
 
 void SpyAudioSource::releaseResources() {
@@ -27,11 +28,14 @@ void SpyAudioSource::getNextAudioBlock(const juce::AudioSourceChannelInfo &buffe
     const int start_sample = bufferToFill.startSample;
 
     for (int i = start_sample; i < bufferToFill.numSamples; i++) {
-        float in1 = bufferToFill.buffer->getSample(0, i);
-        float in2 = bufferToFill.buffer->getSample(1, i);
+        const float in1 = bufferToFill.buffer->getSample(0, i);
+        const float in2 = bufferToFill.buffer->getSample(1, i);
         float *out1 = bufferToFill.buffer->getWritePointer(0, i);
         float *out2 = bufferToFill.buffer->getWritePointer(1, i);
         fx_->Process(in1, in2, out1, out2);
+//        *out1 = in1;
+//        *out2 = in2;
+
     }
     if (counter_ % 100 == 0) {
         std::cout << "Buffer size        : " << bufferToFill.numSamples << std::endl;

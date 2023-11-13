@@ -14,4 +14,6 @@ TEST(Voice, TestBasics) {
     voice.Init(sample_rate);
     t_sample value = voice.Process();
     EXPECT_EQ(value, 0);
+
+
 }

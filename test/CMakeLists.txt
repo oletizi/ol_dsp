@@ -1,6 +1,6 @@
 enable_testing()
 add_subdirectory(googletest)
 find_package(GTest REQUIRED)
-add_executable(gtest_run basic_test.cpp)
+add_executable(gtest_run basic_test.cpp fx_test.cpp)
 target_link_libraries(gtest_run ${GTEST_BOTH_LIBRARIES} ol_corelib ol_ctllib ol_fxlib ol_synthlib DaisySP)
 add_test(gtest_run gtest_run)

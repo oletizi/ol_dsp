@@ -9,14 +9,18 @@
 #include "Delay.h"
 #include "FxControlPanel.h"
 
+#define DELAY_COUNT 2
 namespace ol::fx {
     class FxChain {
     public:
-        FxChain(FxControlPanel * control_panel) : control_panel_(control_panel){}
+        explicit FxChain(FxControlPanel *control_panel) : control_panel_(control_panel) {}
+
         void Init(t_sample sample_rate) {
             verb_.Init(sample_rate);
-            delay_1_.Init(sample_rate);
-            delay_2_.Init(sample_rate);
+            for (auto &delay: delays) {
+                delay = Delay();
+                delay.Init(sample_rate);
+            }
             updateDelays();
         }
 
@@ -30,9 +34,9 @@ namespace ol::fx {
         void updateDelays();
 
         daisysp::ReverbSc verb_;
-        Delay delay_1_;
-        Delay delay_2_;
-        FxControlPanel * control_panel_;
+        Delay delays[DELAY_COUNT];
+        FxControlPanel *control_panel_;
+        uint64_t counter_ = 0;
     };
 
 }
