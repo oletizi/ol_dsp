@@ -35,6 +35,15 @@ void ol::fx::FxControlPanel::UpdateMidi(int controller_number, int value) {
         case CC_DELAY_FILTER_TYPE:
             delay_filter_type.UpdateValueMidi(value);
             break;
+        case CC_LPF_CUTOFF:
+            lpf_cutoff.UpdateValueMidi(value);
+            break;
+        case CC_LPF_RESONANCE:
+            lpf_resonance.UpdateValueMidi(value);
+            break;
+        case CC_LPF_TYPE:
+            lpf_type.UpdateValueMidi(value);
+            break;
         default:
             break;
     }

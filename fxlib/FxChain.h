@@ -7,9 +7,10 @@
 
 #include "ol_fxlib_core.h"
 #include "Delay.h"
+#include "LPF.h"
 #include "FxControlPanel.h"
 
-#define DELAY_COUNT 2
+#define CHANNEL_COUNT 2
 namespace ol::fx {
     class FxChain {
     public:
@@ -21,7 +22,11 @@ namespace ol::fx {
                 delay = Delay();
                 delay.Init(sample_rate);
             }
+            for (auto & lpf : lpfs_) {
+                lpf.Init(sample_rate);
+            }
             updateDelays();
+            updateLpfs();
         }
 
         int Process(const t_sample &in1, const t_sample &in2, t_sample *out1, t_sample *out2);
@@ -32,9 +37,12 @@ namespace ol::fx {
          * Update parameters on the delay lines.
          */
         void updateDelays();
+        void updateLpfs();
 
         daisysp::ReverbSc verb_;
-        Delay delays[DELAY_COUNT];
+        Delay delays[CHANNEL_COUNT];
+        LPF lpfs_[CHANNEL_COUNT];
+        //daisysp::Svf lpfs_[CHANNEL_COUNT];
         FxControlPanel *control_panel_;
         uint64_t counter_ = 0;
     };

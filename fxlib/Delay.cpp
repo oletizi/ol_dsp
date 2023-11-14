@@ -25,12 +25,10 @@ t_sample ol::fx::Delay::Process(t_sample in) {
             delay_input = filt_moog_.Process(delay_input);
             break;
     }
-    //delay_input = filt_svf_.Low();
 
     delay_.Write(delay_input);
 
     if (counter_ % 30000 == 0) {
-        std::cout << "Filter type: " << filter_type_ << std::endl;
         counter_ = 0;
     }
 

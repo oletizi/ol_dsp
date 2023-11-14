@@ -5,6 +5,8 @@ add_library(ol_fxlib ol_fxlib.h
         FxChain.h
         FxChain.cpp
         Delay.cpp
-        Delay.h)
+        Delay.h
+        LPF.cpp
+        LPF.h)
 target_link_libraries(ol_fxlib ol_corelib ol_ctllib DaisySP)
 target_include_directories(ol_fxlib PUBLIC .)

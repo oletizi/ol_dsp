@@ -33,17 +33,14 @@ void SpyAudioSource::getNextAudioBlock(const juce::AudioSourceChannelInfo &buffe
         float *out1 = bufferToFill.buffer->getWritePointer(0, i);
         float *out2 = bufferToFill.buffer->getWritePointer(1, i);
         fx_->Process(in1, in2, out1, out2);
-//        *out1 = in1;
-//        *out2 = in2;
-
     }
-    if (counter_ % 100 == 0) {
-        std::cout << "Buffer size        : " << bufferToFill.numSamples << std::endl;
-        std::cout << "  start sample     : " << start_sample << std::endl;
-        std::cout << "  Buffers processed: " << counter_ << std::endl;
-        std::cout << "  Samples processed: " << processed_ << std::endl;
-        std::cout << "  Total length     : " << source_->getTotalLength() << std::endl;
-    }
+//    if (counter_ % 100 == 0) {
+//        std::cout << "Buffer size        : " << bufferToFill.numSamples << std::endl;
+//        std::cout << "  start sample     : " << start_sample << std::endl;
+//        std::cout << "  Buffers processed: " << counter_ << std::endl;
+//        std::cout << "  Samples processed: " << processed_ << std::endl;
+//        std::cout << "  Total length     : " << source_->getTotalLength() << std::endl;
+//    }
 }
 
 void SpyAudioSource::setNextReadPosition(juce::int64 newPosition) {
