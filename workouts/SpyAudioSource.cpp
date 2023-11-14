@@ -61,5 +61,3 @@ juce::int64 SpyAudioSource::getTotalLength() const {
 bool SpyAudioSource::isLooping() const {
     return source_->isLooping();
 }
-
-
