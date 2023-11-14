@@ -31,6 +31,10 @@ void ol::fx::FxControlPanel::UpdateMidi(int controller_number, int value) {
             break;
         case CC_DELAY_BALANCE:
             delay_balance.UpdateValueMidi(value);
+            break;
+        case CC_DELAY_FILTER_TYPE:
+            delay_filter_type.UpdateValueMidi(value);
+            break;
         default:
             break;
     }

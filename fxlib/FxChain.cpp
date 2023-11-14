@@ -37,5 +37,6 @@ void ol::fx::FxChain::updateDelays() {
         delay.UpdateFeedback(control_panel_->delay_feedback.Value());
         delay.UpdateCutoff(control_panel_->delay_cutoff.Value());
         delay.UpdateResonance(control_panel_->delay_resonance.Value());
+        delay.UpdateFilterType(control_panel_->delay_filter_type.Value() < 0.5 ? Delay::FilterType::SVF : Delay::FilterType::MOOG_LADDER);
     }
 }

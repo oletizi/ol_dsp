@@ -14,6 +14,7 @@
 #define CC_DELAY_CUTOFF 37
 #define CC_DELAY_RESONANCE 38
 #define CC_DELAY_BALANCE 39
+#define CC_DELAY_FILTER_TYPE 40
 
 #include "ol_corelib.h"
 #include "ol_ctllib.h"
@@ -29,7 +30,9 @@ namespace ol::fx {
             delay_time.UpdateValueHardware(0.5);
             delay_cutoff.UpdateValueHardware(0.4);
             delay_balance.UpdateValueHardware(0.25);
+            delay_filter_type.UpdateValueHardware(0);
         }
+
         void UpdateMidi(int controller_number, int controller_value);
 
         ctl::Control reverb_time = ctl::Control();
@@ -47,6 +50,7 @@ namespace ol::fx {
         ctl::Control delay_resonance = ctl::Control();
         ctl::Control delay_balance = ctl::Control();
 
+        ctl::Control delay_filter_type = ctl::Control();
     };
 }
 
