@@ -9,7 +9,7 @@
 #include "daisysp.h"
 #include "ol_corelib.h"
 
-#define FILTER_COUNT 1
+#define BIQUAD_COUNT 1
 namespace ol::fx {
     class LPF {
     public:
@@ -47,7 +47,7 @@ namespace ol::fx {
         FilterType type_ = SVF;
         daisysp::Svf sfv_;
         daisysp::MoogLadder moog_ladder_;
-        daisysp::Biquad biquads_[FILTER_COUNT];
+        daisysp::Biquad biquads_[BIQUAD_COUNT];
     };
 }
 

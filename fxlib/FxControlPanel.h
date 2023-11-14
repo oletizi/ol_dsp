@@ -63,8 +63,8 @@ namespace ol::fx {
 
         // Filter
         ctl::Control lpf_cutoff = ctl::Control(
-                core::Scale(0, 1, 0, 20000, 1),
-                core::Scale(0, 127, 0, 20000, 1));
+                core::Scale(0, 1, 0, 20000, 1.1),
+                core::Scale(0, 127, 0, 20000, 1.1));
         ctl::Control lpf_resonance  = ctl::Control();
         ctl::Control lpf_type = ctl::Control();
     };
