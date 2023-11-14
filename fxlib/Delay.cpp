@@ -13,13 +13,12 @@ t_sample ol::fx::Delay::Process(t_sample in) {
     filt_.SetRes(resonance_);
 
     out = delay_.Read();
-    filt_.Process(out);
-    t_sample filt_out = filt_.Low();
-    // t_sample delay_input = (feedback_ * out) + in;
-    t_sample delay_input = (feedback_ * filt_out) + in;
+    t_sample delay_input = (feedback_ * out) + in;
+
+    filt_.Process(delay_input);
+    delay_input = filt_.Low();
 
     delay_.Write(delay_input);
-    out = (feedback_ * out) + ((1.0f - feedback_) * in);
 
     if (counter_ % 30000 == 0) {
         counter_ = 0;
