@@ -8,4 +8,6 @@
 #include "ol_fxlib_core.h"
 #include "FxControlPanel.h"
 #include "FxChain.h"
+#include "LPF.h"
+#include "Reverb.h"
 #endif //OL_DSP_OL_FXLIB_H

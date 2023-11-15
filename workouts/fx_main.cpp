@@ -11,19 +11,23 @@ int main() {
     juce::AudioDeviceManager deviceManager = juce::AudioDeviceManager();
     deviceManager.initialiseWithDefaultDevices(2, 2);
 
-    FxControlPanel cp;
-    FxChain fx(&cp);
+//    FxControlPanel cp;
+//    FxChain fx(&cp);
+    ReverbControlPanel reverb_control_panel;
+    FxControlPanel fx_control_panel(&reverb_control_panel);
+    Reverb reverb(&reverb_control_panel);
+    Fx *fx = &reverb;
     auto midiDevices = juce::MidiInput::getAvailableDevices();
     std::cout << "MIDI inputs:" << std::endl;
 
-    FxMidiCallback midi_callback(&cp);
+    FxMidiCallback midi_callback(&fx_control_panel);
     for (const auto &input: midiDevices) {
         deviceManager.setMidiInputDeviceEnabled(input.identifier, true);
         deviceManager.addMidiInputDeviceCallback(input.identifier, &midi_callback);
         std::cout << " name: " << input.name << "; identifier: " << input.identifier << std::endl;
     }
 
-    FxAudioCallback audio_callback(&deviceManager, &fx);
+    FxAudioCallback audio_callback(&deviceManager, fx);
 
     std::cout << "Send me some audio!" << std::endl;
     std::cout << "t: play test sound" << std::endl;

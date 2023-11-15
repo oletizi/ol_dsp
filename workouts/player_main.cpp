@@ -49,7 +49,8 @@ int main(int argc, char *argv[]) {
     juce::AudioFormatReaderSource f_reader_source(f_reader, true);
     std::cout << "  created AudioFormatReaderSource." << std::endl;
 
-    ol::fx::FxControlPanel cp;
+    ol::fx::ReverbControlPanel reverb_control_panel;
+    ol::fx::FxControlPanel cp(&reverb_control_panel);
     ol::fx::FxChain fx(&cp);
     SpyAudioSource my_spy_audio_source(&fx, &f_reader_source);
     std::cout << "  created SpyAudioSource around AudioFormatReaderSource." << std::endl;

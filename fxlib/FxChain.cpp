@@ -19,10 +19,10 @@ int ol::fx::FxChain::Process(const float &in1, const float &in2, float *out1, fl
     *out2 += delay_value_2;
 
     // process reverb
-    verb_.SetFeedback(control_panel_->reverb_time.Value());
-    verb_.SetLpFreq(control_panel_->reverb_cutoff.Value());
+    verb_.SetFeedback(control_panel_->reverb_control_->reverb_time.Value());
+    verb_.SetLpFreq(control_panel_->reverb_control_->reverb_cutoff.Value());
 
-    t_sample verb_balance = control_panel_->reverb_balance.Value();
+    t_sample verb_balance = control_panel_->reverb_control_->reverb_balance.Value();
     rv += verb_.Process(*out1, *out2, &wet_out_1, &wet_out_2);
     *out1 += (wet_out_1 * verb_balance);
     *out2 += (wet_out_2 * verb_balance);

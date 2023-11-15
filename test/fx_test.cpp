@@ -5,6 +5,23 @@
 #include "daisysp.h"
 #include "ol_fxlib.h"
 
+TEST(FX, Reverb) {
+    ol::fx::ReverbControlPanel control_panel;
+    ol::fx::Reverb reverb(&control_panel);
+    
+    t_sample sample_rate = 48000;
+    reverb.Init(sample_rate);
+    t_sample in = 0;
+    t_sample in2 = 0;
+    t_sample out1 = 1;
+    t_sample out2 = 1;
+
+    int rv = reverb.Process(in, in2, &out1, &out2);
+    EXPECT_EQ(0, rv);
+    EXPECT_EQ(0, out1);
+    EXPECT_EQ(0, out2);
+}
+
 TEST(FX, Delay) {
     ol::fx::Delay delay;
     t_sample in = 1;

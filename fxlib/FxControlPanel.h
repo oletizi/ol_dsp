@@ -6,6 +6,7 @@
 #define OL_DSP_FXCONTROLPANEL_H
 
 #include "Control.h"
+#include "ReverbControlPanel.h"
 
 #define CC_REVERB_TIME 32
 #define CC_REVERB_CUTOFF 33
@@ -25,10 +26,10 @@
 namespace ol::fx {
     class FxControlPanel {
     public:
-        FxControlPanel() {
-            reverb_time.UpdateValueHardware(0.25);
-            reverb_cutoff.UpdateValueHardware(.4);
-            reverb_balance.UpdateValueHardware(0.3);
+        explicit FxControlPanel(ReverbControlPanel * reverb_control) : reverb_control_(reverb_control) {
+            reverb_control_->reverb_time.UpdateValueHardware(0.25);
+            reverb_control_->reverb_cutoff.UpdateValueHardware(.4);
+            reverb_control_->reverb_balance.UpdateValueHardware(0.3);
             delay_feedback.UpdateValueHardware(0.4);
             delay_time.UpdateValueHardware(0.5);
             delay_cutoff.UpdateValueHardware(0.4);
@@ -42,11 +43,7 @@ namespace ol::fx {
         void UpdateMidi(int controller_number, int controller_value);
 
         // Reverb
-        ctl::Control reverb_time = ctl::Control();
-        ctl::Control reverb_cutoff = ctl::Control(
-                core::Scale(0, 1, 0, 20000, 1),
-                core::Scale(0, 127, 0, 20000, 1));
-        ctl::Control reverb_balance = ctl::Control();
+        ReverbControlPanel *reverb_control_;
 
         // Delay
         ctl::Control delay_time = ctl::Control(

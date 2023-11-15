@@ -6,13 +6,13 @@
 void ol::fx::FxControlPanel::UpdateMidi(int controller_number, int value) {
     switch (controller_number) {
         case CC_REVERB_TIME:
-            reverb_time.UpdateValueMidi(value);
+            reverb_control_->reverb_time.UpdateValueMidi(value);
             break;
         case CC_REVERB_CUTOFF:
-            reverb_cutoff.UpdateValueMidi(value);
+            reverb_control_->reverb_cutoff.UpdateValueMidi(value);
             break;
         case CC_REVERB_BALANCE:
-            reverb_balance.UpdateValueMidi(value);
+            reverb_control_->reverb_balance.UpdateValueMidi(value);
             break;
         case CC_DELAY_TIME:
             delay_time.UpdateValueMidi(value);

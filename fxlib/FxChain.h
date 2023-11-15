@@ -9,14 +9,15 @@
 #include "LPF.h"
 #include "FxControlPanel.h"
 #include "Effects/reverbsc.h"
+#include "Fx.h"
 
 #define CHANNEL_COUNT 2
 namespace ol::fx {
-    class FxChain {
+    class FxChain : public Fx {
     public:
         explicit FxChain(FxControlPanel *control_panel) : control_panel_(control_panel) {}
 
-        void Init(t_sample sample_rate) {
+        void Init(t_sample sample_rate) override {
             verb_.Init(sample_rate);
             for (auto &delay: delays) {
                 delay = Delay();
@@ -29,7 +30,7 @@ namespace ol::fx {
             updateLpfs();
         }
 
-        int Process(const t_sample &in1, const t_sample &in2, t_sample *out1, t_sample *out2);
+        int Process(const t_sample &in1, const t_sample &in2, t_sample *out1, t_sample *out2) override;
 
     private:
 

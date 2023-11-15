@@ -12,7 +12,7 @@
 using namespace ol::fx;
 class FxAudioCallback : public juce::AudioIODeviceCallback {
 public:
-    explicit FxAudioCallback(juce::AudioDeviceManager *device_manager, FxChain *fx)
+    explicit FxAudioCallback(juce::AudioDeviceManager *device_manager, Fx *fx)
             : device_manager_(device_manager), fx_(fx){
         std::cout << "FxAudioCallback: adding myself to device manager..." << std::endl;
         device_manager->addAudioCallback(this);
@@ -29,7 +29,7 @@ public:
 
 private:
     juce::AudioDeviceManager *device_manager_;
-    FxChain *fx_;
+    Fx *fx_;
     uint64_t count_;
 };
 
