@@ -5,6 +5,7 @@
 #ifndef OL_DSP_REVERBCONTROLPANEL_H
 #define OL_DSP_REVERBCONTROLPANEL_H
 
+#include "cc_map.h"
 #include "Control.h"
 
 namespace ol::fx {
@@ -15,6 +16,7 @@ namespace ol::fx {
             reverb_cutoff.UpdateValueHardware(0.4);
             reverb_balance.UpdateValueHardware(0.5);
         };
+        void UpdateMidi(uint16_t control_number, uint16_t control_value);
         ctl::Control reverb_time = ctl::Control();
         ctl::Control reverb_cutoff = ctl::Control(
                 core::Scale(0, 1, 0, 20000, 1),
