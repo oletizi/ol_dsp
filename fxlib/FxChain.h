@@ -5,10 +5,10 @@
 #ifndef OL_DSP_FXCHAIN_H
 #define OL_DSP_FXCHAIN_H
 
-#include "ol_fxlib_core.h"
 #include "Delay.h"
 #include "LPF.h"
 #include "FxControlPanel.h"
+#include "Effects/reverbsc.h"
 
 #define CHANNEL_COUNT 2
 namespace ol::fx {

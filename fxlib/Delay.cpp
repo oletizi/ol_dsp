@@ -2,7 +2,6 @@
 // Created by Orion Letizi on 11/11/23.
 //
 
-#include "ol_fxlib_core.h"
 #include "Delay.h"
 
 t_sample ol::fx::Delay::Process(t_sample in) {

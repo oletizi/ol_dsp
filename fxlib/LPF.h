@@ -23,7 +23,7 @@ namespace ol::fx {
             for (auto &biquad: biquads_) {
                 biquad = daisysp::Biquad();
             }
-            updateFilters();
+            this->updateFilters();
         }
 
         void Init(t_sample sample_rate);

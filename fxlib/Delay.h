@@ -5,7 +5,10 @@
 #ifndef OL_DSP_DELAY_H
 #define OL_DSP_DELAY_H
 
-#include "ol_fxlib_core.h"
+#include "ol_corelib.h"
+#include "Utility/delayline.h"
+#include "Filters/moogladder.h"
+#include "Filters/svf.h"
 
 namespace ol::fx {
     class Delay {

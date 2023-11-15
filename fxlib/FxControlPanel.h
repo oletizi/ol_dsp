@@ -5,6 +5,8 @@
 #ifndef OL_DSP_FXCONTROLPANEL_H
 #define OL_DSP_FXCONTROLPANEL_H
 
+#include "Control.h"
+
 #define CC_REVERB_TIME 32
 #define CC_REVERB_CUTOFF 33
 #define CC_REVERB_BALANCE 34
@@ -19,9 +21,6 @@
 #define CC_LPF_CUTOFF 41
 #define CC_LPF_RESONANCE 42
 #define CC_LPF_TYPE 43
-
-#include "ol_corelib.h"
-#include "ol_ctllib.h"
 
 namespace ol::fx {
     class FxControlPanel {
