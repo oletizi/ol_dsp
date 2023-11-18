@@ -8,16 +8,17 @@
 #include "ol_corelib.h"
 #include "Control.h"
 #include "cc_map.h"
+#include "Delay.h"
 
-#define MAX_TIME 48000.0f
 namespace ol::fx {
 
     class DelayControlPanel {
     public:
         void UpdateMidi(uint16_t control_number, uint16_t control_value);
+
         ctl::Control time = ctl::Control(
-                core::Scale(0, 1, 0, MAX_TIME, 1),
-                core::Scale(0, 127, 0, MAX_TIME, 1)
+                core::Scale(0, 1, 0, Delay::MAX_DELAY_SAMPLES, 1),
+                core::Scale(0, 127, 0, Delay::MAX_DELAY_SAMPLES, 1)
         );
         ctl::Control feedback = ctl::Control();
         ctl::Control cutoff = ctl::Control(
