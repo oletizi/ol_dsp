@@ -16,13 +16,12 @@ namespace ol::fx {
 
     class Delay {
     public:
-        constexpr static const size_t MAX_DELAY_SAMPLES = 48000;
         enum FilterType {
             SVF,
             MOOG_LADDER
         };
 
-        explicit Delay(DelayControlPanel *cp, daisysp::DelayLine<t_sample, MAX_DELAY_SAMPLES> *delay_line) :
+        explicit Delay(ol::fx::DelayControlPanel *cp, daisysp::DelayLine<t_sample, MAX_DELAY_SAMPLES> *delay_line) :
                 cp_(cp),
                 delay_line_(delay_line) {}
 

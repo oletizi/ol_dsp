@@ -24,7 +24,8 @@ TEST(FX, Reverb) {
 
 TEST(FX, Delay) {
     ol::fx::DelayControlPanel control_panel;
-    ol::fx::Delay delay(&control_panel);
+    daisysp::DelayLine<t_sample, MAX_DELAY_SAMPLES> delay_line;
+    ol::fx::Delay delay(&control_panel, &delay_line);
     t_sample in = 1;
     t_sample out = delay.Process(in);
     t_sample sample_rate = 48000;

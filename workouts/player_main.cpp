@@ -52,7 +52,11 @@ int main(int argc, char *argv[]) {
     ol::fx::ReverbControlPanel reverb_control_panel;
     ol::fx::DelayControlPanel delay_control_panel;
     ol::fx::FxControlPanel fx_control_panel(&reverb_control_panel, &delay_control_panel);
-    ol::fx::FxChain fx(&fx_control_panel);
+    daisysp::DelayLine<t_sample, MAX_DELAY_SAMPLES> delay_line_1;
+    daisysp::DelayLine<t_sample, MAX_DELAY_SAMPLES> delay_line_2;
+    ol::fx::Delay delay1(&delay_control_panel, &delay_line_1);
+    ol::fx::Delay delay2(&delay_control_panel, &delay_line_2);
+    ol::fx::FxChain fx(&fx_control_panel, &delay1, &delay2);
     SpyAudioSource my_spy_audio_source(&fx, &f_reader_source);
     std::cout << "  created SpyAudioSource around AudioFormatReaderSource." << std::endl;
     transport.setSource(&my_spy_audio_source);

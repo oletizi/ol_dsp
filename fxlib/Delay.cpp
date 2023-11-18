@@ -10,7 +10,7 @@ t_sample ol::fx::Delay::Process(t_sample in) {
     // Update parameters
     if (time_ != cp_->time.Value()) {
         time_ = cp_->time.Value();
-        delay_.SetDelay(time_);
+        delay_line_->SetDelay(time_);
     }
     if (feedback_ != cp_->feedback.Value()) {
         feedback_ = cp_->feedback.Value();
@@ -24,14 +24,14 @@ t_sample ol::fx::Delay::Process(t_sample in) {
         filt_svf_.SetRes(resonance_);
     }
     // assign current delay value to output
-    out = delay_.Read();
+    out = delay_line_->Read();
 
     // prepare feedback
     filt_svf_.Process(out);
     t_sample delay_input = (feedback_* filt_svf_.Low()) + in;
 
     // write feedback into delay
-    delay_.Write(delay_input);
+    delay_line_->Write(delay_input);
 
     if (counter_ % 30000 == 0) {
         counter_ = 0;
