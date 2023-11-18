@@ -17,4 +17,4 @@ add_library(ol_fxlib ol_fxlib.h
         DelayControlPanel.cpp
         DelayControlPanel.h)
 target_link_libraries(ol_fxlib ol_corelib ol_ctllib DaisySP)
-target_include_directories(ol_fxlib PUBLIC .)
+target_include_directories(ol_fxlib PUBLIC . ..)

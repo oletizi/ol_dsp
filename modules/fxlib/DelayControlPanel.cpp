@@ -5,7 +5,7 @@
 #include "DelayControlPanel.h"
 
 namespace ol::fx {
-    void DelayControlPanel::UpdateMidi(uint16_t control_number, uint16_t control_value) {
+    void DelayControlPanel::UpdateMidi(int control_number, int control_value) {
         switch (control_number) {
             case CC_DELAY_TIME:
                 time.UpdateValueMidi(control_value);

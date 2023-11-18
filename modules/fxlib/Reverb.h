@@ -5,14 +5,16 @@
 #ifndef OL_DSP_REVERB_H
 #define OL_DSP_REVERB_H
 
-#include "ol_corelib.h"
+#include "corelib/ol_corelib.h"
 #include "ReverbControlPanel.h"
 #include "Fx.h"
 
 namespace ol::fx {
     class Reverb : public Fx {
     public:
-        explicit Reverb(ol::fx::ReverbControlPanel *control_panel) : control_panel_(control_panel) {};
+        explicit Reverb(ol::fx::ReverbControlPanel *control_panel, daisysp::ReverbSc * reverb) :
+        control_panel_(control_panel),
+        reverb_(reverb){};
 
         void Init(t_sample sample_rate) override;
 
@@ -21,7 +23,7 @@ namespace ol::fx {
     private:
         void updateReverb();
 
-        daisysp::ReverbSc verb_;
+        daisysp::ReverbSc * reverb_;
         ReverbControlPanel *control_panel_;
         t_sample previous_time_ = 0;
         t_sample previous_cutoff_ = 0;

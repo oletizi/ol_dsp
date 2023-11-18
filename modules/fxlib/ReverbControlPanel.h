@@ -5,9 +5,9 @@
 #ifndef OL_DSP_REVERBCONTROLPANEL_H
 #define OL_DSP_REVERBCONTROLPANEL_H
 
+#include <cstdint>
 #include "cc_map.h"
-#include "Control.h"
-#include "cc_map.h"
+#include "ctllib/Control.h"
 
 namespace ol::fx {
     class ReverbControlPanel {

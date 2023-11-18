@@ -4,4 +4,4 @@ add_library(ol_ctllib
         Control.h
         Control.cpp)
 target_link_libraries(ol_ctllib ol_corelib DaisySP)
-target_include_directories(ol_ctllib PUBLIC .)
+target_include_directories(ol_ctllib PUBLIC . ..)

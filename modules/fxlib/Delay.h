@@ -6,7 +6,7 @@
 #define OL_DSP_DELAY_H
 #define MAX_DELAY 48000
 
-#include "ol_corelib.h"
+#include "corelib/ol_corelib.h"
 #include "Utility/delayline.h"
 #include "Filters/moogladder.h"
 #include "Filters/svf.h"
@@ -16,11 +16,6 @@ namespace ol::fx {
 
     class Delay {
     public:
-        enum FilterType {
-            SVF,
-            MOOG_LADDER
-        };
-
         explicit Delay(ol::fx::DelayControlPanel *cp, daisysp::DelayLine<t_sample, MAX_DELAY_SAMPLES> *delay_line) :
                 cp_(cp),
                 delay_line_(delay_line) {}
@@ -31,6 +26,7 @@ namespace ol::fx {
             cp_->feedback.UpdateValueHardware(0.2);
             cp_->cutoff.UpdateValueHardware(0.5);
             cp_->resonance.UpdateValueHardware(0);
+            cp_->balance.UpdateValueHardware(0.5);
 
             delay_line_->Init();
             delay_line_->SetDelay(cp_->time.Value());
@@ -51,6 +47,7 @@ namespace ol::fx {
         float feedback_ = 0;
         float cutoff_ = 0;
         float resonance_ = 0;
+        float balance_ = 0;
     };
 }
 #endif //OL_DSP_DELAY_H

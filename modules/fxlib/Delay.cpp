@@ -23,8 +23,11 @@ t_sample ol::fx::Delay::Process(t_sample in) {
         resonance_ = cp_->resonance.Value();
         filt_svf_.SetRes(resonance_);
     }
+    if (balance_ != cp_->balance.Value()) {
+        balance_ = cp_->balance.Value();
+    }
     // assign current delay value to output
-    out = delay_line_->Read();
+    out = (delay_line_->Read() * balance_) + (in * 1-balance_) ;
 
     // prepare feedback
     filt_svf_.Process(out);

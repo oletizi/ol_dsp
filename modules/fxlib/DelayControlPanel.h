@@ -4,16 +4,15 @@
 
 #ifndef OL_DSP_DELAYCONTROLPANEL_H
 #define OL_DSP_DELAYCONTROLPANEL_H
-
-#include "ol_corelib.h"
-#include "ol_fxlib_core.h"
-#include "Control.h"
+#include <cstdint>
+#include "fxlib/ol_fxlib_core.h"
+#include "ctllib/Control.h"
 #include "cc_map.h"
 namespace ol::fx {
 
     class DelayControlPanel {
     public:
-        void UpdateMidi(uint16_t control_number, uint16_t control_value);
+        void UpdateMidi(int control_number, int control_value);
 
         ctl::Control time = ctl::Control(
                 core::Scale(0, 1, 0, MAX_DELAY_SAMPLES, 1),

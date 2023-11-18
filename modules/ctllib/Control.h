@@ -5,8 +5,7 @@
 #ifndef OL_DSP_CONTROL_H
 #define OL_DSP_CONTROL_H
 
-#include <cstdint>
-#include "ol_corelib.h"
+#include "corelib/ol_corelib.h"
 
 namespace ol::ctl {
     /**

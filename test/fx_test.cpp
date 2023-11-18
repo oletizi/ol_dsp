@@ -7,8 +7,9 @@
 
 TEST(FX, Reverb) {
     ol::fx::ReverbControlPanel control_panel;
-    ol::fx::Reverb reverb(&control_panel);
-    
+    daisysp::ReverbSc verb;
+    ol::fx::Reverb reverb(&control_panel, &verb);
+
     t_sample sample_rate = 48000;
     reverb.Init(sample_rate);
     t_sample in = 0;
@@ -46,4 +47,16 @@ TEST(FX, Delay) {
         EXPECT_FALSE(isnan(out));
         //std::cout << "in: " << in << "; out: " << out << std::endl;
     }
+}
+
+TEST(FX, FxChain) {
+
+    ol::fx::ReverbControlPanel reverb_control_panel;
+    ol::fx::DelayControlPanel delay_control_panel;
+    ol::fx::FxControlPanel control_panel = ol::fx::FxControlPanel(&reverb_control_panel, &delay_control_panel);
+    daisysp::DelayLine<t_sample, MAX_DELAY_SAMPLES> delay_line1;
+    daisysp::DelayLine<t_sample, MAX_DELAY_SAMPLES> delay_line2;
+    ol::fx::Delay delay1 = ol::fx::Delay(&delay_control_panel, &delay_line1);
+    ol::fx::Delay delay2 = ol::fx::Delay(&delay_control_panel, &delay_line2);
+    ol::fx::FxChain chain(&control_panel, &delay1, &delay2);
 }
