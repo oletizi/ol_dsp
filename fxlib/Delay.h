@@ -52,16 +52,14 @@ namespace ol::fx {
 
         uint64_t counter_ = 0;
         t_sample sample_rate_;
-        t_sample delay_time_ = 48000 / 2;
+        t_sample delay_time_ = 48000.0f / 2;
         t_sample feedback_ = 0.25;
         FilterType filter_type_ = SVF;
-        daisysp::DelayLine<t_sample, 48000> delay_;
+        daisysp::DelayLine<t_sample, 48000> DSY_SDRAM_BSS delay_;
         daisysp::Svf filt_svf_;
         daisysp::MoogLadder filt_moog_;
         t_sample cutoff_ = 0.5f;
         t_sample resonance_ = 0;
     };
 }
-
-
 #endif //OL_DSP_DELAY_H

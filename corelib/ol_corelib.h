@@ -5,6 +5,10 @@
 #ifndef OL_DSP_OL_CORELIB_H
 #define OL_DSP_OL_CORELIB_H
 
+#ifndef DSY_SDRAM_BSS
+#define DSY_SDRAM_BSS
+#endif
+
 #define t_sample float
 
 namespace ol::core {
