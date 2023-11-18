@@ -15,18 +15,18 @@
 namespace ol::fx {
     class FxChain : public Fx {
     public:
-        explicit FxChain(FxControlPanel *control_panel) : control_panel_(control_panel) {}
+        explicit FxChain(FxControlPanel *control_panel) :
+                control_panel_(control_panel),
+                delay1_(Delay(control_panel->delay_control_)),
+                delay2_((Delay(control_panel->delay_control_))){}
 
         void Init(t_sample sample_rate) override {
             verb_.Init(sample_rate);
-            for (auto &delay: delays) {
-                delay = Delay();
-                delay.Init(sample_rate);
-            }
-            for (auto & lpf : lpfs_) {
+            delay1_.Init(sample_rate);
+            delay2_.Init(sample_rate);
+            for (auto &lpf: lpfs_) {
                 lpf.Init(sample_rate);
             }
-            updateDelays();
             updateLpfs();
         }
 
@@ -37,13 +37,12 @@ namespace ol::fx {
         /**
          * Update parameters on the delay lines.
          */
-        void updateDelays();
         void updateLpfs();
 
         daisysp::ReverbSc verb_;
-        Delay delays[CHANNEL_COUNT];
+        Delay delay1_;
+        Delay delay2_;
         LPF lpfs_[CHANNEL_COUNT];
-        //daisysp::Svf lpfs_[CHANNEL_COUNT];
         FxControlPanel *control_panel_;
         uint64_t counter_ = 0;
     };

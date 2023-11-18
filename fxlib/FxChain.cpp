@@ -7,13 +7,11 @@
 int ol::fx::FxChain::Process(const float &in1, const float &in2, float *out1, float *out2) {
     float wet_out_1 = 0, wet_out_2 = 0;
     int rv = 0;
-    updateDelays();
     updateLpfs();
 
     // process delay lines
-    t_sample delay_balance = control_panel_->delay_balance.Value();
-    t_sample delay_value_1 = delays[0].Process(in1) * delay_balance;
-    t_sample delay_value_2 = delays[1].Process(in2) * delay_balance;
+    t_sample delay_value_1 = delay1_.Process(in1);
+    t_sample delay_value_2 = delay2_.Process(in2);
 
     *out1 += delay_value_1;
     *out2 += delay_value_2;
@@ -34,17 +32,6 @@ int ol::fx::FxChain::Process(const float &in1, const float &in2, float *out1, fl
     }
     counter_++;
     return rv;
-}
-
-void ol::fx::FxChain::updateDelays() {
-    for (auto &delay: delays) {
-        delay.UpdateDelayTime(control_panel_->delay_time.Value());
-        delay.UpdateFeedback(control_panel_->delay_feedback.Value());
-        delay.UpdateCutoff(control_panel_->delay_cutoff.Value());
-        delay.UpdateResonance(control_panel_->delay_resonance.Value());
-        delay.UpdateFilterType(control_panel_->delay_filter_type.Value() < 0.5 ? Delay::FilterType::SVF
-                                                                               : Delay::FilterType::MOOG_LADDER);
-    }
 }
 
 void ol::fx::FxChain::updateLpfs() {

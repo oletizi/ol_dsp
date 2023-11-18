@@ -7,6 +7,7 @@
 
 #include "cc_map.h"
 #include "Control.h"
+#include "cc_map.h"
 
 namespace ol::fx {
     class ReverbControlPanel {

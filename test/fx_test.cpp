@@ -23,13 +23,16 @@ TEST(FX, Reverb) {
 }
 
 TEST(FX, Delay) {
-    ol::fx::Delay delay;
+    ol::fx::DelayControlPanel control_panel;
+    ol::fx::Delay delay(&control_panel);
     t_sample in = 1;
     t_sample out = delay.Process(in);
     t_sample sample_rate = 48000;
     t_sample freq = 20000;
-    delay.UpdateDelayTime(sample_rate / 4);
+    //delay.UpdateDelayTime(sample_rate / 4);
+    control_panel.time.UpdateValueHardware(0.5);
     daisysp::Oscillator osc;
+    delay.Init(sample_rate);
     osc.Init(sample_rate);
     osc.SetFreq(freq);
     for (int i = 0; i < sample_rate; i++) {

@@ -50,8 +50,9 @@ int main(int argc, char *argv[]) {
     std::cout << "  created AudioFormatReaderSource." << std::endl;
 
     ol::fx::ReverbControlPanel reverb_control_panel;
-    ol::fx::FxControlPanel cp(&reverb_control_panel);
-    ol::fx::FxChain fx(&cp);
+    ol::fx::DelayControlPanel delay_control_panel;
+    ol::fx::FxControlPanel fx_control_panel(&reverb_control_panel, &delay_control_panel);
+    ol::fx::FxChain fx(&fx_control_panel);
     SpyAudioSource my_spy_audio_source(&fx, &f_reader_source);
     std::cout << "  created SpyAudioSource around AudioFormatReaderSource." << std::endl;
     transport.setSource(&my_spy_audio_source);
@@ -60,7 +61,8 @@ int main(int argc, char *argv[]) {
     auto midiDevices = juce::MidiInput::getAvailableDevices();
     std::cout << "MIDI inputs: " << std::endl;
 
-    FxMidiCallback midi_callback(&cp);
+    FxMidiCallback midi_callback(&fx_control_panel);
+
     for (const auto &input: midiDevices) {
         deviceManager.setMidiInputDeviceEnabled(input.identifier, true);
         deviceManager.addMidiInputDeviceCallback(input.identifier, &midi_callback);

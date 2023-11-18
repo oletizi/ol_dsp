@@ -13,6 +13,8 @@ add_library(ol_fxlib ol_fxlib.h
         ReverbControlPanel.cpp
         ReverbControlPanel.h
         Fx.h
-        cc_map.h)
+        cc_map.h
+        DelayControlPanel.cc
+        DelayControlPanel.h)
 target_link_libraries(ol_fxlib ol_corelib ol_ctllib DaisySP)
 target_include_directories(ol_fxlib PUBLIC .)

@@ -9,6 +9,7 @@
 #include "Utility/delayline.h"
 #include "Filters/moogladder.h"
 #include "Filters/svf.h"
+#include "DelayControlPanel.h"
 
 namespace ol::fx {
     class Delay {
@@ -18,48 +19,33 @@ namespace ol::fx {
             MOOG_LADDER
         };
 
+        explicit Delay(DelayControlPanel *cp) : cp_(cp) {}
+
         void Init(t_sample sample_rate) {
             sample_rate_ = sample_rate;
-            delay_time_ = sample_rate / 2;
+            cp_->time.UpdateValueHardware(0.5);
+            cp_->feedback.UpdateValueHardware(0.2);
+            cp_->cutoff.UpdateValueHardware(0.5);
+            cp_->resonance.UpdateValueHardware(0);
+
             delay_.Init();
-            delay_.SetDelay(delay_time_);
-
+            delay_.SetDelay(cp_->time.Value());
             filt_svf_.Init(sample_rate);
-            filt_moog_.Init(sample_rate);
-
-            updateFilter();
+            filt_svf_.SetFreq(cp_->cutoff.Value());
+            filt_svf_.SetRes(cp_->resonance.Value());
         }
-
-        void UpdateFilterType(FilterType type) { filter_type_ = type; }
-
-        void UpdateDelayTime(t_sample delay_time);
-
-        void UpdateFeedback(t_sample feedback);
-
         t_sample Process(t_sample in);
 
-        void UpdateCutoff(t_sample cutoff);
-
-        void UpdateResonance(t_sample resonance);
-
     private:
-        void updateFilter() {
-            filt_svf_.SetFreq(cutoff_);
-            filt_moog_.SetFreq(cutoff_);
-            filt_svf_.SetRes(resonance_);
-            filt_moog_.SetRes(resonance_);
-        }
-
         uint64_t counter_ = 0;
-        t_sample sample_rate_;
-        t_sample delay_time_ = 48000.0f / 2;
-        t_sample feedback_ = 0.25;
-        FilterType filter_type_ = SVF;
+        t_sample sample_rate_ = 0;
+        DelayControlPanel *cp_;
         daisysp::DelayLine<t_sample, 48000> DSY_SDRAM_BSS delay_;
         daisysp::Svf filt_svf_;
-        daisysp::MoogLadder filt_moog_;
-        t_sample cutoff_ = 0.5f;
-        t_sample resonance_ = 0;
+        t_sample time_ = 0;
+        float feedback_ = 0;
+        float cutoff_ = 0;
+        float resonance_ = 0;
     };
 }
 #endif //OL_DSP_DELAY_H

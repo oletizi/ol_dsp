@@ -14,7 +14,8 @@ int main() {
 //    FxControlPanel cp;
 //    FxChain fx(&cp);
     ReverbControlPanel reverb_control_panel;
-    FxControlPanel fx_control_panel(&reverb_control_panel);
+    DelayControlPanel delay_control_panel;
+    FxControlPanel fx_control_panel(&reverb_control_panel, &delay_control_panel);
     Reverb reverb(&reverb_control_panel);
     Fx *fx = &reverb;
     auto midiDevices = juce::MidiInput::getAvailableDevices();
