@@ -28,6 +28,8 @@ namespace ol::fx {
         daisysp::MoogLadder moog_ladder_;
         daisysp::Biquad biquads_[BIQUAD_COUNT];
         LpfControlPanel *control_panel_;
+        float cutoff_ = 0;
+        float resonance_ = 0;
     };
 }
 

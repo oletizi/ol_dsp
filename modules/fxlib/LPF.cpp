@@ -20,18 +20,28 @@ t_sample LPF::Process(const t_sample in) {
 
     t_sample cutoff = control_panel_->cutoff.Value();
     t_sample resonance = control_panel_->resonance.Value();
-    svf_.SetFreq(cutoff);
-    svf_.SetRes(resonance);
+    if (cutoff_ != cutoff) {
+        cutoff_ = cutoff;
+        svf_.SetFreq(cutoff_);
+        moog_ladder_.SetFreq(cutoff_);
+        for (auto &biquad: biquads_) {
+            biquad.SetCutoff(cutoff_);
+        }
+    }
 
-    moog_ladder_.SetFreq(cutoff);
-    moog_ladder_.SetRes(resonance);
+    if (resonance_ != resonance) {
+        resonance_ = resonance;
+        svf_.SetRes(resonance_);
+        moog_ladder_.SetRes(resonance_);
+        for (auto &biquad: biquads_) {
+            biquad.SetRes(resonance_);
+        }
+    }
 
     svf_.Process(in);
     t_sample moog_out = moog_ladder_.Process(in);
     t_sample biquad_out = in;
     for (auto &biquad: biquads_) {
-        biquad.SetCutoff(cutoff);
-        biquad.SetRes(resonance);
         biquad_out = biquad.Process(biquad_out);
     }
 
