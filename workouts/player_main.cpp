@@ -61,7 +61,11 @@ int main(int argc, char *argv[]) {
     daisysp::DelayLine<t_sample, MAX_DELAY_SAMPLES> delay_line_2;
     ol::fx::Delay delay1(&delay_control_panel, &delay_line_1, &profile);
     ol::fx::Delay delay2(&delay_control_panel, &delay_line_2, &profile);
-    ol::fx::FxChain fx(&fx_control_panel, &delay1, &delay2);
+
+    daisysp::ReverbSc verb;
+    ol::fx::Reverb reverb(&reverb_control_panel, &verb);
+
+    ol::fx::FxChain fx(&fx_control_panel, &delay1, &delay2, &reverb);
     SpyAudioSource my_spy_audio_source(&profile, &fx, &f_reader_source);
     std::cout << "  created SpyAudioSource around AudioFormatReaderSource." << std::endl;
     transport.setSource(&my_spy_audio_source);
