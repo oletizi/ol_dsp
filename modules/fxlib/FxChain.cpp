@@ -8,10 +8,10 @@ int ol::fx::FxChain::Process(const float &in1, const float &in2, float *out1, fl
     float wet_out_1 = 0, wet_out_2 = 0;
     int rv = 0;
     updateLpfs();
-
     // process delay lines
-    t_sample delay_value_1 = delay1_->Process(in1);
-    t_sample delay_value_2 = delay2_->Process(in2);
+    float delay_balance = control_panel_->delay_control_->balance.Value();
+    t_sample delay_value_1 = (delay1_->Process(in1) * delay_balance) + (in1 * (1-delay_balance));
+    t_sample delay_value_2 = (delay2_->Process(in2) * delay_balance) + (in2 * (1-delay_balance));
 
     *out1 += delay_value_1;
     *out2 += delay_value_2;

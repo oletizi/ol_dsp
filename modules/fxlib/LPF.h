@@ -5,9 +5,8 @@
 #ifndef OL_DSP_LPF_H
 #define OL_DSP_LPF_H
 
-#include <iostream>
 #include "daisysp.h"
-#include "ol_corelib.h"
+#include "corelib/ol_corelib.h"
 
 #define BIQUAD_COUNT 1
 namespace ol::fx {

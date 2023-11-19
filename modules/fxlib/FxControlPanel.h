@@ -5,7 +5,7 @@
 #ifndef OL_DSP_FXCONTROLPANEL_H
 #define OL_DSP_FXCONTROLPANEL_H
 
-#include "Control.h"
+#include "ctllib/Control.h"
 #include "ReverbControlPanel.h"
 #include "cc_map.h"
 #include "DelayControlPanel.h"
