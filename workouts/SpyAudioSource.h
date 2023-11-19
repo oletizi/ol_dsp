@@ -12,7 +12,7 @@
 
 class SpyAudioSource : public juce::PositionableAudioSource {
 public:
-    explicit SpyAudioSource(ol::fx::FxChain *fx, juce::AudioFormatReaderSource *source);
+    explicit SpyAudioSource(ol::perflib::Profile *profile, ol::fx::FxChain *fx, juce::AudioFormatReaderSource *source);
 
     void prepareToPlay(int samplesPerBlockExpected, double sampleRate) override;
 
@@ -33,6 +33,7 @@ private:
     uint64_t processed_;
     juce::AudioFormatReaderSource *source_;
     ol::fx::FxChain *fx_;
+    ol::perflib::Profile *profile_;
 };
 
 #endif //OL_DSP_SPYAUDIOSOURCE_H
