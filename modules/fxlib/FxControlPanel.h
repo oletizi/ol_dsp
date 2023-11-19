@@ -9,30 +9,25 @@
 #include "ReverbControlPanel.h"
 #include "cc_map.h"
 #include "DelayControlPanel.h"
+#include "LpfControlPanel.h"
 
 namespace ol::fx {
     class FxControlPanel {
     public:
-        explicit FxControlPanel(ReverbControlPanel * reverb_control, DelayControlPanel * delay_control)
-            : reverb_control_(reverb_control), delay_control_(delay_control) {
-            lpf_cutoff.UpdateValueHardware(0.4);
-            lpf_resonance.UpdateValueHardware(0);
-        }
+        explicit FxControlPanel(ReverbControlPanel *reverb_control, DelayControlPanel *delay_control,
+                                LpfControlPanel *lpf_control) :
+                reverb_control_(reverb_control), delay_control_(delay_control), lpf_control_(lpf_control) {}
 
-        void UpdateMidi(int controller_number, int controller_value);
+        void UpdateMidi(int controller_number, int controller_value) const;
 
         // Reverb
         ReverbControlPanel *reverb_control_;
 
         // Delay
-        DelayControlPanel * delay_control_;
+        DelayControlPanel *delay_control_;
 
         // Filter
-        ctl::Control lpf_cutoff = ctl::Control(
-                core::Scale(0, 1, 0, 20000, 1.1),
-                core::Scale(0, 127, 0, 20000, 1.1));
-        ctl::Control lpf_resonance  = ctl::Control();
-        ctl::Control lpf_type = ctl::Control();
+        LpfControlPanel *lpf_control_;
     };
 }
 
