@@ -5,8 +5,6 @@
 #include "Delay.h"
 
 t_sample ol::fx::Delay::Process(t_sample in) {
-    profile_->Start();
-    profile_->In1(in);
     t_sample out;
 
     // Update parameters
@@ -34,8 +32,6 @@ t_sample ol::fx::Delay::Process(t_sample in) {
     // write feedback into delay
     float delay_input = filt_svf_.Low();
     delay_line_->Write(delay_input);
-    profile_->ValA(delay_input);
-
     //float delay_input = (feedback_ * out) + (in * 0.5f);
     //delay_line_->Write(delay_input);
 
@@ -43,7 +39,5 @@ t_sample ol::fx::Delay::Process(t_sample in) {
         counter_ = 0;
     }
     counter_++;
-    profile_->Out1(out);
-    profile_->End();
     return out;
 }

@@ -3,9 +3,8 @@
 //
 #include "SpyAudioSource.h"
 
-SpyAudioSource::SpyAudioSource(ol::perflib::Profile *profile, ol::fx::FxChain *fx,
+SpyAudioSource::SpyAudioSource(ol::fx::FxChain *fx,
                                juce::AudioFormatReaderSource *source) :
-        profile_(profile),
         fx_(fx), source_(source),
         counter_(0),
         processed_(0) {}
@@ -38,15 +37,7 @@ void SpyAudioSource::getNextAudioBlock(const juce::AudioSourceChannelInfo &buffe
     }
     if (counter_ % 100 == 0) {
         std::cout << "Count: " << counter_ << std::endl;
-        std::cout << "  Max execution time    : " << profile_->MaxExecutionTime() << std::endl;
-        std::cout << "  Average execution time: " << profile_->AverageExecutionTime() << std::endl;
-        std::cout << "  Max input value       :  " << profile_->MaxIn1Value() << std::endl;
-        std::cout << "  Min input value       : " << profile_->MinIn1Value() << std::endl;
-        std::cout << "  Max output value      :  " << profile_->MaxOut1Value() << std::endl;
-        std::cout << "  Min output value      : " << profile_->MinOut1Value() << std::endl;
-        std::cout << "  Max delay input value :  " << profile_->MaxVal1Value() << std::endl;
-        std::cout << "  Min delay output value: " << profile_->MinVal1Value() << std::endl;
-        std::cout << "  Avg abs dely in value :  " << profile_->AvgVal1Value() << std::endl;
+        counter_ = 0;
     }
 }
 

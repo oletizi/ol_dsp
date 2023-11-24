@@ -1,6 +1,5 @@
 #include "gtest/gtest.h"
 #include <ol_synthlib.h>
-#include <ol_fxlib.h>
 
 using namespace ol::synthlib;
 TEST(BasicTestSuite, BasicTest) {
@@ -14,6 +13,4 @@ TEST(Voice, TestBasics) {
     voice.Init(sample_rate);
     t_sample value = voice.Process();
     EXPECT_EQ(value, 0);
-
-
 }

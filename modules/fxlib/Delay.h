@@ -11,17 +11,14 @@
 #include "Filters/moogladder.h"
 #include "Filters/svf.h"
 #include "DelayControlPanel.h"
-#include "perflib/Profile.h"
 
 namespace ol::fx {
 
     class Delay {
     public:
-        Delay(ol::fx::DelayControlPanel *cp, daisysp::DelayLine<t_sample, MAX_DELAY_SAMPLES> *delay_line, perflib::Profile * profile) :
+        Delay(ol::fx::DelayControlPanel *cp, daisysp::DelayLine<t_sample, MAX_DELAY_SAMPLES> *delay_line) :
                 cp_(cp),
-                delay_line_(delay_line),
-                profile_(profile){}
-
+                delay_line_(delay_line){}
         void Init(t_sample sample_rate) {
             sample_rate_ = sample_rate;
             cp_->time.UpdateValueHardware(0.5);
@@ -49,7 +46,6 @@ namespace ol::fx {
         float cutoff_ = 0;
         float resonance_ = 0;
         float balance_ = 0;
-        perflib::Profile *profile_;
     };
 }
 #endif //OL_DSP_DELAY_H

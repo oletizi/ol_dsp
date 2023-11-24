@@ -54,14 +54,10 @@ int main(int argc, char *argv[]) {
     ol::fx::LpfControlPanel lpf_control_panel;
     ol::fx::FxControlPanel fx_control_panel(&reverb_control_panel, &delay_control_panel, &lpf_control_panel);
 
-    ol::perflib::Profile profile(1024, [] () -> uint64_t {
-        return std::chrono::system_clock::now().time_since_epoch().count();
-    });
-
     daisysp::DelayLine<t_sample, MAX_DELAY_SAMPLES> delay_line_1;
     daisysp::DelayLine<t_sample, MAX_DELAY_SAMPLES> delay_line_2;
-    ol::fx::Delay delay1(&delay_control_panel, &delay_line_1, &profile);
-    ol::fx::Delay delay2(&delay_control_panel, &delay_line_2, &profile);
+    ol::fx::Delay delay1(&delay_control_panel, &delay_line_1);
+    ol::fx::Delay delay2(&delay_control_panel, &delay_line_2);
 
     daisysp::ReverbSc verb;
     ol::fx::Reverb reverb(&reverb_control_panel, &verb);
@@ -70,7 +66,7 @@ int main(int argc, char *argv[]) {
     ol::fx::LPF lpf2(&lpf_control_panel);
 
     ol::fx::FxChain fx(&fx_control_panel, &delay1, &delay2, &reverb, &lpf1, &lpf2);
-    SpyAudioSource my_spy_audio_source(&profile, &fx, &f_reader_source);
+    SpyAudioSource my_spy_audio_source(&fx, &f_reader_source);
     std::cout << "  created SpyAudioSource around AudioFormatReaderSource." << std::endl;
     transport.setSource(&my_spy_audio_source);
     player.setSource(&transport);
