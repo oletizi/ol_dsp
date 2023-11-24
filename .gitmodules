@@ -7,10 +7,3 @@
 [submodule "test/googletest"]
 	path = test/googletest
 	url = git@github.com:google/googletest.git
-[submodule "Befaco"]
-	path = Befaco
-	url = git@github.com:VCVRack/Befaco.git
-[submodule "Rack"]
-	path = Rack
-	url = git@github.com:VCVRack/Rack.git
-	branch = v2
