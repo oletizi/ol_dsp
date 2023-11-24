@@ -20,4 +20,8 @@
 #define CC_LPF_RESONANCE 42
 #define CC_LPF_TYPE 43
 
+#define CC_EARLY_PREDELAY 50
+#define CC_REVERB_TYPE 51
+#define CC_REVERB_PREDELAY 52
+
 #endif //OL_DSP_CC_MAP_H
