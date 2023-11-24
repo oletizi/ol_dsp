@@ -7,7 +7,8 @@
 
 #include "daisysp.h"
 #include "juce_audio_devices/juce_audio_devices.h"
-#include "Voice.h"
+#include "synthlib/Voice.h"
+
 
 class SynthAudioCallback : public juce::AudioIODeviceCallback {
 private:
