@@ -17,6 +17,7 @@ target_link_libraries(convolution-workout
         PRIVATE
         juce::juce_core
         juce::juce_audio_devices
+        juce::juce_dsp
         ol_corelib
         ol_fxlib
         ol_synthlib

@@ -13,16 +13,9 @@
 class SynthAudioCallback : public juce::AudioIODeviceCallback {
 private:
     uint32_t counter_ = 0;
-    juce::AudioDeviceManager * device_manager_;
+    juce::AudioDeviceManager *device_manager_;
 public:
-    explicit SynthAudioCallback(juce::AudioDeviceManager *device_manager, ol::synthlib::Voice *pVoice)
-            : device_manager_(device_manager), voice_(pVoice){
-        device_manager->addAudioCallback(this);
-    }
-
-    ~SynthAudioCallback() override {
-        device_manager_->removeAudioCallback(this);
-    }
+    explicit SynthAudioCallback(ol::synthlib::Voice *pVoice) : voice_(pVoice) {}
 
     void audioDeviceIOCallbackWithContext(const float *const *inputChannelData,
                                           int numInputChannels,
@@ -33,7 +26,7 @@ public:
         counter_++;
         for (int i = 0; i < numSamples; i++) {
             float value = voice_->Process();
-            for (int j =0; j<numOutputChannels; j++) {
+            for (int j = 0; j < numOutputChannels; j++) {
                 outputChannelData[j][i] = value;
             }
         }

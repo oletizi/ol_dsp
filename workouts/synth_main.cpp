@@ -25,7 +25,8 @@ int main() {
     }
 
 
-    SynthAudioCallback callback = SynthAudioCallback(&deviceManager, &voice);
+    SynthAudioCallback callback = SynthAudioCallback(&voice);
+    deviceManager.addAudioCallback(&callback);
 
     std::cout << "Send me some MIDI" << std::endl;
     std::cout << "t: play test sound" << std::endl;
