@@ -7,8 +7,8 @@ using namespace juce::dsp;
 
 class ConvolutionCallback : public juce::AudioIODeviceCallback {
 public:
-    explicit ConvolutionCallback(Convolution *convolution, SynthAudioCallback *synthCallback) : synth_callback(
-            synthCallback) {}
+    explicit ConvolutionCallback(Convolution *convolution, SynthAudioCallback *synthCallback)
+            : convolution_(convolution), synth_callback_(synthCallback) {}
 
     void audioDeviceIOCallbackWithContext(const float *const *inputChannelData,
                                           int numInputChannels,
@@ -17,24 +17,34 @@ public:
                                           int numSamples,
                                           const juce::AudioIODeviceCallbackContext &context) override {
         // let the synth do its thing
-        this->synth_callback->audioDeviceIOCallbackWithContext(inputChannelData, numInputChannels,
-                                                               outputChannelData, numOutputChannels,
-                                                               numSamples,
-                                                               context);
+        synth_callback_->audioDeviceIOCallbackWithContext(inputChannelData, numInputChannels,
+                                                                outputChannelData, numOutputChannels,
+                                                                numSamples,
+                                                                context);
         // Now do whatever else needs to happen
         // ...
+        AudioBlock<float> audio_block(outputChannelData, numOutputChannels, numSamples);
+        ProcessContextReplacing processContext(audio_block);
+        convolution_->process(processContext);
     }
 
     void audioDeviceAboutToStart(juce::AudioIODevice *device) override {
-        this->synth_callback->audioDeviceAboutToStart(device);
+        synth_callback_->audioDeviceAboutToStart(device);
+        ProcessSpec pspec{};
+        pspec.sampleRate = device->getCurrentSampleRate();
+        pspec.numChannels = 2; // XXX: initialize somewhere else.
+        pspec.maximumBlockSize = 1024; // XXX: initialize somewhere else.
+
+        convolution_->prepare(pspec);
     }
 
     void audioDeviceStopped() override {
-        this->synth_callback->audioDeviceStopped();
+        synth_callback_->audioDeviceStopped();
     }
 
 private:
-    SynthAudioCallback *synth_callback;
+    SynthAudioCallback *synth_callback_;
+    Convolution *convolution_;
 };
 
 //
