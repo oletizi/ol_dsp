@@ -1,9 +1,9 @@
 [submodule "JUCE"]
 	path = JUCE
-	url = git@github.com:juce-framework/JUCE.git
+	url = git@github.com:oletizi/JUCE.git
 [submodule "DaisySP"]
 	path = DaisySP
-	url = git@github.com:electro-smith/DaisySP.git
+	url = git@github.com:oletizi/DaisySP.git
 [submodule "test/googletest"]
 	path = test/googletest
-	url = git@github.com:google/googletest.git
+	url = git@github.com:oletizi/googletest.git
