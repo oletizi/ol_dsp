@@ -18,7 +18,7 @@ int main() {
     LpfControlPanel lpf_control_panel;
     FxControlPanel fx_control_panel(&reverb_control_panel, &delay_control_panel, &lpf_control_panel);
     daisysp::ReverbSc verb;
-    Reverb reverb(&reverb_control_panel, &verb);
+    ReverbFx reverb(&reverb_control_panel, &verb);
     Fx *fx = &reverb;
     auto midiDevices = juce::MidiInput::getAvailableDevices();
     std::cout << "MIDI inputs:" << std::endl;

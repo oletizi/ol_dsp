@@ -15,7 +15,7 @@
 namespace ol::fx {
     class FxChain : public Fx {
     public:
-        explicit FxChain(FxControlPanel *control_panel, Delay *delay1, Delay *delay2, Reverb *reverb, LPF *lpf1, LPF *lpf2) :
+        explicit FxChain(FxControlPanel *control_panel, Delay *delay1, Delay *delay2, ReverbFx *reverb, LPF *lpf1, LPF *lpf2) :
                 control_panel_(control_panel),
                 delay1_(delay1),
                 delay2_(delay2),
@@ -36,7 +36,7 @@ namespace ol::fx {
 
     private:
 
-        Reverb *verb_;
+        ReverbFx *verb_;
         Delay *delay1_;
         Delay *delay2_;
         FxControlPanel *control_panel_;

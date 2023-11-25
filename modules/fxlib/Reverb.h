@@ -10,9 +10,9 @@
 #include "Fx.h"
 
 namespace ol::fx {
-    class Reverb : public Fx {
+    class ReverbFx : public Fx {
     public:
-        explicit Reverb(ol::fx::ReverbControlPanel *control_panel, daisysp::ReverbSc * reverb) :
+        explicit ReverbFx(ol::fx::ReverbControlPanel *control_panel, daisysp::ReverbSc * reverb) :
         control_panel_(control_panel),
         reverb_(reverb){};
 

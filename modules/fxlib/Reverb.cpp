@@ -5,18 +5,18 @@
 #include "Reverb.h"
 #include "ReverbControlPanel.h"
 
-void ol::fx::Reverb::Init(t_sample sample_rate) {
+void ol::fx::ReverbFx::Init(t_sample sample_rate) {
     reverb_->Init(sample_rate);
 }
 
-int ol::fx::Reverb::Process(const t_sample &in1, const t_sample &in2, t_sample *out1, t_sample *out2) {
+int ol::fx::ReverbFx::Process(const t_sample &in1, const t_sample &in2, t_sample *out1, t_sample *out2) {
     updateReverb();
     int rv = 0;
     rv += reverb_->Process(in1, in2, out1, out2);
     return rv;
 }
 
-void ol::fx::Reverb::updateReverb() {
+void ol::fx::ReverbFx::updateReverb() {
     t_sample time = control_panel_->reverb_time.Value();
     if (time != previous_time_) {
         reverb_->SetFeedback(time);
