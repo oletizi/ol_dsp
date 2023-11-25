@@ -7,3 +7,6 @@
 [submodule "test/googletest"]
 	path = test/googletest
 	url = git@github.com:oletizi/googletest.git
+[submodule "dattorro-verb"]
+	path = dattorro-verb
+	url = git@github.com:oletizi/dattorro-verb.git
