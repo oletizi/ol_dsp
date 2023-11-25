@@ -59,7 +59,8 @@ int main(int argc, char *argv[]) {
     ol::fx::Delay delay1(&delay_control_panel, &delay_line_1);
     ol::fx::Delay delay2(&delay_control_panel, &delay_line_2);
 
-    daisysp::ReverbSc verb;
+    daisysp::ReverbSc reverbsc;
+    ol::fx::ReverbScWrapper verb(&reverbsc);
     ol::fx::ReverbFx reverb(&reverb_control_panel, &verb);
 
     ol::fx::LPF lpf1(&lpf_control_panel);

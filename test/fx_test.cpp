@@ -7,8 +7,9 @@
 
 TEST(FX, Reverb) {
     ol::fx::ReverbControlPanel control_panel;
-    daisysp::ReverbSc verb;
-    ol::fx::Reverb reverb(&control_panel, &verb);
+    daisysp::ReverbSc reverbsc;
+    ol::fx::ReverbScWrapper verb(&reverbsc);
+    ol::fx::ReverbFx reverb(&control_panel, &verb);
 
     t_sample sample_rate = 48000;
     reverb.Init(sample_rate);
@@ -66,6 +67,7 @@ TEST(FX, FxChain) {
     ol::fx::LPF lpf1(&lpf_control_panel);
     ol::fx::LPF lpf2(&lpf_control_panel);
     daisysp::ReverbSc reverbSc;
-    ol::fx::Reverb reverb(&reverb_control_panel, &reverbSc);
+    ol::fx::ReverbScWrapper verb(&reverbSc);
+    ol::fx::ReverbFx reverb(&reverb_control_panel, &verb);
     ol::fx::FxChain chain(&control_panel, &delay1, &delay2, &reverb, &lpf1, &lpf2);
 }
