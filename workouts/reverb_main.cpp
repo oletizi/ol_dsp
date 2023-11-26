@@ -6,9 +6,9 @@
 #include "SynthMidiCallback.h"
 #include "fxlib/ol_fxlib.h"
 
-class ReverbCallback : public juce::AudioIODeviceCallback {
+class ReverbAudioCallback : public juce::AudioIODeviceCallback {
 public:
-    explicit ReverbCallback(ol::fx::reverb::ReverbFx *fx, SynthAudioCallback *synth) :
+    explicit ReverbAudioCallback(ol::fx::reverb::ReverbFx *fx, SynthAudioCallback *synth) :
             fx_(fx), synth_(synth) {}
 
     void audioDeviceAboutToStart(juce::AudioIODevice *device) override {
@@ -54,6 +54,21 @@ public:
     SynthAudioCallback *synth_;
 };
 
+class ReverbMidiCallback : public juce::MidiInputCallback {
+public:
+    explicit ReverbMidiCallback(ol::fx::reverb::ReverbFx *fx) : fx_(fx) {}
+
+    void handleIncomingMidiMessage(juce::MidiInput *source, const juce::MidiMessage &message) override {
+        if (message.isController()) {
+            std::cout << "Reverb midi: controller: " << message.getControllerNumber() << "; val: "
+                      << message.getControllerValue() << std::endl;
+            ol::fx::reverb::UpdateMidi(fx_, message.getControllerNumber(), message.getControllerValue());
+        }
+    }
+
+    ol::fx::reverb::ReverbFx *fx_;
+};
+
 int main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[]) {
     juce::initialiseJuce_GUI();
     juce::AudioDeviceManager deviceManager = juce::AudioDeviceManager();
@@ -64,20 +79,24 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[]) {
 
     ol::synthlib::ControlPanel control_panel;
     ol::synthlib::Voice voice(&control_panel);
-    SynthMidiCallback midi_callback(&control_panel, &voice);
-
-    for (const auto &input: midiDevices) {
-        deviceManager.setMidiInputDeviceEnabled(input.identifier, true);
-        deviceManager.addMidiInputDeviceCallback(input.identifier, &midi_callback);
-        std::cout << " name: " << input.name << "; identifier: " << input.identifier << std::endl;
-    }
-
 
     SynthAudioCallback synth(&voice);
     ol::fx::reverb::ReverbFx fx;
 
+    SynthMidiCallback midi_callback(&control_panel, &voice);
+    ReverbMidiCallback reverb_midi_callback(&fx);
+
+    for (const auto &input: midiDevices) {
+        deviceManager.setMidiInputDeviceEnabled(input.identifier, true);
+        deviceManager.addMidiInputDeviceCallback(input.identifier, &midi_callback);
+        deviceManager.addMidiInputDeviceCallback(input.identifier, &reverb_midi_callback);
+        std::cout << " name: " << input.name << "; identifier: " << input.identifier << std::endl;
+    }
+
+
+
     ol::fx::reverb::Dattorro_Config(&fx, DattorroVerb_create());
-    ReverbCallback reverb_callback(&fx, &synth);
+    ReverbAudioCallback reverb_callback(&fx, &synth);
     deviceManager.addAudioCallback(&reverb_callback);
 
     std::cout << "Send me some MIDI" << std::endl;

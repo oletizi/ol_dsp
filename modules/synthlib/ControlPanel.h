@@ -51,7 +51,7 @@ namespace ol::synthlib {
 
         // TODO: Move this to .cpp file and implement swappable mapping. Maybe even midi learn?
         void UpdateMidi(int ctl, int val) {
-            std::cout << "ctl: " << ctl << "; val: " << val << std::endl;
+            std::cout << "Synth ctl: " << ctl << "; val: " << val << std::endl;
             switch (ctl) {
                 case CC_CTL_VOLUME:
                     master_volume.UpdateValueMidi(val);

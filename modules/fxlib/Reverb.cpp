@@ -5,8 +5,6 @@
 #include "Reverb.h"
 
 namespace ol::fx::reverb {
-
-
     // Dattorro
 
     sDattorroVerb *Dattorro_get(ReverbFx *reverbfx) {
@@ -68,6 +66,46 @@ namespace ol::fx::reverb {
         fx->Init = ReverbSc_Init;
         fx->Process = ReverbSc_Process;
         fx->Update = ReverbSc_Update;
+    }
+
+    void UpdateMidi(ReverbFx *fx, uint8_t control, uint8_t value) {
+        bool update = true;
+        t_sample scaled = core::scale(value, 0, 127, 0, 1, 1);
+        switch (control) {
+            case CC_REVERB_DECAY_DIFFUSION:
+                fx->decay_diffusion = scaled;
+                break;
+            case CC_REVERB_INPUT_DIFFUSION_1:
+                fx->input_diffusion1 = scaled;
+                break;
+            case CC_REVERB_INPUT_DIFFUSION_2:
+                fx->decay_diffusion = scaled;
+                break;
+            case CC_REVERB_CUTOFF:
+                fx->cutoff = scaled;
+                break;
+            case CC_REVERB_BALANCE:
+                fx->balance = scaled;
+                break;
+            case CC_REVERB_PREDELAY:
+                fx->predelay = scaled;
+                break;
+            case CC_EARLY_PREDELAY:
+                fx->early_predelay = scaled;
+                break;
+            case CC_REVERB_PREFILTER:
+                fx->pre_cutoff = scaled;
+                break;
+            case CC_REVERB_TIME:
+                fx->decay_time = scaled;
+                break;
+            default:
+                update = false;
+                break;
+        }
+        if (update) {
+            fx->Update(fx);
+        }
     }
 }
 

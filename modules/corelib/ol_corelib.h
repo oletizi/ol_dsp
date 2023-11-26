@@ -9,6 +9,8 @@
 #define DSY_SDRAM_BSS
 #endif
 
+#include <cmath>
+
 typedef float t_sample;
 
 namespace ol::core {
@@ -16,8 +18,20 @@ namespace ol::core {
         return denom == 0. ? (t_sample) 0. : (t_sample) (num / denom);
     }
 
-    inline t_sample
-    scale(t_sample in, t_sample inlow, t_sample inhigh, t_sample outlow, t_sample outhigh, t_sample power);
+    inline t_sample scale(float in, float inlow, float inhigh, float outlow, float outhigh, float power) {
+        t_sample value;
+        t_sample inscale = safediv(1., inhigh - inlow);
+        t_sample outdiff = outhigh - outlow;
+
+        value = (in - inlow) * inscale;
+        if (value > 0.0)
+            value = pow(value, power);
+        else if (value < 0.0)
+            value = -pow(-value, power);
+        value = (value * outdiff) + outlow;
+
+        return value;
+    }
 
 /**
  * Codifies a scale operation for a given input to output mapping

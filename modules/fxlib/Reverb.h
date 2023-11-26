@@ -23,6 +23,7 @@ namespace ol::fx::reverb {
         t_sample input_diffusion1 = 0.5;
         t_sample input_diffusion2 = 0.5;
         t_sample decay_diffusion = 0.5;
+        t_sample balance = 0.25;
 
         void (*Init)(ReverbFx *, t_sample sample_rate) = nullptr;
 
@@ -34,8 +35,11 @@ namespace ol::fx::reverb {
     };
 
     /* Call one of these Init functions first.*/
-    void ReverbSc_Config(ReverbFx *pFx, daisysp::ReverbSc * reverbsc);
-    void Dattorro_Config(ReverbFx *fx, sDattorroVerb * verb);
+    void ReverbSc_Config(ReverbFx *pFx, daisysp::ReverbSc *reverbsc);
+
+    void Dattorro_Config(ReverbFx *fx, sDattorroVerb *verb);
+
+    void UpdateMidi(ReverbFx *fx, uint8_t control, uint8_t value);
 
 }
 
