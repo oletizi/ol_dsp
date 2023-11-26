@@ -9,7 +9,7 @@
 #define DSY_SDRAM_BSS
 #endif
 
-#define t_sample float
+typedef float t_sample;
 
 namespace ol::core {
     inline t_sample safediv(t_sample num, t_sample denom) {

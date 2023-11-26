@@ -1,56 +1,65 @@
 //
 // Created by Orion Letizi on 11/15/23.
 //
+
 #include "Reverb.h"
 
-void ol::fx::ReverbScWrapper::Init(t_sample sample_rate) {
-    reverb_->Init(sample_rate);
-}
+namespace ol::fx::reverb {
 
-int ol::fx::ReverbScWrapper::Process(const t_sample &in1, const t_sample &in2, t_sample *out1, t_sample *out2) {
-    int rv = 0;
-    rv += reverb_->Process(in1, in2, out1, out2);
-    return rv;
-}
 
-void ol::fx::ReverbScWrapper::SetReverbTime(t_sample t60) {
-    reverb_->SetFeedback(t60);
-}
+    // Dattorro
 
-void ol::fx::ReverbScWrapper::SetCutoff(t_sample cutoff) {
-    reverb_->SetLpFreq(cutoff);
-}
+    sDattorroVerb *Dattorro_get(ReverbFx *reverbfx) {
+        return static_cast<sDattorroVerb *>(reverbfx->reverb);
+    }
 
-void ol::fx::ReverbScWrapper::SetEarlyPredelay(t_sample t60) {
-    // noop
-}
+    int Dattorro_Process(ReverbFx *fx, const t_sample &in1, const t_sample &in2, t_sample *out1, float *out2) {
+        sDattorroVerb *verb = Dattorro_get(fx);
+        DattorroVerb_process(verb,(in1 + in2)/2);
+        *out1 = DattorroVerb_getLeft(verb);
+        *out2 = DattorroVerb_getRight(verb);
+        return 0;
+    }
 
-void ol::fx::ReverbScWrapper::SetPredelay(t_sample t60) {
-    // noop
-}
+    void Dattorro_Update(ReverbFx *fx) {
+        sDattorroVerb *verb = Dattorro_get(fx);
+        DattorroVerb_setPreFilter(verb,fx->pre_cutoff);
+        DattorroVerb_setInputDiffusion1(verb, fx->input_diffusion1);
+        DattorroVerb_setInputDiffusion2(verb, fx->input_diffusion2);
+        DattorroVerb_setDecay(verb, fx->decay_time);
+        DattorroVerb_setDamping(verb, fx->cutoff);
+        DattorroVerb_setDecayDiffusion(verb, fx->decay_diffusion);
+    }
 
-void ol::fx::ReverbScWrapper::SetPreCutoff(t_sample freq) {
-    // noop
-}
+    void Dattorro_Init(ReverbFx *fx, sDattorroVerb *reverb, [[maybe_unused]] t_sample sample_rate) {
+        fx->reverb = reverb;
+        fx->Process = Dattorro_Process;
+        fx->Update = Dattorro_Update;
+    }
 
-void ol::fx::ReverbScWrapper::SetInputDiffusion1(t_sample val) {
-    // noop
-}
 
-void ol::fx::ReverbScWrapper::SetInputDiffusion2(t_sample val) {
-    // nop
-}
+    // ReverbSc
 
-void ol::fx::ReverbScWrapper::SetDecayDiffusion(t_sample vale) {
-    // nop
-}
+    daisysp::ReverbSc *ReverbSc_get(ReverbFx *reverbfx) {
+        return static_cast<daisysp::ReverbSc *>(reverbfx->reverb);
+    }
 
-void ol::fx::ReverbFx::Init(t_sample sample_rate) {
-    reverb_->Init(sample_rate);
-}
+    int ReverbSc_Process(ReverbFx *reverbfx, const float &in1, const float &in2, float *out1, float *out2) {
+        return ReverbSc_get(reverbfx)->Process(in1, in2, out1, out2);
+    }
 
-int ol::fx::ReverbFx::Process(const t_sample &in1, const t_sample &in2, t_sample *out1, t_sample *out2) {
-    return reverb_->Process(in1, in2, out1, out2);
-}
+    void ReverbSc_Update(ReverbFx *reverbfx) {
+        auto *verb = ReverbSc_get(reverbfx);
+        verb->SetFeedback(reverbfx->decay_time);
+        verb->SetLpFreq(reverbfx->cutoff);
+    }
 
+
+    void ReverbSc_Init(ReverbFx *fx, daisysp::ReverbSc *reverb, t_sample sample_rate) {
+        reverb->Init(sample_rate);
+        fx->reverb = reverb;
+        fx->Process = ReverbSc_Process;
+        fx->Update = ReverbSc_Update;
+    }
+}
 

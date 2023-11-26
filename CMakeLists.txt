@@ -4,6 +4,7 @@ set(CMAKE_CXX_STANDARD 17)
 
 add_subdirectory(JUCE)
 add_subdirectory(DaisySP)
+add_subdirectory(dattorro-verb)
 add_subdirectory(modules/corelib)
 add_subdirectory(modules/ctllib)
 add_subdirectory(modules/fxlib)

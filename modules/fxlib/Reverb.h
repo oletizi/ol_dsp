@@ -4,80 +4,39 @@
 
 #ifndef OL_DSP_REVERB_H
 #define OL_DSP_REVERB_H
+
 #include "daisysp.h"
+#include "verb.h"
 #include "corelib/ol_corelib.h"
-#include "ReverbControlPanel.h"
-#include "Fx.h"
+#include "fxlib/ol_fxlib.h"
 
-namespace ol::fx {
+namespace ol::fx::reverb {
 
-    class Reverb {
+    class ReverbFx {
     public:
-        virtual void Init(t_sample sample_rate) = 0;
+        t_sample sample_rate = 44100;
+        t_sample decay_time = 0.5;
+        t_sample cutoff = 0.5;
+        t_sample early_predelay = 0.1;
+        t_sample predelay = 0.2;
+        t_sample pre_cutoff = 0.5;
+        t_sample input_diffusion1 = 0.5;
+        t_sample input_diffusion2 = 0.5;
+        t_sample decay_diffusion = 0.5;
 
-        virtual int Process(const float &in1, const float &in2, float *out1, float *out2) = 0;
+        //void (*Init)(ReverbFx *, t_sample sample_rate) = nullptr;
 
-        virtual void SetReverbTime(t_sample t60) = 0;
+        int (*Process)(ReverbFx *, const float &in1, const float &in2, float *out1, float *out2) = nullptr;
 
-        virtual void SetCutoff(t_sample cutoff) = 0;
+        void (*Update)(ReverbFx *reverb) = nullptr;
 
-        virtual void SetEarlyPredelay(t_sample t60) = 0;
-
-        virtual void SetPredelay(t_sample t60) = 0;
-
-        virtual void SetPreCutoff(t_sample freq) = 0;
-
-        virtual void SetInputDiffusion1(t_sample val) = 0;
-
-        virtual void SetInputDiffusion2(t_sample val) = 0;
-
-        virtual void SetDecayDiffusion(t_sample vale) = 0;
+        void *reverb = nullptr;
     };
 
-    class ReverbScWrapper : public Reverb {
-    public:
+    /* Call one of these Init functions first.*/
+    void ReverbSc_Init(ReverbFx *pFx, daisysp::ReverbSc * reverbsc, float rate);
+    void Dattorro_Init(ReverbFx *fx, sDattorroVerb * verb, [[maybe_unused]] float rate);
 
-        explicit ReverbScWrapper(daisysp::ReverbSc *reverb) : reverb_(reverb) {}
-
-        void Init(t_sample sample_rate) override;
-
-        int Process(const t_sample &in1, const t_sample &in2, t_sample *out1, t_sample *out2) override;
-
-        void SetReverbTime(t_sample t60) override;
-
-        void SetCutoff(t_sample cutoff) override;
-
-        void SetEarlyPredelay(t_sample t60) override;
-
-        void SetPredelay(t_sample t60) override;
-
-        void SetPreCutoff(t_sample freq) override;
-
-        void SetInputDiffusion1(t_sample val) override;
-
-        void SetInputDiffusion2(t_sample val) override;
-
-        void SetDecayDiffusion(t_sample vale) override;
-
-    private:
-        daisysp::ReverbSc *reverb_;
-
-    };
-
-    class ReverbFx : public Fx {
-    public:
-        explicit ReverbFx(ol::fx::ReverbControlPanel *control_panel, Reverb *reverb) :
-                control_panel_(control_panel),
-                reverb_(reverb) {};
-
-        void Init(t_sample sample_rate) override;
-
-        int Process(const t_sample &in1, const t_sample &in2, t_sample *out1, t_sample *out2) override;
-
-    private:
-        Reverb *reverb_;
-        ReverbControlPanel *control_panel_;
-    };
 }
 
 #endif //OL_DSP_REVERB_H

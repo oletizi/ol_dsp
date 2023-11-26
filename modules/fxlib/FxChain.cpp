@@ -15,12 +15,12 @@ int ol::fx::FxChain::Process(const float &in1, const float &in2, float *out1, fl
     *out1 += delay_value_1;
     *out2 += delay_value_2;
 
-    // process reverb
-    t_sample verb_balance = control_panel_->reverb_control_->reverb_balance.Value();
-    rv += verb_->Process(*out1, *out2, &wet_out_1, &wet_out_2);
-    *out1 += wet_out_1 * verb_balance;
-    *out2 += wet_out_2 * verb_balance;
-    *out1 = lpf1_->Process(*out1);
-    *out2 = lpf2_->Process(*out2);
+//    // process reverb
+//    t_sample verb_balance = control_panel_->reverb_control_->reverb_balance.Value();
+//    rv += verb_->Process(*out1, *out2, &wet_out_1, &wet_out_2);
+//    *out1 += wet_out_1 * verb_balance;
+//    *out2 += wet_out_2 * verb_balance;
+//    *out1 = lpf1_->Process(*out1);
+//    *out2 = lpf2_->Process(*out2);
     return rv;
 }

@@ -5,25 +5,6 @@
 #include "daisysp.h"
 #include "ol_fxlib.h"
 
-TEST(FX, Reverb) {
-    ol::fx::ReverbControlPanel control_panel;
-    daisysp::ReverbSc reverbsc;
-    ol::fx::ReverbScWrapper verb(&reverbsc);
-    ol::fx::ReverbFx reverb(&control_panel, &verb);
-
-    t_sample sample_rate = 48000;
-    reverb.Init(sample_rate);
-    t_sample in = 0;
-    t_sample in2 = 0;
-    t_sample out1 = 1;
-    t_sample out2 = 1;
-
-    int rv = reverb.Process(in, in2, &out1, &out2);
-    EXPECT_EQ(0, rv);
-    EXPECT_EQ(0, out1);
-    EXPECT_EQ(0, out2);
-}
-
 TEST(FX, Delay) {
     ol::fx::DelayControlPanel control_panel;
     daisysp::DelayLine<t_sample, MAX_DELAY_SAMPLES> delay_line;
@@ -54,10 +35,9 @@ TEST(FX, Delay) {
 
 TEST(FX, FxChain) {
 
-    ol::fx::ReverbControlPanel reverb_control_panel;
     ol::fx::DelayControlPanel delay_control_panel;
     ol::fx::LpfControlPanel lpf_control_panel;
-    ol::fx::FxControlPanel control_panel = ol::fx::FxControlPanel(&reverb_control_panel, &delay_control_panel,
+    ol::fx::FxControlPanel control_panel = ol::fx::FxControlPanel(&delay_control_panel,
                                                                   &lpf_control_panel);
     daisysp::DelayLine<t_sample, MAX_DELAY_SAMPLES> delay_line1;
     daisysp::DelayLine<t_sample, MAX_DELAY_SAMPLES> delay_line2;
@@ -67,7 +47,5 @@ TEST(FX, FxChain) {
     ol::fx::LPF lpf1(&lpf_control_panel);
     ol::fx::LPF lpf2(&lpf_control_panel);
     daisysp::ReverbSc reverbSc;
-    ol::fx::ReverbScWrapper verb(&reverbSc);
-    ol::fx::ReverbFx reverb(&reverb_control_panel, &verb);
-    ol::fx::FxChain chain(&control_panel, &delay1, &delay2, &reverb, &lpf1, &lpf2);
+    ol::fx::FxChain chain(&control_panel, &delay1, &delay2, &lpf1, &lpf2);
 }
