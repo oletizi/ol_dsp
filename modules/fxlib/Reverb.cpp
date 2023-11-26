@@ -31,8 +31,13 @@ namespace ol::fx::reverb {
         DattorroVerb_setDecayDiffusion(verb, fx->decay_diffusion);
     }
 
-    void Dattorro_Init(ReverbFx *fx, sDattorroVerb *reverb, [[maybe_unused]] t_sample sample_rate) {
+    void Dattoro_Init(ReverbFx *fx, t_sample sample_rate) {
+        // nop
+    }
+
+    void Dattorro_Config(ReverbFx *fx, sDattorroVerb *reverb) {
         fx->reverb = reverb;
+        fx->Init = Dattoro_Init;
         fx->Process = Dattorro_Process;
         fx->Update = Dattorro_Update;
     }
@@ -54,10 +59,13 @@ namespace ol::fx::reverb {
         verb->SetLpFreq(reverbfx->cutoff);
     }
 
+    void ReverbSc_Init(ReverbFx *fx, t_sample sample_rate) {
+        ReverbSc_get(fx)->Init(sample_rate);
+    }
 
-    void ReverbSc_Init(ReverbFx *fx, daisysp::ReverbSc *reverb, t_sample sample_rate) {
-        reverb->Init(sample_rate);
+    void ReverbSc_Config(ReverbFx *fx, daisysp::ReverbSc *reverb) {
         fx->reverb = reverb;
+        fx->Init = ReverbSc_Init;
         fx->Process = ReverbSc_Process;
         fx->Update = ReverbSc_Update;
     }

@@ -1,7 +1,38 @@
 # Workout executables
+
+
+juce_add_console_app(reverb-workout
+        PRODUCT_NAME "Reverb Workout"
+)
+
+target_sources(reverb-workout
+        PRIVATE
+        reverb_main.cpp
+        SynthAudioCallback.h
+)
+target_include_directories(reverb-workout PUBLIC .)
+target_compile_definitions(reverb-workout
+        PRIVATE
+        # JUCE_WEB_BROWSER and JUCE_USE_CURL would be on by default, but you might not need them.
+        JUCE_WEB_BROWSER=0  # If you remove this, add `NEEDS_WEB_BROWSER TRUE` to the `juce_add_console_app` call
+        JUCE_USE_CURL=0)
+target_link_libraries(reverb-workout
+        PRIVATE
+        juce::juce_core
+        juce::juce_audio_devices
+        juce::juce_dsp
+        ol_corelib
+        ol_fxlib
+        ol_synthlib
+        DaisySP
+        juce::juce_recommended_config_flags
+        juce::juce_recommended_config_flags
+)
+
 juce_add_console_app(convolution-workout
         PRODUCT_NAME "Convolution Workout"
 )
+
 target_sources(convolution-workout
         PRIVATE
         convolution_main.cpp

@@ -5,14 +5,18 @@
 #include "fxlib/Reverb.h"
 
 TEST(Reverb, ReverbSc) {
-    ol::fx::reverb::ReverbFx reverbfx;
+    ol::fx::reverb::ReverbFx fx;
     daisysp::ReverbSc reverbsc;
     t_sample sample_rate = 1;
 
-    ol::fx::reverb::ReverbSc_Init(&reverbfx, &reverbsc, sample_rate);
-    EXPECT_TRUE(reverbfx.reverb);
-    EXPECT_TRUE(reverbfx.Process);
-    EXPECT_TRUE(reverbfx.Update);
+    EXPECT_FALSE(fx.reverb);
+    EXPECT_FALSE(fx.Init);
+    EXPECT_FALSE(fx.Process);
+    EXPECT_FALSE(fx.Update);
+    ol::fx::reverb::ReverbSc_Config(&fx, &reverbsc);
+    EXPECT_TRUE(fx.reverb);
+    EXPECT_TRUE(fx.Process);
+    EXPECT_TRUE(fx.Update);
 }
 
 TEST(Reverb, Dottorro) {
@@ -21,10 +25,12 @@ TEST(Reverb, Dottorro) {
     t_sample sample_rate = 1;
 
     EXPECT_FALSE(fx.reverb);
+    EXPECT_FALSE(fx.Init);
     EXPECT_FALSE(fx.Process);
     EXPECT_FALSE(fx.Update);
-    ol::fx::reverb::Dattorro_Init(&fx, verb, sample_rate);
+    ol::fx::reverb::Dattorro_Config(&fx, verb);
     EXPECT_TRUE(fx.reverb);
+    EXPECT_TRUE(fx.Init);
     EXPECT_TRUE(fx.Process);
     EXPECT_TRUE(fx.Update);
 
