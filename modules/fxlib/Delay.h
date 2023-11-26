@@ -19,9 +19,10 @@ namespace ol::fx {
         class DelayFx {
         public:
             t_sample time = 0.5;
-            t_sample feedback = 0.2;
+            t_sample feedback = 0.5;
             t_sample cutoff = 0.5;
             t_sample resonance = 0.2;
+            t_sample balance = 0.5;
 
             void (*Init)(DelayFx *, t_sample sample_rate) = nullptr;
 

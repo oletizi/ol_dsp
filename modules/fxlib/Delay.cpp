@@ -10,8 +10,10 @@ namespace ol::fx::delay {
     }
 
     int Delay_process(DelayFx *fx, const t_sample &in, t_sample *out) {
-        *out = fx->delay_line->Read();
-        fx->delay_line->Write(in * fx->feedback);
+        t_sample delay_out = fx->delay_line->Read();
+        t_sample delay_in = in + (fx->feedback * delay_out);
+        fx->delay_line->Write(delay_in);
+        *out = (delay_out * fx->balance) + (in * (1 - fx->balance));
         return 0;
     }
 
@@ -37,6 +39,9 @@ namespace ol::fx::delay {
                 break;
             case CC_DELAY_FEEDBACK:
                 fx->feedback = scaled;
+                break;
+            case CC_DELAY_BALANCE:
+                fx->balance = scaled;
                 break;
             default:
                 update = false;
