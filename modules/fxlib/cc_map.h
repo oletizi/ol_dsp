@@ -19,6 +19,7 @@
 #define CC_LPF_CUTOFF 41
 #define CC_LPF_RESONANCE 42
 #define CC_LPF_TYPE 43
+#define CC_LPF_DRIVE 44
 
 #define CC_EARLY_PREDELAY 50
 #define CC_REVERB_TYPE 51

@@ -14,7 +14,8 @@ namespace ol::fx::filt {
     class FiltFx {
     public:
         t_sample cutoff = 0.5;
-        t_sample resonance = 0.2;
+        t_sample resonance = 0;
+        t_sample drive = 0;
         void *filt = nullptr;
 
         void (*Init)(FiltFx *, t_sample sample_rate) = nullptr;
@@ -22,10 +23,12 @@ namespace ol::fx::filt {
         int (*Process)(FiltFx *, const float &in, float *out) = nullptr;
 
         void (*Update)(FiltFx *) = nullptr;
+
     };
 
     void UpdateMidi(FiltFx*, uint8_t control, uint8_t value);
     void Biquad_Config(FiltFx *, daisysp::Biquad *);
+    void Svf_Config(FiltFx *, daisysp::Svf *);
 
 }
 

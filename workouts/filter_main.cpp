@@ -118,7 +118,9 @@ int main() {
 
     voice.Init(device.sampleRate);
     daisysp::Biquad biquad;
+    daisysp::Svf svf;
     ol::fx::filt::Biquad_Config(&filt, &biquad);
+//    ol::fx::filt::Svf_Config(&filt, &svf);
     filt.Init(&filt, device.sampleRate);
 
     ma_device_start(&device);     // The device is sleeping by default so you'll need to start it manually.
