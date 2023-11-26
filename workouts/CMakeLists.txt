@@ -1,7 +1,12 @@
 # Workout executables
 
+## Filter Workout
+add_executable(filter-workout filter_main.cpp)
+target_link_libraries(filter-workout ol_corelib ol_fxlib ol_synthlib rtmidi DaisySP)
+target_include_directories(filter-workout PUBLIC . ../miniaudio)
+
 ## Delay Workout
-# Try using miniaudio
+# This one uses miniaudio (ant rtmidi) which has much less goop.
 add_executable(delay-workout delay_main.cpp )
 target_link_libraries(delay-workout ol_corelib ol_fxlib ol_synthlib rtmidi DaisySP)
 target_include_directories(delay-workout PUBLIC . ../miniaudio)
