@@ -37,6 +37,16 @@ public:
         synth_->audioDeviceIOCallbackWithContext(inputChannelData, numOutputChannels,
                                                  outputChannelData, numOutputChannels,
                                                  numSamples, context);
+        for (int i = 0; i < numSamples; i++) {
+            float in1, in2;
+            float *out1, *out2;
+            in1 = outputChannelData[0][i];
+            in2 = outputChannelData[1][i];
+
+            out1 = &outputChannelData[0][i];
+            out2 = &outputChannelData[1][i];
+            fx_->Process(fx_, in1, in2, out1, out2);
+        }
     }
 
 
