@@ -35,7 +35,7 @@ namespace ol::fx::reverb {
     };
 
     /* Call one of these Init functions first.*/
-    void ReverbSc_Config(ReverbFx *pFx, daisysp::ReverbSc *reverbsc);
+    void ReverbSc_Config(ReverbFx *fx, daisysp::ReverbSc *reverbsc);
 
     void Dattorro_Config(ReverbFx *fx, sDattorroVerb *verb);
 

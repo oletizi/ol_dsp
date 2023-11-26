@@ -1,5 +1,12 @@
 # Workout executables
 
+## Delay Workout
+# Try using miniaudio
+add_executable(delay-workout delay_main.cpp )
+target_link_libraries(delay-workout ol_corelib ol_fxlib ol_synthlib rtmidi DaisySP)
+target_include_directories(delay-workout PUBLIC . ../miniaudio)
+
+## Reverb Workout
 
 juce_add_console_app(reverb-workout
         PRODUCT_NAME "Reverb Workout"

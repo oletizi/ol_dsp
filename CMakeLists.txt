@@ -5,11 +5,15 @@ set(CMAKE_CXX_STANDARD 17)
 add_subdirectory(JUCE)
 add_subdirectory(DaisySP)
 add_subdirectory(dattorro-verb)
+add_subdirectory(libs/rtmidi)
 add_subdirectory(modules/corelib)
 add_subdirectory(modules/ctllib)
 add_subdirectory(modules/fxlib)
 add_subdirectory(modules/synthlib)
 
+
+add_library(stk stk/src/RtMidi.cpp)
+target_include_directories(stk PUBLIC stk/include)
 
 add_subdirectory(workouts)
 add_subdirectory(test)

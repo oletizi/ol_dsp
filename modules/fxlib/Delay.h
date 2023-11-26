@@ -6,19 +6,41 @@
 #define OL_DSP_DELAY_H
 #define MAX_DELAY 48000
 
+#include "daisysp.h"
 #include "corelib/ol_corelib.h"
+#include "fxlib/cc_map.h"
 #include "Utility/delayline.h"
 #include "Filters/moogladder.h"
 #include "Filters/svf.h"
 #include "DelayControlPanel.h"
 
 namespace ol::fx {
+    namespace delay {
+        class DelayFx {
+        public:
+            t_sample time = 0.5;
+            t_sample feedback = 0.2;
+            t_sample cutoff = 0.5;
+            t_sample resonance = 0.2;
 
+            void (*Init)(DelayFx *, t_sample sample_rate) = nullptr;
+
+            int (*Process)(DelayFx *, const t_sample &in, t_sample *out) = nullptr;
+
+            void (*Update)(DelayFx *reverb) = nullptr;
+
+            daisysp::DelayLine<t_sample, MAX_DELAY> *delay_line = nullptr;
+        };
+
+        void Delay_Config(DelayFx *, daisysp::DelayLine<t_sample, 48000> *);
+        void UpdateMidi(DelayFx *, uint8_t control, uint8_t value);
+    }
     class Delay {
     public:
         Delay(ol::fx::DelayControlPanel *cp, daisysp::DelayLine<t_sample, MAX_DELAY_SAMPLES> *delay_line) :
                 cp_(cp),
-                delay_line_(delay_line){}
+                delay_line_(delay_line) {}
+
         void Init(t_sample sample_rate) {
             sample_rate_ = sample_rate;
             cp_->time.UpdateValueHardware(0.5);

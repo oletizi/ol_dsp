@@ -10,3 +10,12 @@
 [submodule "dattorro-verb"]
 	path = dattorro-verb
 	url = git@github.com:oletizi/dattorro-verb.git
+[submodule "miniaudio"]
+	path = miniaudio
+	url = git@github.com:oletizi/miniaudio.git
+[submodule "stk"]
+	path = stk
+	url = git@github.com:oletizi/stk.git
+[submodule "libs/rtmidi"]
+	path = libs/rtmidi
+	url = git@github.com:oletizi/rtmidi.git
