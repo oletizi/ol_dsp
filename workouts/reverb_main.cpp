@@ -4,11 +4,11 @@
 #include "juce_audio_devices/juce_audio_devices.h"
 #include "SynthAudioCallback.h"
 #include "SynthMidiCallback.h"
-#include "fxlib/ol_fxlib.h"
+#include "fxlib/Fx.h"
 
 class ReverbAudioCallback : public juce::AudioIODeviceCallback {
 public:
-    explicit ReverbAudioCallback(ol::fx::reverb::ReverbFx *fx, SynthAudioCallback *synth) :
+    explicit ReverbAudioCallback(ol::fx::ReverbFx *fx, SynthAudioCallback *synth) :
             fx_(fx), synth_(synth) {}
 
     void audioDeviceAboutToStart(juce::AudioIODevice *device) override {
@@ -50,23 +50,23 @@ public:
     }
 
 
-    ol::fx::reverb::ReverbFx *fx_;
+    ol::fx::ReverbFx *fx_;
     SynthAudioCallback *synth_;
 };
 
 class ReverbMidiCallback : public juce::MidiInputCallback {
 public:
-    explicit ReverbMidiCallback(ol::fx::reverb::ReverbFx *fx) : fx_(fx) {}
+    explicit ReverbMidiCallback(ol::fx::ReverbFx *fx) : fx_(fx) {}
 
     void handleIncomingMidiMessage(juce::MidiInput *source, const juce::MidiMessage &message) override {
         if (message.isController()) {
             std::cout << "Reverb midi: controller: " << message.getControllerNumber() << "; val: "
                       << message.getControllerValue() << std::endl;
-            ol::fx::reverb::UpdateMidi(fx_, message.getControllerNumber(), message.getControllerValue());
+            ol::fx::Reverb_UpdateMidiControl(fx_, message.getControllerNumber(), message.getControllerValue());
         }
     }
 
-    ol::fx::reverb::ReverbFx *fx_;
+    ol::fx::ReverbFx *fx_;
 };
 
 int main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[]) {
@@ -81,7 +81,7 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[]) {
     ol::synthlib::Voice voice(&control_panel);
 
     SynthAudioCallback synth(&voice);
-    ol::fx::reverb::ReverbFx fx;
+    ol::fx::ReverbFx fx;
 
     SynthMidiCallback midi_callback(&control_panel, &voice);
     ReverbMidiCallback reverb_midi_callback(&fx);
@@ -95,7 +95,7 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[]) {
 
 
 
-    ol::fx::reverb::Dattorro_Config(&fx, DattorroVerb_create());
+    ol::fx::Dattorro_Config(&fx, DattorroVerb_create());
     ReverbAudioCallback reverb_callback(&fx, &synth);
     deviceManager.addAudioCallback(&reverb_callback);
 

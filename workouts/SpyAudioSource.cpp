@@ -3,7 +3,7 @@
 //
 #include "SpyAudioSource.h"
 
-SpyAudioSource::SpyAudioSource(ol::fx::FxChain *fx,
+SpyAudioSource::SpyAudioSource(ol::fx::FxRack *fx,
                                juce::AudioFormatReaderSource *source) :
         fx_(fx), source_(source),
         counter_(0),
@@ -11,7 +11,7 @@ SpyAudioSource::SpyAudioSource(ol::fx::FxChain *fx,
 
 void SpyAudioSource::prepareToPlay(int samplesPerBlockExpected, double sampleRate) {
     source_->prepareToPlay(samplesPerBlockExpected, sampleRate);
-    fx_->Init(sampleRate);
+    fx_->Init(fx_, sampleRate);
 }
 
 void SpyAudioSource::releaseResources() {
@@ -33,7 +33,7 @@ void SpyAudioSource::getNextAudioBlock(const juce::AudioSourceChannelInfo &buffe
         const float in2 = bufferToFill.buffer->getSample(1, i);
         float *out1 = bufferToFill.buffer->getWritePointer(0, i);
         float *out2 = bufferToFill.buffer->getWritePointer(1, i);
-        fx_->Process(in1, in2, out1, out2);
+        fx_->Process(fx_, in1, in2, out1, out2);
     }
     if (counter_ % 100 == 0) {
         std::cout << "Count: " << counter_ << std::endl;

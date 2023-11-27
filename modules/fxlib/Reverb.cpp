@@ -2,9 +2,10 @@
 // Created by Orion Letizi on 11/15/23.
 //
 
-#include "Reverb.h"
+#include "Fx.h"
 
-namespace ol::fx::reverb {
+namespace ol::fx {
+
     // Dattorro
 
     sDattorroVerb *Dattorro_get(ReverbFx *reverbfx) {
@@ -29,7 +30,7 @@ namespace ol::fx::reverb {
         DattorroVerb_setDecayDiffusion(verb, fx->decay_diffusion);
     }
 
-    void Dattoro_Init(ReverbFx *fx, t_sample sample_rate) {
+    void Dattoro_Init([[maybe_unused]] ReverbFx *fx, [[maybe_unused]] t_sample sample_rate) {
         // nop
     }
 
@@ -68,7 +69,7 @@ namespace ol::fx::reverb {
         fx->Update = ReverbSc_Update;
     }
 
-    void UpdateMidi(ReverbFx *fx, uint8_t control, uint8_t value) {
+    void Reverb_UpdateMidiControl(ReverbFx *fx, uint8_t control, uint8_t value) {
         bool update = true;
         t_sample scaled = core::scale(value, 0, 127, 0, 1, 1);
         switch (control) {

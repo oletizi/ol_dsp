@@ -2,9 +2,9 @@
 // Created by Orion Letizi on 11/11/23.
 //
 
-#include "Delay.h"
+#include "Fx.h"
 
-namespace ol::fx::delay {
+namespace ol::fx {
     void Delay_init(DelayFx *fx, t_sample sample_rate) {
         fx->delay_line->Init();
     }
@@ -29,7 +29,7 @@ namespace ol::fx::delay {
         fx->Update = Delay_update;
     }
 
-    void UpdateMidi(DelayFx *fx, uint8_t control, uint8_t value) {
+    void Delay_UpdateMidiControl(DelayFx *fx, uint8_t control, uint8_t value) {
         bool update = true;
         t_sample scaled = ol::core::scale(value, 0, 127, 0, 1, 1);
 
@@ -50,42 +50,4 @@ namespace ol::fx::delay {
             fx->Update(fx);
         }
     }
-}
-
-t_sample ol::fx::Delay::Process(t_sample in) {
-    t_sample out;
-
-    // Update parameters
-    if (time_ != cp_->time.Value()) {
-        time_ = cp_->time.Value();
-        delay_line_->SetDelay(time_);
-    }
-    if (feedback_ != cp_->feedback.Value()) {
-        feedback_ = cp_->feedback.Value();
-    }
-    if (cutoff_ != cp_->cutoff.Value()) {
-        cutoff_ = cp_->cutoff.Value();
-        filt_svf_.SetFreq(cutoff_);
-    }
-    if (resonance_ != cp_->resonance.Value()) {
-        resonance_ = cp_->resonance.Value();
-        filt_svf_.SetRes(resonance_);
-    }
-    // assign current delay value to output
-    out = delay_line_->Read();
-
-    // prepare feedback
-    filt_svf_.Process((feedback_ * out) + in);
-
-    // write feedback into delay
-    float delay_input = filt_svf_.Low();
-    delay_line_->Write(delay_input);
-    //float delay_input = (feedback_ * out) + (in * 0.5f);
-    //delay_line_->Write(delay_input);
-
-    if (counter_ % 512 == 0) {
-        counter_ = 0;
-    }
-    counter_++;
-    return out;
 }

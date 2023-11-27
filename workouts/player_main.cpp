@@ -1,6 +1,6 @@
 #include "juce_audio_formats/juce_audio_formats.h"
 #include "juce_audio_devices/juce_audio_devices.h"
-#include "ol_fxlib.h"
+#include "fxlib/Fx.h"
 #include "SpyAudioSource.h"
 #include "FxMidiCallback.h"
 
@@ -49,20 +49,26 @@ int main(int argc, char *argv[]) {
     juce::AudioFormatReaderSource f_reader_source(f_reader, true);
     std::cout << "  created AudioFormatReaderSource." << std::endl;
 
-    ol::fx::DelayControlPanel delay_control_panel;
-    ol::fx::LpfControlPanel lpf_control_panel;
-    ol::fx::FxControlPanel fx_control_panel(&delay_control_panel, &lpf_control_panel);
+    daisysp::DelayLine<t_sample, MAX_DELAY> delay_line_1;
+    daisysp::DelayLine<t_sample, MAX_DELAY> delay_line_2;
 
-    daisysp::DelayLine<t_sample, MAX_DELAY_SAMPLES> delay_line_1;
-    daisysp::DelayLine<t_sample, MAX_DELAY_SAMPLES> delay_line_2;
-    ol::fx::Delay delay1(&delay_control_panel, &delay_line_1);
-    ol::fx::Delay delay2(&delay_control_panel, &delay_line_2);
+    ol::fx::DelayFx delay1;
+    ol::fx::Delay_Config(&delay1, &delay_line_1);
 
-    ol::fx::LPF lpf1(&lpf_control_panel);
-    ol::fx::LPF lpf2(&lpf_control_panel);
+    ol::fx::DelayFx delay2;
+    ol::fx::Delay_Config(&delay2, &delay_line_2);
 
-    ol::fx::FxChain fx(&fx_control_panel, &delay1, &delay2, &lpf1, &lpf2);
-    SpyAudioSource my_spy_audio_source(&fx, &f_reader_source);
+//    ol::fx::FiltFx lpf1;
+//    ol::fx::FiltFx lpf2;
+
+    daisysp::ReverbSc verb;
+    ol::fx::ReverbFx reverb;
+    ol::fx::ReverbSc_Config(&reverb, &verb);
+
+    ol::fx::FxRack fxrack;
+    ol::fx::FxRack_Config(&fxrack, &delay1, &delay2, &reverb);
+
+    SpyAudioSource my_spy_audio_source(&fxrack, &f_reader_source);
     std::cout << "  created SpyAudioSource around AudioFormatReaderSource." << std::endl;
     transport.setSource(&my_spy_audio_source);
     player.setSource(&transport);
@@ -70,7 +76,7 @@ int main(int argc, char *argv[]) {
     auto midiDevices = juce::MidiInput::getAvailableDevices();
     std::cout << "MIDI inputs: " << std::endl;
 
-    FxMidiCallback midi_callback(&fx_control_panel);
+    FxMidiCallback midi_callback(&fxrack);
 
     for (const auto &input: midiDevices) {
         deviceManager.setMidiInputDeviceEnabled(input.identifier, true);

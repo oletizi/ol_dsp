@@ -6,13 +6,13 @@
 #define OL_DSP_FXAUDIOCALLBACK_H
 
 #include <juce_audio_devices/juce_audio_devices.h>
-#include "ol_fxlib.h"
-#include "FxChain.h"
+#include "fxlib/Fx.h"
+#include "fxlib/Fx.h"
 
 using namespace ol::fx;
 class FxAudioCallback : public juce::AudioIODeviceCallback {
 public:
-    explicit FxAudioCallback(juce::AudioDeviceManager *device_manager, Fx *fx)
+    explicit FxAudioCallback(juce::AudioDeviceManager *device_manager, FxRack *fx)
             : device_manager_(device_manager), fx_(fx){
         std::cout << "FxAudioCallback: adding myself to device manager..." << std::endl;
         device_manager->addAudioCallback(this);
@@ -29,7 +29,7 @@ public:
 
 private:
     juce::AudioDeviceManager *device_manager_;
-    Fx *fx_;
+    FxRack *fx_;
     uint64_t count_;
 };
 

@@ -7,12 +7,12 @@
 
 #include "juce_audio_devices/juce_audio_devices.h"
 #include "juce_audio_formats/juce_audio_formats.h"
-#include "ol_fxlib.h"
+#include "fxlib/Fx.h"
 #include "SpyAudioSource.h"
 
 class SpyAudioSource : public juce::PositionableAudioSource {
 public:
-    explicit SpyAudioSource(ol::fx::FxChain *fx, juce::AudioFormatReaderSource *source);
+    explicit SpyAudioSource(ol::fx::FxRack *fx, juce::AudioFormatReaderSource *source);
 
     void prepareToPlay(int samplesPerBlockExpected, double sampleRate) override;
 
@@ -32,7 +32,7 @@ private:
     uint64_t counter_;
     uint64_t processed_;
     juce::AudioFormatReaderSource *source_;
-    ol::fx::FxChain *fx_;
+    ol::fx::FxRack *fx_;
 };
 
 #endif //OL_DSP_SPYAUDIOSOURCE_H

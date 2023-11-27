@@ -5,7 +5,7 @@
 
 #include "miniaudio.h"
 #include "RtMidi.h"
-#include "fxlib/ol_fxlib.h"
+#include "fxlib/Fx.h"
 #include "synthlib/ol_synthlib.h"
 
 #define CHANNEL_COUNT 2
@@ -13,7 +13,7 @@
 ol::synthlib::ControlPanel synth_control_panel;
 ol::synthlib::Voice voice(&synth_control_panel);
 daisysp::DelayLine<t_sample, MAX_DELAY> delay_line;
-ol::fx::delay::DelayFx delay;
+ol::fx::DelayFx delay;
 
 //ol::fx::delay::Delay_Config(&delay, &delay_line);
 
@@ -37,10 +37,10 @@ void handleNoteOff(int channel, int note, int velocity) {
 void handleCC(int channel, int control, int value) {
     std::cout << "CC: chan: " << channel << "; control: " << control << "; val: " << value << std::endl;
     synth_control_panel.UpdateMidi(control, value);
-    ol::fx::delay::UpdateMidi(&delay, control, value);
+    ol::fx::Delay_UpdateMidiControl(&delay, control, value);
 }
 
-void midi_callback(double deltatime, std::vector<unsigned char> *message, void *userData) {
+void midi_callback([[maybe_unused]] double deltatime, std::vector<unsigned char> *message, [[maybe_unused]] void *userData) {
     unsigned int nBytes = message->size();
     if (nBytes > 0) {
         unsigned char status = message->at(0);
@@ -66,11 +66,12 @@ void midi_callback(double deltatime, std::vector<unsigned char> *message, void *
     }
 }
 
-void midi_error_callback(RtMidiError::Type type, const std::string &errorText, void *userData) {
+void midi_error_callback([[maybe_unused]] RtMidiError::Type type, [[maybe_unused]] const std::string &errorText,
+                         [[maybe_unused]] void *userData) {
     std::cout << "MIDI ERROR! " << errorText << std::endl;
 }
 
-void audio_callback(ma_device *pDevice, void *pOutput, const void *pInput, ma_uint32 frameCount) {
+void audio_callback([[maybe_unused]] ma_device *pDevice, void *pOutput, [[maybe_unused]] const void *pInput, ma_uint32 frameCount) {
     auto *out = (float *) pOutput;
     for (int i = 0; i < frameCount; i++) {
         t_sample voice_out = voice.Process();
@@ -117,12 +118,12 @@ int main() {
     //config.pUserData         = pMyCustomData;   // Can be accessed from the device object (device.pUserData).
 
     ma_device device;
-    if (ma_device_init(NULL, &config, &device) != MA_SUCCESS) {
+    if (ma_device_init(nullptr, &config, &device) != MA_SUCCESS) {
         return -1;  // Failed to initialize the device.
     }
 
     voice.Init(device.sampleRate);
-    ol::fx::delay::Delay_Config(&delay, &delay_line);
+    ol::fx::Delay_Config(&delay, &delay_line);
     delay.Init(&delay, device.sampleRate);
 
     ma_device_start(&device);     // The device is sleeping by default so you'll need to start it manually.

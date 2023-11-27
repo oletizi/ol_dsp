@@ -6,7 +6,7 @@
 
 void FxAudioCallback::audioDeviceAboutToStart(juce::AudioIODevice *device) {
     std::cout << "Audio device about to start..." << std::endl;
-    fx_->Init(device->getCurrentSampleRate());
+    fx_->Init(fx_, device->getCurrentSampleRate());
 }
 
 void FxAudioCallback::audioDeviceStopped() {
@@ -30,7 +30,7 @@ void FxAudioCallback::audioDeviceIOCallbackWithContext(const float *const *input
             out1 = &outputChannelData[0][i];
             out2 = numOutputChannels == 1 ? out1 : &outputChannelData[1][i];
 
-            if (fx_->Process(in1, in2, out1, out2)) {
+            if (fx_->Process(fx_, in1, in2, out1, out2)) {
                 outputChannelData[0][i] = inputChannelData[0][i];
                 outputChannelData[1][i] = inputChannelData[1][i];
                 errors++;

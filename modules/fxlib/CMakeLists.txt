@@ -1,20 +1,10 @@
-add_library(ol_fxlib ol_fxlib.h
-        FxControlPanel.h
-        FxControlPanel.cpp
-        ol_fxlib_core.h
-        FxChain.h
-        FxChain.cpp
-        Delay.cpp
-        Delay.h
-        LPF.cpp
-        LPF.h
-        Reverb.cpp
-        Reverb.h
-        Fx.h
+add_library(ol_fxlib
         cc_map.h
-        DelayControlPanel.cpp
-        DelayControlPanel.h
-        LpfControlPanel.cpp
-        LpfControlPanel.h)
+        Fx.h
+        Filter.cpp
+        Delay.cpp
+        Reverb.cpp
+        FxRack.cpp
+)
 target_link_libraries(ol_fxlib ol_corelib ol_ctllib DaisySP dattorro-verb)
 target_include_directories(ol_fxlib PUBLIC . ..)

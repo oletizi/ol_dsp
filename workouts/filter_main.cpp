@@ -5,14 +5,14 @@
 
 #include "miniaudio.h"
 #include "RtMidi.h"
-#include "fxlib/ol_fxlib.h"
+#include "fxlib/Fx.h"
 #include "synthlib/ol_synthlib.h"
 
 #define CHANNEL_COUNT 2
 
 ol::synthlib::ControlPanel synth_control_panel;
 ol::synthlib::Voice voice(&synth_control_panel);
-ol::fx::filt::FiltFx filt;
+ol::fx::FiltFx filt;
 int notes_on = 0;
 
 void handleNoteOn(int channel, int note, int velocity) {
@@ -32,7 +32,7 @@ void handleNoteOff(int channel, int note, int velocity) {
 void handleCC(int channel, int control, int value) {
     std::cout << "CC: chan: " << channel << "; control: " << control << "; val: " << value << std::endl;
     //synth_control_panel.UpdateMidi(control, value);
-    ol::fx::filt::UpdateMidi(&filt, control, value);
+    ol::fx::Filter_UpdateMidi(&filt, control, value);
 }
 
 void midi_callback(double deltatime, std::vector<unsigned char> *message, void *userData) {
@@ -112,14 +112,14 @@ int main() {
     //config.pUserData         = pMyCustomData;   // Can be accessed from the device object (device.pUserData).
 
     ma_device device;
-    if (ma_device_init(NULL, &config, &device) != MA_SUCCESS) {
+    if (ma_device_init(nullptr, &config, &device) != MA_SUCCESS) {
         return -1;  // Failed to initialize the device.
     }
 
     voice.Init(device.sampleRate);
     daisysp::Biquad biquad;
     daisysp::Svf svf;
-    ol::fx::filt::Biquad_Config(&filt, &biquad);
+    ol::fx::Filter_Biquad_Config(&filt, &biquad);
 //    ol::fx::filt::Svf_Config(&filt, &svf);
     filt.Init(&filt, device.sampleRate);
 
