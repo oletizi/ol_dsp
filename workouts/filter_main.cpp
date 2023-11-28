@@ -12,7 +12,7 @@
 
 ol::synthlib::ControlPanel synth_control_panel;
 ol::synthlib::Voice voice(&synth_control_panel);
-ol::fx::FiltFx filt;
+ol::fx::FilterFx filt;
 int notes_on = 0;
 
 void handleNoteOn(int channel, int note, int velocity) {

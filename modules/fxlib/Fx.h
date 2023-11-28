@@ -13,34 +13,59 @@
 #define MAX_DELAY 48000
 namespace ol::fx {
 
+
+    enum FilterType {
+        LowPass,
+        BandPass,
+        HighPass,
+        Notch,
+        Peak,
+        LastType = Peak
+    };
+
+    FilterType Filter_MidiToType(uint8_t value);
+
+    enum FilterStyle {
+        Biquad,
+        Svf,
+        MoogLadder,
+        LastStyle = MoogLadder
+    };
+
+    FilterStyle Filter_MidiToStyle(uint8_t value);
+
+
 // Fiilter
-    struct FiltFx {
+
+    struct FilterFx {
+
         t_sample cutoff = 0.5;
         t_sample resonance = 0;
         t_sample drive = 0;
+        FilterType type = LowPass;
+
         void *filt = nullptr;
 
-        void (*Init)(FiltFx *, t_sample sample_rate) = nullptr;
+        void (*Init)(FilterFx *, t_sample sample_rate) = nullptr;
 
-        int (*Process)(FiltFx *, const float &in, float *out) = nullptr;
+        int (*Process)(FilterFx *, const float &in, float *out) = nullptr;
 
-        void (*Update)(FiltFx *) = nullptr;
+        void (*Update)(FilterFx *) = nullptr;
     };
 
-    void Filter_UpdateMidi(FiltFx *, uint8_t control, uint8_t value);
+    void Filter_UpdateMidi(FilterFx *, uint8_t control, uint8_t value);
 
-    void Filter_Biquad_Config(FiltFx *, daisysp::Biquad *);
+    void Filter_Biquad_Config(FilterFx *, daisysp::Biquad *);
 
-    void Filter_Svf_Config(FiltFx *, daisysp::Svf *);
+    void Filter_Svf_Config(FilterFx *, daisysp::Svf *);
 
     // Delay
 
     struct DelayFx {
         t_sample time = 0.5;
         t_sample feedback = 0.5;
-        t_sample cutoff = 0.5;
-        t_sample resonance = 0.2;
         t_sample balance = 0.5;
+        FilterFx *filter = nullptr;
 
         void (*Init)(DelayFx *, t_sample sample_rate) = nullptr;
 
@@ -51,7 +76,7 @@ namespace ol::fx {
         daisysp::DelayLine<t_sample, MAX_DELAY> *delay_line = nullptr;
     };
 
-    void Delay_Config(DelayFx *, daisysp::DelayLine<t_sample, MAX_DELAY> *);
+    void Delay_Config(DelayFx *, daisysp::DelayLine<t_sample, MAX_DELAY> *, FilterFx *);
 
     void Delay_UpdateMidiControl(DelayFx *, uint8_t control, uint8_t value);
 

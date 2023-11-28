@@ -6,80 +6,107 @@
 
 namespace ol::fx {
 
+    FilterType Filter_MidiToType(uint8_t value) {
+        return static_cast<FilterType>(ol::core::scale(value, 0, 127, 0, FilterType::LastType, 1));
+    }
+
+    FilterStyle Filter_MidiToStyle(uint8_t value) {
+        return static_cast<FilterStyle>(ol::core::scale(value, 0, 127, 0, FilterStyle::LastStyle, 1));
+    }
+
+
     // Biquad
-    daisysp::Biquad *Biquad_get(FiltFx *fx) {
+    daisysp::Biquad *Biquad_get(FilterFx *fx) {
         return static_cast<daisysp::Biquad *>(fx->filt);
     }
 
-    int Biquad_process(FiltFx *fx, const float &in, float *out) {
+    int Biquad_process(FilterFx *fx, const float &in, float *out) {
         auto filter = Biquad_get(fx);
         *out = filter->Process(in);
         return 0;
     }
 
-    void Biquad_update(FiltFx *fx) {
+    void Biquad_update(FilterFx *fx) {
         daisysp::Biquad *filt = Biquad_get(fx);
         filt->SetCutoff(fx->cutoff);
         filt->SetRes(fx->resonance);
     }
 
-    void Biquad_init(FiltFx *fx, t_sample sample_rate) {
+    void Biquad_init(FilterFx *fx, t_sample sample_rate) {
         Biquad_get(fx)->Init(sample_rate);
         Biquad_update(fx);
     }
 
-    void Filter_Biquad_Config(FiltFx *fx, daisysp::Biquad *filt) {
+    void Filter_Biquad_Config(FilterFx *fx, daisysp::Biquad *filt) {
         fx->filt = filt;
         fx->Init = Biquad_init;
         fx->Process = Biquad_process;
         fx->Update = Biquad_update;
     }
 
-    // SvF
-    daisysp::Svf *Svf_get(FiltFx *fx) {
+    // Svf
+    daisysp::Svf *Svf_get(FilterFx *fx) {
         return static_cast<daisysp::Svf *>(fx->filt);
     }
 
-    int Svf_process(FiltFx *fx, const float &in, float *out) {
+    int Svf_process(FilterFx *fx, const float &in, float *out) {
         daisysp::Svf *filt = Svf_get(fx);
         filt->Process(in);
-        // TODO: add output select based on filter type parameter
-        *out = filt->Low();
+        switch (fx->type) {
+            case FilterType::Peak:
+                *out = filt->Peak();
+                break;
+            case FilterType::BandPass:
+                *out = filt->Band();
+                break;
+            case FilterType::Notch:
+                *out = filt->Notch();
+                break;
+            case FilterType::HighPass:
+                *out = filt->High();
+                break;
+            case FilterType::LowPass:
+                *out = filt->Low();
+                break;
+        }
         return 0;
     }
 
-    void Svf_update(FiltFx *fx) {
+    void Svf_update(FilterFx *fx) {
         daisysp::Svf *filt = Svf_get(fx);
         filt->SetRes(fx->resonance);
         filt->SetFreq(ol::core::scale(fx->cutoff, 0, 1, 0, 20000, 1));
         filt->SetDrive(fx->drive);
     }
 
-    void Svf_init(FiltFx *fx, t_sample sample_rate) {
+    void Svf_init(FilterFx *fx, t_sample sample_rate) {
         daisysp::Svf *filt = Svf_get(fx);
         filt->Init(sample_rate);
         Svf_update(fx);
     }
 
-    void Filter_Svf_Config(FiltFx *fx, daisysp::Svf *filt) {
+    void Filter_Svf_Config(FilterFx *fx, daisysp::Svf *filt) {
         fx->filt = filt;
         fx->Init = Svf_init;
         fx->Process = Svf_process;
         fx->Update = Svf_update;
     }
 
-    void Filter_UpdateMidi(FiltFx *fx, uint8_t control, uint8_t value) {
+    void Filter_UpdateMidi(FilterFx *fx, uint8_t control, uint8_t value) {
         bool update = true;
         t_sample scaled = ol::core::scale(value, 0, 127, 0, 1, 1);
         switch (control) {
-            case CC_LPF_RESONANCE:
+            case CC_FILTER_RESONANCE:
                 fx->resonance = scaled;
                 break;
-            case CC_LPF_CUTOFF:
+            case CC_FILTER_CUTOFF:
                 fx->cutoff = scaled;
                 break;
-            case CC_LPF_DRIVE:
+            case CC_FILTER_DRIVE:
                 fx->drive = scaled;
+                break;
+            case CC_FILTER_TYPE:
+                fx->type = Filter_MidiToType(value);
                 break;
             default:
                 update = false;

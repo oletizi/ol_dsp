@@ -123,7 +123,10 @@ int main() {
     }
 
     voice.Init(device.sampleRate);
-    ol::fx::Delay_Config(&delay, &delay_line);
+    daisysp::Svf svf;
+    ol::fx::FilterFx filter;
+    ol::fx::Filter_Svf_Config(&filter, &svf);
+    ol::fx::Delay_Config(&delay, &delay_line, &filter);
     delay.Init(&delay, device.sampleRate);
 
     ma_device_start(&device);     // The device is sleeping by default so you'll need to start it manually.

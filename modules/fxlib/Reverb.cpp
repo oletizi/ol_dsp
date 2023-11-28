@@ -44,8 +44,8 @@ namespace ol::fx {
 
     // ReverbSc
 
-    daisysp::ReverbSc *ReverbSc_get(ReverbFx *reverbfx) {
-        return static_cast<daisysp::ReverbSc *>(reverbfx->reverb);
+    daisysp::ReverbSc *ReverbSc_get(ReverbFx *fx) {
+        return static_cast<daisysp::ReverbSc *>(fx->reverb);
     }
 
     int ReverbSc_Process(ReverbFx *fx, const float &in1, const float &in2, float *out1, float *out2) {

@@ -14,17 +14,14 @@ using namespace ol::fx;
 ol::synthlib::ControlPanel synth_control_panel;
 ol::synthlib::Voice voice(&synth_control_panel);
 
-daisysp::DelayLine<t_sample, MAX_DELAY> delay_line1;
-DelayFx delay1;
+FilterFx delay_filter1;
+FilterFx delay_filter2;
 
-daisysp::DelayLine<t_sample, MAX_DELAY> delay_line2;
+DelayFx delay1;
 DelayFx delay2;
 
-daisysp::ReverbSc scverb;
-sDattorroVerb *dverb;
-
 ReverbFx reverbSc;
-ReverbFx dattorro;
+ReverbFx reverbDattorro;
 
 FxRack fxrack;
 
@@ -113,11 +110,22 @@ void audio_callback(ma_device *pDevice, void *pOutput, const void *pInput, ma_ui
 
 int main() {
 
-    Delay_Config(&delay1, &delay_line1);
-    Delay_Config(&delay2, &delay_line2);
-    ReverbSc_Config(&reverbSc, &scverb);
-    dverb = DattorroVerb_create();
-    Dattorro_Config(&dattorro, dverb);
+    daisysp::Svf df1;
+    daisysp::Svf df2;
+    ol::fx::Filter_Svf_Config(&delay_filter1, &df1);
+    ol::fx::Filter_Svf_Config(&delay_filter2, &df2);
+
+    daisysp::DelayLine<t_sample, MAX_DELAY> delay_line1;
+    daisysp::DelayLine<t_sample, MAX_DELAY> delay_line2;
+
+    Delay_Config(&delay1, &delay_line1, &delay_filter1);
+    Delay_Config(&delay2, &delay_line2, &delay_filter2);
+
+    daisysp::ReverbSc vsc;
+    ReverbSc_Config(&reverbSc, &vsc);
+
+    sDattorroVerb *dverb = DattorroVerb_create();
+    Dattorro_Config(&reverbDattorro, dverb);
     FxRack_Config(&fxrack, &delay1, &delay2, &reverbSc);
 
     RtMidiIn *midiin = nullptr;
