@@ -60,7 +60,7 @@ namespace ol::fx {
     struct ReverbFx {
         t_sample sample_rate = 44100;
         t_sample decay_time = 0.5;
-        t_sample cutoff = 0.5;
+        t_sample cutoff = 1;
         t_sample early_predelay = 0.1;
         t_sample predelay = 0.2;
         t_sample pre_cutoff = 0.5;
@@ -68,6 +68,7 @@ namespace ol::fx {
         t_sample input_diffusion2 = 0.5;
         t_sample decay_diffusion = 0.5;
         t_sample balance = 0.25;
+        uint64_t counter = 0;
 
         void (*Init)(ReverbFx *, t_sample sample_rate) = nullptr;
 

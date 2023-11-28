@@ -14,7 +14,7 @@ namespace ol::fx {
 
     int Dattorro_Process(ReverbFx *fx, const t_sample &in1, const t_sample &in2, t_sample *out1, float *out2) {
         sDattorroVerb *verb = Dattorro_get(fx);
-        DattorroVerb_process(verb,(in1 + in2)/2);
+        DattorroVerb_process(verb, (in1 + in2) / 2);
         *out1 = DattorroVerb_getLeft(verb);
         *out2 = DattorroVerb_getRight(verb);
         return 0;
@@ -22,7 +22,7 @@ namespace ol::fx {
 
     void Dattorro_Update(ReverbFx *fx) {
         sDattorroVerb *verb = Dattorro_get(fx);
-        DattorroVerb_setPreFilter(verb,fx->pre_cutoff);
+        DattorroVerb_setPreFilter(verb, fx->pre_cutoff);
         DattorroVerb_setInputDiffusion1(verb, fx->input_diffusion1);
         DattorroVerb_setInputDiffusion2(verb, fx->input_diffusion2);
         DattorroVerb_setDecay(verb, fx->decay_time);
@@ -49,18 +49,19 @@ namespace ol::fx {
     }
 
     int ReverbSc_Process(ReverbFx *fx, const float &in1, const float &in2, float *out1, float *out2) {
+        t_sample verb_out1 = 0;
+        t_sample verb_out2 = 0;
 
-        int rv = ReverbSc_get(fx)->Process(in1, in2, out1, out2);
-        if (*out1 > 1 || *out1 < -1) {
-            std::cout << "YIKES!!!!!! This shouldn't happen" << std::endl;
-        }
+        int rv = ReverbSc_get(fx)->Process(in1, in2, &verb_out1, &verb_out2);
+        *out1 = (verb_out1 * fx->balance) + (in1 * (1 - fx->balance));
+        *out2 = (verb_out2 * fx->balance) + (in2 * (1 - fx->balance));
         return rv;
     }
 
     void ReverbSc_Update(ReverbFx *fx) {
         auto *verb = ReverbSc_get(fx);
         verb->SetFeedback(fx->decay_time);
-        verb->SetLpFreq(fx->cutoff);
+        verb->SetLpFreq(ol::core::scale(fx->cutoff, 0, 1, 0, 20000, 1));
     }
 
     void ReverbSc_Init(ReverbFx *fx, t_sample sample_rate) {

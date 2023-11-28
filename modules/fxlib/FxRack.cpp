@@ -7,6 +7,8 @@
 namespace ol::fx {
 
     void FxRack_init(FxRack *fx, t_sample sample_rate) {
+        fx->delay1->Init(fx->delay1, sample_rate);
+        fx->delay2->Init(fx->delay2, sample_rate);
         fx->reverb->Init(fx->reverb, sample_rate);
     };
 

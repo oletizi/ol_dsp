@@ -4,6 +4,8 @@
 
 #include "miniaudio.h"
 #include "RtMidi.h"
+#include "verb.h"
+#include "verb_structs.h"
 
 #include "fxlib/Fx.h"
 #include "synthlib/ol_synthlib.h"
@@ -18,8 +20,11 @@ DelayFx delay1;
 daisysp::DelayLine<t_sample, MAX_DELAY> delay_line2;
 DelayFx delay2;
 
-daisysp::ReverbSc verb;
-ReverbFx reverb;
+daisysp::ReverbSc scverb;
+sDattorroVerb *dverb;
+
+ReverbFx reverbSc;
+ReverbFx dattorro;
 
 FxRack fxrack;
 
@@ -110,8 +115,10 @@ int main() {
 
     Delay_Config(&delay1, &delay_line1);
     Delay_Config(&delay2, &delay_line2);
-    ReverbSc_Config(&reverb, &verb);
-    FxRack_Config(&fxrack, &delay1, &delay2, &reverb);
+    ReverbSc_Config(&reverbSc, &scverb);
+    dverb = DattorroVerb_create();
+    Dattorro_Config(&dattorro, dverb);
+    FxRack_Config(&fxrack, &delay1, &delay2, &reverbSc);
 
     RtMidiIn *midiin = nullptr;
     try {
