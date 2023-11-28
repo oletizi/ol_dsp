@@ -23,6 +23,9 @@ DelayFx delay2;
 ReverbFx reverbSc;
 ReverbFx reverbDattorro;
 
+FilterFx filter1;
+FilterFx filter2;
+
 FxRack fxrack;
 
 int notes_on = 0;
@@ -126,7 +129,13 @@ int main() {
 
     sDattorroVerb *dverb = DattorroVerb_create();
     Dattorro_Config(&reverbDattorro, dverb);
-    FxRack_Config(&fxrack, &delay1, &delay2, &reverbSc);
+
+    daisysp::Svf svf1;
+    daisysp::Svf svf2;
+    ol::fx::Filter_Svf_Config(&filter1, &svf1);
+    ol::fx::Filter_Svf_Config(&filter2, &svf2);
+
+    FxRack_Config(&fxrack, &delay1, &delay2, &reverbSc, &filter1, &filter2);
 
     RtMidiIn *midiin = nullptr;
     try {

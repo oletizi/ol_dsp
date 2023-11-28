@@ -100,7 +100,7 @@ namespace ol::fx {
                 fx->resonance = scaled;
                 break;
             case CC_FILTER_CUTOFF:
-                fx->cutoff = scaled;
+                fx->cutoff = ol::core::scale(value, 0, 127, 0, 1, 1.2);
                 break;
             case CC_FILTER_DRIVE:
                 fx->drive = scaled;

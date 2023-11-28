@@ -119,17 +119,20 @@ namespace ol::fx {
         ol::fx::DelayFx *delay1 = nullptr;
         ol::fx::DelayFx *delay2 = nullptr;
         ol::fx::ReverbFx *reverb = nullptr;
+        FilterFx *filter1 = nullptr;
+        FilterFx *filter2 = nullptr;
 
         void (*Init)(FxRack *, t_sample sample_rate) = nullptr;
 
         int (*Process)(FxRack *, const t_sample &in1, const t_sample &in2, t_sample *out1, t_sample *out2) = nullptr;
 
         void (*Update)(FxRack *) = nullptr;
+
     };
 
     void FxRack_UpdateMidiControl(FxRack *, uint8_t control, uint8_t value);
 
-    void FxRack_Config(FxRack *, DelayFx *, DelayFx *, ReverbFx *);
+    void FxRack_Config(FxRack *, DelayFx *, DelayFx *, ReverbFx *, FilterFx *, FilterFx *);
 
 }
 #endif //OL_DSP_FX_H
