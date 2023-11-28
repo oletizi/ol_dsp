@@ -13,7 +13,7 @@ namespace ol::fx {
     int FxRack_process(FxRack *fx, const t_sample &in1, const t_sample &in2, t_sample *out1, t_sample *out2) {
         fx->delay1->Process(fx->delay1, in1, out1);
         fx->delay2->Process(fx->delay2, in2, out2);
-        fx->reverb->Process(fx->reverb, in1, in2, out1, out2);
+        fx->reverb->Process(fx->reverb, *out1, *out2, out1, out2);
         return 0;
     };
 

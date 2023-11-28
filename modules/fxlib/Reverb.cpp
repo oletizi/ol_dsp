@@ -1,7 +1,7 @@
 //
 // Created by Orion Letizi on 11/15/23.
 //
-
+#include <iostream>
 #include "Fx.h"
 
 namespace ol::fx {
@@ -48,14 +48,19 @@ namespace ol::fx {
         return static_cast<daisysp::ReverbSc *>(reverbfx->reverb);
     }
 
-    int ReverbSc_Process(ReverbFx *reverbfx, const float &in1, const float &in2, float *out1, float *out2) {
-        return ReverbSc_get(reverbfx)->Process(in1, in2, out1, out2);
+    int ReverbSc_Process(ReverbFx *fx, const float &in1, const float &in2, float *out1, float *out2) {
+
+        int rv = ReverbSc_get(fx)->Process(in1, in2, out1, out2);
+        if (*out1 > 1 || *out1 < -1) {
+            std::cout << "YIKES!!!!!! This shouldn't happen" << std::endl;
+        }
+        return rv;
     }
 
-    void ReverbSc_Update(ReverbFx *reverbfx) {
-        auto *verb = ReverbSc_get(reverbfx);
-        verb->SetFeedback(reverbfx->decay_time);
-        verb->SetLpFreq(reverbfx->cutoff);
+    void ReverbSc_Update(ReverbFx *fx) {
+        auto *verb = ReverbSc_get(fx);
+        verb->SetFeedback(fx->decay_time);
+        verb->SetLpFreq(fx->cutoff);
     }
 
     void ReverbSc_Init(ReverbFx *fx, t_sample sample_rate) {

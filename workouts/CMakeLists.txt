@@ -1,5 +1,10 @@
 # Workout executables
 
+## Multi-effects Workout
+add_executable(fx-workout fx_main.cpp)
+target_link_libraries(fx-workout ol_corelib ol_fxlib ol_synthlib rtmidi DaisySP)
+target_include_directories(fx-workout PUBLIC . ../miniaudio)
+
 ## Filter Workout
 add_executable(filter-workout filter_main.cpp)
 target_link_libraries(filter-workout ol_corelib ol_fxlib ol_synthlib rtmidi DaisySP)
@@ -7,7 +12,7 @@ target_include_directories(filter-workout PUBLIC . ../miniaudio)
 
 ## Delay Workout
 # This one uses miniaudio (ant rtmidi) which has much less goop.
-add_executable(delay-workout delay_main.cpp )
+add_executable(delay-workout delay_main.cpp)
 target_link_libraries(delay-workout ol_corelib ol_fxlib ol_synthlib rtmidi DaisySP)
 target_include_directories(delay-workout PUBLIC . ../miniaudio)
 
@@ -69,27 +74,6 @@ target_link_libraries(convolution-workout
         juce::juce_recommended_config_flags
 )
 
-juce_add_console_app(fx-workout
-        PRODUCT_NAME "FX Workout")
-target_sources(fx-workout
-        PRIVATE
-        fx_main.cpp
-        FxAudioCallback.cpp
-        FxMidiCallback.cpp)
-target_compile_definitions(fx-workout
-        PRIVATE
-        JUCE_WEB_BROWSER=0
-        JUCE_USE_CURL=0)
-target_link_libraries(fx-workout
-        PRIVATE
-        juce::juce_core
-        juce::juce_audio_devices
-        PUBLIC
-        ol_corelib
-        ol_fxlib
-        DaisySP
-        juce::juce_recommended_config_flags
-        juce::juce_recommended_config_flags)
 
 juce_add_console_app(synth-workout
         PRODUCT_NAME "Synth Workout")
@@ -115,27 +99,27 @@ target_link_libraries(synth-workout
         juce::juce_recommended_config_flags
         juce::juce_recommended_warning_flags)
 
-juce_add_console_app(player-workout
-        PRODUCT_NAME "Player Workout")
-target_sources(player-workout
-        PRIVATE
-        player_main.cpp
-        SpyAudioSource.cpp
-        FxAudioCallback.cpp
-        FxMidiCallback.cpp)
-target_include_directories(player-workout PUBLIC .)
-target_compile_definitions(player-workout
-        PRIVATE
-        JUCE_WEB_BROWSER=0
-        JUCE_USE_CURL=0)
-target_link_libraries(player-workout
-        PRIVATE
-        juce::juce_core
-        juce::juce_audio_devices
-        juce::juce_audio_formats
-        PUBLIC
-        ol_corelib
-        ol_fxlib
-        DaisySP
-        juce::juce_recommended_config_flags
-        juce::juce_recommended_config_flags)
+#juce_add_console_app(player-workout
+#        PRODUCT_NAME "Player Workout")
+#target_sources(player-workout
+#        PRIVATE
+#        player_main.cpp
+#        SpyAudioSource.cpp
+#        FxAudioCallback.cpp
+#        FxMidiCallback.cpp)
+#target_include_directories(player-workout PUBLIC .)
+#target_compile_definitions(player-workout
+#        PRIVATE
+#        JUCE_WEB_BROWSER=0
+#        JUCE_USE_CURL=0)
+#target_link_libraries(player-workout
+#        PRIVATE
+#        juce::juce_core
+#        juce::juce_audio_devices
+#        juce::juce_audio_formats
+#        PUBLIC
+#        ol_corelib
+#        ol_fxlib
+#        DaisySP
+#        juce::juce_recommended_config_flags
+#        juce::juce_recommended_config_flags)
