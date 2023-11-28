@@ -6,9 +6,13 @@
 #include "fxlib/Fx.h"
 
 TEST(FX, Delay) {
+    daisysp::Svf svf;
+    ol::fx::FilterFx filter;
+    ol::fx::Filter_Svf_Config(&filter, &svf);
+
     daisysp::DelayLine<t_sample, MAX_DELAY> delay_line;
     ol::fx::DelayFx delay;
-    ol::fx::Delay_Config(&delay, &delay_line);
+    ol::fx::Delay_Config(&delay, &delay_line, &filter);
 
     delay.Init(&delay, 128);
     t_sample in = 1;

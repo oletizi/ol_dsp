@@ -7,8 +7,8 @@
 
 #include "verb.h"
 #include "daisysp.h"
-#include "ol_corelib.h"
-#include "cc_map.h"
+#include "corelib/ol_corelib.h"
+#include "fxlib/cc_map.h"
 
 #define MAX_DELAY 48000
 namespace ol::fx {
@@ -95,6 +95,8 @@ namespace ol::fx {
         t_sample balance = 0.25;
         uint64_t counter = 0;
 
+        void (*PrintLine) (const char *) = nullptr;
+
         void (*Init)(ReverbFx *, t_sample sample_rate) = nullptr;
 
         int (*Process)(ReverbFx *, const float &in1, const float &in2, float *out1, float *out2) = nullptr;
@@ -110,6 +112,8 @@ namespace ol::fx {
     void Dattorro_Config(ReverbFx *fx, sDattorroVerb *verb);
 
     void Reverb_UpdateMidiControl(ReverbFx *fx, uint8_t control, uint8_t value);
+
+    void Reverb_UpdateHardwareControl(ReverbFx *fx, uint8_t control, t_sample value);
 
 
     // Multi-effects

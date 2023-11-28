@@ -75,6 +75,59 @@ namespace ol::fx {
         fx->Update = ReverbSc_Update;
     }
 
+    void Reverb_UpdateHardwareControl(ReverbFx *fx, uint8_t control, t_sample value) {
+        t_sample previous_value;
+        bool update = true;
+        switch (control) {
+            case CC_REVERB_DECAY_DIFFUSION:
+                previous_value = fx->decay_diffusion;
+                fx->decay_diffusion = value;
+                break;
+            case CC_REVERB_INPUT_DIFFUSION_1:
+                previous_value = fx->input_diffusion1;
+                fx->input_diffusion1 = value;
+                break;
+            case CC_REVERB_INPUT_DIFFUSION_2:
+                previous_value = fx->decay_diffusion;
+                fx->decay_diffusion = value;
+                break;
+            case CC_REVERB_CUTOFF:
+                previous_value = fx->cutoff;
+                fx->cutoff = value;
+                break;
+            case CC_REVERB_BALANCE:
+                previous_value = fx->balance;
+                fx->balance = value;
+                break;
+            case CC_REVERB_PREDELAY:
+                previous_value = fx->predelay;
+                fx->predelay = value;
+                break;
+            case CC_EARLY_PREDELAY:
+                previous_value = fx->early_predelay;
+                fx->early_predelay = value;
+                break;
+            case CC_REVERB_PREFILTER:
+                previous_value = fx->pre_cutoff;
+                fx->pre_cutoff = value;
+                break;
+            case CC_REVERB_TIME:
+                previous_value = fx->decay_time;
+                fx->decay_time = value;
+                break;
+            default:
+                update = false;
+                break;
+        }
+        if (update) {
+            if (fx->PrintLine) {
+                std::string message = "Updateing reverb parameter: control: " + std::to_string(control);
+                fx->PrintLine(message.c_str());
+            }
+            fx->Update(fx);
+        }
+    }
+
     void Reverb_UpdateMidiControl(ReverbFx *fx, uint8_t control, uint8_t value) {
         bool update = true;
         t_sample scaled = core::scale(value, 0, 127, 0, 1, 1);
