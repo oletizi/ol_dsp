@@ -14,7 +14,7 @@
 	path = miniaudio
 	url = git@github.com:oletizi/miniaudio.git
 [submodule "stk"]
-	path = stk
+	path = libs/stk
 	url = git@github.com:oletizi/stk.git
 [submodule "libs/rtmidi"]
 	path = libs/rtmidi
