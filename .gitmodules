@@ -19,3 +19,6 @@
 [submodule "libs/rtmidi"]
 	path = libs/rtmidi
 	url = git@github.com:oletizi/rtmidi.git
+[submodule "libs/libDaisy"]
+	path = libs/libDaisy
+	url = git@github.com:oletizi/libDaisy.git

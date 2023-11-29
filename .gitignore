@@ -3,3 +3,6 @@
 /.idea/
 /build/
 /.vscode/
+/modules/daisy/fx/multifx/build/
+/modules/daisy/fx/delayfx/build/
+/modules/daisy/fx/reverbfx/build/
