@@ -3,7 +3,7 @@ project(ol_dsp VERSION 0.1)
 set(CMAKE_CXX_STANDARD 17)
 
 add_subdirectory(JUCE)
-add_subdirectory(DaisySP)
+add_subdirectory(libs/DaisySP)
 add_subdirectory(libs/libDaisy)
 add_subdirectory(dattorro-verb)
 add_subdirectory(libs/rtmidi)

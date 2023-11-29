@@ -23,7 +23,7 @@ CPP_SOURCES += main.cpp \
 
 # Library Locations
 LIBDAISY_DIR = ${PROJECT_DIR}/libs/libDaisy
-DAISYSP_DIR = ${PROJECT_DIR}/DaisySP
+DAISYSP_DIR = ${PROJECT_DIR}/libs/DaisySP
 
 # Core location, and generic Makefile.
 SYSTEM_FILES_DIR = $(LIBDAISY_DIR)/core
