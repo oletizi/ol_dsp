@@ -3,18 +3,18 @@
 ## Multi-effects Workout
 add_executable(fx-workout fx_main.cpp)
 target_link_libraries(fx-workout ol_corelib ol_fxlib ol_synthlib rtmidi DaisySP)
-target_include_directories(fx-workout PUBLIC . ../miniaudio)
+target_include_directories(fx-workout PUBLIC . ../libs/miniaudio)
 
 ## Filter Workout
 add_executable(filter-workout filter_main.cpp)
 target_link_libraries(filter-workout ol_corelib ol_fxlib ol_synthlib rtmidi DaisySP)
-target_include_directories(filter-workout PUBLIC . ../miniaudio)
+target_include_directories(filter-workout PUBLIC . ../libs/miniaudio)
 
 ## Delay Workout
 # This one uses miniaudio (ant rtmidi) which has much less goop.
 add_executable(delay-workout delay_main.cpp)
 target_link_libraries(delay-workout ol_corelib ol_fxlib ol_synthlib rtmidi DaisySP)
-target_include_directories(delay-workout PUBLIC . ../miniaudio)
+target_include_directories(delay-workout PUBLIC . ../libs/miniaudio)
 
 ## Reverb Workout
 
