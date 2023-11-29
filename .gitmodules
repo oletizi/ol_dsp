@@ -1,5 +1,5 @@
 [submodule "JUCE"]
-	path = JUCE
+	path = libs/JUCE
 	url = git@github.com:oletizi/JUCE.git
 [submodule "DaisySP"]
 	path = DaisySP
