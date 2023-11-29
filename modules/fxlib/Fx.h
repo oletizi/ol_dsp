@@ -53,6 +53,8 @@ namespace ol::fx {
         void (*Update)(FilterFx *) = nullptr;
     };
 
+    void Filter_UpdateHardwareControl(FilterFx *fx, uint8_t control, t_sample value);
+
     void Filter_UpdateMidi(FilterFx *, uint8_t control, uint8_t value);
 
     void Filter_Biquad_Config(FilterFx *, daisysp::Biquad *);
@@ -79,6 +81,8 @@ namespace ol::fx {
     void Delay_Config(DelayFx *, daisysp::DelayLine<t_sample, MAX_DELAY> *, FilterFx *);
 
     void Delay_UpdateMidiControl(DelayFx *, uint8_t control, uint8_t value);
+
+    void Delay_UpdateHardwareControl(DelayFx *, uint8_t control, uint8_t value);
 
     // Reverb
 

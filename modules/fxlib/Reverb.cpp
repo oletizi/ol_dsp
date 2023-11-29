@@ -76,43 +76,33 @@ namespace ol::fx {
     }
 
     void Reverb_UpdateHardwareControl(ReverbFx *fx, uint8_t control, t_sample value) {
-        t_sample previous_value;
         bool update = true;
         switch (control) {
-            case CC_REVERB_DECAY_DIFFUSION:
-                previous_value = fx->decay_diffusion;
+            case CC_REVERB_DECAY_DIFFUSION:;
                 fx->decay_diffusion = value;
                 break;
-            case CC_REVERB_INPUT_DIFFUSION_1:
-                previous_value = fx->input_diffusion1;
+            case CC_REVERB_INPUT_DIFFUSION_1:;
                 fx->input_diffusion1 = value;
                 break;
-            case CC_REVERB_INPUT_DIFFUSION_2:
-                previous_value = fx->decay_diffusion;
+            case CC_REVERB_INPUT_DIFFUSION_2:;
                 fx->decay_diffusion = value;
                 break;
-            case CC_REVERB_CUTOFF:
-                previous_value = fx->cutoff;
+            case CC_REVERB_CUTOFF:;
                 fx->cutoff = value;
                 break;
-            case CC_REVERB_BALANCE:
-                previous_value = fx->balance;
+            case CC_REVERB_BALANCE:;
                 fx->balance = value;
                 break;
-            case CC_REVERB_PREDELAY:
-                previous_value = fx->predelay;
+            case CC_REVERB_PREDELAY:;
                 fx->predelay = value;
                 break;
-            case CC_EARLY_PREDELAY:
-                previous_value = fx->early_predelay;
+            case CC_EARLY_PREDELAY:;
                 fx->early_predelay = value;
                 break;
-            case CC_REVERB_PREFILTER:
-                previous_value = fx->pre_cutoff;
+            case CC_REVERB_PREFILTER:;
                 fx->pre_cutoff = value;
                 break;
-            case CC_REVERB_TIME:
-                previous_value = fx->decay_time;
+            case CC_REVERB_TIME:;
                 fx->decay_time = value;
                 break;
             default:

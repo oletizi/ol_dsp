@@ -14,7 +14,7 @@ add_subdirectory(modules/fxlib)
 add_subdirectory(modules/synthlib)
 
 
-add_library(stk stk/src/RtMidi.cpp)
+add_library(stk libs/stk/src/RtMidi.cpp)
 target_include_directories(stk PUBLIC stk/include)
 
 add_subdirectory(workouts)

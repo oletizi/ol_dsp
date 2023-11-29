@@ -1,6 +1,7 @@
 #include "daisy.h"
 #include "daisy_pod.h"
 #include "fxlib/Fx.h"
+#include "daisy/ui/ui.h"
 
 #define AUDIO_BLOCK_SIZE 4
 using namespace daisy;
@@ -120,15 +121,6 @@ static void handleMidiMessage(MidiEvent m) {
     }
 }
 
-struct Page {
-    const char *name;
-    Page *next = nullptr;
-    Page *prev = nullptr;
-
-    void (*UpdateKnob1)(t_sample value);
-
-    void (*UpdateKnob2)(t_sample value);
-};
 
 static Page reverb_page = {
         "Reverb",
@@ -144,16 +136,33 @@ static Page reverb_page = {
         }
 };
 
-//static Page delay_page = {
-//        "Delay",
-//        &delay_page,
-//        &reverb_page,
-//        [](t_sample value)
-//};
+static Page delay_page = {
+        "Delay",
+        &delay_page,
+        &reverb_page,
+        [](t_sample value) {
+            Delay_UpdateHardwareControl(&delay1, CC_DELAY_TIME, value);
+            Delay_UpdateHardwareControl(&delay2, CC_DELAY_TIME, value);
+            DaisySeed::PrintLine("Updated delay time: %d", uint16_t(delay1.time * 1000));
+        },
+        [](t_sample value) {
+            Delay_UpdateHardwareControl(&delay1, CC_DELAY_CUTOFF, value);
+            Delay_UpdateHardwareControl(&delay2, CC_DELAY_CUTOFF, value);
+            DaisySeed::PrintLine("Update delay cutoff: %d", uint16_t(delay1.filter->cutoff * 1000));
+        }
+};
+
 
 static Page *current_page = &reverb_page;
 
-void initPages() {}
+
+void initPages() {
+    delay_page.next = &reverb_page;
+    delay_page.prev = &delay_page;
+
+    reverb_page.next = &delay_page;
+    reverb_page.prev = &delay_page;
+}
 
 
 static t_sample knob1_value = 0;

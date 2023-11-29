@@ -17,7 +17,7 @@ namespace ol::fx {
         FilterFx *filter = fx->filter;
         t_sample filter_out = 0;
         filter->Process(filter, delay_out, &filter_out);
-        
+
         *out = (filter_out * fx->balance) + (in * (1 - fx->balance));
         return 0;
     }
@@ -36,6 +36,28 @@ namespace ol::fx {
         fx->Update = Delay_update;
     }
 
+    void Delay_UpdateHardwareControl(DelayFx *fx, uint8_t control, uint8_t value) {
+        bool update = true;
+        switch (control) {
+            case CC_DELAY_TIME:
+                fx->time = value;
+                break;
+            case CC_DELAY_FEEDBACK:
+                fx->feedback = value;
+                break;
+            case CC_DELAY_BALANCE:
+                fx->balance = value;
+                break;
+            default:
+                update = false;
+        }
+        Filter_UpdateHardwareControl(fx->filter, control, value);
+        if (update) {
+            fx->Update(fx);
+        }
+
+    }
+
     void Delay_UpdateMidiControl(DelayFx *fx, uint8_t control, uint8_t value) {
         bool update = true;
         t_sample scaled = ol::core::scale(value, 0, 127, 0, 1, 1);
@@ -50,15 +72,10 @@ namespace ol::fx {
             case CC_DELAY_BALANCE:
                 fx->balance = scaled;
                 break;
-            case CC_DELAY_CUTOFF:
-                fx->filter->cutoff = scaled;
-                break;
-            case CC_DELAY_RESONANCE:
-                fx->filter->resonance = scaled;
-                break;
             default:
                 update = false;
         }
+        Filter_UpdateMidi(fx->filter, control, value);
         if (update) {
             fx->Update(fx);
         }

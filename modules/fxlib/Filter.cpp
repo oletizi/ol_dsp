@@ -92,6 +92,30 @@ namespace ol::fx {
         fx->Update = Svf_update;
     }
 
+    void Filter_UpdateHardwareControl(FilterFx *fx, uint8_t control, t_sample value) {
+        bool update = true;
+        switch (control) {
+            case CC_FILTER_RESONANCE:
+                fx->resonance = value;
+                break;
+            case CC_FILTER_CUTOFF:
+                fx->cutoff = ol::core::scale(value, 0, 1, 0, 1, 1.2);
+                break;
+            case CC_FILTER_DRIVE:
+                fx->drive = value;
+                break;
+            case CC_FILTER_TYPE:
+                fx->type = Filter_MidiToType(value);
+                break;
+            default:
+                update = false;
+                break;
+        }
+        if (update) {
+            fx->Update(fx);
+        }
+    }
+
     void Filter_UpdateMidi(FilterFx *fx, uint8_t control, uint8_t value) {
         bool update = true;
         t_sample scaled = ol::core::scale(value, 0, 127, 0, 1, 1);
@@ -116,4 +140,5 @@ namespace ol::fx {
             fx->Update(fx);
         }
     }
+
 }
