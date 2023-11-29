@@ -6,7 +6,7 @@ TARGET = ex_pod_Encoder
 #APP_TYPE = BOOT_SRAM
 PROJECT_DIR = ../../../..
 OL_DSP_DIR   = ${PROJECT_DIR}/modules
-DATTORRO_DIR = ${PROJECT_DIR}/dattorro-verb
+DATTORRO_DIR = ${PROJECT_DIR}/libs/dattorro-verb
 # Includes
 
 C_INCLUDES += -I${OL_DSP_DIR} -I${DATTORRO_DIR}
