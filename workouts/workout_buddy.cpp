@@ -46,7 +46,6 @@ namespace ol::workout {
 
 
     void Workout_Init(workout_buddy *buddy) {
-
         // Initialize Midi
         auto midi_in = buddy->midi_in;
         uint16_t ports = midi_in->getPortCount();
@@ -63,11 +62,9 @@ namespace ol::workout {
         midi_in->setCallback(Workout_RtMidiCallback, buddy);
     }
 
-    void Workout_Config(workout_buddy *buddy, RtMidiIn *mi) {
+    void Workout_Config(workout_buddy *buddy, RtMidiIn *mi, MidiControlChangeCallback cc_callback) {
         buddy->midi_in = mi;
+        buddy->HandleMidiControlChange = cc_callback;
     }
 
-    bool Workout_DoIExist() {
-        return true;
-    }
 }

@@ -13,13 +13,15 @@
 
 namespace ol::workout {
 
+    typedef
+    void (*MidiControlChangeCallback)(uint8_t channel, uint8_t controller, uint8_t value);// = nullptr;
+
     struct workout_buddy {
         void (*HandleNoteOn)(uint8_t channel, uint8_t note, uint8_t velocity) = nullptr;
 
         void (*HandleNoteOff)(uint8_t channel, uint8_t note, uint8_t value) = nullptr;
 
-        void (*HandleMidiControlChange)(uint8_t channel, uint8_t controller, uint8_t value) = nullptr;
-
+        MidiControlChangeCallback HandleMidiControlChange = nullptr;
 //        void (*Process)(ma_device *pDevice, void *pOutput, const void *pInput, ma_uint32 frameCount) = nullptr;
 
         RtMidiIn *midi_in = nullptr;
@@ -29,11 +31,10 @@ namespace ol::workout {
 
 //    static void Workout_Miniaudio_Callback(ma_device *, void *output, const void *input, ma_uint32 frame_count);
 
-    bool Workout_DoIExist();
 
     void Workout_Init(workout_buddy *);
 
-    void Workout_Config(workout_buddy *, RtMidiIn *);
+    void Workout_Config(workout_buddy *, RtMidiIn *, MidiControlChangeCallback);
 }
 
 
