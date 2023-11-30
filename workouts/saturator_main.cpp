@@ -4,18 +4,30 @@
 #include <iostream>
 #include "workout_buddy.h"
 #include "ol_fxlib.h"
+#include "ol_synthlib.h"
 
 using namespace ol::workout;
+
+ol::synthlib::ControlPanel cp;
+ol::synthlib::Voice voice(&cp);
 
 ol::fx::SaturatorFx saturator1;
 ol::fx::SaturatorFx saturator2;
 
-void note_on_callback(uint8_t channel, uint8_t note, uint8_t velocity) {}
+int notes_on = 0;
 
-void note_off_callback(uint8_t channel, uint8_t note, uint8_t velocity) {}
+void note_on_callback(uint8_t channel, uint8_t note, uint8_t velocity) {
+    notes_on++;
+    voice.NoteOn(note, velocity);
+}
+
+void note_off_callback(uint8_t channel, uint8_t note, uint8_t velocity) {
+    notes_on = notes_on > 0 ? notes_on -1 : 0;
+    voice.NoteOff(note);
+}
 
 void cc_callback(uint8_t channel, uint8_t control, uint8_t value) {
-    Saturator_UpdateMidiControl(&saturator1, control, value);
+        Saturator_UpdateMidiControl(&saturator1, control, value);
     Saturator_UpdateMidiControl(&saturator2, control, value);
 }
 
@@ -23,8 +35,11 @@ uint64_t counter = 0;
 
 void audio_callback(t_sample &in1, t_sample &in2, t_sample *out1, t_sample *out2) {
     counter++;
-    saturator1.Process(&saturator1, in1, out1);
-    saturator2.Process(&saturator2, in2, out2);
+    t_sample voice_out = voice.Process();
+    t_sample next_in1 = voice_out + in1;
+    t_sample next_in2 = voice_out + in2;
+    saturator1.Process(&saturator1, next_in1, out1);
+    saturator2.Process(&saturator2, next_in2, out2);
     if (counter % 20000 == 0) {
         std::cout << "Audio callback!" << std::endl;
         counter = 0;
@@ -51,7 +66,10 @@ int main() {
     if (status != InitStatus::Ok) {
         return status;
     }
-    saturator1.Init(&saturator1, Workout_SampleRate(&buddy));
+    t_sample sample_rate = Workout_SampleRate(&buddy);
+    voice.Init(sample_rate);
+    saturator1.Init(&saturator1, sample_rate);
+    
 
     Workout_Start(&buddy);
 
