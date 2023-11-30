@@ -31,6 +31,8 @@ namespace ol::fx {
         void (*Update)(SaturatorFx *) = nullptr;
     };
 
+    void Saturator_UpdateMidiControl(SaturatorFx *, uint8_t control, uint8_t value);
+
     void Saturator_Config(SaturatorFx *, sp_saturator *, sp_data *);
 
     // Filter

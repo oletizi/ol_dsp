@@ -4,6 +4,7 @@
 #include <iostream>
 #include "workout_buddy.h"
 #include "ol_fxlib.h"
+
 using namespace ol::workout;
 
 ol::fx::SaturatorFx saturator1;
@@ -13,7 +14,10 @@ void note_on_callback(uint8_t channel, uint8_t note, uint8_t velocity) {}
 
 void note_off_callback(uint8_t channel, uint8_t note, uint8_t velocity) {}
 
-void cc_callback(uint8_t channel, uint8_t control, uint8_t value) {}
+void cc_callback(uint8_t channel, uint8_t control, uint8_t value) {
+    Saturator_UpdateMidiControl(&saturator1, control, value);
+    Saturator_UpdateMidiControl(&saturator2, control, value);
+}
 
 uint64_t counter = 0;
 

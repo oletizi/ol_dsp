@@ -17,6 +17,13 @@ namespace ol::fx {
         return 0;
     }
 
+    void Saturator_UpdateMidiControl(SaturatorFx *fx, uint8_t control, uint8_t value) {
+        if (control == CC_SATURATOR_DRIVE) {
+            fx->saturator->drive = ol::core::scale(value, 0, 127, 0, 1, 1);
+
+        }
+    }
+
     void Saturator_Config(SaturatorFx *fx, sp_saturator *saturator, sp_data *spdata) {
         fx->saturator = saturator;
         fx->spdata = spdata;
