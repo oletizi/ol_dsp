@@ -4,15 +4,36 @@
 
 #ifndef OL_DSP_FX_H
 #define OL_DSP_FX_H
+#define SPFLOAT t_sample
+
+#include "corelib/ol_corelib.h"
+
+extern "C" {
+#include "soundpipe.h"
+}
 
 #include "verb.h"
 #include "daisysp.h"
-#include "corelib/ol_corelib.h"
 #include "fxlib/cc_map.h"
 
 #define MAX_DELAY 48000
 namespace ol::fx {
 
+    // Saturator
+    struct SaturatorFx {
+        sp_saturator *saturator = nullptr;
+        sp_data *spdata = nullptr;
+
+        void (*Init)(SaturatorFx *, t_sample sample_rate) = nullptr;
+
+        int (*Process)(SaturatorFx *, const t_sample &in, t_sample *out) = nullptr;
+
+        void (*Update)(SaturatorFx *) = nullptr;
+    };
+
+    void Saturator_Config(SaturatorFx *, sp_saturator *, sp_data *);
+
+    // Filter
 
     enum FilterType {
         LowPass,
@@ -33,9 +54,6 @@ namespace ol::fx {
     };
 
     FilterStyle Filter_MidiToStyle(uint8_t value);
-
-
-// Fiilter
 
     struct FilterFx {
 
@@ -99,7 +117,7 @@ namespace ol::fx {
         t_sample balance = 0.25;
         uint64_t counter = 0;
 
-        void (*PrintLine) (const char *) = nullptr;
+        void (*PrintLine)(const char *) = nullptr;
 
         void (*Init)(ReverbFx *, t_sample sample_rate) = nullptr;
 
@@ -135,12 +153,11 @@ namespace ol::fx {
         int (*Process)(FxRack *, const t_sample &in1, const t_sample &in2, t_sample *out1, t_sample *out2) = nullptr;
 
         void (*Update)(FxRack *) = nullptr;
-
     };
 
     void FxRack_UpdateMidiControl(FxRack *, uint8_t control, uint8_t value);
 
-    void FxRack_Config(FxRack *, DelayFx *, DelayFx *, ReverbFx *, FilterFx *, FilterFx *);
+    void FxRack_Config(FxRack *, DelayFx *, DelayFx *, ReverbFx *, FilterFx *, FilterFx * );
 
 }
 #endif //OL_DSP_FX_H

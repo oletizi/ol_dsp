@@ -1,9 +1,17 @@
+#ifdef DAISY_NATIVE
+#include "daisy/daisy_dummy.h"
+#else
+
 #include "daisy.h"
 #include "daisy_pod.h"
+
+#endif
+
 #include "fxlib/Fx.h"
 #include "daisy/ui/ui.h"
 
 #define AUDIO_BLOCK_SIZE 4
+
 using namespace daisy;
 static DaisyPod hw;
 
@@ -33,7 +41,6 @@ daisysp::Svf DSY_SDRAM_BSS svf1;
 daisysp::Svf DSY_SDRAM_BSS svf2;
 ol::fx::FilterFx filter1;
 ol::fx::FilterFx filter2;
-
 
 ol::fx::FxRack fxrack;
 

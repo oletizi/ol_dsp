@@ -1,4 +1,16 @@
-# Workout executables
+
+## Workout library
+#add_library(workout workout_buddy.cpp)
+#target_link_libraries(workout ol_corelib)
+#target_include_directories(workout PUBLIC . ../libs/miniaudio ../libs/rtmidi)
+
+add_library(workout-buddy workout_buddy.cpp)
+target_link_libraries(workout-buddy ol_corelib rtmidi)
+target_include_directories(workout-buddy PUBLIC ../libs/rtmidi)
+
+## Saturator Workout
+add_executable(saturator-workout saturator_main.cpp)
+target_link_libraries(saturator-workout workout-buddy)
 
 ## Multi-effects Workout
 add_executable(fx-workout fx_main.cpp)
@@ -17,7 +29,6 @@ target_link_libraries(delay-workout ol_corelib ol_fxlib ol_synthlib rtmidi Daisy
 target_include_directories(delay-workout PUBLIC . ../libs/miniaudio)
 
 ## Reverb Workout
-
 juce_add_console_app(reverb-workout
         PRODUCT_NAME "Reverb Workout"
 )

@@ -4,6 +4,24 @@
 #include "gtest/gtest.h"
 #include "daisysp.h"
 #include "fxlib/Fx.h"
+using namespace ol::fx;
+TEST(FX, Saturator) {
+    SaturatorFx saturator;
+    sp_saturator spsaturator;
+    sp_data spdata;
+    Saturator_Config(&saturator, &spsaturator, &spdata);
+    saturator.Init(&saturator, 48000);
+
+    t_sample in = 0;
+    t_sample out = 1;
+    saturator.Process(&saturator, in, &out);
+    EXPECT_EQ(in, out);
+
+    in = 1;
+    out = 1;
+    saturator.Process(&saturator, in, &out);
+    EXPECT_NE(in, out);
+}
 
 TEST(FX, Delay) {
     daisysp::Svf svf;

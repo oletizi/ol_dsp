@@ -22,3 +22,9 @@
 [submodule "libs/libDaisy"]
 	path = libs/libDaisy
 	url = git@github.com:oletizi/libDaisy.git
+[submodule "libs/TeensyAudio"]
+	path = libs/TeensyAudio
+	url = git@github.com:oletizi/TeensyAudio.git
+[submodule "libs/Soundpipe"]
+	path = libs/Soundpipe
+	url = git@github.com:oletizi/Soundpipe.git
