@@ -6,12 +6,19 @@
 #define OL_DSP_WORKOUT_BUDDY_H
 
 #define MINIAUDIO_IMPLEMENTATION
-//#include "miniaudio.h"
+
+#include "miniaudio.h"
 #include "RtMidi.h"
 #include "corelib/ol_corelib.h"
 
 
 namespace ol::workout {
+
+    enum InitStatus {
+        Ok,
+        MidiInitError,
+        AudioInitError
+    };
 
     typedef
     void (*MidiNoteOnCallback)(uint8_t channel, uint8_t note, uint8_t velocity);
@@ -22,6 +29,9 @@ namespace ol::workout {
     typedef
     void (*MidiControlChangeCallback)(uint8_t channel, uint8_t controller, uint8_t value);
 
+    typedef
+    void (*AudioCallback)(t_sample &in1, t_sample &in2, t_sample *out1, t_sample *out2);
+
     struct workout_buddy {
 
         MidiNoteOnCallback HandleNoteOn = nullptr;
@@ -30,20 +40,22 @@ namespace ol::workout {
 
         MidiControlChangeCallback HandleMidiControlChange = nullptr;
 
-        //        void (*Process)(ma_device *pDevice, void *pOutput, const void *pInput, ma_uint32 frameCount) = nullptr;
+        AudioCallback Process = nullptr;
+
+        ma_device *audio_device = nullptr;
 
         RtMidiIn *midi_in = nullptr;
     };
 
-    void Workout_RtMidiCallback([[maybe_unused]] double deltatime, std::vector<unsigned char> *message, void *userData);
+    t_sample Workout_SampleRate(workout_buddy *);
 
-//    static void Workout_Miniaudio_Callback(ma_device *, void *output, const void *input, ma_uint32 frame_count);
+    void Workout_Start(workout_buddy *);
 
-
-    void Workout_Init(workout_buddy *);
+    InitStatus Workout_Init(workout_buddy *);
 
     void
-    Workout_Config(workout_buddy *, RtMidiIn *, MidiNoteOnCallback, MidiNoteOffCallback, MidiControlChangeCallback);
+    Workout_Config(workout_buddy *, RtMidiIn *, ma_device *, MidiNoteOnCallback, MidiNoteOffCallback,
+                   MidiControlChangeCallback, AudioCallback);
 }
 
 

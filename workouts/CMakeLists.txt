@@ -5,12 +5,12 @@
 #target_include_directories(workout PUBLIC . ../libs/miniaudio ../libs/rtmidi)
 
 add_library(workout-buddy workout_buddy.cpp)
-target_link_libraries(workout-buddy ol_corelib rtmidi)
-target_include_directories(workout-buddy PUBLIC ../libs/rtmidi)
+target_link_libraries(workout-buddy ol_corelib ol_fxlib ol_synthlib rtmidi)
+target_include_directories(workout-buddy PUBLIC ../libs/rtmidi ../libs/miniaudio)
 
 ## Saturator Workout
 add_executable(saturator-workout saturator_main.cpp)
-target_link_libraries(saturator-workout workout-buddy)
+target_link_libraries(saturator-workout workout-buddy ol_fxlib)
 
 ## Multi-effects Workout
 add_executable(fx-workout fx_main.cpp)
