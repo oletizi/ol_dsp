@@ -5,7 +5,8 @@
 #include "workout_buddy.h"
 
 namespace ol::workout {
-    void Workout_RtMidiCallback(double deltatime, std::vector<unsigned char> *message, void *userData) {
+    void
+    Workout_RtMidiCallback([[maybe_unused]] double deltatime, std::vector<unsigned char> *message, void *userData) {
         auto *buddy = static_cast<workout_buddy *>(userData);
         unsigned int nBytes = message->size();
         if (nBytes > 0) {
@@ -62,9 +63,15 @@ namespace ol::workout {
         midi_in->setCallback(Workout_RtMidiCallback, buddy);
     }
 
-    void Workout_Config(workout_buddy *buddy, RtMidiIn *mi, MidiControlChangeCallback cc_callback) {
+    void Workout_Config(workout_buddy *buddy, RtMidiIn *mi,
+                        MidiNoteOnCallback note_on_callback,
+                        MidiNoteOffCallback note_off_callback,
+                        MidiControlChangeCallback cc_callback) {
         buddy->midi_in = mi;
+        buddy->HandleNoteOn = note_on_callback;
+        buddy->HandleNoteOff = note_off_callback;
         buddy->HandleMidiControlChange = cc_callback;
+
     }
 
 }
