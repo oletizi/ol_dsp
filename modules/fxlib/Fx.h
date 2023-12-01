@@ -168,6 +168,9 @@ namespace ol::fx {
         ol::fx::ReverbFx *reverb = nullptr;
         FilterFx *filter1 = nullptr;
         FilterFx *filter2 = nullptr;
+        SaturatorFx *saturator1 = nullptr;
+        SaturatorFx *saturator2 = nullptr;
+        SaturatorFx *interstage_saturator = nullptr;
 
         void (*Init)(FxRack *, t_sample sample_rate) = nullptr;
 
@@ -178,7 +181,8 @@ namespace ol::fx {
 
     void FxRack_UpdateMidiControl(FxRack *, uint8_t control, uint8_t value);
 
-    void FxRack_Config(FxRack *, DelayFx *, DelayFx *, ReverbFx *, FilterFx *, FilterFx *);
+    void
+    FxRack_Config(FxRack *, DelayFx *, DelayFx *, ReverbFx *, FilterFx *, FilterFx *, SaturatorFx *, SaturatorFx *, SaturatorFx * interstage_saturator);
 
 }
 #endif //OL_DSP_FX_H

@@ -240,7 +240,7 @@ int main() {
     ol::fx::Filter_Svf_Config(&filter1, &svf1);
     ol::fx::Filter_Svf_Config(&filter2, &svf2);
 
-    ol::fx::FxRack_Config(&fxrack, &delay1, &delay2, &reverb, &filter1, &filter2);
+    ol::fx::FxRack_Config(&fxrack, &delay1, &delay2, &reverb, &filter1, &filter2, nullptr, nullptr);
 
     fxrack.Init(&fxrack, sample_rate);
 

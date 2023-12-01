@@ -132,10 +132,20 @@ int main() {
 
     daisysp::Svf svf1;
     daisysp::Svf svf2;
-    ol::fx::Filter_Svf_Config(&filter1, &svf1);
-    ol::fx::Filter_Svf_Config(&filter2, &svf2);
+    Filter_Svf_Config(&filter1, &svf1);
+    Filter_Svf_Config(&filter2, &svf2);
 
-    FxRack_Config(&fxrack, &delay1, &delay2, &reverbSc, &filter1, &filter2);
+    HyperTan transfer_function;
+    SaturatorFx saturator1;
+    Saturator_Config(&saturator1, &transfer_function);
+
+    SaturatorFx saturator2;
+    Saturator_Config(&saturator2, &transfer_function);
+
+    SaturatorFx interstage_saturator;
+    Saturator_Config(&interstage_saturator, &transfer_function);
+
+    FxRack_Config(&fxrack, &delay1, &delay2, &reverbSc, &filter1, &filter2, &saturator1, &saturator2, & interstage_saturator);
 
     RtMidiIn *midiin = nullptr;
     try {
