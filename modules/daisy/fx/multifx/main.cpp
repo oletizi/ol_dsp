@@ -1,5 +1,7 @@
 #ifdef DAISY_NATIVE
+
 #include "daisy/daisy_dummy.h"
+
 #else
 
 #include "daisy.h"
@@ -56,6 +58,8 @@ static void callback(AudioHandle::InterleavingInputBuffer in,
         fxrack.Process(&fxrack, in[i], in[i + 1], &out1, &out2);
         out[i] = out1;
         out[i + 1] = out2;
+//        out[i] = in[i];
+//        out[i+1] = in[i+1];
         if (counter % 20000 == 0) {
             DaisySeed::PrintLine("out1: %d, out2: %d", uint16_t(out[i] * 1000), uint16_t(out[i + 1] * 1000));
             counter = 0;
@@ -153,9 +157,9 @@ static Page delay_page = {
             DaisySeed::PrintLine("Updated delay time: %d", uint16_t(delay1.time * 1000));
         },
         [](t_sample value) {
-            Delay_UpdateHardwareControl(&delay1, CC_DELAY_CUTOFF, value);
-            Delay_UpdateHardwareControl(&delay2, CC_DELAY_CUTOFF, value);
-            DaisySeed::PrintLine("Update delay cutoff: %d", uint16_t(delay1.filter->cutoff * 1000));
+            Delay_UpdateHardwareControl(&delay1, CC_DELAY_FEEDBACK, value);
+            Delay_UpdateHardwareControl(&delay2, CC_DELAY_FEEDBACK, value);
+            DaisySeed::PrintLine("Update delay feedback: %d", uint16_t(delay1.filter->cutoff * 1000));
         }
 };
 
@@ -216,6 +220,8 @@ static void handleControls() {
     }
 }
 
+using namespace ol::fx;
+
 int main() {
     float sample_rate;
 
@@ -225,22 +231,32 @@ int main() {
     sample_rate = hw.AudioSampleRate();
     hw.StartAdc();
 
-    ol::fx::FilterFx delay_filter1;
-    ol::fx::Filter_Svf_Config(&delay_filter1, &delay_svf1);
+    FilterFx delay_filter1;
+    Filter_Svf_Config(&delay_filter1, &delay_svf1);
 
-    ol::fx::FilterFx delay_filter2;
-    ol::fx::Filter_Svf_Config(&delay_filter2, &delay_svf2);
+    FilterFx delay_filter2;
+    Filter_Svf_Config(&delay_filter2, &delay_svf2);
 
-    ol::fx::Delay_Config(&delay1, &delay_line1, &delay_filter1);
-    ol::fx::Delay_Config(&delay2, &delay_line2, &delay_filter2);
+    Delay_Config(&delay1, &delay_line1, &delay_filter1);
+    Delay_Config(&delay2, &delay_line2, &delay_filter2);
 
-    ol::fx::ReverbSc_Config(&reverb, &verb);
+    ReverbSc_Config(&reverb, &verb);
     reverb.PrintLine = [](const char *msg) { DaisySeed::PrintLine(msg); };
 
-    ol::fx::Filter_Svf_Config(&filter1, &svf1);
-    ol::fx::Filter_Svf_Config(&filter2, &svf2);
+    Filter_Svf_Config(&filter1, &svf1);
+    Filter_Svf_Config(&filter2, &svf2);
 
-    ol::fx::FxRack_Config(&fxrack, &delay1, &delay2, &reverb, &filter1, &filter2, nullptr, nullptr);
+    HyperTan xfr_function;
+    SaturatorFx saturator1;
+    Saturator_Config(&saturator1, &xfr_function);
+
+    SaturatorFx saturator2;
+    Saturator_Config(&saturator2, &xfr_function);
+
+    SaturatorFx interstage_saturator;
+    Saturator_Config(&interstage_saturator, &xfr_function);
+
+    FxRack_Config(&fxrack, &delay1, &delay2, &reverb, &filter1, &filter2, &saturator1, &saturator2, &interstage_saturator);
 
     fxrack.Init(&fxrack, sample_rate);
 

@@ -7,9 +7,10 @@ TARGET = ex_pod_Encoder
 PROJECT_DIR = ../../../..
 OL_DSP_DIR   = ${PROJECT_DIR}/modules
 DATTORRO_DIR = ${PROJECT_DIR}/libs/dattorro-verb
+SOUNDPIPE_DIR = ${PROJECT_DIR}/libs/Soundpipe
 # Includes
 
-C_INCLUDES += -I${OL_DSP_DIR} -I${DATTORRO_DIR}
+C_INCLUDES += -I${OL_DSP_DIR} -I${DATTORRO_DIR} -I${SOUNDPIPE_DIR}/h
 # Sources
 CPP_SOURCES += main.cpp \
 	${OL_DSP_DIR}/corelib/ol_corelib.cpp \
@@ -17,6 +18,7 @@ CPP_SOURCES += main.cpp \
 	${OL_DSP_DIR}/fxlib/Delay.cpp \
 	${OL_DSP_DIR}/fxlib/Filter.cpp \
 	${OL_DSP_DIR}/fxlib/Reverb.cpp \
+	${OL_DSP_DIR}/fxlib/Saturator.cpp \
 	${DATTORRO_DIR}/verb.cpp
 
 # OPT = -O3
