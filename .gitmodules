@@ -28,3 +28,6 @@
 [submodule "libs/Soundpipe"]
 	path = libs/Soundpipe
 	url = git@github.com:oletizi/Soundpipe.git
+[submodule "libs/du-ino"]
+	path = libs/du-ino
+	url = git@github.com:oletizi/du-ino.git
