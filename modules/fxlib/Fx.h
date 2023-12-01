@@ -19,21 +19,40 @@ extern "C" {
 #define MAX_DELAY 48000
 namespace ol::fx {
 
+    template<typename T>
+    class TransferFunction {
+    public:
+        virtual t_sample Process(T data, t_sample in) = 0;
+    };
+
     // Saturator
     struct SaturatorFx {
-        sp_saturator *saturator = nullptr;
-        sp_data *spdata = nullptr;
+
+        t_sample drive = 1;
 
         void (*Init)(SaturatorFx *, t_sample sample_rate) = nullptr;
 
         int (*Process)(SaturatorFx *, const t_sample &in, t_sample *out) = nullptr;
 
         void (*Update)(SaturatorFx *) = nullptr;
+
+        TransferFunction<SaturatorFx *> *transferFunction = nullptr;
+
+        sp_saturator *saturator = nullptr;
+        sp_data *spdata = nullptr;
+    };
+
+    class HyperTan : public TransferFunction<SaturatorFx *> {
+    public:
+        t_sample Process(SaturatorFx *, t_sample in) override;
     };
 
     void Saturator_UpdateMidiControl(SaturatorFx *, uint8_t control, uint8_t value);
 
     void Saturator_Config(SaturatorFx *, sp_saturator *, sp_data *);
+
+    void Saturator_Config(SaturatorFx *, TransferFunction<SaturatorFx *> *);
+
 
     // Filter
 
@@ -159,7 +178,7 @@ namespace ol::fx {
 
     void FxRack_UpdateMidiControl(FxRack *, uint8_t control, uint8_t value);
 
-    void FxRack_Config(FxRack *, DelayFx *, DelayFx *, ReverbFx *, FilterFx *, FilterFx * );
+    void FxRack_Config(FxRack *, DelayFx *, DelayFx *, ReverbFx *, FilterFx *, FilterFx *);
 
 }
 #endif //OL_DSP_FX_H

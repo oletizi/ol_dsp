@@ -61,25 +61,12 @@ namespace ol::workout {
             auto output_channel_count = device->playback.channels;
 
             for (int i = 0; i < frameCount; i++) {
-                t_sample in_value1 = 0;
-                t_sample in_value2 = 0;
-                t_sample *out1 = nullptr;
-                t_sample *out2 = nullptr;
-                if (input_channel_count > 0) {
-                    in_value1 = in[i];
-                    in_value2 = in_value1;
-                }
-                if (input_channel_count >= 1) {
-                    in_value2 = in[i + 1];
-                }
-                if (output_channel_count > 0) {
-                    out1 = out + i;
-                    out2 = out1;
-                }
-                if (output_channel_count >= 1) {
-                    out2 = out + i + 1;
-                }
-                buddy->Process(in_value1, in_value2, out1, out2);
+                t_sample out1 = 0;
+                t_sample out2 = 0;
+                buddy->Process(in[i], in[i], &out1, &out2);
+                out[i * output_channel_count + 0] = out1;
+                out[i * output_channel_count + 1] = out2;
+
             }
         }
         if (counter % 20000 == 0) {
