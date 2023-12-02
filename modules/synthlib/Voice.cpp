@@ -38,11 +38,11 @@ namespace ol::synth {
         // Filter
 //        v->filt_freq = v->filter_envelope.Process(v->notes_on > 0);
 //
-//        v->filt_1.SetFreq(v->filt_freq);
-//        v->filt_1.SetRes(v->filt_res);
-//        v->filt_1.SetDrive(v->filt_drive);
-//        v->filt_1.Process(rv);
-//        rv = v->filt_1.Low();
+        v->filter.SetFreq(v->filt_freq);
+        v->filter.SetRes(v->filt_res);
+        v->filter.SetDrive(v->filt_drive);
+        v->filter.Process(rv);
+        rv = v->filter.Low();
 
         //float amp = v->amp_envelope.Process(v->notes_on > 0);
         //rv *= amp;
@@ -62,7 +62,7 @@ namespace ol::synth {
                 v->portamento_htime = scaled;
                 break;
             case CC_FILT_CUTOFF:
-                v->filt_freq = daisysp::mtof(val);
+                v->filt_freq = ol::core::scale(val, 0, 127, 0, 20000, 2.5  );
                 break;
             case CC_FILT_Q:
                 v->filt_res = scaled;
@@ -173,9 +173,10 @@ namespace ol::synth {
         v->slop_lfo_4.SetFreq(0.00011f);
         for (auto &oscillator: v->oscillators) {
             oscillator.Init(sample_rate);
+            oscillator.SetWaveform(daisysp::Oscillator::WAVE_POLYBLEP_SAW);
         }
 
-        v->filt_1.Init(sample_rate);
+        v->filter.Init(sample_rate);
         v->filter_envelope.Init(sample_rate);
         v->amp_envelope.Init(sample_rate);
         v->portamento_.Init(sample_rate, 0);

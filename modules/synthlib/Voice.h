@@ -48,7 +48,7 @@ namespace ol::synth {
 
         // Filter
         daisysp::Adsr filter_envelope;
-        daisysp::Svf filt_1;
+        daisysp::Svf filter;
 
         // Amplifier
         daisysp::Adsr amp_envelope;
