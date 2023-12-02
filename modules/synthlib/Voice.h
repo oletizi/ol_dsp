@@ -5,8 +5,9 @@
 #ifndef JUCE_TEST_VOICE_H
 #define JUCE_TEST_VOICE_H
 
+#include <queue>
 #include <daisysp.h>
-#include "ol_synthlib_core.h"
+#include "synthlib/ol_synthlib.h"
 
 #define OSCILLATOR_COUNT 4
 
@@ -15,8 +16,11 @@ namespace ol::synth {
     struct Voice {
 
         void (*Init)(Voice *, t_sample sample_rate) = nullptr;
+
         void (*Update)(Voice *) = nullptr;
+
         t_sample (*Process)(Voice *) = nullptr;
+
         void (*UpdateMidiControl)(Voice *, int control, int value) = nullptr;
 
         // XXX: This should be separated into note and gate
@@ -86,6 +90,26 @@ namespace ol::synth {
     };
 
     void Voice_Config(Voice *);
+
+    struct Multivoice {
+
+        void (*Init)(Multivoice *, t_sample sample_rate) = nullptr;
+
+        t_sample (*Process)(Multivoice *) = nullptr;
+
+        void (*NoteOn)(Multivoice *, uint8_t note, uint8_t velocity) = nullptr;
+
+        void (*NoteOff)(Multivoice *, uint8_t note, uint8_t velocity) = nullptr;
+
+        void (*UpdateMidiControl)(Multivoice *, uint8_t control, uint8_t value) = nullptr;
+
+        std::queue<ol::synth::Voice *> pool;
+        std::vector<ol::synth::Voice *> voices;
+        std::queue<ol::synth::Voice *> playing[127];
+        uint8_t unison_count = 1;
+    };
+
+    void Multivoice_Config(Multivoice *m, const std::vector<Voice *> *voices);
 
 }
 #endif //JUCE_TEST_VOICE_H

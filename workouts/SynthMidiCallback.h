@@ -8,21 +8,21 @@
 
 class SynthMidiCallback : public juce::MidiInputCallback {
 public:
-    explicit SynthMidiCallback(ol::synth::Voice *voice) : voice_(voice) {}
+    explicit SynthMidiCallback(ol::synth::Multivoice *voices) : voices_(voices) {}
 
     void handleIncomingMidiMessage(juce::MidiInput *source, const juce::MidiMessage &message) override {
         if (message.isNoteOn()) {
-            voice_->NoteOn(voice_, static_cast<unsigned char>(message.getNoteNumber()), message.getVelocity());
+            voices_->NoteOn(voices_, static_cast<unsigned char>(message.getNoteNumber()), message.getVelocity());
         } else if (message.isNoteOff()) {
-            voice_->NoteOff(voice_, static_cast<unsigned char>(message.getNoteNumber()), message.getVelocity());
+            voices_->NoteOff(voices_, static_cast<unsigned char>(message.getNoteNumber()), message.getVelocity());
         } else if (message.isController()) {
-            voice_->UpdateMidiControl(voice_, message.getControllerNumber(),
+            voices_->UpdateMidiControl(voices_, message.getControllerNumber(),
                                        message.getControllerValue());
         }
     }
 
 private:
-    ol::synth::Voice *voice_;
+    ol::synth::Multivoice *voices_;
 };
 
 #endif //OL_DSP_SYNTHMIDICALLBACK_H
