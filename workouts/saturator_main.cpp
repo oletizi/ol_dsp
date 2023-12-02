@@ -7,23 +7,23 @@
 #include "ol_synthlib.h"
 
 using namespace ol::workout;
+using namespace ol::synthlib;
+using namespace ol::fx;
+Voice voice;
 
-ol::synthlib::ControlPanel cp;
-ol::synthlib::Voice voice(&cp);
-
-ol::fx::SaturatorFx saturator1;
-ol::fx::SaturatorFx saturator2;
+SaturatorFx saturator1;
+SaturatorFx saturator2;
 
 int notes_on = 0;
 
 void note_on_callback(uint8_t channel, uint8_t note, uint8_t velocity) {
     notes_on++;
-    voice.NoteOn(note, velocity);
+    voice.NoteOn(&voice, note, velocity);
 }
 
 void note_off_callback(uint8_t channel, uint8_t note, uint8_t velocity) {
     notes_on = notes_on > 0 ? notes_on - 1 : 0;
-    voice.NoteOff(note);
+    voice.NoteOff(&voice, note, velocity);
 }
 
 void cc_callback(uint8_t channel, uint8_t control, uint8_t value) {
@@ -35,7 +35,7 @@ uint64_t counter = 0;
 
 void audio_callback(t_sample &in1, t_sample &in2, t_sample *out1, t_sample *out2) {
     counter++;
-    t_sample voice_out = voice.Process();
+    t_sample voice_out = voice.Process(&voice);
     t_sample next_in1 = voice_out + in1;
     t_sample next_in2 = voice_out + in2;
     saturator1.Process(&saturator1, next_in1, out1);
@@ -71,7 +71,9 @@ int main() {
         return status;
     }
     t_sample sample_rate = Workout_SampleRate(&buddy);
-    voice.Init(sample_rate);
+
+    Voice_Config(&voice);
+    voice.Init(&voice, sample_rate);
     saturator1.Init(&saturator1, sample_rate);
     saturator2.Init(&saturator2, sample_rate);
 

@@ -10,15 +10,14 @@
 
 #define CHANNEL_COUNT 2
 
-ol::synthlib::ControlPanel synth_control_panel;
-ol::synthlib::Voice voice(&synth_control_panel);
+ol::synthlib::Voice voice;
 ol::fx::FilterFx filt;
 int notes_on = 0;
 
 void handleNoteOn(int channel, int note, int velocity) {
     std::cout << "NOTE ON: chan: " << channel << "; note: " << note << "; vel: " << velocity << std::endl;
     notes_on++;
-    //voice.NoteOn(note, velocity);
+    voice.NoteOn(&voice, note, velocity);
 }
 
 void handleNoteOff(int channel, int note, int velocity) {
@@ -26,12 +25,13 @@ void handleNoteOff(int channel, int note, int velocity) {
     if (notes_on > 0) {
         notes_on--;
     }
-    //voice.NoteOff(note);
+    voice.NoteOff(&voice, note, velocity);
 }
 
 void handleCC(int channel, int control, int value) {
     std::cout << "CC: chan: " << channel << "; control: " << control << "; val: " << value << std::endl;
     //synth_control_panel.UpdateMidi(control, value);
+    voice.UpdateMidiControl(&voice, control, value);
     ol::fx::Filter_UpdateMidi(&filt, control, value);
 }
 
@@ -71,8 +71,8 @@ void audio_callback(ma_device *device, void *pOutput, const void *pInput, ma_uin
     auto *in = (t_sample *) pInput;
     auto *out = (t_sample *) pOutput;
     for (int i = 0; i < frameCount; i++) {
-        //  t_sample voice_out = voice.Process();
-        t_sample filt_out = 0;
+
+        t_sample filt_out = voice.Process(&voice);
         filt.Process(&filt, in[i * inputs], &filt_out);;
 
         out[i * outputs + 0] = filt_out;
@@ -116,7 +116,9 @@ int main() {
         return -1;  // Failed to initialize the device.
     }
 
-    voice.Init(device.sampleRate);
+    ol::synthlib::Voice_Config(&voice);
+    voice.Init(&voice, device.sampleRate);
+
     daisysp::Biquad biquad;
     daisysp::Svf svf;
     ol::fx::Filter_Biquad_Config(&filt, &biquad);

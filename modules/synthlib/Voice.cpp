@@ -5,107 +5,188 @@
 #include <iostream>
 #include "Voice.h"
 
-t_sample ol::synthlib::Voice::Process() {
-    counter_++;
+namespace ol::synthlib {
 
-    // Oscillator
-    updateWaveform();
+    t_sample Voice_process(Voice *v) {
 
-    portamento_.SetHtime(control_panel_->portamento.Value());
-    t_sample port = portamento_.Process(freq_);
+        t_sample freq = v->freq_;
+        //t_sample freq = v->portamento_.Process(freq);
+        t_sample rv = 0;
 
-    setOscillatorFrequency(port);
+//        t_sample slop_lfo_1_value = v->slop_lfo_1.Process();
+//        t_sample slop_lfo_2_value = v->slop_lfo_2.Process();
+//        t_sample slop_lfo_3_value = v->slop_lfo_3.Process();
+//        t_sample slop_lfo_4_value = v->slop_lfo_4.Process();
+//
+//        t_sample osc_1_slop_freq = port + port * slop_lfo_1_value * v->slop_factor * v->osc_1_slop;
+//        t_sample osc_2_slop_freq = port - port * slop_lfo_2_value * v->slop_factor * v->osc_2_slop;
+//        t_sample osc_3_slop_freq = port + port * slop_lfo_3_value * v->slop_factor * v->osc_3_slop;
+//        t_sample osc_4_slop_freq = port - port * slop_lfo_4_value * v->slop_factor * v->osc_4_slop;
+//        v->slop_lfo_1.PhaseAdd(slop_lfo_1_value * 0.000001f);
+//        v->slop_lfo_2.PhaseAdd(slop_lfo_2_value * 0.0000009f);
+//
+        v->oscillators[0].SetFreq(freq);
+//        v->oscillators[1].SetFreq(osc_2_slop_freq);
+//        v->oscillators[2].SetFreq(osc_3_slop_freq);
+//        v->oscillators[3].SetFreq(osc_4_slop_freq);
 
-    t_sample value = processOscillators();//osc_1_.Process();
+        rv += v->oscillators[0].Process() * v->osc_1_mix;
+//        rv += v->oscillators[1].Process() * v->osc_2_mix;;
+//        rv += v->oscillators[2].Process() * v->osc_3_mix;
+//        rv += v->oscillators[3].Process() * v->osc_4_mix;
 
-    // Filter
-    env_filt_.SetAttackTime(control_panel_->env_filt_A.Value());
-    env_filt_.SetDecayTime(control_panel_->env_filt_D.Value());
-    env_filt_.SetSustainLevel(control_panel_->env_filt_S.Value());
-    env_filt_.SetReleaseTime(control_panel_->env_filt_R.Value());
-    float env_filt_value = env_filt_.Process(notes_on_ > 0);
-    control_panel_->filter_cutoff.UpdateCv(env_filt_value);
-    float filt_freq = control_panel_->filter_cutoff.Value();
-    float filt_res = control_panel_->filter_resonance.Value();
-    float filt_drive = control_panel_->filter_drive.Value();
-    filt_1_.SetFreq(filt_freq);
-    filt_1_.SetRes(filt_res);
-    filt_1_.SetDrive(filt_drive);
-    filt_1_.Process(value);
-    value = filt_1_.Low();
-    // Amplifier
-    env_amp_.SetAttackTime(control_panel_->env_amp_A.Value());
-    env_amp_.SetDecayTime(control_panel_->env_amp_D.Value());
-    env_amp_.SetSustainLevel(control_panel_->env_amp_S.Value());
-    env_amp_.SetReleaseTime(control_panel_->env_amp_R.Value());
-    float amp = env_amp_.Process(notes_on_ > 0);
-    value *= amp;
-    if (counter_ % 40000 == 0) {
-        counter_ = 0;
+        // Filter
+//        v->filt_freq = v->filter_envelope.Process(v->notes_on > 0);
+//
+//        v->filt_1.SetFreq(v->filt_freq);
+//        v->filt_1.SetRes(v->filt_res);
+//        v->filt_1.SetDrive(v->filt_drive);
+//        v->filt_1.Process(rv);
+//        rv = v->filt_1.Low();
+
+        //float amp = v->amp_envelope.Process(v->notes_on > 0);
+        //rv *= amp;
+        //rv *= v->master_volume;
+        return rv;
     }
-    float volume = control_panel_->master_volume.Value();
-    return value * volume;
-}
 
-void ol::synthlib::Voice::updateWaveform() {
-    for (auto &oscillator: oscillators) {
-        switch (control_panel_->GetOsc1Waveform()) {
-            case ControlPanel::WAVE_SIN:
-                oscillator.SetWaveform(daisysp::Oscillator::WAVE_SIN);
+    void Voice_updateMidiControl(Voice *v, int ctl, int val) {
+        std::cout << "Synth ctl: " << ctl << "; val: " << val << std::endl;
+        bool update = true;
+        t_sample scaled = ol::core::scale(val, 0, 127, 0, 1, 1);
+        switch (ctl) {
+            case CC_CTL_VOLUME:
+                v->master_volume = scaled;
                 break;
-            case ControlPanel::WAVE_SAW:
-                oscillator.SetWaveform(daisysp::Oscillator::WAVE_POLYBLEP_SAW);
+            case CC_CTL_PORTAMENTO:
+                v->portamento_htime = scaled;
                 break;
-            case ControlPanel::WAVE_TRI:
-                oscillator.SetWaveform(daisysp::Oscillator::WAVE_POLYBLEP_TRI);
+            case CC_FILT_CUTOFF:
+                v->filt_freq = daisysp::mtof(val);
                 break;
-            case ControlPanel::WAVE_SQUARE:
-                oscillator.SetWaveform(daisysp::Oscillator::WAVE_POLYBLEP_SQUARE);
+            case CC_FILT_Q:
+                v->filt_res = scaled;
+                break;
+            case CC_FILT_DRIVE:
+                v->filt_drive = scaled;
+                break;
+            case CC_ENV_FILT_AMT:
+                v->filter_envelope_amount = scaled;
+                break;
+            case CC_ENV_FILT_A:
+                v->filter_attack = scaled;
+                break;
+            case CC_ENV_FILT_D:
+                v->filter_decay = scaled;
+                break;
+            case CC_ENV_FILT_S:
+                v->filter_sustain = scaled;
+                break;
+            case CC_ENV_FILT_R:
+                v->filter_release = scaled;
+                break;
+            case CC_ENV_AMP_A:
+                v->amp_attack = scaled;
+                break;
+            case CC_ENV_AMP_D:
+                v->amp_decay = scaled;
+                break;
+            case CC_ENV_AMP_S:
+                v->amp_sustain = scaled;
+                break;
+            case CC_ENV_AMP_R:
+                v->amp_release = scaled;
+                break;
+            case CC_OSC_1_VOLUME:
+                v->osc_1_mix = scaled;
+                break;
+            case CC_OSC_2_VOLUME:
+                v->osc_2_mix = scaled;
+                break;
+            case CC_OSC_3_VOLUME:
+                v->osc_3_mix = scaled;
+                break;
+            case CC_OSC_4_VOLUME:
+                v->osc_4_mix = scaled;
+                break;
+            case CC_OSC_1_SLOP:
+                v->osc_1_slop = scaled;
+                break;
+            case CC_OSC_2_SLOP:
+                v->osc_2_slop = scaled;
+                break;
+            case CC_OSC_3_SLOP:
+                v->osc_3_slop = scaled;
+                break;
+            case CC_OSC_4_SLOP:
+                v->osc_4_slop = scaled;
+                break;
+            default:
+                std::cout << "CC not mapped: " << ctl << std::endl;
+                update = false;
                 break;
         }
+        if (update) {
+            v->Update(v);
+        }
     }
-}
 
-void ol::synthlib::Voice::setOscillatorFrequency(t_sample freq) {
-    for (auto &oscillator: oscillators) {
-        oscillator.SetFreq(freq);
+    void Voice_noteOn(Voice *v, uint8_t midi_note, uint8_t velocity) {
+        std::cout << "Note on: " << midi_note << "; velocity: " << velocity << std::endl;
+        v->notes_on++;
+        v->freq_ = daisysp::mtof(midi_note);
+        v->amp_envelope.Retrigger(false);
+        v->filter_envelope.Retrigger(false);
+        std::cout << "  Frequency: " << v->freq_ << std::endl;
     }
-}
 
-#define SLOP_FACTOR 0.001f
-t_sample ol::synthlib::Voice::processOscillators() {
-    t_sample rv = 0;
+    void Voice_noteOff(Voice *v, uint8_t midi_note, uint8_t velocity) {
+        if (v->notes_on > 0) {
+            v->notes_on--;
+        }
+    }
 
-    t_sample slop_lfo_1_value = slop_lfo_1.Process();
-    t_sample slop_lfo_2_value = slop_lfo_2.Process();
-    t_sample slop_lfo_3_value = slop_lfo_3.Process();
-    t_sample slop_lfo_4_value = slop_lfo_4.Process();
+    void Voice_update(Voice *v) {
+        v->portamento_.SetHtime(v->portamento_htime);
 
-    //oscillators[0].PhaseAdd(slop_lfo_1_value * 0.0000005f);
-    //oscillators[0].SetFreq(control_panel_->)
-    t_sample osc_1_slop_freq = freq_ + freq_ * slop_lfo_1_value * SLOP_FACTOR * control_panel_->osc_1_slop.Value();
-    t_sample osc_2_slop_freq = freq_ - freq_ * slop_lfo_2_value * SLOP_FACTOR * control_panel_->osc_2_slop.Value();
-    t_sample osc_3_slop_freq = freq_ + freq_ * slop_lfo_3_value * SLOP_FACTOR * control_panel_->osc_3_slop.Value();
-    t_sample osc_4_slop_freq = freq_ - freq_ * slop_lfo_4_value * SLOP_FACTOR * control_panel_->osc_4_slop.Value();
-    slop_lfo_1.PhaseAdd(slop_lfo_1_value * 0.000001f);
-    slop_lfo_2.PhaseAdd(slop_lfo_2_value * 0.0000009f);
+        // Filter
+        v->filter_envelope.SetAttackTime(v->filter_attack);
+        v->filter_envelope.SetDecayTime(v->filter_decay);
+        v->filter_envelope.SetSustainLevel(v->filter_sustain);
+        v->filter_envelope.SetReleaseTime(v->filter_release);
 
-    oscillators[0].SetFreq(osc_1_slop_freq);
-    oscillators[1].SetFreq(osc_2_slop_freq);
-    oscillators[2].SetFreq(osc_3_slop_freq);
-    oscillators[3].SetFreq(osc_4_slop_freq);
-    rv += oscillators[0].Process() * control_panel_->osc_1_volume.Value();
-    rv += oscillators[1].Process() * control_panel_->osc_2_volume.Value();
-    rv += oscillators[2].Process() * control_panel_->osc_3_volume.Value();
-    rv += oscillators[3].Process() * control_panel_->osc_4_volume.Value();
-//    if (counter_ % 40000 == 0) {
-//        std::cout << "freq_, osc 1 slop freq: " << freq_ << ", " << osc_1_slop_freq << std::endl;
-//        std::cout << "freq_, osc 2 slop freq: " << freq_ << ", " << osc_2_slop_freq << std::endl;
-//        std::cout << "freq_, osc 3 slop freq: " << freq_ << ", " << osc_3_slop_freq << std::endl;
-//        std::cout << "freq_, osc 4 slop freq: " << freq_ << ", " << osc_4_slop_freq << std::endl;
-//    }
-//    float voice_gain = control_panel_->voice_gain.Value();
-//    float voice_clip = daisysp::SoftClip(voice_gain + rv);
-//    rv = voice_clip;
-    return rv;
+        // Amplifier
+        v->amp_envelope.SetAttackTime(v->amp_attack);
+        v->amp_envelope.SetDecayTime(v->amp_decay);
+        v->amp_envelope.SetSustainLevel(v->amp_sustain);
+        v->amp_envelope.SetReleaseTime(v->amp_release);
+    }
+
+    void Voice_init(Voice *v, t_sample sample_rate) {
+        v->slop_lfo_1.Init(sample_rate);
+        v->slop_lfo_2.Init(sample_rate);
+        v->slop_lfo_3.Init(sample_rate);
+        v->slop_lfo_4.Init(sample_rate);
+        v->slop_lfo_1.SetFreq(0.0001f);
+        v->slop_lfo_2.SetFreq(0.00009f);
+        v->slop_lfo_3.SetFreq(0.00008f);
+        v->slop_lfo_4.SetFreq(0.00011f);
+        for (auto &oscillator: v->oscillators) {
+            oscillator.Init(sample_rate);
+        }
+
+        v->filt_1.Init(sample_rate);
+        v->filter_envelope.Init(sample_rate);
+        v->amp_envelope.Init(sample_rate);
+        v->portamento_.Init(sample_rate, 0);
+    }
+
+    void Voice_Config(Voice *v) {
+        v->Init = Voice_init;
+        v->Process = Voice_process;
+        v->Update = Voice_update;
+        v->UpdateMidiControl = Voice_updateMidiControl;
+        v->NoteOn = Voice_noteOn;
+        v->NoteOff = Voice_noteOff;
+    }
 }

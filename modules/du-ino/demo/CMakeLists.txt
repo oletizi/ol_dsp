@@ -9,6 +9,7 @@ target_include_directories(duino-demo PUBLIC
         ${ARDUINO_LIBS}/Adafruit_GFX_Library
         ${ARDUINO_LIBS}/Adafruit_SSD1306
 )
+target_compile_definitions(ol_daisy_multifx PRIVATE ARDUINO_NATIVE)
 #include_directories(
 #        ${DUINO_ROOT}/cores/arduino
 #        ${DUINO_LIB}

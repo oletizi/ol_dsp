@@ -25,7 +25,7 @@ public:
                                           const juce::AudioIODeviceCallbackContext &context) override {
         counter_++;
         for (int i = 0; i < numSamples; i++) {
-            float value = voice_->Process();
+            float value = voice_->Process(voice_);
             for (int j = 0; j < numOutputChannels; j++) {
                 outputChannelData[j][i] = value;
             }
@@ -33,7 +33,7 @@ public:
     }
 
     void audioDeviceAboutToStart(juce::AudioIODevice *device) override {
-        voice_->Init(static_cast<float>(device->getCurrentSampleRate()));
+        voice_->Init(voice_, static_cast<float>(device->getCurrentSampleRate()));
     }
 
     void audioDeviceStopped() override {

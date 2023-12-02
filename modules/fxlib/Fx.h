@@ -14,7 +14,7 @@ extern "C" {
 
 #include "verb.h"
 #include "daisysp.h"
-#include "fxlib/cc_map.h"
+#include "corelib/cc_map.h"
 
 #define MAX_DELAY 48000
 namespace ol::fx {

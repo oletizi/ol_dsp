@@ -70,9 +70,9 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[]) {
     auto midiDevices = juce::MidiInput::getAvailableDevices();
     std::cout << "MIDI inputs:" << std::endl;
 
-    ol::synthlib::ControlPanel control_panel;
-    ol::synthlib::Voice voice(&control_panel);
-    SynthMidiCallback midi_callback(&control_panel, &voice);
+    ol::synthlib::Voice voice;
+    ol::synthlib::Voice_Config(&voice);
+    SynthMidiCallback midi_callback(&voice);
 
     for (const auto &input: midiDevices) {
         deviceManager.setMidiInputDeviceEnabled(input.identifier, true);

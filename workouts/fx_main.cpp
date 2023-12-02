@@ -11,8 +11,9 @@
 #include "synthlib/ol_synthlib.h"
 
 using namespace ol::fx;
-ol::synthlib::ControlPanel synth_control_panel;
-ol::synthlib::Voice voice(&synth_control_panel);
+using namespace ol::synthlib;
+
+ol::synthlib::Voice voice;
 
 FilterFx delay_filter1;
 FilterFx delay_filter2;
@@ -34,7 +35,7 @@ int notes_on = 0;
 void handleNoteOn(int channel, int note, int velocity) {
     std::cout << "NOTE ON: chan: " << channel << "; note: " << note << "; vel: " << velocity << std::endl;
     notes_on++;
-    voice.NoteOn(note, velocity);
+    voice.NoteOn(&voice, note, velocity);
 }
 
 void handleNoteOff(int channel, int note, int velocity) {
@@ -42,12 +43,13 @@ void handleNoteOff(int channel, int note, int velocity) {
     if (notes_on > 0) {
         notes_on--;
     }
-    voice.NoteOff(note);
+    voice.NoteOff(&voice, note, velocity);
 }
 
 void handleCC(int channel, int control, int value) {
     std::cout << "CC: chan: " << channel << "; control: " << control << "; val: " << value << std::endl;
-    synth_control_panel.UpdateMidi(control, value);
+    //synth_control_panel.UpdateMidi(control, value);
+    voice.UpdateMidiControl(&voice, control, value);
     ol::fx::FxRack_UpdateMidiControl(&fxrack, control, value);
 }
 
@@ -92,7 +94,7 @@ void audio_callback(ma_device *pDevice, void *pOutput, const void *pInput, ma_ui
 
     for (int i = 0; i < frameCount; i++) {
 
-        t_sample voice_out = voice.Process();
+        t_sample voice_out = voice.Process(&voice);
         t_sample in_value = 0;
         for (int j = 0; j < input_channel_count; j++) {
             in_value += in[(i * input_channel_count) + j];
@@ -146,6 +148,7 @@ int main() {
     Saturator_Config(&interstage_saturator, &transfer_function);
 
     FxRack_Config(&fxrack, &delay1, &delay2, &reverbSc, &filter1, &filter2, &saturator1, &saturator2, & interstage_saturator);
+    Voice_Config(&voice);
 
     RtMidiIn *midiin = nullptr;
     try {
@@ -181,7 +184,7 @@ int main() {
         return -1;  // Failed to initialize the device.
     }
 
-    voice.Init(device.sampleRate);
+    voice.Init(&voice, device.sampleRate);
     fxrack.Init(&fxrack, device.sampleRate);
 
     ma_device_start(&device);     // The device is sleeping by default so you'll need to start it manually.

@@ -6,8 +6,8 @@
 using namespace ol::synthlib;
 
 int main() {
-    ControlPanel control_panel;
-    Voice voice = Voice(&control_panel);
+    Voice voice;
+    Voice_Config(&voice);
 
     juce::initialiseJuce_GUI();
     juce::AudioDeviceManager deviceManager = juce::AudioDeviceManager();
@@ -16,7 +16,7 @@ int main() {
     auto midiDevices = juce::MidiInput::getAvailableDevices();
     std::cout << "MIDI inputs:" << std::endl;
 
-    SynthMidiCallback midi_callback(&control_panel, &voice);
+    SynthMidiCallback midi_callback(&voice);
 
     for (const auto &input: midiDevices) {
         deviceManager.setMidiInputDeviceEnabled(input.identifier, true);

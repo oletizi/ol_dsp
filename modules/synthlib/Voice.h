@@ -13,52 +13,29 @@
 
 namespace ol::synthlib {
 
-    class Voice {
+    struct Voice {
 
-    public:
-        explicit Voice(ControlPanel *control_panel) : control_panel_(control_panel) {
-        }
-
-        void Init(t_sample sample_rate) {
-            sample_rate_ = sample_rate;
-            slop_lfo_1.Init(sample_rate_);
-            slop_lfo_2.Init(sample_rate_);
-            slop_lfo_3.Init(sample_rate_);
-            slop_lfo_4.Init(sample_rate_);
-            slop_lfo_1.SetFreq(0.0001f);
-            slop_lfo_2.SetFreq(0.00009f);
-            slop_lfo_3.SetFreq( 0.00008f);
-            slop_lfo_4.SetFreq(0.00011f);
-            for (auto &oscillator: oscillators) {
-                oscillator.Init(sample_rate);
-            }
-
-            filt_1_.Init(sample_rate);
-            env_filt_.Init(sample_rate);
-            env_amp_.Init(sample_rate);
-            portamento_.Init(sample_rate, control_panel_->portamento.Value());
-        }
+        void (*Init)(Voice *, t_sample sample_rate) = nullptr;
+        void (*Update)(Voice *) = nullptr;
+        t_sample (*Process)(Voice *) = nullptr;
+        void (*UpdateMidiControl)(Voice *, int control, int value) = nullptr;
 
         // XXX: This should be separated into note and gate
-        void NoteOn(uint8_t midi_note, uint8_t velocity) {
-            notes_on_++;
-            freq_ = daisysp::mtof(midi_note);
-            env_amp_.Retrigger(false);
-            env_filt_.Retrigger(false);
-        }
+        void (*NoteOn)(Voice *, uint8_t midi_note, uint8_t velocity) = nullptr;
 
-        void NoteOff(uint8_t midi_note) {
-            if (notes_on_ > 0) {
-                notes_on_--;
-            }
-        }
+        void (*NoteOff)(Voice *, uint8_t midi_note, uint8_t velocity) = nullptr;
 
-        t_sample Process();
 
-    private:
-        t_sample sample_rate_ = 0;
+        t_sample portamento_htime = 0;
 
-        uint8_t notes_on_ = 0;
+        t_sample filt_freq = 20000;
+        t_sample filt_res = 0;
+        t_sample filt_drive = 0;
+        t_sample master_volume = 0.8f;
+
+        t_sample sample_rate = 0;
+
+        uint8_t notes_on = 0;
 
         daisysp::Oscillator slop_lfo_1;
         daisysp::Oscillator slop_lfo_2;
@@ -71,24 +48,43 @@ namespace ol::synthlib {
         t_sample freq_ = 0;
 
         // Filter
-        daisysp::Adsr env_filt_;
-        daisysp::Svf filt_1_;
+        daisysp::Adsr filter_envelope;
+        daisysp::Svf filt_1;
 
         // Amplifier
-        daisysp::Adsr env_amp_;
+        daisysp::Adsr amp_envelope;
 
         // Portamento
         daisysp::Port portamento_;
 
-        // Controls
-        ControlPanel *control_panel_;
-        int counter_ = 0;
+        // Filter envelope
+        t_sample filter_attack = 0;
+        t_sample filter_decay = 0;
+        t_sample filter_sustain = 1;
+        t_sample filter_release = 0;
+        t_sample filter_envelope_amount = 1;
 
-        void updateWaveform();
+        // Amp envelope
+        t_sample amp_attack = 0;
+        t_sample amp_decay = 0;
+        t_sample amp_sustain = 1;
+        t_sample amp_release = 0;
 
-        void setOscillatorFrequency(t_sample freq);
+        // Oscillator slop
+        t_sample slop_factor = 0.5;
+        t_sample osc_1_slop = 0.25f;
+        t_sample osc_2_slop = 0.25f;
+        t_sample osc_3_slop = 0.1f;
+        t_sample osc_4_slop = 0.07f;
 
-        t_sample processOscillators();
+        // Oscillator mixer
+        t_sample osc_1_mix = 0.25;
+        t_sample osc_2_mix = 0.25;
+        t_sample osc_3_mix = 0.25;
+        t_sample osc_4_mix = 0.25;
     };
+
+    void Voice_Config(Voice *);
+
 }
 #endif //JUCE_TEST_VOICE_H

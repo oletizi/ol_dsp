@@ -1,5 +1,5 @@
 add_library(ol_fxlib
-        cc_map.h
+        ../corelib/cc_map.h
         Fx.h
         Filter.cpp
         Delay.cpp

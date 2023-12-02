@@ -10,20 +10,16 @@
 
 #define CHANNEL_COUNT 2
 
-ol::synthlib::ControlPanel synth_control_panel;
-ol::synthlib::Voice voice(&synth_control_panel);
+ol::synthlib::Voice voice;
 daisysp::DelayLine<t_sample, MAX_DELAY> delay_line;
 ol::fx::DelayFx delay;
-
-//ol::fx::delay::Delay_Config(&delay, &delay_line);
-
 
 int notes_on = 0;
 
 void handleNoteOn(int channel, int note, int velocity) {
     std::cout << "NOTE ON: chan: " << channel << "; note: " << note << "; vel: " << velocity << std::endl;
     notes_on++;
-    voice.NoteOn(note, velocity);
+    voice.NoteOn(&voice, note, velocity);
 }
 
 void handleNoteOff(int channel, int note, int velocity) {
@@ -31,12 +27,13 @@ void handleNoteOff(int channel, int note, int velocity) {
     if (notes_on > 0) {
         notes_on--;
     }
-    voice.NoteOff(note);
+    voice.NoteOff(&voice, note, velocity);
 }
 
 void handleCC(int channel, int control, int value) {
     std::cout << "CC: chan: " << channel << "; control: " << control << "; val: " << value << std::endl;
-    synth_control_panel.UpdateMidi(control, value);
+    //synth_control_panel.UpdateMidi(control, value);
+    voice.UpdateMidiControl(&voice, control, value);
     ol::fx::Delay_UpdateMidiControl(&delay, control, value);
 }
 
@@ -74,7 +71,7 @@ void midi_error_callback([[maybe_unused]] RtMidiError::Type type, [[maybe_unused
 void audio_callback([[maybe_unused]] ma_device *pDevice, void *pOutput, [[maybe_unused]] const void *pInput, ma_uint32 frameCount) {
     auto *out = (float *) pOutput;
     for (int i = 0; i < frameCount; i++) {
-        t_sample voice_out = voice.Process();
+        t_sample voice_out = voice.Process(&voice);
         t_sample delay_out = 0;
         delay.Process(&delay, voice_out, &delay_out);
 
@@ -122,7 +119,8 @@ int main() {
         return -1;  // Failed to initialize the device.
     }
 
-    voice.Init(device.sampleRate);
+    Voice_Config(&voice);
+    voice.Init(&voice, device.sampleRate);
     daisysp::Svf svf;
     ol::fx::FilterFx filter;
     ol::fx::Filter_Svf_Config(&filter, &svf);

@@ -78,12 +78,13 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[]) {
     std::cout << "MIDI inputs:" << std::endl;
 
     ol::synthlib::ControlPanel control_panel;
-    ol::synthlib::Voice voice(&control_panel);
+    ol::synthlib::Voice voice;
+    ol::synthlib::Voice_Config(&voice);
 
     SynthAudioCallback synth(&voice);
     ol::fx::ReverbFx fx;
 
-    SynthMidiCallback midi_callback(&control_panel, &voice);
+    SynthMidiCallback midi_callback(&voice);
     ReverbMidiCallback reverb_midi_callback(&fx);
 
     for (const auto &input: midiDevices) {
