@@ -52,9 +52,19 @@ float scale(float in, float inlow, float inhigh, float outlow, float outhigh, fl
     return value;
 }
 
+
+void clock_callback() {
+    println("Clock! %d", millis());
+}
+
 void DU_Demo_Function::function_setup() {
     DUINO_Function::function_setup();
     Serial.begin(9600);
+
+    clock_.set_bpm(120);
+    clock_.attach_clock_callback(clock_callback);
+    clock_.
+    clock_.begin();
 
 }
 
@@ -71,9 +81,9 @@ void DU_Demo_Function::function_loop() {
     if (counter % CV_IN_UPDATE_FREQ == 0) {
         Display.fill_screen(DUINO_SH1106::Black);
         //Display.draw_circle(0, 0, 50, DUINO_SH1106::White);
-        for (int i = 0; i < 2; i++) {
-            Display.draw_text(0+i, 10+i, "Hi Christine!!!", DUINO_SH1106::White);
-        }
+        char *buffer[32];
+        snprintf(buffer, 32, "Now: %d", now);
+        Display.draw_text(0, 10, buffer, DUINO_SH1106::White);
         Display.display();
         counter = 0;
     }
