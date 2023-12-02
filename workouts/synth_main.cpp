@@ -3,7 +3,7 @@
 #include "SynthAudioCallback.h"
 #include "SynthMidiCallback.h"
 
-using namespace ol::synthlib;
+using namespace ol::synth;
 
 int main() {
     Voice voice;

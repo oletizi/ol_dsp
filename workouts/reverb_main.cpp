@@ -77,8 +77,8 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[]) {
     auto midiDevices = juce::MidiInput::getAvailableDevices();
     std::cout << "MIDI inputs:" << std::endl;
 
-    ol::synthlib::Voice voice;
-    ol::synthlib::Voice_Config(&voice);
+    ol::synth::Voice voice;
+    ol::synth::Voice_Config(&voice);
 
     SynthAudioCallback synth(&voice);
     ol::fx::ReverbFx fx;

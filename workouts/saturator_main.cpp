@@ -7,7 +7,7 @@
 #include "ol_synthlib.h"
 
 using namespace ol::workout;
-using namespace ol::synthlib;
+using namespace ol::synth;
 using namespace ol::fx;
 Voice voice;
 

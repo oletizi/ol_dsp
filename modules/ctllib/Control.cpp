@@ -4,6 +4,6 @@
 
 #include "Control.h"
 
-namespace ol::synthlib {
+namespace ol::synth {
 
 } // synthlib

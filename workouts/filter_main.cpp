@@ -10,7 +10,7 @@
 
 #define CHANNEL_COUNT 2
 
-ol::synthlib::Voice voice;
+ol::synth::Voice voice;
 ol::fx::FilterFx filt;
 int notes_on = 0;
 
@@ -116,7 +116,7 @@ int main() {
         return -1;  // Failed to initialize the device.
     }
 
-    ol::synthlib::Voice_Config(&voice);
+    ol::synth::Voice_Config(&voice);
     voice.Init(&voice, device.sampleRate);
 
     daisysp::Biquad biquad;

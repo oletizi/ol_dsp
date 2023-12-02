@@ -11,9 +11,9 @@
 #include "synthlib/ol_synthlib.h"
 
 using namespace ol::fx;
-using namespace ol::synthlib;
+using namespace ol::synth;
 
-ol::synthlib::Voice voice;
+ol::synth::Voice voice;
 
 FilterFx delay_filter1;
 FilterFx delay_filter2;

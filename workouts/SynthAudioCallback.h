@@ -15,7 +15,7 @@ private:
     uint32_t counter_ = 0;
     juce::AudioDeviceManager *device_manager_;
 public:
-    explicit SynthAudioCallback(ol::synthlib::Voice *pVoice) : voice_(pVoice) {}
+    explicit SynthAudioCallback(ol::synth::Voice *pVoice) : voice_(pVoice) {}
 
     void audioDeviceIOCallbackWithContext(const float *const *inputChannelData,
                                           int numInputChannels,
@@ -40,7 +40,7 @@ public:
     }
 
 private:
-    ol::synthlib::Voice *voice_;
+    ol::synth::Voice *voice_;
 };
 
 

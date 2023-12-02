@@ -10,7 +10,7 @@
 
 #define OSCILLATOR_COUNT 4
 
-namespace ol::synthlib {
+namespace ol::synth {
 
     struct Voice {
 

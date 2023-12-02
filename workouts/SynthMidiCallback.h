@@ -8,7 +8,7 @@
 
 class SynthMidiCallback : public juce::MidiInputCallback {
 public:
-    explicit SynthMidiCallback(ol::synthlib::Voice *voice) : voice_(voice) {}
+    explicit SynthMidiCallback(ol::synth::Voice *voice) : voice_(voice) {}
 
     void handleIncomingMidiMessage(juce::MidiInput *source, const juce::MidiMessage &message) override {
         if (message.isNoteOn()) {
@@ -22,7 +22,7 @@ public:
     }
 
 private:
-    ol::synthlib::Voice *voice_;
+    ol::synth::Voice *voice_;
 };
 
 #endif //OL_DSP_SYNTHMIDICALLBACK_H

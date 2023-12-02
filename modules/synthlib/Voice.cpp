@@ -5,7 +5,7 @@
 #include <iostream>
 #include "Voice.h"
 
-namespace ol::synthlib {
+namespace ol::synth {
 
     t_sample Voice_process(Voice *v) {
 

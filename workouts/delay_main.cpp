@@ -10,7 +10,7 @@
 
 #define CHANNEL_COUNT 2
 
-ol::synthlib::Voice voice;
+ol::synth::Voice voice;
 daisysp::DelayLine<t_sample, MAX_DELAY> delay_line;
 ol::fx::DelayFx delay;
 
