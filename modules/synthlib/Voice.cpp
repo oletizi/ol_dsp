@@ -36,11 +36,10 @@ namespace ol::synth {
 //        rv += v->oscillators[3].Process() * v->osc_4_mix;
 
         // Filter
-//        v->filt_freq = v->filter_envelope.Process(v->notes_on > 0);
-//
-        v->filter.SetFreq(v->filt_freq);
-        v->filter.SetRes(v->filt_res);
-        v->filter.SetDrive(v->filt_drive);
+        t_sample env_value = v->filter_envelope.Process(v->notes_on > 0);
+        t_sample filter_frequency = v->filt_freq + ( (env_value * 20000) * v->filter_envelope_amount);
+
+        v->filter.SetFreq(filter_frequency);
         v->filter.Process(rv);
         rv = v->filter.Low();
 
@@ -77,7 +76,7 @@ namespace ol::synth {
                 v->filter_attack = scaled;
                 break;
             case CC_ENV_FILT_D:
-                v->filter_decay = scaled;
+                v->filter_decay = ol::core::scale(val, 0, 127, 0, 1, 3);
                 break;
             case CC_ENV_FILT_S:
                 v->filter_sustain = scaled;
@@ -150,6 +149,9 @@ namespace ol::synth {
         v->portamento_.SetHtime(v->portamento_htime);
 
         // Filter
+        v->filter.SetFreq(v->filt_freq);
+        v->filter.SetRes(v->filt_res);
+        v->filter.SetDrive(v->filt_drive);
         v->filter_envelope.SetAttackTime(v->filter_attack);
         v->filter_envelope.SetDecayTime(v->filter_decay);
         v->filter_envelope.SetSustainLevel(v->filter_sustain);

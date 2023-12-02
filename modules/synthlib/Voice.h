@@ -27,9 +27,7 @@ namespace ol::synth {
 
         t_sample portamento_htime = 0;
 
-        t_sample filt_freq = 20000;
-        t_sample filt_res = 0;
-        t_sample filt_drive = 0;
+
         t_sample master_volume = 0.8f;
 
         t_sample sample_rate = 0;
@@ -56,10 +54,14 @@ namespace ol::synth {
         // Portamento
         daisysp::Port portamento_;
 
-        // Filter envelope
+        // Filter
+        t_sample filt_freq = 0;
+        t_sample filt_res = 0;
+        t_sample filt_drive = 0;
+
         t_sample filter_attack = 0;
-        t_sample filter_decay = 0;
-        t_sample filter_sustain = 1;
+        t_sample filter_decay = 0.2f;
+        t_sample filter_sustain = 0;
         t_sample filter_release = 0;
         t_sample filter_envelope_amount = 1;
 
