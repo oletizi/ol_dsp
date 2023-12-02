@@ -10,7 +10,7 @@ namespace ol::synth {
     t_sample Voice_process(Voice *v) {
 
         t_sample freq = v->freq_;
-        //t_sample freq = v->portamento_.Process(freq);
+        freq = v->portamento_.Process(freq);
         t_sample rv = 0;
 
 //        t_sample slop_lfo_1_value = v->slop_lfo_1.Process();
@@ -37,7 +37,7 @@ namespace ol::synth {
 
         // Filter
         t_sample env_value = v->filter_envelope.Process(v->notes_on > 0);
-        t_sample filter_frequency = v->filt_freq + ( (env_value * 20000) * v->filter_envelope_amount);
+        t_sample filter_frequency = v->filt_freq + ((env_value * 20000) * v->filter_envelope_amount);
 
         v->filter.SetFreq(filter_frequency);
         v->filter.Process(rv);
@@ -58,10 +58,10 @@ namespace ol::synth {
                 v->master_volume = scaled;
                 break;
             case CC_CTL_PORTAMENTO:
-                v->portamento_htime = scaled;
+                v->portamento_htime = ol::core::scale(val, 0, 127, 0, 1, 4);
                 break;
             case CC_FILT_CUTOFF:
-                v->filt_freq = ol::core::scale(val, 0, 127, 0, 20000, 2.5  );
+                v->filt_freq = ol::core::scale(val, 0, 127, 0, 20000, 2.5);
                 break;
             case CC_FILT_Q:
                 v->filt_res = scaled;
@@ -146,6 +146,7 @@ namespace ol::synth {
     }
 
     void Voice_update(Voice *v) {
+        // Portamento
         v->portamento_.SetHtime(v->portamento_htime);
 
         // Filter
