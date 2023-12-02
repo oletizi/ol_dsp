@@ -45,7 +45,7 @@ namespace ol::synth {
 
         float amp = v->amp_envelope.Process(v->notes_on > 0);
         rv *= amp;
-        //rv *= v->master_volume;
+        rv *= v->master_volume;
         return rv;
     }
 
