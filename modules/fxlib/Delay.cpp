@@ -72,10 +72,16 @@ namespace ol::fx {
             case CC_DELAY_BALANCE:
                 fx->balance = scaled;
                 break;
+            case CC_DELAY_CUTOFF:
+                Filter_UpdateMidi(fx->filter, CC_FILTER_CUTOFF, value);
+                break;
+            case CC_DELAY_RESONANCE:
+                Filter_UpdateMidi(fx->filter, CC_FILTER_RESONANCE, value);
+                break;
             default:
                 update = false;
         }
-        Filter_UpdateMidi(fx->filter, control, value);
+        //Filter_UpdateMidi(fx->filter, control, value);
         if (update) {
             fx->Update(fx);
         }
