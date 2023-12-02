@@ -7,7 +7,6 @@
 
 #include <daisysp.h>
 #include "ol_synthlib_core.h"
-#include "ControlPanel.h"
 
 #define OSCILLATOR_COUNT 4
 

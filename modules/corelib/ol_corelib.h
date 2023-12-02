@@ -10,6 +10,7 @@
 #endif
 
 #include <cmath>
+#include "corelib/cc_map.h"
 
 typedef float t_sample;
 
