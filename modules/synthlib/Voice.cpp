@@ -43,8 +43,8 @@ namespace ol::synth {
         v->filter.Process(rv);
         rv = v->filter.Low();
 
-        //float amp = v->amp_envelope.Process(v->notes_on > 0);
-        //rv *= amp;
+        float amp = v->amp_envelope.Process(v->notes_on > 0);
+        rv *= amp;
         //rv *= v->master_volume;
         return rv;
     }
