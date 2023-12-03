@@ -35,20 +35,20 @@ namespace ol::synth {
 //        rv += v->oscillators[3].Process() * v->osc_4_mix;
 
         // Filter
-        t_sample env_value = v->filter_envelope->Process(v->notes_on > 0);
+        t_sample env_value = v->filter_envelope->Process(v->playing);
         t_sample filter_frequency = v->filt_freq + ((env_value * 20000) * v->filter_envelope_amount);
 
         v->filter->SetFreq(filter_frequency);
         v->filter->Process(rv);
         rv = v->filter->Low();
 
-        float amp = v->amp_envelope->Process(v->notes_on > 0);
+        float amp = v->amp_envelope->Process(v->playing);
         rv *= amp;
         rv *= v->master_volume;
         return rv;
     }
 
-    void Voice_updateMidiControl(Voice *v, int ctl, int val) {
+    void Voice_updateMidiControl(Voice *v, uint8_t ctl, uint8_t val) {
         bool update = true;
         t_sample scaled = ol::core::scale(val, 0, 127, 0, 1, 1);
         switch (ctl) {
@@ -128,16 +128,14 @@ namespace ol::synth {
     }
 
     void Voice_noteOn(Voice *v, uint8_t midi_note, uint8_t velocity) {
-        v->notes_on++;
+        v->playing = midi_note;
         v->freq_ = daisysp::mtof(midi_note);
-        v->amp_envelope->Retrigger(false);
-        v->filter_envelope->Retrigger(false);
+        v->amp_envelope->Retrigger(true);
+        v->filter_envelope->Retrigger(true);
     }
 
     void Voice_noteOff(Voice *v, uint8_t midi_note, uint8_t velocity) {
-        if (v->notes_on > 0) {
-            v->notes_on--;
-        }
+        v->playing = 0;
     }
 
     void Voice_update(Voice *v) {

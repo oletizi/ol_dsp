@@ -15,6 +15,7 @@
 typedef float t_sample;
 
 namespace ol::core {
+
     inline t_sample safediv(t_sample num, t_sample denom) {
         return denom == 0. ? (t_sample) 0. : (t_sample) (num / denom);
     }

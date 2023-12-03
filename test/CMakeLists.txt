@@ -6,6 +6,7 @@ add_executable(gtest_run
         fx_test.cpp
         reverb_test.cpp
         workout_test.cpp
-        )
+        synth_test.cpp
+)
 target_link_libraries(gtest_run ${GTEST_BOTH_LIBRARIES} ol_corelib ol_ctllib ol_fxlib ol_synthlib DaisySP soundpipe)
 add_test(gtest_run gtest_run)

@@ -4,9 +4,11 @@
 
 #ifndef JUCE_TEST_VOICE_H
 #define JUCE_TEST_VOICE_H
+
 #include <queue>
 #include <daisysp.h>
 #include "synthlib/ol_synthlib.h"
+
 #define MAX_VOICES 5
 
 #define OSCILLATOR_COUNT 4
@@ -21,7 +23,7 @@ namespace ol::synth {
 
         t_sample (*Process)(Voice *) = nullptr;
 
-        void (*UpdateMidiControl)(Voice *, int control, int value) = nullptr;
+        void (*UpdateMidiControl)(Voice *, uint8_t control, uint8_t value) = nullptr;
 
         // XXX: This should be separated into note and gate
         void (*NoteOn)(Voice *, uint8_t midi_note, uint8_t velocity) = nullptr;
@@ -35,8 +37,6 @@ namespace ol::synth {
         t_sample master_volume = 0.8f;
 
         t_sample sample_rate = 0;
-
-        uint8_t notes_on = 0;
 
         daisysp::Oscillator slop_lfo_1;
         daisysp::Oscillator slop_lfo_2;
@@ -83,10 +83,11 @@ namespace ol::synth {
         t_sample osc_4_slop = 0.07f;
 
         // Oscillator mixer
-        t_sample osc_1_mix = 0.25;
-        t_sample osc_2_mix = 0.25;
-        t_sample osc_3_mix = 0.25;
-        t_sample osc_4_mix = 0.25;
+        t_sample osc_1_mix = 0.8f;
+        t_sample osc_2_mix = 0;
+        t_sample osc_3_mix = 0;
+        t_sample osc_4_mix = 0;
+        uint8_t playing = 0;
     };
 
     void Voice_Config(Voice *,
@@ -110,7 +111,7 @@ namespace ol::synth {
 
         Voice *voices[MAX_VOICES];
         Voice *pool[MAX_VOICES];
-        Voice *playing[128];
+        Voice *playing[128][MAX_VOICES];
 
         bool initialized = false;
         uint8_t unison_count = 1;

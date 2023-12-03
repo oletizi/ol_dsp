@@ -22,33 +22,24 @@ namespace ol::synth {
     }
 
     void Multivoice_noteOn(Multivoice *m, uint8_t note, uint8_t velocity) {
-        Voice *v = nullptr;
-        // TODO: support multiple voices playing the same note.
-        if (m->playing[note]) return;
-
-        for (int i = 0; i < m->voice_count; i++) {
-            if (m->pool[i]) {
-                v = m->pool[i];
-                m->pool[i] = nullptr;
+        Voice *v;
+        for (int i=0; i< m->voice_count; i++) {
+            v = m->voices[i];
+            if (! v->playing) {
+                v->NoteOn(v, note, velocity);
                 break;
             }
-        }
-        if (v) {
-            m->playing[note] = v;
-            v->NoteOn(v, note, velocity);
         }
     }
 
     void Multivoice_noteOff(Multivoice *m, uint8_t note, uint8_t velocity) {
-        if (m->playing[note]) {
-            Voice *v = m->playing[note];
-            for (int i = 0; i < m->voice_count; i++) {
-                if (!m->pool[i]) {
-                    m->pool[i] = m->playing[note];
-                }
+        Voice *v;
+        for (int i=0; i<m->voice_count; i++) {
+            v = m->voices[i];
+            if (v->playing == note) {
+                v->NoteOff(v, note, velocity);
+                break;
             }
-            m->playing[note]->NoteOff(m->playing[note], note, velocity);
-            m->playing[note] = nullptr;
         }
     }
 
@@ -58,7 +49,7 @@ namespace ol::synth {
         }
     }
 
-    void Multivoice_Config(Multivoice *m, Voice* voices[], uint8_t voice_count) {
+    void Multivoice_Config(Multivoice *m, Voice *voices[], uint8_t voice_count) {
         m->Init = Multivoice_init;
         m->Process = Multivoice_process;
         m->NoteOn = Multivoice_noteOn;
@@ -76,7 +67,9 @@ namespace ol::synth {
         }
 
         for (int i = 0; i < 128; i++) {
-            m->playing[i] = nullptr;
+            for (int j = 0; j < MAX_VOICES; j++) {
+                m->playing[i][j] = nullptr;
+            }
         }
     }
 

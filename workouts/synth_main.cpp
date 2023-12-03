@@ -20,15 +20,20 @@ int main() {
     daisysp::Adsr v1_amp_envelope = daisysp::Adsr();
     daisysp::Port v1_portamento = daisysp::Port();
 
-    uint8_t voice_count = 1;
+    Voice v2;
+    daisysp::Svf v2_filter = daisysp::Svf();
+    daisysp::Adsr v2_filter_envelope = daisysp::Adsr();
+    daisysp::Adsr v2_amp_envelope = daisysp::Adsr();
+    daisysp::Port v2_portamento = daisysp::Port();
+
+    uint8_t voice_count = 2;
     //std::vector<Voice *> voices{&v1, &v2, &v3, &v4};
     //Voice voices[] = {v1, v2, v3, v4};
-    Voice* voices[] = {&v1};
+    Voice *voices[] = {&v1, &v2};
 
-    for (int i = 0; i < voice_count; i++) {
-        Voice_Config(voices[i], &v1_filter, &v1_filter_envelope, &v1_amp_envelope, &v1_portamento);
-    }
-
+    Voice_Config(&v1, &v1_filter, &v1_filter_envelope, &v1_amp_envelope, &v1_portamento);
+    Voice_Config(&v2, &v2_filter, &v2_filter_envelope, &v2_amp_envelope, &v2_portamento);
+    
     Multivoice_Config(&multi, voices, voice_count);
 
     juce::initialiseJuce_GUI();

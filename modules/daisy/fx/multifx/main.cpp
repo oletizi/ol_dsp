@@ -34,7 +34,7 @@ t_sample led2_blue = 0;
 
 //std::queue<Voice*> DSY_SDRAM_BSS voice_pool;
 //std::vector<Voice*> DSY_SDRAM_BSS voices;
-uint8_t voice_count = 1;
+const uint8_t voice_count = 5;
 Multivoice DSY_SDRAM_BSS multi;
 daisysp::Svf DSY_SDRAM_BSS v1_f;
 daisysp::Adsr v1_fe;
@@ -42,19 +42,29 @@ daisysp::Adsr v1_ae;
 daisysp::Port v1_port;
 Voice v1;
 
-//
-//Svf DSY_SDRAM_BSS v2f;
-//Svf DSY_SDRAM_BSS v3f;
-//Svf DSY_SDRAM_BSS v4f;
-//Svf DSY_SDRAM_BSS v5f;
+daisysp::Svf DSY_SDRAM_BSS v2_f;
+daisysp::Adsr v2_fe;
+daisysp::Adsr v2_ae;
+daisysp::Port v2_port;
+Voice v2;
 
+daisysp::Svf DSY_SDRAM_BSS v3_f;
+daisysp::Adsr v3_fe;
+daisysp::Adsr v3_ae;
+daisysp::Port v3_port;
+Voice v3;
 
-//Voice DSY_SDRAM_BSS v2;
-//Voice DSY_SDRAM_BSS v3;
-//Voice DSY_SDRAM_BSS v4;
-//Voice DSY_SDRAM_BSS v5;
+daisysp::Svf DSY_SDRAM_BSS v4_f;
+daisysp::Adsr v4_fe;
+daisysp::Adsr v4_ae;
+daisysp::Port v4_port;
+Voice v4;
 
-
+daisysp::Svf DSY_SDRAM_BSS v5_f;
+daisysp::Adsr v5_fe;
+daisysp::Adsr v5_ae;
+daisysp::Port v5_port;
+Voice DSY_SDRAM_BSS v5;
 
 daisysp::Svf delay_svf1;
 daisysp::Svf delay_svf2;
@@ -95,7 +105,7 @@ static void callback(AudioHandle::InterleavingInputBuffer in,
 
         t_sample synth = multi.Process(&multi);
         t_sample out1 = in[i];
-        t_sample out2 = in[i+1];
+        t_sample out2 = in[i + 1];
         fxrack.Process(&fxrack, in[i] + synth, in[i + 1] + synth, &out1, &out2);
 
         out[i] = out1;
@@ -285,11 +295,13 @@ int main() {
 
     // Config and init synth voices
     Voice_Config(&v1, &v1_f, &v1_fe, &v1_ae, &v1_port);
+    Voice_Config(&v2, &v2_f, &v2_fe, &v2_ae, &v2_port);
+    Voice_Config(&v3, &v3_f, &v3_fe, &v3_ae, &v3_port);
+    Voice_Config(&v4, &v4_f, &v4_fe, &v4_ae, &v4_port);
+    Voice_Config(&v5, &v5_f, &v5_fe, &v5_ae, &v5_port);
 
-//    v1.Init(&v1, sample_rate);
-    //voices.push_back(&v1);
-    Voice* voices[] = {&v1};
-    Multivoice_Config(&multi, voices, 1);
+    Voice *voices[] = {&v1, &v2, &v3, &v4, &v5};
+    Multivoice_Config(&multi, voices, voice_count);
 
     multi.Init(&multi, sample_rate);
 
