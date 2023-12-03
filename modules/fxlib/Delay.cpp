@@ -8,6 +8,7 @@ namespace ol::fx {
     void Delay_init(DelayFx *fx, t_sample sample_rate) {
         fx->delay_line->Init();
         fx->filter->Init(fx->filter, sample_rate);
+        fx->Update(fx);
     }
 
     int Delay_process(DelayFx *fx, const t_sample &in, t_sample *out) {

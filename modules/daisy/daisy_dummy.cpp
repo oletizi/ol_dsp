@@ -21,9 +21,9 @@ int daisy::System::GetNow() { return 0; }
 
 void daisy::System::Delay(int) {}
 
-daisy::NoteOnEvent daisy::MidiEvent::AsNoteOn() { return {}; }
+daisy::NoteOnEvent daisy::MidiEvent::AsNoteOn() { return NoteOnEvent{}; }
 
-daisy::NoteOffEvent daisy::MidiEvent::AsNoteOff() { return {}; }
+daisy::NoteOffEvent daisy::MidiEvent::AsNoteOff() { return NoteOffEvent{}; }
 
 daisy::ControlChangeEvent daisy::MidiEvent::AsControlChange() { return ControlChangeEvent(); }
 

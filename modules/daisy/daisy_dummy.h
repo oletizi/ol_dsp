@@ -6,6 +6,7 @@
 #define OL_DSP_DAISY_DUMMY_H
 
 #include <cstddef>
+#include <cstdint>
 
 #define DSY_SDRAM_BSS
 namespace daisy {
@@ -66,10 +67,19 @@ namespace daisy {
         ControlChange
     };
 
-    struct NoteOnEvent {
+    struct NoteOnEvent
+    {
+        int     channel;  /**< & */
+        uint8_t note;     /**< & */
+        uint8_t velocity; /**< & */
     };
-    struct NoteOffEvent {
+    struct NoteOffEvent
+    {
+        int     channel;  /**< & */
+        uint8_t note;     /**< & */
+        uint8_t velocity; /**< & */
     };
+
     struct ControlChangeEvent {
         int control_number;
         int value;

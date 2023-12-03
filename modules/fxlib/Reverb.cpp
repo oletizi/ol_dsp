@@ -1,7 +1,6 @@
 //
 // Created by Orion Letizi on 11/15/23.
 //
-#include <iostream>
 #include "Fx.h"
 
 namespace ol::fx {

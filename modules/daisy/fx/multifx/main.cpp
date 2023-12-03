@@ -10,11 +10,16 @@
 #endif
 
 #include "fxlib/Fx.h"
+#include "synthlib/ol_synthlib.h"
 #include "daisy/ui/ui.h"
 
 #define AUDIO_BLOCK_SIZE 4
+#define SYNTH_CHANNEL 0
+#define FX_CHANNEL 1
 
 using namespace daisy;
+using namespace ol::fx;
+using namespace ol::synth;
 static DaisyPod hw;
 
 uint64_t led2_red_timestamp;
@@ -26,44 +31,84 @@ t_sample led2_green = 0;
 uint64_t led2_blue_timestamp;
 t_sample led2_blue = 0;
 
-daisysp::Svf DSY_SDRAM_BSS delay_svf1;
-daisysp::Svf DSY_SDRAM_BSS delay_svf2;
+
+//std::queue<Voice*> DSY_SDRAM_BSS voice_pool;
+//std::vector<Voice*> DSY_SDRAM_BSS voices;
+uint8_t voice_count = 1;
+Multivoice DSY_SDRAM_BSS multi;
+daisysp::Svf DSY_SDRAM_BSS v1_f;
+daisysp::Adsr v1_fe;
+daisysp::Adsr v1_ae;
+daisysp::Port v1_port;
+Voice v1;
+
+//
+//Svf DSY_SDRAM_BSS v2f;
+//Svf DSY_SDRAM_BSS v3f;
+//Svf DSY_SDRAM_BSS v4f;
+//Svf DSY_SDRAM_BSS v5f;
+
+
+//Voice DSY_SDRAM_BSS v2;
+//Voice DSY_SDRAM_BSS v3;
+//Voice DSY_SDRAM_BSS v4;
+//Voice DSY_SDRAM_BSS v5;
+
+
+
+daisysp::Svf delay_svf1;
+daisysp::Svf delay_svf2;
 
 
 daisysp::DelayLine<t_sample, MAX_DELAY> DSY_SDRAM_BSS delay_line1;
 ol::fx::DelayFx delay1;
+FilterFx delay_filter1;
 
 daisysp::DelayLine<t_sample, MAX_DELAY> DSY_SDRAM_BSS delay_line2;
 ol::fx::DelayFx delay2;
+FilterFx delay_filter2;
 
-daisysp::ReverbSc DSY_SDRAM_BSS verb;
+daisysp::ReverbSc verb;
 ol::fx::ReverbFx reverb;
 
-daisysp::Svf DSY_SDRAM_BSS svf1;
-daisysp::Svf DSY_SDRAM_BSS svf2;
+
+daisysp::Svf svf1;
+daisysp::Svf svf2;
 ol::fx::FilterFx filter1;
 ol::fx::FilterFx filter2;
 
+
+HyperTan xfr_function;
+SaturatorFx saturator1;
+SaturatorFx saturator2;
+
+SaturatorFx interstage_saturator;
+
+
 ol::fx::FxRack fxrack;
 
-uint64_t counter = 0;
 
 static void callback(AudioHandle::InterleavingInputBuffer in,
                      AudioHandle::InterleavingOutputBuffer out,
                      size_t size) {
     for (size_t i = 0; i < size; i += 2) {
-        counter++;
-        t_sample out1 = 0;
-        t_sample out2 = 0;
-        fxrack.Process(&fxrack, in[i], in[i + 1], &out1, &out2);
+
+        t_sample synth = multi.Process(&multi);
+        t_sample out1 = in[i];
+        t_sample out2 = in[i+1];
+        fxrack.Process(&fxrack, in[i] + synth, in[i + 1] + synth, &out1, &out2);
+
         out[i] = out1;
         out[i + 1] = out2;
-//        out[i] = in[i];
-//        out[i+1] = in[i+1];
-        if (counter % 20000 == 0) {
-            DaisySeed::PrintLine("out1: %d, out2: %d", uint16_t(out[i] * 1000), uint16_t(out[i + 1] * 1000));
-            counter = 0;
-        }
+
+        /*
+        out[i] = in[i];
+        out[i+1] = in[i+1];
+         */
+//        if (counter % 20000 == 0) {
+//            DaisySeed::PrintLine("out1: %d, out2: %d", uint16_t(out[i] * 1000), uint16_t(out[i + 1] * 1000));
+//            counter = 0;
+//        }
     }
 }
 
@@ -115,21 +160,25 @@ static void handleSignalLed() {
 }
 
 static void handleMidiMessage(MidiEvent m) {
-    DaisySeed::PrintLine("Midi event: %d", m.channel);
+    DaisySeed::PrintLine("Midi event; channel: %d", uint32_t(m.channel));
 
     if (m.type == daisy::NoteOn) {
-        NoteOnEvent n = m.AsNoteOn();
+        auto n = m.AsNoteOn();
+        multi.NoteOn(&multi, n.note, n.velocity);
         signalLed(LedSignal::NoteOn);
     }
     if (m.type == daisy::NoteOff) {
         NoteOffEvent n = m.AsNoteOff();
+        multi.NoteOff(&multi, n.note, n.velocity);
         signalLed(LedSignal::NoteOff);
     }
     if (m.type == daisy::ControlChange) {
         ControlChangeEvent p = m.AsControlChange();
-        ol::fx::FxRack_UpdateMidiControl(&fxrack, p.control_number, p.value);
+        FxRack_UpdateMidiControl(&fxrack, p.control_number, p.value);
+        multi.UpdateMidiControl(&multi, p.control_number, p.value);
         signalLed(LedSignal::Control);
     }
+
 }
 
 
@@ -213,14 +262,16 @@ static void handleControls() {
         knob2_value = k2_val;
         current_page->UpdateKnob2(knob2_value);
     }
-
-    if (counter % 19000 == 0) {
-        DaisySeed::PrintLine("Knob 1: %d", uint64_t(k1_val * 10));
-        DaisySeed::PrintLine("Knob 2: %d", uint64_t(k2_val * 10));
-    }
 }
 
-using namespace ol::fx;
+template<typename... V>
+void println(const char *msg, V... args) {
+    DaisySeed::PrintLine(msg, args...);
+}
+
+void println(const char *msg) {
+    DaisySeed::PrintLine(msg);
+}
 
 int main() {
     float sample_rate;
@@ -231,32 +282,45 @@ int main() {
     sample_rate = hw.AudioSampleRate();
     hw.StartAdc();
 
-    FilterFx delay_filter1;
-    Filter_Svf_Config(&delay_filter1, &delay_svf1);
 
-    FilterFx delay_filter2;
+    // Config and init synth voices
+    Voice_Config(&v1, &v1_f, &v1_fe, &v1_ae, &v1_port);
+
+//    v1.Init(&v1, sample_rate);
+    //voices.push_back(&v1);
+    Voice* voices[] = {&v1};
+    Multivoice_Config(&multi, voices, 1);
+
+    multi.Init(&multi, sample_rate);
+
+
+    // Config delay filters
+    Filter_Svf_Config(&delay_filter1, &delay_svf1);
     Filter_Svf_Config(&delay_filter2, &delay_svf2);
 
+    // Config delays
     Delay_Config(&delay1, &delay_line1, &delay_filter1);
     Delay_Config(&delay2, &delay_line2, &delay_filter2);
 
+    // Config reverb
     ReverbSc_Config(&reverb, &verb);
     reverb.PrintLine = [](const char *msg) { DaisySeed::PrintLine(msg); };
 
+    // Config output filters
     Filter_Svf_Config(&filter1, &svf1);
     Filter_Svf_Config(&filter2, &svf2);
 
-    HyperTan xfr_function;
-    SaturatorFx saturator1;
+    // Config output saturators (probably only need one of these, but one of the implementations
+    // has history, so...)
     Saturator_Config(&saturator1, &xfr_function);
-
-    SaturatorFx saturator2;
     Saturator_Config(&saturator2, &xfr_function);
 
-    SaturatorFx interstage_saturator;
+    // Config interstage saturator
     Saturator_Config(&interstage_saturator, &xfr_function);
 
-    FxRack_Config(&fxrack, &delay1, &delay2, &reverb, &filter1, &filter2, &saturator1, &saturator2, &interstage_saturator);
+    // Config and init fx rack
+    FxRack_Config(&fxrack, &delay1, &delay2, &reverb, &filter1, &filter2, &saturator1, &saturator2,
+                  &interstage_saturator);
 
     fxrack.Init(&fxrack, sample_rate);
 
@@ -264,6 +328,7 @@ int main() {
 
     hw.StartAudio(callback);
     hw.midi.StartReceive();
+
     long count = 0;
     bool led_state = 0;
     while (true) {
@@ -289,4 +354,5 @@ int main() {
         }
         count++;
     }
+
 }

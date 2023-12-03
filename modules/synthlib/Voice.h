@@ -4,10 +4,10 @@
 
 #ifndef JUCE_TEST_VOICE_H
 #define JUCE_TEST_VOICE_H
-
 #include <queue>
 #include <daisysp.h>
 #include "synthlib/ol_synthlib.h"
+#define MAX_VOICES 5
 
 #define OSCILLATOR_COUNT 4
 
@@ -28,9 +28,9 @@ namespace ol::synth {
 
         void (*NoteOff)(Voice *, uint8_t midi_note, uint8_t velocity) = nullptr;
 
+        bool initialized = false;
 
         t_sample portamento_htime = 0;
-
 
         t_sample master_volume = 0.8f;
 
@@ -49,14 +49,14 @@ namespace ol::synth {
         t_sample freq_ = 0;
 
         // Filter
-        daisysp::Adsr filter_envelope;
-        daisysp::Svf filter;
+        daisysp::Adsr *filter_envelope;
+        daisysp::Svf *filter;
 
         // Amplifier
-        daisysp::Adsr amp_envelope;
+        daisysp::Adsr *amp_envelope;
 
         // Portamento
-        daisysp::Port portamento_;
+        daisysp::Port *portamento_;
 
         // Filter
         t_sample filt_freq = 0;
@@ -89,7 +89,12 @@ namespace ol::synth {
         t_sample osc_4_mix = 0.25;
     };
 
-    void Voice_Config(Voice *);
+    void Voice_Config(Voice *,
+                      daisysp::Svf *filter,
+                      daisysp::Adsr *filter_envelope,
+                      daisysp::Adsr *amp_envelope,
+                      daisysp::Port *portamento);
+
 
     struct Multivoice {
 
@@ -103,13 +108,16 @@ namespace ol::synth {
 
         void (*UpdateMidiControl)(Multivoice *, uint8_t control, uint8_t value) = nullptr;
 
-        std::queue<ol::synth::Voice *> pool;
-        std::vector<ol::synth::Voice *> voices;
-        std::queue<ol::synth::Voice *> playing[127];
+        Voice *voices[MAX_VOICES];
+        Voice *pool[MAX_VOICES];
+        Voice *playing[128];
+
+        bool initialized = false;
         uint8_t unison_count = 1;
+        uint8_t voice_count = 0;
     };
 
-    void Multivoice_Config(Multivoice *m, const std::vector<Voice *> *voices);
+    void Multivoice_Config(Multivoice *m, Voice *voices[], uint8_t voice_count);
 
 }
 #endif //JUCE_TEST_VOICE_H

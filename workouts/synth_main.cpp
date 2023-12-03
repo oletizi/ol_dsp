@@ -15,15 +15,21 @@ int main() {
     Multivoice multi;
 
     Voice v1;
-    Voice v2;
-    Voice v3;
-    Voice v4;
-    std::vector<Voice *> voices{&v1, &v2, &v3, &v4};
-    for (auto v : voices) {
-        Voice_Config(v);
+    daisysp::Svf v1_filter = daisysp::Svf();
+    daisysp::Adsr v1_filter_envelope = daisysp::Adsr();
+    daisysp::Adsr v1_amp_envelope = daisysp::Adsr();
+    daisysp::Port v1_portamento = daisysp::Port();
+
+    uint8_t voice_count = 1;
+    //std::vector<Voice *> voices{&v1, &v2, &v3, &v4};
+    //Voice voices[] = {v1, v2, v3, v4};
+    Voice* voices[] = {&v1};
+
+    for (int i = 0; i < voice_count; i++) {
+        Voice_Config(voices[i], &v1_filter, &v1_filter_envelope, &v1_amp_envelope, &v1_portamento);
     }
 
-    Multivoice_Config(&multi, &voices);
+    Multivoice_Config(&multi, voices, voice_count);
 
     juce::initialiseJuce_GUI();
     juce::AudioDeviceManager deviceManager = juce::AudioDeviceManager();

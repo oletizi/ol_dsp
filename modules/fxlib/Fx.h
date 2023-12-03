@@ -78,7 +78,7 @@ namespace ol::fx {
 
     struct FilterFx {
 
-        t_sample cutoff = 0.5;
+        t_sample cutoff = 1;
         t_sample resonance = 0;
         t_sample drive = 0;
         FilterType type = LowPass;
@@ -105,7 +105,7 @@ namespace ol::fx {
     struct DelayFx {
         t_sample time = 0.5;
         t_sample feedback = 0.5;
-        t_sample balance = 0.5;
+        t_sample balance = 0.33;
         FilterFx *filter = nullptr;
 
         void (*Init)(DelayFx *, t_sample sample_rate) = nullptr;
@@ -135,8 +135,7 @@ namespace ol::fx {
         t_sample input_diffusion1 = 0.5;
         t_sample input_diffusion2 = 0.5;
         t_sample decay_diffusion = 0.5;
-        t_sample balance = 0.25;
-        uint64_t counter = 0;
+        t_sample balance = 0.5;
 
         void (*PrintLine)(const char *) = nullptr;
 

@@ -2,7 +2,6 @@
 // Created by Orion Letizi on 11/8/23.
 //
 
-#include <iostream>
 #include "Voice.h"
 
 namespace ol::synth {
@@ -10,7 +9,7 @@ namespace ol::synth {
     t_sample Voice_process(Voice *v) {
 
         t_sample freq = v->freq_;
-        freq = v->portamento_.Process(freq);
+        freq = v->portamento_->Process(freq);
         t_sample rv = 0;
 
 //        t_sample slop_lfo_1_value = v->slop_lfo_1.Process();
@@ -36,21 +35,20 @@ namespace ol::synth {
 //        rv += v->oscillators[3].Process() * v->osc_4_mix;
 
         // Filter
-        t_sample env_value = v->filter_envelope.Process(v->notes_on > 0);
+        t_sample env_value = v->filter_envelope->Process(v->notes_on > 0);
         t_sample filter_frequency = v->filt_freq + ((env_value * 20000) * v->filter_envelope_amount);
 
-        v->filter.SetFreq(filter_frequency);
-        v->filter.Process(rv);
-        rv = v->filter.Low();
+        v->filter->SetFreq(filter_frequency);
+        v->filter->Process(rv);
+        rv = v->filter->Low();
 
-        float amp = v->amp_envelope.Process(v->notes_on > 0);
+        float amp = v->amp_envelope->Process(v->notes_on > 0);
         rv *= amp;
         rv *= v->master_volume;
         return rv;
     }
 
     void Voice_updateMidiControl(Voice *v, int ctl, int val) {
-        std::cout << "Synth ctl: " << ctl << "; val: " << val << std::endl;
         bool update = true;
         t_sample scaled = ol::core::scale(val, 0, 127, 0, 1, 1);
         switch (ctl) {
@@ -121,7 +119,6 @@ namespace ol::synth {
                 v->osc_4_slop = scaled;
                 break;
             default:
-                std::cout << "CC not mapped: " << ctl << std::endl;
                 update = false;
                 break;
         }
@@ -131,12 +128,10 @@ namespace ol::synth {
     }
 
     void Voice_noteOn(Voice *v, uint8_t midi_note, uint8_t velocity) {
-        std::cout << "Note on: " << midi_note << "; velocity: " << velocity << std::endl;
         v->notes_on++;
         v->freq_ = daisysp::mtof(midi_note);
-        v->amp_envelope.Retrigger(false);
-        v->filter_envelope.Retrigger(false);
-        std::cout << "  Frequency: " << v->freq_ << std::endl;
+        v->amp_envelope->Retrigger(false);
+        v->filter_envelope->Retrigger(false);
     }
 
     void Voice_noteOff(Voice *v, uint8_t midi_note, uint8_t velocity) {
@@ -147,22 +142,22 @@ namespace ol::synth {
 
     void Voice_update(Voice *v) {
         // Portamento
-        v->portamento_.SetHtime(v->portamento_htime);
+        v->portamento_->SetHtime(v->portamento_htime);
 
         // Filter
-        v->filter.SetFreq(v->filt_freq);
-        v->filter.SetRes(v->filt_res);
-        v->filter.SetDrive(v->filt_drive);
-        v->filter_envelope.SetAttackTime(v->filter_attack);
-        v->filter_envelope.SetDecayTime(v->filter_decay);
-        v->filter_envelope.SetSustainLevel(v->filter_sustain);
-        v->filter_envelope.SetReleaseTime(v->filter_release);
+        v->filter->SetFreq(v->filt_freq);
+        v->filter->SetRes(v->filt_res);
+        v->filter->SetDrive(v->filt_drive);
+        v->filter_envelope->SetAttackTime(v->filter_attack);
+        v->filter_envelope->SetDecayTime(v->filter_decay);
+        v->filter_envelope->SetSustainLevel(v->filter_sustain);
+        v->filter_envelope->SetReleaseTime(v->filter_release);
 
         // Amplifier
-        v->amp_envelope.SetAttackTime(v->amp_attack);
-        v->amp_envelope.SetDecayTime(v->amp_decay);
-        v->amp_envelope.SetSustainLevel(v->amp_sustain);
-        v->amp_envelope.SetReleaseTime(v->amp_release);
+        v->amp_envelope->SetAttackTime(v->amp_attack);
+        v->amp_envelope->SetDecayTime(v->amp_decay);
+        v->amp_envelope->SetSustainLevel(v->amp_sustain);
+        v->amp_envelope->SetReleaseTime(v->amp_release);
     }
 
     void Voice_init(Voice *v, t_sample sample_rate) {
@@ -179,13 +174,22 @@ namespace ol::synth {
             oscillator.SetWaveform(daisysp::Oscillator::WAVE_POLYBLEP_SAW);
         }
 
-        v->filter.Init(sample_rate);
-        v->filter_envelope.Init(sample_rate);
-        v->amp_envelope.Init(sample_rate);
-        v->portamento_.Init(sample_rate, 0);
+        v->filter->Init(sample_rate);
+        v->filter_envelope->Init(sample_rate);
+        v->amp_envelope->Init(sample_rate);
+        v->portamento_->Init(sample_rate, 0);
+        v->initialized = true;
     }
 
-    void Voice_Config(Voice *v) {
+    void Voice_Config(Voice *v,
+                      daisysp::Svf *filter,
+                      daisysp::Adsr *filter_envelope,
+                      daisysp::Adsr *amp_envelope,
+                      daisysp::Port *portamento) {
+        v->filter = filter;
+        v->filter_envelope = filter_envelope;
+        v->amp_envelope = amp_envelope;
+        v->portamento_ = portamento;
         v->Init = Voice_init;
         v->Process = Voice_process;
         v->Update = Voice_update;
@@ -193,4 +197,12 @@ namespace ol::synth {
         v->NoteOn = Voice_noteOn;
         v->NoteOff = Voice_noteOff;
     }
+//    void Voice_Config(Voice *v) {
+//        Voice_Config(v,
+//                     new daisysp::Svf(),
+//                     new daisysp::Adsr(),
+//                     new daisysp::Adsr(),
+//                     new daisysp::Port()
+//                     );
+//    }
 }
