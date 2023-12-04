@@ -104,21 +104,12 @@ static void callback(AudioHandle::InterleavingInputBuffer in,
     for (size_t i = 0; i < size; i += 2) {
 
         t_sample synth = multi.Process(&multi);
-        t_sample out1 = in[i];
-        t_sample out2 = in[i + 1];
+        t_sample out1 = synth; // this value gets overwritten by the fxrack, but it makes it easy to disable the fx rack with a single comment.
+        t_sample out2 = synth;
         fxrack.Process(&fxrack, in[i] + synth, in[i + 1] + synth, &out1, &out2);
 
         out[i] = out1;
         out[i + 1] = out2;
-
-        /*
-        out[i] = in[i];
-        out[i+1] = in[i+1];
-         */
-//        if (counter % 20000 == 0) {
-//            DaisySeed::PrintLine("out1: %d, out2: %d", uint16_t(out[i] * 1000), uint16_t(out[i + 1] * 1000));
-//            counter = 0;
-//        }
     }
 }
 
@@ -174,18 +165,26 @@ static void handleMidiMessage(MidiEvent m) {
 
     if (m.type == daisy::NoteOn) {
         auto n = m.AsNoteOn();
-        multi.NoteOn(&multi, n.note, n.velocity);
+        if (m.channel == SYNTH_CHANNEL) {
+            multi.NoteOn(&multi, n.note, n.velocity);
+        }
         signalLed(LedSignal::NoteOn);
     }
     if (m.type == daisy::NoteOff) {
         NoteOffEvent n = m.AsNoteOff();
-        multi.NoteOff(&multi, n.note, n.velocity);
+        if (m.channel == SYNTH_CHANNEL) {
+            multi.NoteOff(&multi, n.note, n.velocity);
+        }
         signalLed(LedSignal::NoteOff);
     }
     if (m.type == daisy::ControlChange) {
         ControlChangeEvent p = m.AsControlChange();
-        FxRack_UpdateMidiControl(&fxrack, p.control_number, p.value);
-        multi.UpdateMidiControl(&multi, p.control_number, p.value);
+        if (m.channel == FX_CHANNEL) {
+            FxRack_UpdateMidiControl(&fxrack, p.control_number, p.value);
+        }
+        if (m.channel == SYNTH_CHANNEL) {
+            multi.UpdateMidiControl(&multi, p.control_number, p.value);
+        }
         signalLed(LedSignal::Control);
     }
 

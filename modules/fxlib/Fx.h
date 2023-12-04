@@ -170,12 +170,14 @@ namespace ol::fx {
         SaturatorFx *saturator1 = nullptr;
         SaturatorFx *saturator2 = nullptr;
         SaturatorFx *interstage_saturator = nullptr;
+        t_sample master_volume = 0.8f;
 
         void (*Init)(FxRack *, t_sample sample_rate) = nullptr;
 
         int (*Process)(FxRack *, const t_sample &in1, const t_sample &in2, t_sample *out1, t_sample *out2) = nullptr;
 
         void (*Update)(FxRack *) = nullptr;
+
     };
 
     void FxRack_UpdateMidiControl(FxRack *, uint8_t control, uint8_t value);

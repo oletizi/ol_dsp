@@ -16,11 +16,11 @@ namespace ol::synth {
 //        t_sample slop_lfo_2_value = v->slop_lfo_2.Process();
 //        t_sample slop_lfo_3_value = v->slop_lfo_3.Process();
 //        t_sample slop_lfo_4_value = v->slop_lfo_4.Process();
-//
-//        t_sample osc_1_slop_freq = port + port * slop_lfo_1_value * v->slop_factor * v->osc_1_slop;
-//        t_sample osc_2_slop_freq = port - port * slop_lfo_2_value * v->slop_factor * v->osc_2_slop;
-//        t_sample osc_3_slop_freq = port + port * slop_lfo_3_value * v->slop_factor * v->osc_3_slop;
-//        t_sample osc_4_slop_freq = port - port * slop_lfo_4_value * v->slop_factor * v->osc_4_slop;
+
+//        t_sample osc_1_slop_freq = freq + freq * slop_lfo_1_value * v->slop_factor * v->osc_1_slop;
+//        t_sample osc_2_slop_freq = freq - freq * slop_lfo_2_value * v->slop_factor * v->osc_2_slop;
+//        t_sample osc_3_slop_freq = freq + freq * slop_lfo_3_value * v->slop_factor * v->osc_3_slop;
+//        t_sample osc_4_slop_freq = freq - freq * slop_lfo_4_value * v->slop_factor * v->osc_4_slop;
 //        v->slop_lfo_1.PhaseAdd(slop_lfo_1_value * 0.000001f);
 //        v->slop_lfo_2.PhaseAdd(slop_lfo_2_value * 0.0000009f);
 //

@@ -70,13 +70,13 @@ namespace ol::synth {
         t_sample filter_envelope_amount = 1;
 
         // Amp envelope
-        t_sample amp_attack = 0;
+        t_sample amp_attack = 0.01f; // a little lag on attack and release help reduce clicking
         t_sample amp_decay = 0;
         t_sample amp_sustain = 1;
-        t_sample amp_release = 0;
+        t_sample amp_release = 0.01f;
 
         // Oscillator slop
-        t_sample slop_factor = 0.5;
+        t_sample slop_factor = 0.1;
         t_sample osc_1_slop = 0.25f;
         t_sample osc_2_slop = 0.25f;
         t_sample osc_3_slop = 0.1f;

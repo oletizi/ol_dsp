@@ -20,23 +20,22 @@ namespace ol::fx {
     int FxRack_process(FxRack *fx, const t_sample &in1, const t_sample &in2, t_sample *out1, t_sample *out2) {
         fx->delay1->Process(fx->delay1, in1, out1);
         fx->delay2->Process(fx->delay2, in2, out2);
-        fx->interstage_saturator->Process(fx->interstage_saturator, *out1, out1);
-        fx->interstage_saturator->Process(fx->interstage_saturator, *out2, out2);
+//        fx->interstage_saturator->Process(fx->interstage_saturator, *out1, out1);
+//        fx->interstage_saturator->Process(fx->interstage_saturator, *out2, out2);
 
         fx->reverb->Process(fx->reverb, *out1, *out2, out1, out2);
-        fx->interstage_saturator->Process(fx->interstage_saturator, *out1, out1);
-        fx->interstage_saturator->Process(fx->interstage_saturator, *out2, out2);
+//        fx->interstage_saturator->Process(fx->interstage_saturator, *out1, out1);
+//        fx->interstage_saturator->Process(fx->interstage_saturator, *out2, out2);
 
         fx->saturator1->Process(fx->saturator1, *out1, out1);
         fx->saturator2->Process(fx->saturator2, *out2, out2);
 
         fx->filter1->Process(fx->filter1, *out1, out1);
         fx->filter2->Process(fx->filter2, *out2, out2);
-        fx->interstage_saturator->Process(fx->interstage_saturator, *out1, out1);
-        fx->interstage_saturator->Process(fx->interstage_saturator, *out2, out2);
-
-
-
+//        fx->interstage_saturator->Process(fx->interstage_saturator, *out1, out1);
+//        fx->interstage_saturator->Process(fx->interstage_saturator, *out2, out2);
+        *out1 *= fx->master_volume;
+        *out2 *= fx->master_volume;
         return 0;
     };
 
@@ -58,6 +57,9 @@ namespace ol::fx {
         Filter_UpdateMidi(fx->filter2, control, value);
         Saturator_UpdateMidiControl(fx->saturator1, control, value);
         Saturator_UpdateMidiControl(fx->saturator2, control, value);
+        if (control == CC_CTL_VOLUME) {
+            fx->master_volume = ol::core::scale(value, 0, 127, 0, 1, 1);
+        }
     }
 
     void
