@@ -12,7 +12,7 @@ int main() {
 //    Voice voice2;
 //    Voice_Config(&voice2);
 
-    Multivoice multi;
+    Polyvoice multi;
 
     Voice v1;
     daisysp::Svf v1_filter = daisysp::Svf();
@@ -33,8 +33,8 @@ int main() {
 
     Voice_Config(&v1, &v1_filter, &v1_filter_envelope, &v1_amp_envelope, &v1_portamento);
     Voice_Config(&v2, &v2_filter, &v2_filter_envelope, &v2_amp_envelope, &v2_portamento);
-    
-    Multivoice_Config(&multi, voices, voice_count);
+
+    Polyvoice_Config(&multi, voices, voice_count);
 
     juce::initialiseJuce_GUI();
     juce::AudioDeviceManager deviceManager = juce::AudioDeviceManager();

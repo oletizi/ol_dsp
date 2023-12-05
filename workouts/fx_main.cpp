@@ -148,7 +148,7 @@ int main() {
     Saturator_Config(&interstage_saturator, &transfer_function);
 
     FxRack_Config(&fxrack, &delay1, &delay2, &reverbSc, &filter1, &filter2, &saturator1, &saturator2, & interstage_saturator);
-    Voice_Config(&voice);
+    Voice_Config(&voice, new daisysp::Svf(), new daisysp::Adsr(), new daisysp::Adsr, new daisysp::Port());
 
     RtMidiIn *midiin = nullptr;
     try {

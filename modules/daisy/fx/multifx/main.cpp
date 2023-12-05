@@ -35,7 +35,7 @@ t_sample led2_blue = 0;
 //std::queue<Voice*> DSY_SDRAM_BSS voice_pool;
 //std::vector<Voice*> DSY_SDRAM_BSS voices;
 const uint8_t voice_count = 5;
-Multivoice DSY_SDRAM_BSS multi;
+Polyvoice DSY_SDRAM_BSS multi;
 daisysp::Svf DSY_SDRAM_BSS v1_f;
 daisysp::Adsr v1_fe;
 daisysp::Adsr v1_ae;
@@ -300,7 +300,7 @@ int main() {
     Voice_Config(&v5, &v5_f, &v5_fe, &v5_ae, &v5_port);
 
     Voice *voices[] = {&v1, &v2, &v3, &v4, &v5};
-    Multivoice_Config(&multi, voices, voice_count);
+    Polyvoice_Config(&multi, voices, voice_count);
 
     multi.Init(&multi, sample_rate);
 

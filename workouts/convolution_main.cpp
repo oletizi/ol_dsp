@@ -72,7 +72,11 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[]) {
 
     ol::synth::Voice voice;
     ol::synth::Voice_Config(&voice);
-    SynthMidiCallback midi_callback(&voice);
+    ol::synth::Voice * voices[] = {&voice};
+    ol::synth::Polyvoice poly;
+    ol::synth::Polyvoice_Config(&poly, voices, 1);
+
+    SynthMidiCallback midi_callback(&poly);
 
     for (const auto &input: midiDevices) {
         deviceManager.setMidiInputDeviceEnabled(input.identifier, true);
@@ -81,7 +85,8 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[]) {
     }
 
 
-    SynthAudioCallback synth(&voice);
+
+    SynthAudioCallback synth(&poly);
     ConvolutionCallback convolution_callback(&convolution, &synth);
     deviceManager.addAudioCallback(&convolution_callback);
 

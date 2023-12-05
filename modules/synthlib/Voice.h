@@ -2,8 +2,8 @@
 // Created by Orion Letizi on 11/8/23.
 //
 
-#ifndef JUCE_TEST_VOICE_H
-#define JUCE_TEST_VOICE_H
+#ifndef OL_SYNTH_VOICE
+#define OL_SYNTH_VOICE
 
 #include <queue>
 #include <daisysp.h>
@@ -90,35 +90,38 @@ namespace ol::synth {
         uint8_t playing = 0;
     };
 
-    void Voice_Config(Voice *,
-                      daisysp::Svf *filter,
-                      daisysp::Adsr *filter_envelope,
-                      daisysp::Adsr *amp_envelope,
-                      daisysp::Port *portamento);
+    void Voice_Config(Voice * ,
+                      daisysp::Svf * filter,
+                      daisysp::Adsr * filter_envelope,
+                      daisysp::Adsr * amp_envelope,
+                      daisysp::Port * portamento);
 
+    inline void Voice_Config(Voice * v) {
+        Voice_Config(v, new daisysp::Svf(), new daisysp::Adsr(), new daisysp::Adsr(), new daisysp::Port());
+    }
 
-    struct Multivoice {
+    struct Polyvoice {
 
-        void (*Init)(Multivoice *, t_sample sample_rate) = nullptr;
+        void (*Init)(Polyvoice *, t_sample sample_rate) = nullptr;
 
-        t_sample (*Process)(Multivoice *) = nullptr;
+        t_sample (*Process)(Polyvoice *) = nullptr;
 
-        void (*NoteOn)(Multivoice *, uint8_t note, uint8_t velocity) = nullptr;
+        void (*NoteOn)(Polyvoice *, uint8_t note, uint8_t velocity) = nullptr;
 
-        void (*NoteOff)(Multivoice *, uint8_t note, uint8_t velocity) = nullptr;
+        void (*NoteOff)(Polyvoice *, uint8_t note, uint8_t velocity) = nullptr;
 
-        void (*UpdateMidiControl)(Multivoice *, uint8_t control, uint8_t value) = nullptr;
+        void (*UpdateMidiControl)(Polyvoice *, uint8_t control, uint8_t value) = nullptr;
 
-        Voice *voices[MAX_VOICES];
-        Voice *pool[MAX_VOICES];
-        Voice *playing[128][MAX_VOICES];
+        Voice *voices[MAX_VOICES] = {};
+        Voice *pool[MAX_VOICES] = {};
+        Voice *playing[128][MAX_VOICES] = {};
 
         bool initialized = false;
         uint8_t unison_count = 1;
         uint8_t voice_count = 0;
     };
 
-    void Multivoice_Config(Multivoice *m, Voice *voices[], uint8_t voice_count);
+    void Polyvoice_Config(Polyvoice * m, Voice * voices[], uint8_t voice_count);
 
 }
-#endif //JUCE_TEST_VOICE_H
+#endif //OL_SYNTH_VOICE

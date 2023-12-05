@@ -5,6 +5,25 @@
 #include "workout_buddy.h"
 
 namespace ol::workout {
+
+    void
+    MaSampleSource_read (void *source, t_sample *frames_out, uint64_t frame_count,
+                        uint64_t *frames_read) {
+        auto s = static_cast<MaSampleSource *>(source);
+        ma_decoder_read_pcm_frames(s->decoder, frames_out, frame_count, frames_read);
+    }
+
+    void MaSampleSource_seek(void *source, uint64_t frame_index) {
+        auto s = static_cast<MaSampleSource *>(source);
+        ma_decoder_seek_to_pcm_frame(s->decoder, frame_index);
+    }
+
+    void MaSampleSource_Config(MaSampleSource *s, ma_decoder *d) {
+        s->decoder = d;
+        s->Read = MaSampleSource_read;
+        s->Seek = MaSampleSource_seek;
+    }
+
     void
     Workout_rtMidiCallback([[maybe_unused]] double deltatime, std::vector<unsigned char> *message, void *userData) {
         auto *buddy = static_cast<workout_buddy *>(userData);
@@ -13,12 +32,11 @@ namespace ol::workout {
             unsigned char status = message->at(0);
             int type = (int) (status >> 4);
             int channel = (int) (status & 0x0F);
-            std::cout << "TYPE: " << type << "; CHAN: " << channel << std::endl;
             switch (type) {
                 case 9:
                     std::cout << "NOTE ON!" << std::endl;
                     if (buddy->HandleNoteOn) {
-                        buddy->HandleNoteOn(channel, message->at(1), message->at(2));
+                        buddy->HandleNoteOn(buddy, channel, message->at(1), message->at(2));
                     } else {
                         std::cout << "No Note On callback configured." << std::endl;
                     }
@@ -26,7 +44,7 @@ namespace ol::workout {
                 case 8:
                     std::cout << "NOTE OFF!" << std::endl;
                     if (buddy->HandleNoteOff) {
-                        buddy->HandleNoteOff(channel, message->at(1), message->at(2));
+                        buddy->HandleNoteOff(buddy, channel, message->at(1), message->at(2));
                     } else {
                         std::cout << "No Note Off callback configured." << std::endl;
                     }
@@ -34,7 +52,7 @@ namespace ol::workout {
                 case 11:
                     std::cout << "MIDI CC!" << std::endl;
                     if (buddy->HandleMidiControlChange) {
-                        buddy->HandleMidiControlChange(channel, message->at(1), message->at(2));
+                        buddy->HandleMidiControlChange(buddy, channel, message->at(1), message->at(2));
                     } else {
                         std::cout << "No CC callback configured." << std::endl;
                     }
@@ -56,14 +74,12 @@ namespace ol::workout {
         if (buddy->Process) {
             auto *in = (t_sample *) pInput;
             auto *out = (t_sample *) pOutput;
-
-            auto input_channel_count = device->capture.channels;
             auto output_channel_count = device->playback.channels;
 
             for (int i = 0; i < frameCount; i++) {
                 t_sample out1 = 0;
                 t_sample out2 = 0;
-                buddy->Process(in[i], in[i], &out1, &out2);
+                buddy->Process(buddy, in[i], in[i], &out1, &out2);
                 out[i * output_channel_count + 0] = out1;
                 out[i * output_channel_count + 1] = out2;
 
@@ -108,16 +124,18 @@ namespace ol::workout {
     }
 
     void Workout_Config(workout_buddy *buddy, RtMidiIn *mi, ma_device *audio_device,
-                        MidiNoteOnCallback note_on_callback,
-                        MidiNoteOffCallback note_off_callback,
-                        MidiControlChangeCallback cc_callback,
-                        AudioCallback audio_callback) {
+                        workout_buddy::MidiNoteOnCallback note_on_callback,
+                        workout_buddy::MidiNoteOffCallback note_off_callback,
+                        workout_buddy::MidiControlChangeCallback cc_callback,
+                        workout_buddy::AudioCallback audio_callback,
+                        void * audio_data) {
         buddy->midi_in = mi;
         buddy->audio_device = audio_device;
         buddy->HandleNoteOn = note_on_callback;
         buddy->HandleNoteOff = note_off_callback;
         buddy->HandleMidiControlChange = cc_callback;
         buddy->Process = audio_callback;
+        buddy->audio_data = audio_data;
     }
 
     void Workout_Start(workout_buddy *buddy) {
@@ -125,7 +143,7 @@ namespace ol::workout {
     }
 
     t_sample Workout_SampleRate(workout_buddy *buddy) {
-        return buddy->audio_device->sampleRate;
+        return t_sample(buddy->audio_device->sampleRate);
     }
 
 }

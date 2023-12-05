@@ -116,7 +116,7 @@ int main() {
         return -1;  // Failed to initialize the device.
     }
 
-    ol::synth::Voice_Config(&voice);
+    ol::synth::Voice_Config(&voice, new daisysp::Svf(), new daisysp::Adsr, new daisysp::Adsr(), new daisysp::Port());
     voice.Init(&voice, device.sampleRate);
 
     daisysp::Biquad biquad;

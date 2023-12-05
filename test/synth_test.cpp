@@ -12,7 +12,7 @@ int v2_note_off_calls = 0;
 
 using namespace ol::synth;
 TEST(Synth, Multi) {
-    Multivoice m;
+    Polyvoice m;
 
     Voice v1 = Voice();
     v1.NoteOn = [](Voice *v, uint8_t note, uint8_t velocity) {
@@ -35,7 +35,7 @@ TEST(Synth, Multi) {
     };
 
     Voice *voices[] = {&v1, &v2};
-    Multivoice_Config(&m, voices, 2);
+    Polyvoice_Config(&m, voices, 2);
 
     m.NoteOn(&m, 10, 1);
     m.NoteOn(&m, 11, 1);

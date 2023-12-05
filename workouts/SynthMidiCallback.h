@@ -9,7 +9,7 @@
 
 class SynthMidiCallback : public juce::MidiInputCallback {
 public:
-    explicit SynthMidiCallback(ol::synth::Multivoice *voices) : voices_(voices) {}
+    explicit SynthMidiCallback(ol::synth::Polyvoice *voices) : voices_(voices) {}
 
     void handleIncomingMidiMessage(juce::MidiInput *source, const juce::MidiMessage &message) override {
         std::cout << "MIDI!" << std::endl;
@@ -24,7 +24,7 @@ public:
     }
 
 private:
-    ol::synth::Multivoice *voices_;
+    ol::synth::Polyvoice *voices_;
 };
 
 #endif //OL_DSP_SYNTHMIDICALLBACK_H

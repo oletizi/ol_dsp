@@ -80,10 +80,14 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[]) {
     ol::synth::Voice voice;
     ol::synth::Voice_Config(&voice);
 
-    SynthAudioCallback synth(&voice);
+    ol::synth::Polyvoice multi = {};
+    ol::synth::Voice *voices[] = {&voice};
+    ol::synth::Polyvoice_Config(&multi, voices, 1);
+
+    SynthAudioCallback synth(&multi);
     ol::fx::ReverbFx fx;
 
-    SynthMidiCallback midi_callback(&voice);
+    SynthMidiCallback midi_callback(&multi);
     ReverbMidiCallback reverb_midi_callback(&fx);
 
     for (const auto &input: midiDevices) {
@@ -92,7 +96,6 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[]) {
         deviceManager.addMidiInputDeviceCallback(input.identifier, &reverb_midi_callback);
         std::cout << " name: " << input.name << "; identifier: " << input.identifier << std::endl;
     }
-
 
 
     ol::fx::Dattorro_Config(&fx, DattorroVerb_create());
