@@ -58,17 +58,9 @@ namespace ol::synth {
         m->voice_count = voice_count;
         for (int i = 0; i < MAX_VOICES; i++) {
             if (i < voice_count) {
-                m->pool[i] = voices[i];
                 m->voices[i] = voices[i];
             } else {
                 m->voices[i] = nullptr;
-                m->pool[i] = nullptr;
-            }
-        }
-
-        for (int i = 0; i < 128; i++) {
-            for (int j = 0; j < MAX_VOICES; j++) {
-                m->playing[i][j] = nullptr;
             }
         }
     }

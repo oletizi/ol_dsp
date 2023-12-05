@@ -9,19 +9,49 @@
 #include <daisysp.h>
 #include "synthlib/ol_synthlib.h"
 
-#define MAX_VOICES 5
-
-#define OSCILLATOR_COUNT 4
+#define MAX_VOICES 8
 
 namespace ol::synth {
 
+    class PitchedSoundSource {
+    public:
+        virtual void Init(t_sample sample_rate) = 0;
+
+        virtual t_sample Process() = 0;
+
+        virtual void SetFreq(t_sample freq) = 0;
+    };
+
+    class OscillatorSoundSource : public PitchedSoundSource {
+    public:
+        explicit OscillatorSoundSource(daisysp::Oscillator *o) : o_(o) {};
+
+        void Init(t_sample sample_rate) override;
+
+        t_sample Process() override;
+
+        void SetFreq(t_sample freq) override;
+
+    private:
+        daisysp::Oscillator *o_;
+        const float freq_ = 0;
+    };
+
     struct Voice {
 
-        void (*Init)(Voice *, t_sample sample_rate) = nullptr;
+        typedef
+        void (*Init_function)(Voice *, t_sample sample_rate);
 
-        void (*Update)(Voice *) = nullptr;
+        typedef
+        void (*Update_function)(Voice *);
 
-        t_sample (*Process)(Voice *) = nullptr;
+        typedef
+        t_sample (*Process_function)(Voice *);
+
+
+        Init_function Init = nullptr;
+        Update_function Update = nullptr;
+        Process_function Process = nullptr;
 
         void (*UpdateMidiControl)(Voice *, uint8_t control, uint8_t value) = nullptr;
 
@@ -38,14 +68,9 @@ namespace ol::synth {
 
         t_sample sample_rate = 0;
 
-        daisysp::Oscillator slop_lfo_1;
-        daisysp::Oscillator slop_lfo_2;
-        daisysp::Oscillator slop_lfo_3;
-        daisysp::Oscillator slop_lfo_4;
+        // Oscillator, sample player, etc.
+        PitchedSoundSource *sound_source = nullptr;
 
-        // Oscillator
-        daisysp::Oscillator oscillators[4] = {daisysp::Oscillator(), daisysp::Oscillator(), daisysp::Oscillator(),
-                                              daisysp::Oscillator()};
         t_sample freq_ = 0;
 
         // Filter
@@ -75,29 +100,22 @@ namespace ol::synth {
         t_sample amp_sustain = 1;
         t_sample amp_release = 0.01f;
 
-        // Oscillator slop
-        t_sample slop_factor = 0.1;
-        t_sample osc_1_slop = 0.25f;
-        t_sample osc_2_slop = 0.25f;
-        t_sample osc_3_slop = 0.1f;
-        t_sample osc_4_slop = 0.07f;
-
         // Oscillator mixer
         t_sample osc_1_mix = 0.8f;
-        t_sample osc_2_mix = 0;
-        t_sample osc_3_mix = 0;
-        t_sample osc_4_mix = 0;
         uint8_t playing = 0;
     };
 
-    void Voice_Config(Voice * ,
-                      daisysp::Svf * filter,
-                      daisysp::Adsr * filter_envelope,
-                      daisysp::Adsr * amp_envelope,
-                      daisysp::Port * portamento);
+    void Voice_Config(Voice *,
+                      PitchedSoundSource *sound_source,
+                      daisysp::Svf *filter,
+                      daisysp::Adsr *filter_envelope,
+                      daisysp::Adsr *amp_envelope,
+                      daisysp::Port *portamento);
 
-    inline void Voice_Config(Voice * v) {
-        Voice_Config(v, new daisysp::Svf(), new daisysp::Adsr(), new daisysp::Adsr(), new daisysp::Port());
+    inline void Voice_Config(Voice *v) {
+        Voice_Config(v, new OscillatorSoundSource(new daisysp::Oscillator()),
+                     new daisysp::Svf(), new daisysp::Adsr(),
+                     new daisysp::Adsr(), new daisysp::Port());
     }
 
     struct Polyvoice {
@@ -113,15 +131,11 @@ namespace ol::synth {
         void (*UpdateMidiControl)(Polyvoice *, uint8_t control, uint8_t value) = nullptr;
 
         Voice *voices[MAX_VOICES] = {};
-        Voice *pool[MAX_VOICES] = {};
-        Voice *playing[128][MAX_VOICES] = {};
-
         bool initialized = false;
-        uint8_t unison_count = 1;
         uint8_t voice_count = 0;
     };
 
-    void Polyvoice_Config(Polyvoice * m, Voice * voices[], uint8_t voice_count);
+    void Polyvoice_Config(Polyvoice *m, Voice *voices[], uint8_t voice_count);
 
 }
 #endif //OL_SYNTH_VOICE

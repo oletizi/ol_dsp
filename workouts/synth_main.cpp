@@ -31,8 +31,12 @@ int main() {
     //Voice voices[] = {v1, v2, v3, v4};
     Voice *voices[] = {&v1, &v2};
 
-    Voice_Config(&v1, &v1_filter, &v1_filter_envelope, &v1_amp_envelope, &v1_portamento);
-    Voice_Config(&v2, &v2_filter, &v2_filter_envelope, &v2_amp_envelope, &v2_portamento);
+    Voice_Config(&v1, new OscillatorSoundSource(new daisysp::Oscillator()),
+                 &v1_filter, &v1_filter_envelope,
+                 &v1_amp_envelope, &v1_portamento);
+    Voice_Config(&v2, new OscillatorSoundSource(new daisysp::Oscillator()),
+                 &v2_filter, &v2_filter_envelope,
+                 &v2_amp_envelope, &v2_portamento);
 
     Polyvoice_Config(&multi, voices, voice_count);
 

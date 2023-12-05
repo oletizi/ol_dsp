@@ -72,7 +72,7 @@ int main() {
     }
     t_sample sample_rate = Workout_SampleRate(&buddy);
 
-    Voice_Config(&voice, new daisysp::Svf(), new daisysp::Adsr(), new daisysp::Adsr(), new daisysp::Port());
+    Voice_Config(&voice);
     voice.Init(&voice, sample_rate);
     saturator1.Init(&saturator1, sample_rate);
     saturator2.Init(&saturator2, sample_rate);

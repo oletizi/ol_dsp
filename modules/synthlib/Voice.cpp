@@ -10,29 +10,10 @@ namespace ol::synth {
 
         t_sample freq = v->freq_;
         freq = v->portamento_->Process(freq);
+        v->sound_source->SetFreq(freq);
         t_sample rv = 0;
 
-//        t_sample slop_lfo_1_value = v->slop_lfo_1.Process();
-//        t_sample slop_lfo_2_value = v->slop_lfo_2.Process();
-//        t_sample slop_lfo_3_value = v->slop_lfo_3.Process();
-//        t_sample slop_lfo_4_value = v->slop_lfo_4.Process();
-
-//        t_sample osc_1_slop_freq = freq + freq * slop_lfo_1_value * v->slop_factor * v->osc_1_slop;
-//        t_sample osc_2_slop_freq = freq - freq * slop_lfo_2_value * v->slop_factor * v->osc_2_slop;
-//        t_sample osc_3_slop_freq = freq + freq * slop_lfo_3_value * v->slop_factor * v->osc_3_slop;
-//        t_sample osc_4_slop_freq = freq - freq * slop_lfo_4_value * v->slop_factor * v->osc_4_slop;
-//        v->slop_lfo_1.PhaseAdd(slop_lfo_1_value * 0.000001f);
-//        v->slop_lfo_2.PhaseAdd(slop_lfo_2_value * 0.0000009f);
-//
-        v->oscillators[0].SetFreq(freq);
-//        v->oscillators[1].SetFreq(osc_2_slop_freq);
-//        v->oscillators[2].SetFreq(osc_3_slop_freq);
-//        v->oscillators[3].SetFreq(osc_4_slop_freq);
-
-        rv += v->oscillators[0].Process() * v->osc_1_mix;
-//        rv += v->oscillators[1].Process() * v->osc_2_mix;;
-//        rv += v->oscillators[2].Process() * v->osc_3_mix;
-//        rv += v->oscillators[3].Process() * v->osc_4_mix;
+        rv += v->sound_source->Process() * v->osc_1_mix;
 
         // Filter
         t_sample env_value = v->filter_envelope->Process(v->playing);
@@ -97,27 +78,6 @@ namespace ol::synth {
             case CC_OSC_1_VOLUME:
                 v->osc_1_mix = scaled;
                 break;
-            case CC_OSC_2_VOLUME:
-                v->osc_2_mix = scaled;
-                break;
-            case CC_OSC_3_VOLUME:
-                v->osc_3_mix = scaled;
-                break;
-            case CC_OSC_4_VOLUME:
-                v->osc_4_mix = scaled;
-                break;
-            case CC_OSC_1_SLOP:
-                v->osc_1_slop = scaled;
-                break;
-            case CC_OSC_2_SLOP:
-                v->osc_2_slop = scaled;
-                break;
-            case CC_OSC_3_SLOP:
-                v->osc_3_slop = scaled;
-                break;
-            case CC_OSC_4_SLOP:
-                v->osc_4_slop = scaled;
-                break;
             default:
                 update = false;
                 break;
@@ -159,18 +119,8 @@ namespace ol::synth {
     }
 
     void Voice_init(Voice *v, t_sample sample_rate) {
-        v->slop_lfo_1.Init(sample_rate);
-        v->slop_lfo_2.Init(sample_rate);
-        v->slop_lfo_3.Init(sample_rate);
-        v->slop_lfo_4.Init(sample_rate);
-        v->slop_lfo_1.SetFreq(0.0001f);
-        v->slop_lfo_2.SetFreq(0.00009f);
-        v->slop_lfo_3.SetFreq(0.00008f);
-        v->slop_lfo_4.SetFreq(0.00011f);
-        for (auto &oscillator: v->oscillators) {
-            oscillator.Init(sample_rate);
-            oscillator.SetWaveform(daisysp::Oscillator::WAVE_POLYBLEP_SAW);
-        }
+
+        v->sound_source->Init(sample_rate);
 
         v->filter->Init(sample_rate);
         v->filter_envelope->Init(sample_rate);
@@ -180,10 +130,12 @@ namespace ol::synth {
     }
 
     void Voice_Config(Voice *v,
+                      PitchedSoundSource *sound_source,
                       daisysp::Svf *filter,
                       daisysp::Adsr *filter_envelope,
                       daisysp::Adsr *amp_envelope,
                       daisysp::Port *portamento) {
+        v->sound_source = sound_source;
         v->filter = filter;
         v->filter_envelope = filter_envelope;
         v->amp_envelope = amp_envelope;
@@ -195,12 +147,16 @@ namespace ol::synth {
         v->NoteOn = Voice_noteOn;
         v->NoteOff = Voice_noteOff;
     }
-//    void Voice_Config(Voice *v) {
-//        Voice_Config(v,
-//                     new daisysp::Svf(),
-//                     new daisysp::Adsr(),
-//                     new daisysp::Adsr(),
-//                     new daisysp::Port()
-//                     );
-//    }
+
+    void OscillatorSoundSource::Init(t_sample sample_rate) {
+        o_->Init(sample_rate);
+    }
+
+    void OscillatorSoundSource::SetFreq(t_sample freq) {
+        o_->SetFreq(freq);
+    }
+
+    t_sample OscillatorSoundSource::Process() {
+        return o_->Process();
+    }
 }

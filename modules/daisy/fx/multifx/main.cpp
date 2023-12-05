@@ -31,11 +31,9 @@ t_sample led2_green = 0;
 uint64_t led2_blue_timestamp;
 t_sample led2_blue = 0;
 
-
-//std::queue<Voice*> DSY_SDRAM_BSS voice_pool;
-//std::vector<Voice*> DSY_SDRAM_BSS voices;
 const uint8_t voice_count = 5;
 Polyvoice DSY_SDRAM_BSS multi;
+OscillatorSoundSource osc1(new daisysp::Oscillator());
 daisysp::Svf DSY_SDRAM_BSS v1_f;
 daisysp::Adsr v1_fe;
 daisysp::Adsr v1_ae;
@@ -43,24 +41,28 @@ daisysp::Port v1_port;
 Voice v1;
 
 daisysp::Svf DSY_SDRAM_BSS v2_f;
+OscillatorSoundSource osc2(new daisysp::Oscillator());
 daisysp::Adsr v2_fe;
 daisysp::Adsr v2_ae;
 daisysp::Port v2_port;
 Voice v2;
 
 daisysp::Svf DSY_SDRAM_BSS v3_f;
+OscillatorSoundSource osc3(new daisysp::Oscillator());
 daisysp::Adsr v3_fe;
 daisysp::Adsr v3_ae;
 daisysp::Port v3_port;
 Voice v3;
 
 daisysp::Svf DSY_SDRAM_BSS v4_f;
+OscillatorSoundSource osc4(new daisysp::Oscillator());
 daisysp::Adsr v4_fe;
 daisysp::Adsr v4_ae;
 daisysp::Port v4_port;
 Voice v4;
 
 daisysp::Svf DSY_SDRAM_BSS v5_f;
+OscillatorSoundSource osc5(new daisysp::Oscillator());
 daisysp::Adsr v5_fe;
 daisysp::Adsr v5_ae;
 daisysp::Port v5_port;
@@ -289,11 +291,11 @@ int main() {
 
 
     // Config and init synth voices
-    Voice_Config(&v1, &v1_f, &v1_fe, &v1_ae, &v1_port);
-    Voice_Config(&v2, &v2_f, &v2_fe, &v2_ae, &v2_port);
-    Voice_Config(&v3, &v3_f, &v3_fe, &v3_ae, &v3_port);
-    Voice_Config(&v4, &v4_f, &v4_fe, &v4_ae, &v4_port);
-    Voice_Config(&v5, &v5_f, &v5_fe, &v5_ae, &v5_port);
+    Voice_Config(&v1, &osc1, &v1_f, &v1_fe, &v1_ae, &v1_port);
+    Voice_Config(&v2, &osc2, &v2_f, &v2_fe, &v2_ae, &v2_port);
+    Voice_Config(&v3, &osc3, &v3_f, &v3_fe, &v3_ae, &v3_port);
+    Voice_Config(&v4, &osc4, &v4_f, &v4_fe, &v4_ae, &v4_port);
+    Voice_Config(&v5, &osc5, &v5_f, &v5_fe, &v5_ae, &v5_port);
 
     Voice *voices[] = {&v1, &v2, &v3, &v4, &v5};
     Polyvoice_Config(&multi, voices, voice_count);
