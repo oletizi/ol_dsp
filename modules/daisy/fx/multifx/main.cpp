@@ -87,16 +87,12 @@ daisysp::Svf svf2;
 ol::fx::FilterFx filter1;
 ol::fx::FilterFx filter2;
 
-
 HyperTan xfr_function;
 SaturatorFx saturator1;
 SaturatorFx saturator2;
-
 SaturatorFx interstage_saturator;
 
-
 ol::fx::FxRack fxrack;
-
 
 static void callback(AudioHandle::InterleavingInputBuffer in,
                      AudioHandle::InterleavingOutputBuffer out,

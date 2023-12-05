@@ -11,4 +11,7 @@ add_executable(ol_daisy_multifx fx/multifx/main.cpp)
 target_link_libraries(ol_daisy_multifx daisy DaisySP ol_daisy_ui ol_corelib ol_fxlib ol_synthlib)
 target_compile_definitions(ol_daisy_multifx PRIVATE DAISY_NATIVE)
 
+add_executable(ol_daisy_sampler sampler/main.cpp)
+target_link_libraries(ol_daisy_sampler daisy DaisySP ol_daisy_ui, ol_corelib ol_fxlib ol_synthlib)
+target_compile_definitions(ol_daisy_sampler PRIVATE DAISY_NATIVE)
 
