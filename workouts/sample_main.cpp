@@ -5,7 +5,6 @@
 
 using namespace ol::workout;
 
-
 void note_on_callback(workout_buddy *, uint8_t channel, uint8_t note, uint8_t velocity) {}
 
 void note_off_callback(workout_buddy *, uint8_t channel, uint8_t note, uint8_t velocity) {}
@@ -64,8 +63,7 @@ int main() {
         if (c == 'q' || c == 'Q') {
             break;
         } else if (c == 'l') {
-            sample.SetLoopStart(0);
-            sample.SetLoopEnd(-1);
+            sample.SetPlayMode(ol::synth::MultiChannelSample::Loop);
         } else if (c == 'r') {
             sample.Seek(0);
         }
