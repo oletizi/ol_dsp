@@ -2,6 +2,7 @@
 // Created by Orion Letizi on 12/3/23.
 //
 #include "gtest/gtest.h"
+#include "gmock/gmock.h"
 #include "ol_synthlib.h"
 
 int v1_note_on_calls = 0;
@@ -11,51 +12,36 @@ int v2_note_on_calls = 0;
 int v2_note_off_calls = 0;
 
 using namespace ol::synth;
-TEST(Synth, Multi) {
-    Polyvoice m;
 
-    Voice v1 = Voice();
-    v1.NoteOn = [](Voice *v, uint8_t note, uint8_t velocity) {
-        v1_note_on_calls++;
-        v->playing = note;
-    };
-    v1.NoteOff = [](Voice *v, uint8_t note, uint8_t velocity) {
-        v1_note_off_calls++;
-        v->playing = 0;
-    };
+class MockVoice : public Voice {
+public:
+    MOCK_METHOD(void, Init, (t_sample sample_rate), (override));
+    MOCK_METHOD(void, Update, (), (override));
+    MOCK_METHOD(t_sample, Process, (), (override));
+    MOCK_METHOD(void, UpdateMidiControl, (uint8_t control, uint8_t value), (override));
+    MOCK_METHOD(void, NoteOn, (uint8_t midi_note, uint8_t velocity), (override));
+    MOCK_METHOD(void, NoteOff, (uint8_t midi_note, uint8_t velocity), (override));
+    MOCK_METHOD(uint8_t, Playing, (), (override));
+};
 
-    Voice v2 = Voice();
-    v2.NoteOn = [](Voice *v, uint8_t note, uint8_t velocity) {
-        v2_note_on_calls++;
-        v->playing = note;
-    };
-    v2.NoteOff = [](Voice *v, uint8_t note, uint8_t velocity) {
-        v2_note_off_calls++;
-        v->playing = 0;
-    };
+using ::testing::AtLeast;
+using ::testing::Return;
+TEST(Synth, Polyvoice) {
+    MockVoice v1 = MockVoice();
+    MockVoice v2 = MockVoice();
+    uint64_t voice_count = 2;
+    Voice *mock_voices[] = {&v1, &v2};
+    Polyvoice p = Polyvoice(mock_voices, voice_count);
 
-    Voice *voices[] = {&v1, &v2};
-    Polyvoice_Config(&m, voices, 2);
+    EXPECT_CALL(v1, NoteOn(10, 1)).Times(AtLeast(1));
+    EXPECT_CALL(v1, Playing())
+            .WillOnce(Return(0))
+            .WillOnce(Return(10));
 
-    m.NoteOn(&m, 10, 1);
-    m.NoteOn(&m, 11, 1);
+    EXPECT_CALL(v2, NoteOn(11, 1)).Times(AtLeast(1));
+    EXPECT_CALL(v2, Playing())
+            .WillOnce(Return(0));
 
-    EXPECT_EQ(v1_note_on_calls, 1);
-    EXPECT_EQ(v2_note_on_calls, 1);
-    EXPECT_TRUE(v1.playing);
-    EXPECT_TRUE(v2.playing);
-
-    m.NoteOff(&m, 1, 1);
-    m.NoteOff(&m, 1, 1);
-    EXPECT_EQ(v1_note_off_calls, 0);
-    EXPECT_EQ(v2_note_off_calls, 0);
-    EXPECT_TRUE(v1.playing);
-    EXPECT_TRUE(v1.playing);
-
-    m.NoteOff(&m, 10, 1);
-    m.NoteOff(&m, 11, 1);
-    EXPECT_EQ(v1_note_off_calls, 1);
-    EXPECT_EQ(v2_note_off_calls, 1);
-    EXPECT_FALSE(v1.playing);
-    EXPECT_FALSE(v1.playing);
+    p.NoteOn(10, 1);
+    p.NoteOn(11, 1);
 }

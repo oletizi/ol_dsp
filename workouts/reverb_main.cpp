@@ -5,20 +5,21 @@
 #include "SynthAudioCallback.h"
 #include "SynthMidiCallback.h"
 #include "fxlib/Fx.h"
+#include "synthlib/ol_synthlib.h"
 
 class ReverbAudioCallback : public juce::AudioIODeviceCallback {
 public:
-    explicit ReverbAudioCallback(ol::fx::ReverbFx *fx, SynthAudioCallback *synth) :
+    explicit ReverbAudioCallback(ol::fx::ReverbFx *fx, SynthAudioCallback &synth) :
             fx_(fx), synth_(synth) {}
 
     void audioDeviceAboutToStart(juce::AudioIODevice *device) override {
-        synth_->audioDeviceAboutToStart(device);
+        synth_.audioDeviceAboutToStart(device);
         fx_->Init(fx_, device->getCurrentSampleRate());
     }
 
     /** Called to indicate that the device has stopped. */
     void audioDeviceStopped() override {
-        synth_->audioDeviceStopped();
+        synth_.audioDeviceStopped();
     };
 
     /** This can be overridden to be told if the device generates an error while operating.
@@ -34,7 +35,7 @@ public:
                                           int numSamples,
                                           const juce::AudioIODeviceCallbackContext &context)
     override {
-        synth_->audioDeviceIOCallbackWithContext(inputChannelData, numOutputChannels,
+        synth_.audioDeviceIOCallbackWithContext(inputChannelData, numOutputChannels,
                                                  outputChannelData, numOutputChannels,
                                                  numSamples, context);
         for (int i = 0; i < numSamples; i++) {
@@ -51,7 +52,7 @@ public:
 
 
     ol::fx::ReverbFx *fx_;
-    SynthAudioCallback *synth_;
+    SynthAudioCallback &synth_;
 };
 
 class ReverbMidiCallback : public juce::MidiInputCallback {
@@ -77,17 +78,20 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[]) {
     auto midiDevices = juce::MidiInput::getAvailableDevices();
     std::cout << "MIDI inputs:" << std::endl;
 
-    ol::synth::Voice voice;
-    ol::synth::Voice_Config(&voice);
+    auto osc1 = ol::synth::OscillatorSoundSource(daisysp::Oscillator());
+    auto v1_f = daisysp::Svf();
+    auto v1_fe = daisysp::Adsr();
+    auto v1_ae = daisysp::Adsr();
+    auto v1_port = daisysp::Port();
+    auto v1 = ol::synth::SynthVoice(osc1, v1_f, v1_fe, v1_ae, v1_port);
 
-    ol::synth::Polyvoice multi = {};
-    ol::synth::Voice *voices[] = {&voice};
-    ol::synth::Polyvoice_Config(&multi, voices, 1);
+    ol::synth::Voice *voices[] = {&v1};
+    auto poly = ol::synth::Polyvoice(voices, 1);
 
-    SynthAudioCallback synth(&multi);
+    auto synthCallback = SynthAudioCallback(poly);
     ol::fx::ReverbFx fx;
 
-    SynthMidiCallback midi_callback(&multi);
+    auto midi_callback = SynthMidiCallback(poly);
     ReverbMidiCallback reverb_midi_callback(&fx);
 
     for (const auto &input: midiDevices) {
@@ -99,7 +103,7 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[]) {
 
 
     ol::fx::Dattorro_Config(&fx, DattorroVerb_create());
-    ReverbAudioCallback reverb_callback(&fx, &synth);
+    ReverbAudioCallback reverb_callback(&fx, synthCallback);
     deviceManager.addAudioCallback(&reverb_callback);
 
     std::cout << "Send me some MIDI" << std::endl;

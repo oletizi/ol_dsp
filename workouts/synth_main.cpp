@@ -12,33 +12,28 @@ int main() {
 //    Voice voice2;
 //    Voice_Config(&voice2);
 
-    Polyvoice multi;
 
-    Voice v1;
+    auto osc1 = ol::synth::OscillatorSoundSource(daisysp::Oscillator());
+    auto v1_f = daisysp::Svf();
+    auto v1_fe = daisysp::Adsr();
+    auto v1_ae = daisysp::Adsr();
+    auto v1_port = daisysp::Port();
+    auto v1 = ol::synth::SynthVoice(osc1, v1_f, v1_fe, v1_ae, v1_port);
     daisysp::Svf v1_filter = daisysp::Svf();
     daisysp::Adsr v1_filter_envelope = daisysp::Adsr();
     daisysp::Adsr v1_amp_envelope = daisysp::Adsr();
     daisysp::Port v1_portamento = daisysp::Port();
 
-    Voice v2;
+    auto osc2 = ol::synth::OscillatorSoundSource(daisysp::Oscillator());
     daisysp::Svf v2_filter = daisysp::Svf();
     daisysp::Adsr v2_filter_envelope = daisysp::Adsr();
     daisysp::Adsr v2_amp_envelope = daisysp::Adsr();
     daisysp::Port v2_portamento = daisysp::Port();
+    auto v2 = ol::synth::SynthVoice(osc2, v2_filter, v2_filter_envelope, v2_amp_envelope, v2_portamento);
 
     uint8_t voice_count = 2;
-    //std::vector<Voice *> voices{&v1, &v2, &v3, &v4};
-    //Voice voices[] = {v1, v2, v3, v4};
     Voice *voices[] = {&v1, &v2};
-
-    Voice_Config(&v1, new OscillatorSoundSource(new daisysp::Oscillator()),
-                 &v1_filter, &v1_filter_envelope,
-                 &v1_amp_envelope, &v1_portamento);
-    Voice_Config(&v2, new OscillatorSoundSource(new daisysp::Oscillator()),
-                 &v2_filter, &v2_filter_envelope,
-                 &v2_amp_envelope, &v2_portamento);
-
-    Polyvoice_Config(&multi, voices, voice_count);
+    auto poly = Polyvoice(voices, voice_count);
 
     juce::initialiseJuce_GUI();
     juce::AudioDeviceManager deviceManager = juce::AudioDeviceManager();
@@ -47,7 +42,7 @@ int main() {
     auto midiDevices = juce::MidiInput::getAvailableDevices();
     std::cout << "MIDI inputs:" << std::endl;
 
-    SynthMidiCallback midi_callback(&multi);
+    auto midi_callback = SynthMidiCallback(poly);
 
     for (const auto &input: midiDevices) {
         deviceManager.setMidiInputDeviceEnabled(input.identifier, true);
@@ -56,7 +51,7 @@ int main() {
     }
 
 
-    SynthAudioCallback callback = SynthAudioCallback(&multi);
+    auto callback = SynthAudioCallback(poly);
     deviceManager.addAudioCallback(&callback);
 
     std::cout << "Send me some MIDI" << std::endl;

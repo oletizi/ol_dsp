@@ -14,14 +14,9 @@ void cc_callback(workout_buddy *, uint8_t channel, uint8_t controller, uint8_t v
 
 void audio_callback(workout_buddy *buddy, t_sample &in1, t_sample &in2, t_sample *out1, t_sample *out2) {
     auto sample = static_cast<ol::synth::Sample *>(buddy->audio_data);
-    float32_t out[2] = {*out1, *out2};
-    uint64_t frames_read = 0;
-    // seed: ma_data_source_seek_to_pcm_frame
-    uint64_t result = sample->Process(sample, in1, in2, out1, out2);
-
-    if (result == 0) {
-        sample->Seek(sample, 0);
-    }
+    auto result = sample->Process();
+    *out1 = result;
+    *out2 = result;
 }
 
 int main() {
@@ -30,8 +25,8 @@ int main() {
     ma_device audio_device;
 
     ma_decoder decoder{};
-    MaSampleSource sample_source{};;
-    ol::synth::Sample sample{};
+    auto sample_source = MaSampleSource(&decoder);
+    auto sample = ol::synth::Sample(sample_source);
 
 
     printf("Starting audio...");
@@ -55,15 +50,12 @@ int main() {
         return -2;
     }
 
-    MaSampleSource_Config(&sample_source, &decoder);
-
-
-    ol::synth::Sample_Config(&sample, &sample_source);
-    sample.Init(&sample, sample_rate);
+    sample.Init(sample_rate);
 
     Workout_Start(&buddy);
 
     printf("Playing %s\n", filename);
+    printf("Quit [q|Q]: ");
     while (auto c = getchar()) {
         if (c == 'q' || c == 'Q') {
             break;

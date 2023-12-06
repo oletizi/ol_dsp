@@ -9,22 +9,22 @@
 
 class SynthMidiCallback : public juce::MidiInputCallback {
 public:
-    explicit SynthMidiCallback(ol::synth::Polyvoice *voices) : voices_(voices) {}
+    explicit SynthMidiCallback(ol::synth::Polyvoice &poly) : poly_(poly) {}
 
     void handleIncomingMidiMessage(juce::MidiInput *source, const juce::MidiMessage &message) override {
         std::cout << "MIDI!" << std::endl;
         if (message.isNoteOn()) {
-            voices_->NoteOn(voices_, static_cast<unsigned char>(message.getNoteNumber()), message.getVelocity());
+            poly_.NoteOn(static_cast<unsigned char>(message.getNoteNumber()), message.getVelocity());
         } else if (message.isNoteOff()) {
-            voices_->NoteOff(voices_, static_cast<unsigned char>(message.getNoteNumber()), message.getVelocity());
+            poly_.NoteOff(static_cast<unsigned char>(message.getNoteNumber()), message.getVelocity());
         } else if (message.isController()) {
-            voices_->UpdateMidiControl(voices_, message.getControllerNumber(),
-                                       message.getControllerValue());
+            poly_.UpdateMidiControl(message.getControllerNumber(),
+                                     message.getControllerValue());
         }
     }
 
 private:
-    ol::synth::Polyvoice *voices_;
+    ol::synth::Polyvoice &poly_;
 };
 
 #endif //OL_DSP_SYNTHMIDICALLBACK_H

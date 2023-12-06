@@ -7,7 +7,7 @@
 
 #include "daisysp.h"
 #include "juce_audio_devices/juce_audio_devices.h"
-#include "synthlib/Voice.h"
+#include "synthlib/ol_synthlib.h"
 
 
 class SynthAudioCallback : public juce::AudioIODeviceCallback {
@@ -15,7 +15,7 @@ private:
     uint32_t counter_ = 0;
     juce::AudioDeviceManager *device_manager_ = nullptr;
 public:
-    explicit SynthAudioCallback(ol::synth::Polyvoice *voices) : voices_(voices) {}
+    explicit SynthAudioCallback(ol::synth::Polyvoice &voices) : poly_(voices) {}
 
     void audioDeviceIOCallbackWithContext(const float *const *inputChannelData,
                                           int numInputChannels,
@@ -25,7 +25,7 @@ public:
                                           const juce::AudioIODeviceCallbackContext &context) override {
         counter_++;
         for (int i = 0; i < numSamples; i++) {
-            float value = voices_->Process(voices_);
+            float value = poly_.Process();
             for (int j = 0; j < numOutputChannels; j++) {
                 outputChannelData[j][i] = value;
             }
@@ -33,14 +33,14 @@ public:
     }
 
     void audioDeviceAboutToStart(juce::AudioIODevice *device) override {
-        voices_->Init(voices_, static_cast<float>(device->getCurrentSampleRate()));
+        poly_.Init(static_cast<float>(device->getCurrentSampleRate()));
     }
 
     void audioDeviceStopped() override {
     }
 
 private:
-    ol::synth::Polyvoice *voices_;
+    ol::synth::Polyvoice poly_;
 };
 
 

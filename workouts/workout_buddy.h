@@ -15,11 +15,15 @@
 
 namespace ol::workout {
 
-    struct MaSampleSource : public ol::synth::SampleSource {
-        ma_decoder *decoder;
-    };
+    class MaSampleSource : public ol::synth::SampleDataSource {
+    public:
+        explicit MaSampleSource(ma_decoder * decoder) : decoder_(decoder){}
+         void Seek(uint64_t) override;
 
-    void MaSampleSource_Config(MaSampleSource *, ma_decoder *);
+         t_sample Read() override;
+    private:
+        ma_decoder *decoder_;
+    };
 
     enum InitStatus {
         Ok,

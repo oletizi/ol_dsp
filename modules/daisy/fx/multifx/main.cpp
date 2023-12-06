@@ -32,41 +32,43 @@ uint64_t led2_blue_timestamp;
 t_sample led2_blue = 0;
 
 const uint8_t voice_count = 5;
-Polyvoice DSY_SDRAM_BSS multi;
-OscillatorSoundSource osc1(new daisysp::Oscillator());
+auto osc1 = OscillatorSoundSource(daisysp::Oscillator());
 daisysp::Svf DSY_SDRAM_BSS v1_f;
 daisysp::Adsr v1_fe;
 daisysp::Adsr v1_ae;
 daisysp::Port v1_port;
-Voice v1;
+auto v1 = SynthVoice(osc1, v1_f, v1_fe, v1_ae, v1_port);
 
+auto osc2 = OscillatorSoundSource(daisysp::Oscillator());
 daisysp::Svf DSY_SDRAM_BSS v2_f;
-OscillatorSoundSource osc2(new daisysp::Oscillator());
 daisysp::Adsr v2_fe;
 daisysp::Adsr v2_ae;
 daisysp::Port v2_port;
-Voice v2;
+auto v2 = SynthVoice(osc2, v2_f, v2_fe, v2_ae, v2_port);
 
+auto osc3 = OscillatorSoundSource(daisysp::Oscillator());
 daisysp::Svf DSY_SDRAM_BSS v3_f;
-OscillatorSoundSource osc3(new daisysp::Oscillator());
 daisysp::Adsr v3_fe;
 daisysp::Adsr v3_ae;
 daisysp::Port v3_port;
-Voice v3;
+auto v3 = SynthVoice(osc3, v3_f, v3_fe, v3_ae, v3_port);
 
+auto osc4 = OscillatorSoundSource(daisysp::Oscillator());
 daisysp::Svf DSY_SDRAM_BSS v4_f;
-OscillatorSoundSource osc4(new daisysp::Oscillator());
 daisysp::Adsr v4_fe;
 daisysp::Adsr v4_ae;
 daisysp::Port v4_port;
-Voice v4;
+auto v4 = SynthVoice(osc4, v4_f, v4_fe, v4_ae, v4_port);
 
+auto osc5 = OscillatorSoundSource(daisysp::Oscillator());
 daisysp::Svf DSY_SDRAM_BSS v5_f;
-OscillatorSoundSource osc5(new daisysp::Oscillator());
 daisysp::Adsr v5_fe;
 daisysp::Adsr v5_ae;
 daisysp::Port v5_port;
-Voice DSY_SDRAM_BSS v5;
+auto v5 = SynthVoice(osc5, v5_f, v5_fe, v5_ae, v5_port);
+
+Voice *voices[] = {&v1, &v2, &v3, &v4, &v5};
+auto  DSY_SDRAM_BSS poly = Polyvoice(voices, voice_count);
 
 daisysp::Svf delay_svf1;
 daisysp::Svf delay_svf2;
@@ -101,7 +103,7 @@ static void callback(AudioHandle::InterleavingInputBuffer in,
                      size_t size) {
     for (size_t i = 0; i < size; i += 2) {
 
-        t_sample synth = multi.Process(&multi);
+        t_sample synth = poly.Process();
         t_sample out1 = synth; // this value gets overwritten by the fxrack, but it makes it easy to disable the fx rack with a single comment.
         t_sample out2 = synth;
         fxrack.Process(&fxrack, in[i] + synth, in[i + 1] + synth, &out1, &out2);
@@ -164,14 +166,14 @@ static void handleMidiMessage(MidiEvent m) {
     if (m.type == daisy::NoteOn) {
         auto n = m.AsNoteOn();
         if (m.channel == SYNTH_CHANNEL) {
-            multi.NoteOn(&multi, n.note, n.velocity);
+            poly.NoteOn(n.note, n.velocity);
         }
         signalLed(LedSignal::NoteOn);
     }
     if (m.type == daisy::NoteOff) {
         NoteOffEvent n = m.AsNoteOff();
         if (m.channel == SYNTH_CHANNEL) {
-            multi.NoteOff(&multi, n.note, n.velocity);
+            poly.NoteOff(n.note, n.velocity);
         }
         signalLed(LedSignal::NoteOff);
     }
@@ -181,7 +183,7 @@ static void handleMidiMessage(MidiEvent m) {
             FxRack_UpdateMidiControl(&fxrack, p.control_number, p.value);
         }
         if (m.channel == SYNTH_CHANNEL) {
-            multi.UpdateMidiControl(&multi, p.control_number, p.value);
+            poly.UpdateMidiControl(p.control_number, p.value);
         }
         signalLed(LedSignal::Control);
     }
@@ -291,16 +293,7 @@ int main() {
 
 
     // Config and init synth voices
-    Voice_Config(&v1, &osc1, &v1_f, &v1_fe, &v1_ae, &v1_port);
-    Voice_Config(&v2, &osc2, &v2_f, &v2_fe, &v2_ae, &v2_port);
-    Voice_Config(&v3, &osc3, &v3_f, &v3_fe, &v3_ae, &v3_port);
-    Voice_Config(&v4, &osc4, &v4_f, &v4_fe, &v4_ae, &v4_port);
-    Voice_Config(&v5, &osc5, &v5_f, &v5_fe, &v5_ae, &v5_port);
-
-    Voice *voices[] = {&v1, &v2, &v3, &v4, &v5};
-    Polyvoice_Config(&multi, voices, voice_count);
-
-    multi.Init(&multi, sample_rate);
+    poly.Init(sample_rate);
 
 
     // Config delay filters

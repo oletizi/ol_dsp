@@ -70,13 +70,16 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[]) {
     auto midiDevices = juce::MidiInput::getAvailableDevices();
     std::cout << "MIDI inputs:" << std::endl;
 
-    ol::synth::Voice voice;
-    ol::synth::Voice_Config(&voice);
+    auto osc = ol::synth::OscillatorSoundSource(daisysp::Oscillator());
+    auto v1_f = daisysp::Svf();
+    auto v1_fe = daisysp::Adsr();
+    auto v1_ae = daisysp::Adsr();
+    auto v1_port = daisysp::Port();
+    auto voice = ol::synth::SynthVoice(osc, v1_f, v1_fe, v1_ae, v1_port);
     ol::synth::Voice * voices[] = {&voice};
-    ol::synth::Polyvoice poly;
-    ol::synth::Polyvoice_Config(&poly, voices, 1);
+    ol::synth::Polyvoice poly = ol::synth::Polyvoice(voices, 1);
 
-    SynthMidiCallback midi_callback(&poly);
+    auto midi_callback = SynthMidiCallback(poly);
 
     for (const auto &input: midiDevices) {
         deviceManager.setMidiInputDeviceEnabled(input.identifier, true);
@@ -86,7 +89,7 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[]) {
 
 
 
-    SynthAudioCallback synth(&poly);
+    auto synth = SynthAudioCallback(poly);
     ConvolutionCallback convolution_callback(&convolution, &synth);
     deviceManager.addAudioCallback(&convolution_callback);
 

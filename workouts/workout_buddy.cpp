@@ -6,22 +6,15 @@
 
 namespace ol::workout {
 
-    void
-    MaSampleSource_read (void *source, t_sample *frames_out, uint64_t frame_count,
-                        uint64_t *frames_read) {
-        auto s = static_cast<MaSampleSource *>(source);
-        ma_decoder_read_pcm_frames(s->decoder, frames_out, frame_count, frames_read);
+    t_sample MaSampleSource::Read() {
+
+        t_sample frames_out = 0;
+        uint64_t frames_read = 0;
+        ma_decoder_read_pcm_frames(decoder_, &frames_out, 1, &frames_read);
     }
 
-    void MaSampleSource_seek(void *source, uint64_t frame_index) {
-        auto s = static_cast<MaSampleSource *>(source);
-        ma_decoder_seek_to_pcm_frame(s->decoder, frame_index);
-    }
-
-    void MaSampleSource_Config(MaSampleSource *s, ma_decoder *d) {
-        s->decoder = d;
-        s->Read = MaSampleSource_read;
-        s->Seek = MaSampleSource_seek;
+    void MaSampleSource::Seek(uint64_t frame_index) {
+        ma_decoder_seek_to_pcm_frame(decoder_, frame_index);
     }
 
     void
@@ -128,7 +121,7 @@ namespace ol::workout {
                         workout_buddy::MidiNoteOffCallback note_off_callback,
                         workout_buddy::MidiControlChangeCallback cc_callback,
                         workout_buddy::AudioCallback audio_callback,
-                        void * audio_data) {
+                        void *audio_data) {
         buddy->midi_in = mi;
         buddy->audio_device = audio_device;
         buddy->HandleNoteOn = note_on_callback;

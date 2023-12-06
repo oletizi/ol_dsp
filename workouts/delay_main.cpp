@@ -10,7 +10,12 @@
 
 #define CHANNEL_COUNT 2
 
-ol::synth::Voice voice;
+auto osc = ol::synth::OscillatorSoundSource(daisysp::Oscillator());
+auto v1_f = daisysp::Svf();
+auto v1_fe = daisysp::Adsr();
+auto v1_ae = daisysp::Adsr();
+auto v1_port = daisysp::Port();
+auto voice = ol::synth::SynthVoice(osc, v1_f, v1_fe, v1_ae, v1_port);
 daisysp::DelayLine<t_sample, MAX_DELAY> delay_line;
 ol::fx::DelayFx delay;
 
@@ -19,7 +24,7 @@ int notes_on = 0;
 void handleNoteOn(int channel, int note, int velocity) {
     std::cout << "NOTE ON: chan: " << channel << "; note: " << note << "; vel: " << velocity << std::endl;
     notes_on++;
-    voice.NoteOn(&voice, note, velocity);
+    voice.NoteOn(note, velocity);
 }
 
 void handleNoteOff(int channel, int note, int velocity) {
@@ -27,17 +32,18 @@ void handleNoteOff(int channel, int note, int velocity) {
     if (notes_on > 0) {
         notes_on--;
     }
-    voice.NoteOff(&voice, note, velocity);
+    voice.NoteOff(note, velocity);
 }
 
 void handleCC(int channel, int control, int value) {
     std::cout << "CC: chan: " << channel << "; control: " << control << "; val: " << value << std::endl;
     //synth_control_panel.UpdateMidi(control, value);
-    voice.UpdateMidiControl(&voice, control, value);
+    voice.UpdateMidiControl(control, value);
     ol::fx::Delay_UpdateMidiControl(&delay, control, value);
 }
 
-void midi_callback([[maybe_unused]] double deltatime, std::vector<unsigned char> *message, [[maybe_unused]] void *userData) {
+void
+midi_callback([[maybe_unused]] double deltatime, std::vector<unsigned char> *message, [[maybe_unused]] void *userData) {
     unsigned int nBytes = message->size();
     if (nBytes > 0) {
         unsigned char status = message->at(0);
@@ -68,10 +74,11 @@ void midi_error_callback([[maybe_unused]] RtMidiError::Type type, [[maybe_unused
     std::cout << "MIDI ERROR! " << errorText << std::endl;
 }
 
-void audio_callback([[maybe_unused]] ma_device *pDevice, void *pOutput, [[maybe_unused]] const void *pInput, ma_uint32 frameCount) {
+void audio_callback([[maybe_unused]] ma_device *pDevice, void *pOutput, [[maybe_unused]] const void *pInput,
+                    ma_uint32 frameCount) {
     auto *out = (float *) pOutput;
     for (int i = 0; i < frameCount; i++) {
-        t_sample voice_out = voice.Process(&voice);
+        t_sample voice_out = voice.Process();
         t_sample delay_out = 0;
         delay.Process(&delay, voice_out, &delay_out);
 
@@ -119,8 +126,7 @@ int main() {
         return -1;  // Failed to initialize the device.
     }
 
-    Voice_Config(&voice);
-    voice.Init(&voice, device.sampleRate);
+    voice.Init( device.sampleRate);
     daisysp::Svf svf;
     ol::fx::FilterFx filter;
     ol::fx::Filter_Svf_Config(&filter, &svf);

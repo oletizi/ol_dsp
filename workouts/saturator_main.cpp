@@ -9,7 +9,12 @@
 using namespace ol::workout;
 using namespace ol::synth;
 using namespace ol::fx;
-Voice voice;
+auto osc = OscillatorSoundSource(daisysp::Oscillator());
+auto filter = daisysp::Svf();
+auto fe = daisysp::Adsr();
+auto ae = daisysp::Adsr();
+auto port = daisysp::Port();
+auto voice = SynthVoice(osc, filter, fe, ae, port);
 
 SaturatorFx saturator1;
 SaturatorFx saturator2;
@@ -18,12 +23,12 @@ int notes_on = 0;
 
 void note_on_callback(workout_buddy *, uint8_t channel, uint8_t note, uint8_t velocity) {
     notes_on++;
-    voice.NoteOn(&voice, note, velocity);
+    voice.NoteOn(note, velocity);
 }
 
 void note_off_callback(workout_buddy *, uint8_t channel, uint8_t note, uint8_t velocity) {
     notes_on = notes_on > 0 ? notes_on - 1 : 0;
-    voice.NoteOff(&voice, note, velocity);
+    voice.NoteOff(note, velocity);
 }
 
 void cc_callback(workout_buddy *, uint8_t channel, uint8_t control, uint8_t value) {
@@ -35,7 +40,7 @@ uint64_t counter = 0;
 
 void audio_callback(workout_buddy *, t_sample &in1, t_sample &in2, t_sample *out1, t_sample *out2) {
     counter++;
-    t_sample voice_out = voice.Process(&voice);
+    t_sample voice_out = voice.Process();
     t_sample next_in1 = voice_out + in1;
     t_sample next_in2 = voice_out + in2;
     saturator1.Process(&saturator1, next_in1, out1);
@@ -72,8 +77,7 @@ int main() {
     }
     t_sample sample_rate = Workout_SampleRate(&buddy);
 
-    Voice_Config(&voice);
-    voice.Init(&voice, sample_rate);
+    voice.Init(sample_rate);
     saturator1.Init(&saturator1, sample_rate);
     saturator2.Init(&saturator2, sample_rate);
 
