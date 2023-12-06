@@ -14,6 +14,7 @@ namespace ol::synth {
             OneShot,
             Loop
         };
+
         MultiChannelSample(SampleDataSource &data_source) : data_source_(data_source) {}
 
         void Process(t_sample *frame_out);
@@ -28,9 +29,14 @@ namespace ol::synth {
 
         void SetPlayMode(PlayMode mode);
 
+        void TogglePlay();
+
+        void Play();
+
     private:
         SampleDataSource &data_source_;
         PlayMode play_mode_ = OneShot;
+        bool playing = false;
         uint64_t start_ = 0;
         uint64_t end_ = 0;
         uint64_t loop_start_ = 0;

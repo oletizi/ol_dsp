@@ -57,6 +57,7 @@ int main() {
     printf("Playing %s\n", filename);
     printf("Replay [r]\n");
     printf("Loop [l]\n");
+    printf("Play/pause [p]\n");
     printf("Quit [q|Q] \n");
     printf("command: ");
     while (auto c = getchar()) {
@@ -64,8 +65,13 @@ int main() {
             break;
         } else if (c == 'l') {
             sample.SetPlayMode(ol::synth::MultiChannelSample::Loop);
-        } else if (c == 'r') {
+            sample.Play();
+        } else if(c == 'p') {
+            sample.TogglePlay();
+        }
+        else if (c == 'r') {
             sample.Seek(0);
+            sample.Play();
         }
     }
     return 0;
