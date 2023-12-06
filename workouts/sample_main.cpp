@@ -13,10 +13,11 @@ void note_off_callback(workout_buddy *, uint8_t channel, uint8_t note, uint8_t v
 void cc_callback(workout_buddy *, uint8_t channel, uint8_t controller, uint8_t value) {}
 
 void audio_callback(workout_buddy *buddy, t_sample &in1, t_sample &in2, t_sample *out1, t_sample *out2) {
-    auto sample = static_cast<ol::synth::Sample *>(buddy->audio_data);
-    auto result = sample->Process();
-    *out1 = result;
-    *out2 = result;
+    ol::synth::MultiChannelSample *sample = static_cast<ol::synth::MultiChannelSample *>(buddy->audio_data);
+    t_sample frame_out[2] = {0, 0};
+    sample->Process(frame_out);
+    *out1 = frame_out[0];
+    *out2 = frame_out[1];
 }
 
 int main() {
@@ -26,7 +27,7 @@ int main() {
 
     ma_decoder decoder{};
     auto sample_source = MaSampleSource(&decoder);
-    auto sample = ol::synth::Sample(sample_source);
+    auto sample = ol::synth::MultiChannelSample(sample_source);
 
 
     printf("Starting audio...");
@@ -55,10 +56,18 @@ int main() {
     Workout_Start(&buddy);
 
     printf("Playing %s\n", filename);
-    printf("Quit [q|Q]: ");
+    printf("Replay [r]\n");
+    printf("Loop [l]\n");
+    printf("Quit [q|Q] \n");
+    printf("command: ");
     while (auto c = getchar()) {
         if (c == 'q' || c == 'Q') {
             break;
+        } else if (c == 'l') {
+            sample.SetLoopStart(0);
+            sample.SetLoopEnd(-1);
+        } else if (c == 'r') {
+            sample.Seek(0);
         }
     }
     return 0;

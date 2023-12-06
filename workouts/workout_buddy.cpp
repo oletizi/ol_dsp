@@ -6,15 +6,18 @@
 
 namespace ol::workout {
 
-    t_sample MaSampleSource::Read() {
-
-        t_sample frames_out = 0;
+    uint64_t MaSampleSource::Read(t_sample *frames_out) {
         uint64_t frames_read = 0;
-        ma_decoder_read_pcm_frames(decoder_, &frames_out, 1, &frames_read);
+        ma_decoder_read_pcm_frames(decoder_, frames_out, 1, &frames_read);
+        return frames_read;
     }
 
     void MaSampleSource::Seek(uint64_t frame_index) {
         ma_decoder_seek_to_pcm_frame(decoder_, frame_index);
+    }
+
+    uint64_t MaSampleSource::GetChannelCount() {
+        return decoder_->outputChannels;
     }
 
     void

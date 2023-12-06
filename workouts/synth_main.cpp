@@ -6,13 +6,6 @@
 using namespace ol::synth;
 
 int main() {
-//    Voice voice1;
-//    Voice_Config(&voice1);
-//
-//    Voice voice2;
-//    Voice_Config(&voice2);
-
-
     auto osc1 = ol::synth::OscillatorSoundSource(daisysp::Oscillator());
     auto v1_f = daisysp::Svf();
     auto v1_fe = daisysp::Adsr();

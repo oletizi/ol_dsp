@@ -17,10 +17,14 @@ namespace ol::workout {
 
     class MaSampleSource : public ol::synth::SampleDataSource {
     public:
-        explicit MaSampleSource(ma_decoder * decoder) : decoder_(decoder){}
-         void Seek(uint64_t) override;
+        explicit MaSampleSource(ma_decoder *decoder) : decoder_(decoder) {}
 
-         t_sample Read() override;
+        uint64_t GetChannelCount() override;
+
+        void Seek(uint64_t) override;
+
+        uint64_t Read(t_sample *frames_out) override;
+
     private:
         ma_decoder *decoder_;
     };
@@ -53,7 +57,7 @@ namespace ol::workout {
 
         RtMidiIn *midi_in = nullptr;
 
-        void * audio_data = nullptr;
+        void *audio_data = nullptr;
     };
 
 
@@ -64,8 +68,9 @@ namespace ol::workout {
     InitStatus Workout_Init(workout_buddy *);
 
     void
-    Workout_Config(workout_buddy *, RtMidiIn *, ma_device *, workout_buddy::MidiNoteOnCallback, workout_buddy::MidiNoteOffCallback,
-                   workout_buddy::MidiControlChangeCallback, workout_buddy::AudioCallback, void * audio_data = nullptr);
+    Workout_Config(workout_buddy *, RtMidiIn *, ma_device *, workout_buddy::MidiNoteOnCallback,
+                   workout_buddy::MidiNoteOffCallback,
+                   workout_buddy::MidiControlChangeCallback, workout_buddy::AudioCallback, void *audio_data = nullptr);
 }
 
 
