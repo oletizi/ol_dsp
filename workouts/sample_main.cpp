@@ -13,10 +13,15 @@ void cc_callback(workout_buddy *, uint8_t channel, uint8_t controller, uint8_t v
 
 void audio_callback(workout_buddy *buddy, t_sample &in1, t_sample &in2, t_sample *out1, t_sample *out2) {
     ol::synth::MultiChannelSample *sample = static_cast<ol::synth::MultiChannelSample *>(buddy->audio_data);
-    t_sample frame_out[2] = {0, 0};
+    uint64_t channel_count = sample->GetChannelCount();
+    t_sample frame_out[channel_count];
     sample->Process(frame_out);
-    *out1 = frame_out[0];
-    *out2 = frame_out[1];
+    if (channel_count > 0) {
+        *out1 = frame_out[0];
+    }
+    if (channel_count > 1) {
+        *out2 = frame_out[1];
+    }
 }
 
 int main() {
@@ -64,12 +69,11 @@ int main() {
         if (c == 'q' || c == 'Q') {
             break;
         } else if (c == 'l') {
-            sample.SetPlayMode(ol::synth::MultiChannelSample::Loop);
+            sample.SetPlayMode(ol::synth::SamplePlayMode::Loop);
             sample.Play();
-        } else if(c == 'p') {
+        } else if (c == 'p') {
             sample.TogglePlay();
-        }
-        else if (c == 'r') {
+        } else if (c == 'r') {
             sample.Seek(0);
             sample.Play();
         }

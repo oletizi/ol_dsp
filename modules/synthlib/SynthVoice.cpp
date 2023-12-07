@@ -6,27 +6,25 @@
 
 namespace ol::synth {
 
-    t_sample SynthVoice::Process() {
+    void SynthVoice::Process(t_sample *frame_out) {
         t_sample freq = freq_;
         freq = portamento.Process(freq);
         sound_source.SetFreq(freq);
-        t_sample rv = 0;
 
-        rv = sound_source.Process();
-        rv *= osc_1_mix;
+        sound_source.Process(frame_out);
+        *frame_out *= osc_1_mix;
 
         // Filter
         t_sample env_value = filter_envelope.Process(playing);
         t_sample filter_frequency = filt_freq + ((env_value * 20000) * filter_envelope_amount);
 
         filter.SetFreq(filter_frequency);
-        filter.Process(rv);
-        rv = filter.Low();
+        filter.Process(*frame_out);
+        *frame_out = filter.Low();
 
         float amp = amp_envelope.Process(playing);
-        rv *= amp;
-        rv *= master_volume;
-        return rv;
+        *frame_out *= amp;
+        *frame_out *= master_volume;
     }
 
     void SynthVoice::UpdateMidiControl(uint8_t ctl, uint8_t val) {

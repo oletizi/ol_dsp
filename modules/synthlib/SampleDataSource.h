@@ -5,8 +5,6 @@
 #ifndef OL_DSP_SAMPLEDATASOURCE_H
 #define OL_DSP_SAMPLEDATASOURCE_H
 
-#include "corelib/ol_corelib.h"
-
 namespace ol::synth {
     class SampleDataSource {
     public:

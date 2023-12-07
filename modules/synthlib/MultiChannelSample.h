@@ -5,15 +5,16 @@
 #ifndef OL_DSP_MULTICHANNELSAMPLE_H
 #define OL_DSP_MULTICHANNELSAMPLE_H
 
-#include "synthlib/ol_synthlib.h"
+#include "SampleDataSource.h"
 
 namespace ol::synth {
+    enum SamplePlayMode {
+        OneShot,
+        Loop
+    };
+
     class MultiChannelSample {
     public:
-        enum PlayMode {
-            OneShot,
-            Loop
-        };
 
         MultiChannelSample(SampleDataSource &data_source) : data_source_(data_source) {}
 
@@ -27,16 +28,18 @@ namespace ol::synth {
 
         void SetLoopEnd(uint64_t frame_index);
 
-        void SetPlayMode(PlayMode mode);
+        void SetPlayMode(SamplePlayMode mode);
 
         void TogglePlay();
 
         void Play();
 
+        uint64_t GetChannelCount();
+
     private:
         SampleDataSource &data_source_;
-        PlayMode play_mode_ = OneShot;
-        bool playing = false;
+        SamplePlayMode play_mode_ = OneShot;
+        bool playing;
         uint64_t start_ = 0;
         uint64_t end_ = 0;
         uint64_t loop_start_ = 0;

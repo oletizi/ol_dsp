@@ -1,7 +1,7 @@
 //
 // Created by Orion Letizi on 12/6/23.
 //
-
+#include "corelib/ol_corelib.h"
 #include "MultiChannelSample.h"
 
 void ol::synth::MultiChannelSample::Process(t_sample *frame_out) {
@@ -37,7 +37,7 @@ void ol::synth::MultiChannelSample::SetLoopEnd(uint64_t frame_index) {
     loop_end_ = frame_index;
 }
 
-void ol::synth::MultiChannelSample::SetPlayMode(ol::synth::MultiChannelSample::PlayMode mode) {
+void ol::synth::MultiChannelSample::SetPlayMode(ol::synth::SamplePlayMode mode) {
     play_mode_ = mode;
 }
 
@@ -47,4 +47,8 @@ void ol::synth::MultiChannelSample::TogglePlay() {
 
 void ol::synth::MultiChannelSample::Play() {
     playing = true;
+}
+
+uint64_t ol::synth::MultiChannelSample::GetChannelCount() {
+    return data_source_.GetChannelCount();
 }

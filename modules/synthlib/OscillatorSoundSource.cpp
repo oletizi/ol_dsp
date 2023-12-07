@@ -3,10 +3,10 @@
 //
 #include "synthlib/ol_synthlib.h"
 #include "Voice.h"
+#include "OscillatorSoundSource.h"
 
 
 namespace ol::synth {
-
     void OscillatorSoundSource::Init(t_sample sample_rate) {
         osc_.Init(sample_rate);
     }
@@ -15,8 +15,10 @@ namespace ol::synth {
         osc_.SetFreq(freq);
     }
 
-    t_sample OscillatorSoundSource::Process() {
-        return osc_.Process();
+    void OscillatorSoundSource::Process(t_sample *frame) {
+        t_sample out = osc_.Process();
+        for (int i = 0; i < channel_count_; i++) {
+            frame[i] = out;
+        }
     }
-
 }

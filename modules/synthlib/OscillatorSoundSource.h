@@ -9,19 +9,24 @@
 #include "synthlib/ol_synthlib.h"
 
 namespace ol::synth {
+
     class OscillatorSoundSource : public PitchedSoundSource {
     public:
-        explicit OscillatorSoundSource(const daisysp::Oscillator &osc) : osc_(osc) {};
+        explicit OscillatorSoundSource(const daisysp::Oscillator &osc = daisysp::Oscillator(),
+                                       const int channel_count = 1)
+                : osc_(osc), channel_count_(channel_count) {};
+
 
         void Init(t_sample sample_rate) override;
 
-        t_sample Process() override;
+        void Process(t_sample *frame) override;
 
         void SetFreq(t_sample freq) override;
 
     private:
         daisysp::Oscillator osc_;
         float freq_ = 0;
+        const int channel_count_;
     };
 }
 #endif //OL_DSP_OSCILLATORSOUNDSOURCE_H

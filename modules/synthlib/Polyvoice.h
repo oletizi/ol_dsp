@@ -14,7 +14,7 @@ namespace ol::synth {
 
         void Init(t_sample sample_rate);
 
-        t_sample Process();
+        void Process(t_sample *frame_out);
 
         void NoteOn(uint8_t note, uint8_t velocity);
 

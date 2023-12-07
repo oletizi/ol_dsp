@@ -7,18 +7,18 @@
 namespace ol::synth {
 
     void Polyvoice::Init(t_sample sample_rate) {
-        for (int i=0; i< voice_count; i++) {
+        for (int i = 0; i < voice_count; i++) {
             voices_[i]->Init(sample_rate);
         }
         initialized = true;
     }
 
-    t_sample Polyvoice::Process() {
-        t_sample rv = 0;
-        for (int i=0; i<voice_count; i++) {
-            rv += voices_[i]->Process();
+    void Polyvoice::Process(t_sample *frame_out) {
+        for (int i = 0; i < voice_count; i++) {
+            t_sample s = 0;
+            voices_[i]->Process(&s);
+            *frame_out += s;
         }
-        return rv;
     }
 
     void Polyvoice::NoteOn(const uint8_t note, const uint8_t velocity) {

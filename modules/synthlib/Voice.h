@@ -16,7 +16,7 @@ namespace ol::synth {
 
         virtual void Update() = 0;
 
-        virtual t_sample Process() = 0;
+        virtual void Process(t_sample *frame_out) = 0;
 
         virtual void UpdateMidiControl(uint8_t control, uint8_t value) = 0;
 

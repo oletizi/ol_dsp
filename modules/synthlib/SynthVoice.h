@@ -25,7 +25,7 @@ namespace ol::synth {
 
         void Update() override;
 
-        t_sample Process() override;
+        void Process(t_sample *frame_out) override;
 
         void UpdateMidiControl(uint8_t control, uint8_t value) override;
 
@@ -46,6 +46,7 @@ namespace ol::synth {
 
         // Oscillator, sample player, etc.
         PitchedSoundSource &sound_source;
+
         t_sample freq_ = 0;
 
         // Filter

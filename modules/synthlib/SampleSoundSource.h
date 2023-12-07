@@ -4,24 +4,28 @@
 #ifndef OL_DSP_SAMPLESOUNDSOURCE_H
 #define OL_DSP_SAMPLESOUNDSOURCE_H
 
-#include "PitchedSoundSource.h"
-#include "Sample.h"
+#include "synthlib/ol_synthlib.h"
+#include "MultiChannelSample.h"
 
 namespace ol::synth {
+
     class SampleSoundSource : public PitchedSoundSource {
     public:
-        SampleSoundSource(Sample &s) : sample_(s), freq_(0) {}
+        SampleSoundSource(MultiChannelSample &s) : sample_(s), freq_(0) {}
 
         void Init(t_sample sample_rate) override;
 
-        t_sample Process() override;
+        void Process(t_sample *frame) override;
 
         void SetFreq(t_sample freq) override;
 
+
     private:
-        Sample sample_;
+        MultiChannelSample &sample_;
         t_sample freq_;
+        t_sample *frame_buffer_;
     };
+
 }
 
 #endif //OL_DSP_SAMPLESOUNDSOURCE_H

@@ -78,7 +78,8 @@ void audio_callback([[maybe_unused]] ma_device *pDevice, void *pOutput, [[maybe_
                     ma_uint32 frameCount) {
     auto *out = (float *) pOutput;
     for (int i = 0; i < frameCount; i++) {
-        t_sample voice_out = voice.Process();
+        t_sample voice_out = 0;
+        voice.Process(&voice_out);
         t_sample delay_out = 0;
         delay.Process(&delay, voice_out, &delay_out);
 
@@ -126,7 +127,7 @@ int main() {
         return -1;  // Failed to initialize the device.
     }
 
-    voice.Init( device.sampleRate);
+    voice.Init(device.sampleRate);
     daisysp::Svf svf;
     ol::fx::FilterFx filter;
     ol::fx::Filter_Svf_Config(&filter, &svf);
