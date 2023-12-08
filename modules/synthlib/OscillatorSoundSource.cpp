@@ -9,6 +9,7 @@
 namespace ol::synth {
     void OscillatorSoundSource::Init(t_sample sample_rate) {
         osc_.Init(sample_rate);
+        osc_.SetWaveform(daisysp::Oscillator::WAVE_POLYBLEP_SAW);
     }
 
     void OscillatorSoundSource::SetFreq(t_sample freq) {
@@ -17,8 +18,7 @@ namespace ol::synth {
 
     void OscillatorSoundSource::Process(t_sample *frame) {
         t_sample out = osc_.Process();
-        for (int i = 0; i < channel_count_; i++) {
-            frame[i] = out;
-        }
+        frame[frame_offset] = out;
+
     }
 }

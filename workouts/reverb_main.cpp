@@ -14,7 +14,7 @@ public:
 
     void audioDeviceAboutToStart(juce::AudioIODevice *device) override {
         synth_.audioDeviceAboutToStart(device);
-        fx_->Init(fx_, device->getCurrentSampleRate());
+        fx_->Init(device->getCurrentSampleRate());
     }
 
     /** Called to indicate that the device has stopped. */
@@ -36,17 +36,20 @@ public:
                                           const juce::AudioIODeviceCallbackContext &context)
     override {
         synth_.audioDeviceIOCallbackWithContext(inputChannelData, numOutputChannels,
-                                                 outputChannelData, numOutputChannels,
-                                                 numSamples, context);
+                                                outputChannelData, numOutputChannels,
+                                                numSamples, context);
+
+        t_sample input_buffer[] = {0, 0};
+        t_sample output_buffer[] = {0, 0};
         for (int i = 0; i < numSamples; i++) {
             float in1, in2;
             float *out1, *out2;
-            in1 = outputChannelData[0][i];
-            in2 = outputChannelData[1][i];
+            input_buffer[0] = outputChannelData[0][i];
+            input_buffer[1] = outputChannelData[1][i];
 
-            out1 = &outputChannelData[0][i];
-            out2 = &outputChannelData[1][i];
-            fx_->Process(fx_, in1, in2, out1, out2);
+            fx_->Process(input_buffer, output_buffer);
+            outputChannelData[0][i] = output_buffer[0];
+            outputChannelData[1][i] = output_buffer[1];
         }
     }
 
@@ -63,7 +66,8 @@ public:
         if (message.isController()) {
             std::cout << "Reverb midi: controller: " << message.getControllerNumber() << "; val: "
                       << message.getControllerValue() << std::endl;
-            ol::fx::Reverb_UpdateMidiControl(fx_, message.getControllerNumber(), message.getControllerValue());
+            //ol::fx::Reverb_UpdateMidiControl(fx_, message.getControllerNumber(), message.getControllerValue());
+            fx_->UpdateMidiControl(message.getControllerNumber(), message.getControllerValue());
         }
     }
 
@@ -89,10 +93,12 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[]) {
     auto poly = ol::synth::Polyvoice(voices, 1);
 
     auto synthCallback = SynthAudioCallback(poly);
-    ol::fx::ReverbFx fx;
+    //daisysp::ReverbSc verb;
+    auto verb = DattorroVerb_create();
+    auto reverb = ol::fx::ReverbFx(verb);
 
     auto midi_callback = SynthMidiCallback(poly);
-    ReverbMidiCallback reverb_midi_callback(&fx);
+    ReverbMidiCallback reverb_midi_callback(&reverb);
 
     for (const auto &input: midiDevices) {
         deviceManager.setMidiInputDeviceEnabled(input.identifier, true);
@@ -102,8 +108,9 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[]) {
     }
 
 
-    ol::fx::Dattorro_Config(&fx, DattorroVerb_create());
-    ReverbAudioCallback reverb_callback(&fx, synthCallback);
+    //ol::fx::Dattorro_Config(&reverb, DattorroVerb_create());
+
+    ReverbAudioCallback reverb_callback(&reverb, synthCallback);
     deviceManager.addAudioCallback(&reverb_callback);
 
     std::cout << "Send me some MIDI" << std::endl;

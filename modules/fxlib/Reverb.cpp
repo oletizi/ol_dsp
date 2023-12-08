@@ -7,20 +7,26 @@ namespace ol::fx {
 
     // Dattorro
 
-    sDattorroVerb *Dattorro_get(ReverbFx *reverbfx) {
-        return static_cast<sDattorroVerb *>(reverbfx->reverb);
-    }
+    void ReverbFx::dattorro_process(ReverbFx *fx, const t_sample *frame_in, t_sample *frame_out) {
+        sDattorroVerb *verb = fx->asDattorroVerb();
+        t_sample in1 = fx->input_channels > 0 ? frame_in[0] : 0;
+        t_sample in2 = fx->input_channels > 1 ? frame_in[1] : in1;
 
-    int Dattorro_Process(ReverbFx *fx, const t_sample &in1, const t_sample &in2, t_sample *out1, float *out2) {
-        sDattorroVerb *verb = Dattorro_get(fx);
         DattorroVerb_process(verb, (in1 + in2) / 2);
-        *out1 = DattorroVerb_getLeft(verb);
-        *out2 = DattorroVerb_getRight(verb);
-        return 0;
+
+        t_sample out1 = DattorroVerb_getLeft(verb);
+        t_sample out2 = DattorroVerb_getRight(verb);
+
+        if (fx->output_channels > 0) {
+            frame_out[0] = out1;
+        }
+        if (fx->output_channels > 1) {
+            frame_out[1] = out2;
+        }
     }
 
-    void Dattorro_Update(ReverbFx *fx) {
-        sDattorroVerb *verb = Dattorro_get(fx);
+    void ReverbFx::dattorro_update(ReverbFx *fx) {
+        sDattorroVerb *verb = fx->asDattorroVerb();
         DattorroVerb_setPreFilter(verb, fx->pre_cutoff);
         DattorroVerb_setInputDiffusion1(verb, fx->input_diffusion1);
         DattorroVerb_setInputDiffusion2(verb, fx->input_diffusion2);
@@ -29,132 +35,123 @@ namespace ol::fx {
         DattorroVerb_setDecayDiffusion(verb, fx->decay_diffusion);
     }
 
-    void Dattoro_Init([[maybe_unused]] ReverbFx *fx, [[maybe_unused]] t_sample sample_rate) {
-        // nop
-    }
-
-    void Dattorro_Config(ReverbFx *fx, sDattorroVerb *reverb) {
-        fx->reverb = reverb;
-        fx->Init = Dattoro_Init;
-        fx->Process = Dattorro_Process;
-        fx->Update = Dattorro_Update;
-    }
-
+    void ReverbFx::dattorro_init(ReverbFx *fx, t_sample sample_rate) {}
 
     // ReverbSc
-
-    daisysp::ReverbSc *ReverbSc_get(ReverbFx *fx) {
-        return static_cast<daisysp::ReverbSc *>(fx->reverb);
-    }
-
-    int ReverbSc_Process(ReverbFx *fx, const float &in1, const float &in2, float *out1, float *out2) {
+    void ReverbFx::reverbSc_process(ReverbFx *fx, const t_sample *frame_in, t_sample *frame_out) {
+        const t_sample verb_in1 = fx->input_channels > 0 ? frame_in[0] : 0;
+        const t_sample verb_in2 = fx->input_channels > 1 ? frame_in[1] : verb_in1;
         t_sample verb_out1 = 0;
         t_sample verb_out2 = 0;
 
-        int rv = ReverbSc_get(fx)->Process(in1, in2, &verb_out1, &verb_out2);
-        *out1 = (verb_out1 * fx->balance) + (in1 * (1 - fx->balance));
-        *out2 = (verb_out2 * fx->balance) + (in2 * (1 - fx->balance));
-        return rv;
+        fx->asReverbSc()->Process(verb_in1, verb_in2, &verb_out1, &verb_out2);
+        t_sample out1 = (verb_out1 * fx->balance) + (verb_in1 * (1 - fx->balance));
+        t_sample out2 = (verb_out2 * fx->balance) + (verb_in2 * (1 - fx->balance));
+        frame_out[0] = out1;
+        if (fx->output_channels > 1) {
+            frame_out[2] = out2;
+        }
     }
 
-    void ReverbSc_Update(ReverbFx *fx) {
-        auto *verb = ReverbSc_get(fx);
+    void ReverbFx::reverbSc_update(ReverbFx *fx) {
+        auto *verb = fx->asReverbSc();
         verb->SetFeedback(fx->decay_time);
         verb->SetLpFreq(ol::core::scale(fx->cutoff, 0, 1, 0, 20000, 1));
     }
 
-    void ReverbSc_Init(ReverbFx *fx, t_sample sample_rate) {
-        ReverbSc_get(fx)->Init(sample_rate);
+    void ReverbFx::reverbSc_init(ReverbFx *fx, const t_sample sample_rate) {
+        fx->asReverbSc()->Init(sample_rate);
     }
 
-    void ReverbSc_Config(ReverbFx *fx, daisysp::ReverbSc *reverb) {
-        fx->reverb = reverb;
-        fx->Init = ReverbSc_Init;
-        fx->Process = ReverbSc_Process;
-        fx->Update = ReverbSc_Update;
-    }
-
-    void Reverb_UpdateHardwareControl(ReverbFx *fx, uint8_t control, t_sample value) {
-        bool update = true;
+    void ReverbFx::UpdateHardwareControl(uint8_t control, t_sample value) {
+        bool do_update = true;
         switch (control) {
             case CC_REVERB_DECAY_DIFFUSION:;
-                fx->decay_diffusion = value;
+                decay_diffusion = value;
                 break;
             case CC_REVERB_INPUT_DIFFUSION_1:;
-                fx->input_diffusion1 = value;
+                input_diffusion1 = value;
                 break;
             case CC_REVERB_INPUT_DIFFUSION_2:;
-                fx->decay_diffusion = value;
+                decay_diffusion = value;
                 break;
             case CC_REVERB_CUTOFF:;
-                fx->cutoff = value;
+                cutoff = value;
                 break;
             case CC_REVERB_BALANCE:;
-                fx->balance = value;
+                balance = value;
                 break;
             case CC_REVERB_PREDELAY:;
-                fx->predelay = value;
+                predelay = value;
                 break;
             case CC_EARLY_PREDELAY:;
-                fx->early_predelay = value;
+                early_predelay = value;
                 break;
             case CC_REVERB_PREFILTER:;
-                fx->pre_cutoff = value;
+                pre_cutoff = value;
                 break;
             case CC_REVERB_TIME:;
-                fx->decay_time = value;
+                decay_time = value;
                 break;
             default:
-                update = false;
+                do_update = false;
                 break;
         }
-        if (update) {
-            if (fx->PrintLine) {
-                std::string message = "Updateing reverb parameter: control: " + std::to_string(control);
-                fx->PrintLine(message.c_str());
-            }
-            fx->Update(fx);
+        if (do_update) {
+            Update();
         }
     }
 
-    void Reverb_UpdateMidiControl(ReverbFx *fx, uint8_t control, uint8_t value) {
-        bool update = true;
+    void ReverbFx::UpdateMidiControl(uint8_t control, uint8_t value) {
+        bool do_update = true;
         t_sample scaled = core::scale(value, 0, 127, 0, 1, 1);
         switch (control) {
             case CC_REVERB_DECAY_DIFFUSION:
-                fx->decay_diffusion = scaled;
+                decay_diffusion = scaled;
                 break;
             case CC_REVERB_INPUT_DIFFUSION_1:
-                fx->input_diffusion1 = scaled;
+                input_diffusion1 = scaled;
                 break;
             case CC_REVERB_INPUT_DIFFUSION_2:
-                fx->decay_diffusion = scaled;
+                decay_diffusion = scaled;
                 break;
             case CC_REVERB_CUTOFF:
-                fx->cutoff = scaled;
+                cutoff = scaled;
                 break;
             case CC_REVERB_BALANCE:
-                fx->balance = scaled;
+                balance = scaled;
                 break;
             case CC_REVERB_PREDELAY:
-                fx->predelay = scaled;
+                predelay = scaled;
                 break;
             case CC_EARLY_PREDELAY:
-                fx->early_predelay = scaled;
+                early_predelay = scaled;
                 break;
             case CC_REVERB_PREFILTER:
-                fx->pre_cutoff = scaled;
+                pre_cutoff = scaled;
                 break;
             case CC_REVERB_TIME:
-                fx->decay_time = scaled;
+                decay_time = scaled;
                 break;
             default:
-                update = false;
+                do_update = false;
                 break;
         }
-        if (update) {
-            fx->Update(fx);
+        if (do_update) {
+            Update();
         }
+    }
+
+    void ReverbFx::Init(const t_sample sample_rate) {
+        this->init(this, sample_rate);
+    }
+
+    void ReverbFx::Process(const t_sample *frame_in, t_sample *frame_out) {
+        this->process(this, frame_in, frame_out);
+    }
+
+    void ReverbFx::Update() {
+        this->update(this);
     }
 }
 

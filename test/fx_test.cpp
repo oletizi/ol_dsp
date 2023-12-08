@@ -7,46 +7,42 @@
 using namespace ol::fx;
 TEST(FX, Saturator) {
     SaturatorFx saturator;
-    sp_saturator spsaturator;
-    sp_data spdata;
-    Saturator_Config(&saturator, &spsaturator, &spdata);
-    saturator.Init(&saturator, 48000);
+    saturator.Init( 48000);
 
     t_sample in = 0;
     t_sample out = 1;
-    saturator.Process(&saturator, in, &out);
+    saturator.Process( &in, &out);
     EXPECT_EQ(in, out);
 
     in = 1;
     out = 1;
-    saturator.Process(&saturator, in, &out);
+    saturator.Process( &in, &out);
     EXPECT_NE(in, out);
 }
 
 TEST(FX, Delay) {
     daisysp::Svf svf;
-    ol::fx::FilterFx filter;
-    ol::fx::Filter_Svf_Config(&filter, &svf);
-
+    auto filter = ol::fx::FilterFx(svf);
     daisysp::DelayLine<t_sample, MAX_DELAY> delay_line;
-    ol::fx::DelayFx delay;
-    ol::fx::Delay_Config(&delay, &delay_line, &filter);
+    auto delay = DelayFx(delay_line, filter);
 
-    delay.Init(&delay, 128);
+    delay.Init(128);
     t_sample in = 1;
     t_sample out = 0;
-    delay.Process(&delay, in, &out);
+    delay.Process( &in, &out);
     t_sample sample_rate = 48000;
     t_sample freq = 20000;
-    delay.time = 0.5;
-    delay.Update(&delay);
+
+    //delay.time = 0.5;
+    delay.UpdateHardwareControl(CC_DELAY_TIME, 0.5);
+    delay.Update();
     daisysp::Oscillator osc;
-    delay.Init(&delay, sample_rate);
+    delay.Init(sample_rate);
     osc.Init(sample_rate);
     osc.SetFreq(freq);
     for (int i = 0; i < sample_rate; i++) {
         in = osc.Process();
-        delay.Process(&delay, in, &out);
+        delay.Process(&in, &out);
         if (isnan(out)) {
             std::cout << "NaN! sample: " << i + 1 << "sample rate: " << sample_rate << "; freq: " << freq << "; in: "
                       << in << "; out: " << std::endl;

@@ -20,19 +20,27 @@ auto vae = daisysp::Adsr();
 auto vport = daisysp::Port();
 auto voice = SynthVoice(osc, vf, vfe, vae, vport);
 
-FilterFx delay_filter1;
-FilterFx delay_filter2;
+daisysp::Svf df1;
+auto delay_filter1 = FilterFx(df1, 0);
+daisysp::Svf df2;
+auto delay_filter2 = FilterFx(df2, 1);
 
-DelayFx delay1;
-DelayFx delay2;
+daisysp::DelayLine<t_sample, MAX_DELAY> delay_line1;
+daisysp::DelayLine<t_sample, MAX_DELAY> delay_line2;
+auto delay1 = DelayFx(delay_line1, delay_filter1, 0);
+auto delay2 = DelayFx(delay_line2, delay_filter2, 1);
+daisysp::ReverbSc verb;
+auto reverb = ReverbFx(verb);
 
-ReverbFx reverbSc;
-ReverbFx reverbDattorro;
+daisysp::Svf svf1;
+daisysp::Svf svf2;
+auto filter1 = FilterFx(svf1, 0);
+auto filter2 = FilterFx(svf2, 1);
 
-FilterFx filter1;
-FilterFx filter2;
-
-FxRack fxrack;
+auto sat1 = SaturatorFx(0);
+auto sat2 = SaturatorFx(1);
+auto sat3 = SaturatorFx();
+auto fxrack = FxRack(delay1, delay2, reverb, filter1, filter2, sat1, sat2, sat3);
 
 int notes_on = 0;
 
@@ -55,7 +63,8 @@ void handleCC(int channel, int control, int value) {
     std::cout << "CC: chan: " << channel << "; control: " << control << "; val: " << value << std::endl;
     //synth_control_panel.UpdateMidi(control, value);
     voice.UpdateMidiControl(control, value);
-    ol::fx::FxRack_UpdateMidiControl(&fxrack, control, value);
+    //ol::fx::FxRack_UpdateMidiControl(&fxrack, control, value);
+    fxrack.UpdateMidiControl(control, value);
 }
 
 void
@@ -97,64 +106,29 @@ void audio_callback(ma_device *pDevice, void *pOutput, const void *pInput, ma_ui
     auto input_channel_count = pDevice->capture.channels;
     auto output_channel_count = pDevice->playback.channels;
 
+    t_sample in_buffer[] = {0, 0};
+    t_sample out_buffer[] = {0, 0};
     for (int i = 0; i < frameCount; i++) {
 
-        t_sample voice_out = voice.Process();
+        t_sample voice_out = 0;
+        voice.Process(&voice_out);
         t_sample in_value = 0;
-        for (int j = 0; j < input_channel_count; j++) {
-            in_value += in[(i * input_channel_count) + j];
-        }
-        t_sample fx_in1 = (voice_out + in_value) / 2;
-        t_sample fx_in2 = fx_in1;
 
-        t_sample fx_out1 = 0;
-        t_sample fx_out2 = 0;
+        in_buffer[0] = in[i * input_channel_count] + voice_out;
+        in_buffer[1] = in[i * input_channel_count + 1] + voice_out;
+//        t_sample *fx_out1 = &out[i];
+//        t_sample *fx_out2 = &out[i+1];
 
-        fxrack.Process(&fxrack, fx_in1, fx_in2, &fx_out1, &fx_out2);
+        //fxrack.Process(&fxrack, fx_in1, fx_in2, &fx_out1, &fx_out2);
+        fxrack.Process(in_buffer, out_buffer);
 
-        out[i * output_channel_count + 0] = fx_out1;
-        out[i * output_channel_count + 1] = fx_out2;
+        out[i * output_channel_count + 0] = out_buffer[0];
+        out[i * output_channel_count + 1] = out_buffer[1];
     }
 }
 
 
 int main() {
-
-    daisysp::Svf df1;
-    daisysp::Svf df2;
-    ol::fx::Filter_Svf_Config(&delay_filter1, &df1);
-    ol::fx::Filter_Svf_Config(&delay_filter2, &df2);
-
-    daisysp::DelayLine<t_sample, MAX_DELAY> delay_line1;
-    daisysp::DelayLine<t_sample, MAX_DELAY> delay_line2;
-
-    Delay_Config(&delay1, &delay_line1, &delay_filter1);
-    Delay_Config(&delay2, &delay_line2, &delay_filter2);
-
-    daisysp::ReverbSc vsc;
-    ReverbSc_Config(&reverbSc, &vsc);
-
-    sDattorroVerb *dverb = DattorroVerb_create();
-    Dattorro_Config(&reverbDattorro, dverb);
-
-    daisysp::Svf svf1;
-    daisysp::Svf svf2;
-    Filter_Svf_Config(&filter1, &svf1);
-    Filter_Svf_Config(&filter2, &svf2);
-
-    HyperTan transfer_function;
-    SaturatorFx saturator1;
-    Saturator_Config(&saturator1, &transfer_function);
-
-    SaturatorFx saturator2;
-    Saturator_Config(&saturator2, &transfer_function);
-
-    SaturatorFx interstage_saturator;
-    Saturator_Config(&interstage_saturator, &transfer_function);
-
-    FxRack_Config(&fxrack, &delay1, &delay2, &reverbSc, &filter1, &filter2, &saturator1, &saturator2,
-                  &interstage_saturator);
-
     RtMidiIn *midiin = nullptr;
     try {
         midiin = new RtMidiIn();
@@ -190,7 +164,7 @@ int main() {
     }
 
     voice.Init(device.sampleRate);
-    fxrack.Init(&fxrack, device.sampleRate);
+    fxrack.Init(device.sampleRate);
 
     ma_device_start(&device);     // The device is sleeping by default so you'll need to start it manually.
 

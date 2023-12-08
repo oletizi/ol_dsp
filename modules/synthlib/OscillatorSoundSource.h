@@ -13,9 +13,9 @@ namespace ol::synth {
     class OscillatorSoundSource : public PitchedSoundSource {
     public:
         explicit OscillatorSoundSource(const daisysp::Oscillator &osc = daisysp::Oscillator(),
-                                       const int channel_count = 1)
-                : osc_(osc), channel_count_(channel_count) {};
-
+                                       const int frame_offset = 0)
+                : osc_(osc), frame_offset(frame_offset) {
+        };
 
         void Init(t_sample sample_rate) override;
 
@@ -26,7 +26,7 @@ namespace ol::synth {
     private:
         daisysp::Oscillator osc_;
         float freq_ = 0;
-        const int channel_count_;
+        int frame_offset = 0;
     };
 }
 #endif //OL_DSP_OSCILLATORSOUNDSOURCE_H

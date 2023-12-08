@@ -15,9 +15,12 @@ auto v1_f = daisysp::Svf();
 auto v1_fe = daisysp::Adsr();
 auto v1_ae = daisysp::Adsr();
 auto v1_port = daisysp::Port();
-auto voice = ol::synth::SynthVoice(osc, v1_f, v1_fe, v1_ae, v1_port);
+auto voice = ol::synth::SynthVoice(osc, v1_f, v1_fe, v1_ae, v1_port, 0);
 daisysp::DelayLine<t_sample, MAX_DELAY> delay_line;
-ol::fx::DelayFx delay;
+
+auto df = daisysp::Svf();
+auto dfx = ol::fx::FilterFx(df);
+auto delay = ol::fx::DelayFx(delay_line, dfx);
 
 int notes_on = 0;
 
@@ -37,9 +40,8 @@ void handleNoteOff(int channel, int note, int velocity) {
 
 void handleCC(int channel, int control, int value) {
     std::cout << "CC: chan: " << channel << "; control: " << control << "; val: " << value << std::endl;
-    //synth_control_panel.UpdateMidi(control, value);
     voice.UpdateMidiControl(control, value);
-    ol::fx::Delay_UpdateMidiControl(&delay, control, value);
+    delay.UpdateMidiControl(control, value);
 }
 
 void
@@ -81,7 +83,7 @@ void audio_callback([[maybe_unused]] ma_device *pDevice, void *pOutput, [[maybe_
         t_sample voice_out = 0;
         voice.Process(&voice_out);
         t_sample delay_out = 0;
-        delay.Process(&delay, voice_out, &delay_out);
+        delay.Process(&voice_out, &delay_out);
 
         t_sample out1 = voice_out + delay_out;
         t_sample out2 = voice_out + delay_out;
@@ -128,11 +130,7 @@ int main() {
     }
 
     voice.Init(device.sampleRate);
-    daisysp::Svf svf;
-    ol::fx::FilterFx filter;
-    ol::fx::Filter_Svf_Config(&filter, &svf);
-    ol::fx::Delay_Config(&delay, &delay_line, &filter);
-    delay.Init(&delay, device.sampleRate);
+    delay.Init(device.sampleRate);
 
     ma_device_start(&device);     // The device is sleeping by default so you'll need to start it manually.
 

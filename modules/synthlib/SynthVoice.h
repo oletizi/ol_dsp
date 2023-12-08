@@ -14,12 +14,14 @@ namespace ol::synth {
                             daisysp::Svf &filter,
                             daisysp::Adsr &filter_envelope,
                             daisysp::Adsr &amp_envelope,
-                            daisysp::Port &portamento)
+                            daisysp::Port &portamento,
+                            int frame_offset = 0)
                 : sound_source(sound_source),
                   filter(filter),
                   filter_envelope(filter_envelope),
                   amp_envelope(amp_envelope),
-                  portamento(portamento) {};
+                  portamento(portamento),
+                  frame_offset(frame_offset) {};
 
         void Init(t_sample sample_rate) override;
 
@@ -79,6 +81,7 @@ namespace ol::synth {
         // Oscillator mixer
         t_sample osc_1_mix = 0.8f;
         uint8_t playing = 0;
+        int frame_offset = 0;
     };
 }
 #endif //OL_DSP_SYNTHVOICE_H

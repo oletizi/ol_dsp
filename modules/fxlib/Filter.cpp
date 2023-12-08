@@ -6,139 +6,130 @@
 
 namespace ol::fx {
 
-    FilterType Filter_MidiToType(uint8_t value) {
+    FilterFx::FilterType FilterFx::Filter_MidiToType(uint8_t value) {
         return static_cast<FilterType>(ol::core::scale(value, 0, 127, 0, FilterType::LastType, 1));
     }
 
-    FilterStyle Filter_MidiToStyle(uint8_t value) {
-        return static_cast<FilterStyle>(ol::core::scale(value, 0, 127, 0, FilterStyle::LastStyle, 1));
+    void FilterFx::biquad_process(FilterFx *fx, const t_sample * frame_in, t_sample *frame_out) {
+        frame_out[fx->frame_offset] = fx->asBiquad()->Process(frame_in[fx->frame_offset]);
     }
 
-
-    // Biquad
-    daisysp::Biquad *Biquad_get(FilterFx *fx) {
-        return static_cast<daisysp::Biquad *>(fx->filt);
-    }
-
-    int Biquad_process(FilterFx *fx, const float &in, float *out) {
-        auto filter = Biquad_get(fx);
-        *out = filter->Process(in);
-        return 0;
-    }
-
-    void Biquad_update(FilterFx *fx) {
-        daisysp::Biquad *filt = Biquad_get(fx);
+    void FilterFx::biquad_update(FilterFx *fx) {
+        daisysp::Biquad *filt = fx->asBiquad();
         filt->SetCutoff(fx->cutoff);
         filt->SetRes(fx->resonance);
     }
 
-    void Biquad_init(FilterFx *fx, t_sample sample_rate) {
-        Biquad_get(fx)->Init(sample_rate);
-        Biquad_update(fx);
+    void FilterFx::biquad_init(FilterFx *fx, t_sample sample_rate) {
+        fx->asBiquad()->Init(sample_rate);
+        fx->Update();
     }
 
-    void Filter_Biquad_Config(FilterFx *fx, daisysp::Biquad *filt) {
-        fx->filt = filt;
-        fx->Init = Biquad_init;
-        fx->Process = Biquad_process;
-        fx->Update = Biquad_update;
-    }
-
-    // Svf
-    daisysp::Svf *Svf_get(FilterFx *fx) {
-        return static_cast<daisysp::Svf *>(fx->filt);
-    }
-
-    int Svf_process(FilterFx *fx, const float &in, float *out) {
-        daisysp::Svf *filt = Svf_get(fx);
-        filt->Process(in);
+    void FilterFx::svf_process(FilterFx *fx, const t_sample *frame_in, t_sample *frame_out) {
+        t_sample out = 0;
+        daisysp::Svf *svf = fx->asSvf();
+        svf->Process(frame_in[fx->frame_offset]);
         switch (fx->type) {
             case FilterType::Peak:
-                *out = filt->Peak();
+                out = svf->Peak();
                 break;
             case FilterType::BandPass:
-                *out = filt->Band();
+                out = svf->Band();
                 break;
             case FilterType::Notch:
-                *out = filt->Notch();
+                out = svf->Notch();
                 break;
             case FilterType::HighPass:
-                *out = filt->High();
+                out = svf->High();
                 break;
             case FilterType::LowPass:
-                *out = filt->Low();
+                out = svf->Low();
                 break;
         }
-        return 0;
+        frame_out[fx->frame_offset] = out;
     }
 
-    void Svf_update(FilterFx *fx) {
-        daisysp::Svf *filt = Svf_get(fx);
+    void FilterFx::svf_update(FilterFx *fx) {
+        daisysp::Svf *filt = fx->asSvf();
         filt->SetRes(fx->resonance);
         filt->SetFreq(ol::core::scale(fx->cutoff, 0, 1, 0, 20000, 1));
         filt->SetDrive(fx->drive);
     }
 
-    void Svf_init(FilterFx *fx, t_sample sample_rate) {
-        daisysp::Svf *filt = Svf_get(fx);
+    void FilterFx::svf_init(FilterFx *fx, const t_sample sample_rate) {
+        daisysp::Svf * filt = fx->asSvf();
         filt->Init(sample_rate);
-        Svf_update(fx);
+        fx->Update();
     }
 
-    void Filter_Svf_Config(FilterFx *fx, daisysp::Svf *filt) {
-        fx->filt = filt;
-        fx->Init = Svf_init;
-        fx->Process = Svf_process;
-        fx->Update = Svf_update;
+    void FilterFx::Init(const t_sample sample_rate) {
+        init(this, sample_rate);
     }
 
-    void Filter_UpdateHardwareControl(FilterFx *fx, uint8_t control, t_sample value) {
-        bool update = true;
+    void FilterFx::Process(const t_sample *frame_in, t_sample *frame_out) {
+        process(this, frame_in, frame_out);
+    }
+
+    void FilterFx::Update() {
+        update(this);
+    }
+
+    void FilterFx::UpdateHardwareControl(uint8_t control, t_sample value) {
+        bool do_update = true;
         switch (control) {
             case CC_FILTER_RESONANCE:
-                fx->resonance = value;
+                resonance = value;
                 break;
             case CC_FILTER_CUTOFF:
-                fx->cutoff = ol::core::scale(value, 0, 1, 0, 1, 1.2);
+                cutoff = ol::core::scale(value, 0, 1, 0, 1, 1.2);
                 break;
             case CC_FILTER_DRIVE:
-                fx->drive = value;
+                drive = value;
                 break;
             case CC_FILTER_TYPE:
-                fx->type = Filter_MidiToType(value);
+                type = Filter_MidiToType(value);
                 break;
             default:
-                update = false;
+                do_update = false;
                 break;
         }
-        if (update) {
-            fx->Update(fx);
+        if (do_update) {
+            Update();
         }
     }
 
-    void Filter_UpdateMidi(FilterFx *fx, uint8_t control, uint8_t value) {
-        bool update = true;
+    void FilterFx::UpdateMidiControl(uint8_t control, uint8_t value) {
+        bool do_update = true;
         t_sample scaled = ol::core::scale(value, 0, 127, 0, 1, 1);
         switch (control) {
             case CC_FILTER_RESONANCE:
-                fx->resonance = scaled;
+                resonance = scaled;
                 break;
             case CC_FILTER_CUTOFF:
-                fx->cutoff = ol::core::scale(value, 0, 127, 0, 1, 1.2);
+                cutoff = ol::core::scale(value, 0, 127, 0, 1, 1.2);
                 break;
             case CC_FILTER_DRIVE:
-                fx->drive = scaled;
+                drive = scaled;
                 break;
             case CC_FILTER_TYPE:
-                fx->type = Filter_MidiToType(value);
+                type = Filter_MidiToType(value);
                 break;
             default:
-                update = false;
+                do_update = false;
                 break;
         }
-        if (update) {
-            fx->Update(fx);
+        if (do_update) {
+            Update();
         }
     }
+
+    daisysp::Biquad *FilterFx::asBiquad() {
+        return static_cast<daisysp::Biquad *>(filter);
+    }
+
+    daisysp::Svf *FilterFx::asSvf() {
+        return static_cast<daisysp::Svf *>(filter);
+    }
+
 
 }

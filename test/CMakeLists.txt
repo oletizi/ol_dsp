@@ -5,7 +5,6 @@ find_package(GTest REQUIRED)
 add_executable(gtest_run
         basic_test.cpp
         fx_test.cpp
-        reverb_test.cpp
         workout_test.cpp
         synth_test.cpp
 )

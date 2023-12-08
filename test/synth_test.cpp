@@ -5,19 +5,13 @@
 #include "gmock/gmock.h"
 #include "ol_synthlib.h"
 
-int v1_note_on_calls = 0;
-int v1_note_off_calls = 0;
-
-int v2_note_on_calls = 0;
-int v2_note_off_calls = 0;
-
 using namespace ol::synth;
 
 class MockVoice : public Voice {
 public:
     MOCK_METHOD(void, Init, (t_sample sample_rate), (override));
     MOCK_METHOD(void, Update, (), (override));
-    MOCK_METHOD(t_sample, Process, (), (override));
+    MOCK_METHOD(void, Process, (t_sample *frame_out), (override));
     MOCK_METHOD(void, UpdateMidiControl, (uint8_t control, uint8_t value), (override));
     MOCK_METHOD(void, NoteOn, (uint8_t midi_note, uint8_t velocity), (override));
     MOCK_METHOD(void, NoteOff, (uint8_t midi_note, uint8_t velocity), (override));

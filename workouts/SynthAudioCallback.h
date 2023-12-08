@@ -24,10 +24,11 @@ public:
                                           int numSamples,
                                           const juce::AudioIODeviceCallbackContext &context) override {
         counter_++;
+        t_sample output_buffer = 0;
         for (int i = 0; i < numSamples; i++) {
-            float value = poly_.Process();
+            poly_.Process(&output_buffer);
             for (int j = 0; j < numOutputChannels; j++) {
-                outputChannelData[j][i] = value;
+                outputChannelData[j][i] = output_buffer;
             }
         }
     }

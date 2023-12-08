@@ -12,7 +12,7 @@ namespace ol::synth {
         sound_source.SetFreq(freq);
 
         sound_source.Process(frame_out);
-        *frame_out *= osc_1_mix;
+        frame_out[frame_offset] *= osc_1_mix;
 
         // Filter
         t_sample env_value = filter_envelope.Process(playing);

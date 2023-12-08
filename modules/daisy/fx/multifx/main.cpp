@@ -37,79 +37,73 @@ daisysp::Svf DSY_SDRAM_BSS v1_f;
 daisysp::Adsr v1_fe;
 daisysp::Adsr v1_ae;
 daisysp::Port v1_port;
-auto v1 = SynthVoice(osc1, v1_f, v1_fe, v1_ae, v1_port);
+auto v1 = SynthVoice(osc1, v1_f, v1_fe, v1_ae, v1_port, 0);
 
 auto osc2 = OscillatorSoundSource(daisysp::Oscillator());
 daisysp::Svf DSY_SDRAM_BSS v2_f;
 daisysp::Adsr v2_fe;
 daisysp::Adsr v2_ae;
 daisysp::Port v2_port;
-auto v2 = SynthVoice(osc2, v2_f, v2_fe, v2_ae, v2_port);
+auto v2 = SynthVoice(osc2, v2_f, v2_fe, v2_ae, v2_port, 0);
 
 auto osc3 = OscillatorSoundSource(daisysp::Oscillator());
 daisysp::Svf DSY_SDRAM_BSS v3_f;
 daisysp::Adsr v3_fe;
 daisysp::Adsr v3_ae;
 daisysp::Port v3_port;
-auto v3 = SynthVoice(osc3, v3_f, v3_fe, v3_ae, v3_port);
+auto v3 = SynthVoice(osc3, v3_f, v3_fe, v3_ae, v3_port, 0);
 
 auto osc4 = OscillatorSoundSource(daisysp::Oscillator());
 daisysp::Svf DSY_SDRAM_BSS v4_f;
 daisysp::Adsr v4_fe;
 daisysp::Adsr v4_ae;
 daisysp::Port v4_port;
-auto v4 = SynthVoice(osc4, v4_f, v4_fe, v4_ae, v4_port);
+auto v4 = SynthVoice(osc4, v4_f, v4_fe, v4_ae, v4_port, 0);
 
 auto osc5 = OscillatorSoundSource(daisysp::Oscillator());
 daisysp::Svf DSY_SDRAM_BSS v5_f;
 daisysp::Adsr v5_fe;
 daisysp::Adsr v5_ae;
 daisysp::Port v5_port;
-auto v5 = SynthVoice(osc5, v5_f, v5_fe, v5_ae, v5_port);
+auto v5 = SynthVoice(osc5, v5_f, v5_fe, v5_ae, v5_port, 0);
 
 Voice *voices[] = {&v1, &v2, &v3, &v4, &v5};
 auto  DSY_SDRAM_BSS poly = Polyvoice(voices, voice_count);
 
 daisysp::Svf delay_svf1;
 daisysp::Svf delay_svf2;
-
-
+auto delay_filter1 = FilterFx(delay_svf1);
+auto delay_filter2 = FilterFx(delay_svf2);
 daisysp::DelayLine<t_sample, MAX_DELAY> DSY_SDRAM_BSS delay_line1;
-ol::fx::DelayFx delay1;
-FilterFx delay_filter1;
-
 daisysp::DelayLine<t_sample, MAX_DELAY> DSY_SDRAM_BSS delay_line2;
-ol::fx::DelayFx delay2;
-FilterFx delay_filter2;
+auto delay1 = ol::fx::DelayFx(delay_line1, delay_filter1);
+auto delay2 = DelayFx(delay_line2, delay_filter2);
+
 
 daisysp::ReverbSc verb;
-ol::fx::ReverbFx reverb;
+auto reverb = ReverbFx(verb);
 
 
 daisysp::Svf svf1;
 daisysp::Svf svf2;
-ol::fx::FilterFx filter1;
-ol::fx::FilterFx filter2;
+auto filter1 = FilterFx(svf1);
+auto filter2 = FilterFx(svf2);
 
-HyperTan xfr_function;
 SaturatorFx saturator1;
 SaturatorFx saturator2;
 SaturatorFx interstage_saturator;
 
-ol::fx::FxRack fxrack;
+auto fxrack = FxRack(delay1, delay2, reverb, filter1, filter2, saturator1, saturator2, interstage_saturator, 2);
+
+t_sample process_buffer[] = {0, 0};
 
 static void callback(AudioHandle::InterleavingInputBuffer in,
                      AudioHandle::InterleavingOutputBuffer out,
                      size_t size) {
     for (size_t i = 0; i < size; i += 2) {
-
-        t_sample synth = poly.Process();
-        t_sample out1 = synth; // this value gets overwritten by the fxrack, but it makes it easy to disable the fx rack with a single comment.
-        t_sample out2 = synth;
-        fxrack.Process(&fxrack, in[i] + synth, in[i + 1] + synth, &out1, &out2);
-
-        out[i] = out1;
-        out[i + 1] = out2;
+        poly.Process(process_buffer);
+        //fxrack.Process(in[i] + process_buffer[0], in[i + 1] + process_buffer[1], out);
+        fxrack.Process(process_buffer, &out[i]);
     }
 }
 
@@ -180,7 +174,8 @@ static void handleMidiMessage(MidiEvent m) {
     if (m.type == daisy::ControlChange) {
         ControlChangeEvent p = m.AsControlChange();
         if (m.channel == FX_CHANNEL) {
-            FxRack_UpdateMidiControl(&fxrack, p.control_number, p.value);
+            //FxRack_UpdateMidiControl(&fxrack, p.control_number, p.value);
+            fxrack.UpdateMidiControl(p.control_number, p.value);
         }
         if (m.channel == SYNTH_CHANNEL) {
             poly.UpdateMidiControl(p.control_number, p.value);
@@ -196,12 +191,14 @@ static Page reverb_page = {
         &reverb_page,
         &reverb_page,
         [](t_sample value) {
-            Reverb_UpdateHardwareControl(&reverb, CC_REVERB_TIME, value);
-            DaisySeed::PrintLine("Updated reverb time: %d", uint16_t(reverb.decay_time * 1000));
+            //Reverb_UpdateHardwareControl(&reverb, CC_REVERB_TIME, value);
+            reverb.UpdateHardwareControl(CC_REVERB_TIME, value);
+            //DaisySeed::PrintLine("Updated reverb time: %d", uint16_t(reverb.decay_time * 1000));
         },
         [](t_sample value) {
-            Reverb_UpdateHardwareControl(&reverb, CC_REVERB_CUTOFF, value);
-            DaisySeed::PrintLine("Updated reverb cutoff: %d", uint16_t(reverb.cutoff * 1000));
+            //Reverb_UpdateHardwareControl(&reverb, CC_REVERB_CUTOFF, value);
+            reverb.UpdateHardwareControl(CC_REVERB_CUTOFF, value);
+            //DaisySeed::PrintLine("Updated reverb cutoff: %d", uint16_t(reverb.cutoff * 1000));
         }
 };
 
@@ -210,14 +207,18 @@ static Page delay_page = {
         &delay_page,
         &reverb_page,
         [](t_sample value) {
-            Delay_UpdateHardwareControl(&delay1, CC_DELAY_TIME, value);
-            Delay_UpdateHardwareControl(&delay2, CC_DELAY_TIME, value);
-            DaisySeed::PrintLine("Updated delay time: %d", uint16_t(delay1.time * 1000));
+            //Delay_UpdateHardwareControl(&delay1, CC_DELAY_TIME, value);
+            //Delay_UpdateHardwareControl(&delay2, CC_DELAY_TIME, value);
+            delay1.UpdateHardwareControl(CC_DELAY_TIME, value);
+            delay2.UpdateHardwareControl(CC_DELAY_TIME, value);
+            //DaisySeed::PrintLine("Updated delay time: %d", uint16_t(delay1.time * 1000));
         },
         [](t_sample value) {
-            Delay_UpdateHardwareControl(&delay1, CC_DELAY_FEEDBACK, value);
-            Delay_UpdateHardwareControl(&delay2, CC_DELAY_FEEDBACK, value);
-            DaisySeed::PrintLine("Update delay feedback: %d", uint16_t(delay1.filter->cutoff * 1000));
+            //Delay_UpdateHardwareControl(&delay1, CC_DELAY_FEEDBACK, value);
+            //Delay_UpdateHardwareControl(&delay2, CC_DELAY_FEEDBACK, value);
+            delay1.UpdateHardwareControl(CC_DELAY_FEEDBACK, value);
+            delay2.UpdateHardwareControl(CC_DELAY_FEEDBACK, value);
+            //DaisySeed::PrintLine("Update delay feedback: %d", uint16_t(delay1.filter->cutoff * 1000));
         }
 };
 
@@ -294,37 +295,7 @@ int main() {
 
     // Config and init synth voices
     poly.Init(sample_rate);
-
-
-    // Config delay filters
-    Filter_Svf_Config(&delay_filter1, &delay_svf1);
-    Filter_Svf_Config(&delay_filter2, &delay_svf2);
-
-    // Config delays
-    Delay_Config(&delay1, &delay_line1, &delay_filter1);
-    Delay_Config(&delay2, &delay_line2, &delay_filter2);
-
-    // Config reverb
-    ReverbSc_Config(&reverb, &verb);
-    reverb.PrintLine = [](const char *msg) { DaisySeed::PrintLine(msg); };
-
-    // Config output filters
-    Filter_Svf_Config(&filter1, &svf1);
-    Filter_Svf_Config(&filter2, &svf2);
-
-    // Config output saturators (probably only need one of these, but one of the implementations
-    // has history, so...)
-    Saturator_Config(&saturator1, &xfr_function);
-    Saturator_Config(&saturator2, &xfr_function);
-
-    // Config interstage saturator
-    Saturator_Config(&interstage_saturator, &xfr_function);
-
-    // Config and init fx rack
-    FxRack_Config(&fxrack, &delay1, &delay2, &reverb, &filter1, &filter2, &saturator1, &saturator2,
-                  &interstage_saturator);
-
-    fxrack.Init(&fxrack, sample_rate);
+    fxrack.Init(sample_rate);
 
     initPages();
 

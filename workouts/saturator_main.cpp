@@ -14,7 +14,7 @@ auto filter = daisysp::Svf();
 auto fe = daisysp::Adsr();
 auto ae = daisysp::Adsr();
 auto port = daisysp::Port();
-auto voice = SynthVoice(osc, filter, fe, ae, port);
+auto voice = SynthVoice(osc, filter, fe, ae, port, 0);
 
 SaturatorFx saturator1;
 SaturatorFx saturator2;
@@ -32,19 +32,23 @@ void note_off_callback(workout_buddy *, uint8_t channel, uint8_t note, uint8_t v
 }
 
 void cc_callback(workout_buddy *, uint8_t channel, uint8_t control, uint8_t value) {
-    Saturator_UpdateMidiControl(&saturator1, control, value);
-    Saturator_UpdateMidiControl(&saturator2, control, value);
+//    Saturator_UpdateMidiControl(&saturator1, control, value);
+//    Saturator_UpdateMidiControl(&saturator2, control, value);
+    saturator1.UpdateMidiControl(control, value);
+    saturator2.UpdateMidiControl(control, value);
 }
 
 uint64_t counter = 0;
 
 void audio_callback(workout_buddy *, t_sample &in1, t_sample &in2, t_sample *out1, t_sample *out2) {
     counter++;
-    t_sample voice_out = voice.Process();
+    //t_sample voice_out = voice.Process();
+    t_sample voice_out = 0;
+    voice.Process(&voice_out);
     t_sample next_in1 = voice_out + in1;
     t_sample next_in2 = voice_out + in2;
-    saturator1.Process(&saturator1, next_in1, out1);
-    saturator2.Process(&saturator2, next_in2, out2);
+    saturator1.Process(&next_in1, out1);
+    saturator2.Process(&next_in2, out2);
     if (counter % 20000 == 0) {
         counter = 0;
     }
@@ -55,13 +59,6 @@ int main() {
     sp_data sp_data1;
     sp_saturator sat2;
     sp_data sp_data2;
-
-    Saturator_Config(&saturator1, &sat1, &sp_data1);
-    Saturator_Config(&saturator2, &sat2, &sp_data2);
-
-//    ol::fx::HyperTan hyperbolic_tangent;
-//    Saturator_Config(&saturator1, &hyperbolic_tangent);
-//    Saturator_Config(&saturator2, &hyperbolic_tangent);
 
     ol::workout::workout_buddy buddy;
     RtMidiIn midi_in;
@@ -78,8 +75,8 @@ int main() {
     t_sample sample_rate = Workout_SampleRate(&buddy);
 
     voice.Init(sample_rate);
-    saturator1.Init(&saturator1, sample_rate);
-    saturator2.Init(&saturator2, sample_rate);
+    saturator1.Init(sample_rate);
+    saturator2.Init(sample_rate);
 
 
     Workout_Start(&buddy);

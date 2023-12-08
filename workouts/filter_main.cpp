@@ -15,8 +15,10 @@ auto v1_f = daisysp::Svf();
 auto v1_fe = daisysp::Adsr();
 auto v1_ae = daisysp::Adsr();
 auto v1_port = daisysp::Port();
-auto voice = ol::synth::SynthVoice(osc, v1_f, v1_fe, v1_ae, v1_port);
-ol::fx::FilterFx filt;
+auto voice = ol::synth::SynthVoice(osc, v1_f, v1_fe, v1_ae, v1_port, 0);
+auto svf = daisysp::Svf();
+
+auto filt = ol::fx::FilterFx(svf);
 int notes_on = 0;
 
 void handleNoteOn(int channel, int note, int velocity) {
@@ -37,7 +39,7 @@ void handleCC(int channel, int control, int value) {
     std::cout << "CC: chan: " << channel << "; control: " << control << "; val: " << value << std::endl;
     //synth_control_panel.UpdateMidi(control, value);
     voice.UpdateMidiControl(control, value);
-    ol::fx::Filter_UpdateMidi(&filt, control, value);
+    filt.UpdateMidiControl(control, value);
 }
 
 void midi_callback(double deltatime, std::vector<unsigned char> *message, void *userData) {
@@ -75,13 +77,18 @@ void audio_callback(ma_device *device, void *pOutput, const void *pInput, ma_uin
     const uint32_t outputs = device->playback.channels;
     auto *in = (t_sample *) pInput;
     auto *out = (t_sample *) pOutput;
+    t_sample buf_in = 0;
+    t_sample buf_out = 0;
     for (int i = 0; i < frameCount; i++) {
 
-        t_sample filt_out = voice.Process();
-        filt.Process(&filt, in[i * inputs], &filt_out);;
+        //t_sample filt_out = voice.Process();
 
-        out[i * outputs + 0] = filt_out;
-        out[i * outputs + 1] = filt_out;
+        voice.Process(&buf_in);
+         filt.Process(&buf_in, &buf_out);
+        //filt.Process(in[i * inputs], &filt_out);;
+
+        out[i * outputs + 0] = buf_out;
+        out[i * outputs + 1] = buf_out;
     }
 }
 
@@ -122,12 +129,7 @@ int main() {
     }
 
     voice.Init(device.sampleRate);
-
-    daisysp::Biquad biquad;
-    daisysp::Svf svf;
-    ol::fx::Filter_Biquad_Config(&filt, &biquad);
-//    ol::fx::filt::Svf_Config(&filt, &svf);
-    filt.Init(&filt, device.sampleRate);
+    filt.Init(device.sampleRate);
 
     ma_device_start(&device);     // The device is sleeping by default so you'll need to start it manually.
 
