@@ -31,3 +31,6 @@
 [submodule "libs/du-ino"]
 	path = libs/du-ino
 	url = git@github.com:oletizi/du-ino.git
+[submodule "libs/sfizz"]
+	path = libs/sfizz
+	url = git@github.com:oletizi/sfizz.git
