@@ -34,6 +34,8 @@ namespace ol::synth {
 
         void Play();
 
+        void Pause();
+
         uint64_t GetChannelCount();
 
     private:

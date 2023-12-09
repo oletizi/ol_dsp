@@ -11,6 +11,10 @@ public:
 
     virtual void Process(t_sample *frame) = 0;
 
+    virtual void GateOn() = 0;
+
+    virtual void GateOff() = 0;
+
     virtual void SetFreq(t_sample freq) = 0;
 };
 #endif //OL_DSP_PITCHEDSOUNDSOURCE_H

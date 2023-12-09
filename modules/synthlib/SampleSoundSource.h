@@ -17,6 +17,13 @@ namespace ol::synth {
 
         void Process(t_sample *frame) override;
 
+        inline void GateOn() override {
+            sample_.Seek(0);
+            sample_.Play();
+        }
+
+        void GateOff() override { sample_.Pause(); }
+
         void SetFreq(t_sample freq) override;
 
 

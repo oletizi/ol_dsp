@@ -21,6 +21,10 @@ namespace ol::synth {
 
         void Process(t_sample *frame) override;
 
+        inline void GateOn() override {};
+
+        inline void GateOff() override {};
+
         void SetFreq(t_sample freq) override;
 
     private:

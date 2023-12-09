@@ -14,19 +14,19 @@ namespace ol::synth {
         sound_source.SetFreq(freq);
 
         sound_source.Process(frame_out);
-        frame_out[frame_offset] *= osc_1_mix;
-
-        // Filter
-        t_sample env_value = filter_envelope.Process(Gate());
-        t_sample filter_frequency = filt_freq + ((env_value * 20000) * filter_envelope_amount);
-
-        filter.SetFreq(filter_frequency);
-        filter.Process(*frame_out);
-        *frame_out = filter.Low();
-
-        float amp = amp_envelope.Process(Gate());
-        *frame_out *= amp;
-        *frame_out *= master_volume;
+//        frame_out[frame_offset] *= osc_1_mix;
+//
+//        // Filter
+//        t_sample env_value = filter_envelope.Process(Gate());
+//        t_sample filter_frequency = filt_freq + ((env_value * 20000) * filter_envelope_amount);
+//
+//        filter.SetFreq(filter_frequency);
+//        filter.Process(*frame_out);
+//        *frame_out = filter.Low();
+//
+//        float amp = amp_envelope.Process(Gate());
+//        *frame_out *= amp;
+//        *frame_out *= master_volume;
     }
 
     void SynthVoice::UpdateMidiControl(uint8_t ctl, uint8_t val) {
@@ -105,10 +105,12 @@ namespace ol::synth {
 
     void SynthVoice::GateOn() {
         gate = true;
+        sound_source.GateOn();
     }
 
     void SynthVoice::GateOff() {
         gate = false;
+        sound_source.GateOff();
     }
 
     bool SynthVoice::Gate() {

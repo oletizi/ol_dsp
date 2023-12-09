@@ -8,6 +8,10 @@ add_library(workout-buddy workout_buddy.cpp)
 target_link_libraries(workout-buddy ol_corelib ol_fxlib ol_synthlib rtmidi)
 target_include_directories(workout-buddy PUBLIC ../libs/rtmidi ../libs/miniaudio)
 
+add_executable(drum-workout drum_main.cpp)
+target_link_libraries(drum-workout workout-buddy ol_synthlib)
+target_include_directories(drum-workout PUBLIC ../libs/miniaudio)
+
 add_executable(sample-workout sample_main.cpp)
 target_link_libraries(sample-workout workout-buddy ol_synthlib)
 target_include_directories(sample-workout PUBLIC ../libs/miniaudio)

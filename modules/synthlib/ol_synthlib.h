@@ -12,5 +12,6 @@
 #include "synthlib/OscillatorSoundSource.h"
 #include "synthlib/Voice.h"
 #include "synthlib/SynthVoice.h"
+#include "synthlib/VoiceMap.h"
 #include "synthlib/Polyvoice.h"
 #endif //JUCE_TEST_OL_SYNTHLIB_H

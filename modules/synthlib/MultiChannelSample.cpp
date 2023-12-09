@@ -49,6 +49,11 @@ void ol::synth::MultiChannelSample::Play() {
     playing = true;
 }
 
+void ol::synth::MultiChannelSample::Pause() {
+    playing = false;
+}
+
 uint64_t ol::synth::MultiChannelSample::GetChannelCount() {
     return data_source_.GetChannelCount();
 }
+

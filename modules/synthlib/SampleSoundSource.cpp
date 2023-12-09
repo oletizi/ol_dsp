@@ -10,7 +10,7 @@ namespace ol::synth {
     }
 
     void SampleSoundSource::Process(t_sample *frame_out) {
-        sample_.Process(frame_buffer_);
+        sample_.Process(frame_out);
     }
 
     void SampleSoundSource::Init(t_sample sample_rate) {
