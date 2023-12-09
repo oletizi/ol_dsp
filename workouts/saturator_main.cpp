@@ -9,7 +9,8 @@
 using namespace ol::workout;
 using namespace ol::synth;
 using namespace ol::fx;
-auto osc = OscillatorSoundSource(daisysp::Oscillator());
+daisysp::Oscillator dosc;
+auto osc = OscillatorSoundSource(dosc);
 auto filter = daisysp::Svf();
 auto fe = daisysp::Adsr();
 auto ae = daisysp::Adsr();

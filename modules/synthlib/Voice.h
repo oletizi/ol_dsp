@@ -20,6 +20,12 @@ namespace ol::synth {
 
         virtual void UpdateMidiControl(uint8_t control, uint8_t value) = 0;
 
+        virtual void GateOn() = 0;
+
+        virtual void GateOff() = 0;
+
+        virtual bool Gate() = 0;
+
         virtual void NoteOn(uint8_t midi_note, uint8_t velocity) = 0;
 
         virtual void NoteOff(uint8_t midi_note, uint8_t velocity) = 0;

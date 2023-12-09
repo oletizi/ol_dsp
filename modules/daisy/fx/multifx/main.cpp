@@ -32,35 +32,40 @@ uint64_t led2_blue_timestamp;
 t_sample led2_blue = 0;
 
 const uint8_t voice_count = 5;
-auto osc1 = OscillatorSoundSource(daisysp::Oscillator());
+daisysp::Oscillator dosc1;
+auto osc1 = OscillatorSoundSource(dosc1);
 daisysp::Svf DSY_SDRAM_BSS v1_f;
 daisysp::Adsr v1_fe;
 daisysp::Adsr v1_ae;
 daisysp::Port v1_port;
 auto v1 = SynthVoice(osc1, v1_f, v1_fe, v1_ae, v1_port, 0);
 
-auto osc2 = OscillatorSoundSource(daisysp::Oscillator());
+daisysp::Oscillator dosc2;
+auto osc2 = OscillatorSoundSource(dosc2);
 daisysp::Svf DSY_SDRAM_BSS v2_f;
 daisysp::Adsr v2_fe;
 daisysp::Adsr v2_ae;
 daisysp::Port v2_port;
 auto v2 = SynthVoice(osc2, v2_f, v2_fe, v2_ae, v2_port, 0);
 
-auto osc3 = OscillatorSoundSource(daisysp::Oscillator());
+daisysp::Oscillator dosc3;
+auto osc3 = OscillatorSoundSource(dosc3);
 daisysp::Svf DSY_SDRAM_BSS v3_f;
 daisysp::Adsr v3_fe;
 daisysp::Adsr v3_ae;
 daisysp::Port v3_port;
 auto v3 = SynthVoice(osc3, v3_f, v3_fe, v3_ae, v3_port, 0);
 
-auto osc4 = OscillatorSoundSource(daisysp::Oscillator());
+daisysp::Oscillator dosc4;
+auto osc4 = OscillatorSoundSource(dosc4);
 daisysp::Svf DSY_SDRAM_BSS v4_f;
 daisysp::Adsr v4_fe;
 daisysp::Adsr v4_ae;
 daisysp::Port v4_port;
 auto v4 = SynthVoice(osc4, v4_f, v4_fe, v4_ae, v4_port, 0);
 
-auto osc5 = OscillatorSoundSource(daisysp::Oscillator());
+daisysp::Oscillator dosc5;
+auto osc5 = OscillatorSoundSource(dosc5);
 daisysp::Svf DSY_SDRAM_BSS v5_f;
 daisysp::Adsr v5_fe;
 daisysp::Adsr v5_ae;

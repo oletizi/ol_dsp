@@ -18,7 +18,6 @@ namespace ol::synth {
 
     void OscillatorSoundSource::Process(t_sample *frame) {
         t_sample out = osc_.Process();
-        frame[frame_offset] = out;
-
+        frame[frame_offset_] = out;
     }
 }

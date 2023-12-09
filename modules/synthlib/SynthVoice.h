@@ -31,6 +31,12 @@ namespace ol::synth {
 
         void UpdateMidiControl(uint8_t control, uint8_t value) override;
 
+        void GateOn() override;
+
+        void GateOff() override;
+
+        bool Gate() override;
+
         void NoteOn(uint8_t midi_note, uint8_t velocity) override;
 
         void NoteOff(uint8_t midi_note, uint8_t velocity) override;
@@ -82,6 +88,7 @@ namespace ol::synth {
         t_sample osc_1_mix = 0.8f;
         uint8_t playing = 0;
         int frame_offset = 0;
+        bool gate = false;
     };
 }
 #endif //OL_DSP_SYNTHVOICE_H

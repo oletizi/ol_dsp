@@ -13,6 +13,9 @@ public:
     MOCK_METHOD(void, Update, (), (override));
     MOCK_METHOD(void, Process, (t_sample *frame_out), (override));
     MOCK_METHOD(void, UpdateMidiControl, (uint8_t control, uint8_t value), (override));
+    MOCK_METHOD(void, GateOn, (), (override));
+    MOCK_METHOD(void, GateOff, (), (override));
+    MOCK_METHOD(bool, Gate, (), (override));
     MOCK_METHOD(void, NoteOn, (uint8_t midi_note, uint8_t velocity), (override));
     MOCK_METHOD(void, NoteOff, (uint8_t midi_note, uint8_t velocity), (override));
     MOCK_METHOD(uint8_t, Playing, (), (override));

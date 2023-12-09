@@ -13,7 +13,8 @@
 using namespace ol::fx;
 using namespace ol::synth;
 
-auto osc = OscillatorSoundSource(daisysp::Oscillator());
+daisysp::Oscillator dosc;
+auto osc = OscillatorSoundSource(dosc);
 auto vf = daisysp::Svf();
 auto vfe = daisysp::Adsr();
 auto vae = daisysp::Adsr();

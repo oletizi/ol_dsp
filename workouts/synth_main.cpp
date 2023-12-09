@@ -6,7 +6,8 @@
 using namespace ol::synth;
 
 int main() {
-    auto osc1 = ol::synth::OscillatorSoundSource(daisysp::Oscillator());
+    daisysp::Oscillator dosc1;
+    auto osc1 = ol::synth::OscillatorSoundSource(dosc1);
     auto v1_f = daisysp::Svf();
     auto v1_fe = daisysp::Adsr();
     auto v1_ae = daisysp::Adsr();
@@ -17,15 +18,16 @@ int main() {
     daisysp::Adsr v1_amp_envelope = daisysp::Adsr();
     daisysp::Port v1_portamento = daisysp::Port();
 
-    auto osc2 = ol::synth::OscillatorSoundSource(daisysp::Oscillator());
+    daisysp::Oscillator dosc2;
+    auto osc2 = ol::synth::OscillatorSoundSource(dosc2);
     daisysp::Svf v2_filter = daisysp::Svf();
     daisysp::Adsr v2_filter_envelope = daisysp::Adsr();
     daisysp::Adsr v2_amp_envelope = daisysp::Adsr();
     daisysp::Port v2_portamento = daisysp::Port();
     auto v2 = ol::synth::SynthVoice(osc2, v2_filter, v2_filter_envelope, v2_amp_envelope, v2_portamento);
 
-    uint8_t voice_count = 2;
-    Voice *voices[] = {&v1, &v2};
+    uint8_t voice_count = 1;
+    Voice *voices[] = {&v1};
     auto poly = Polyvoice(voices, voice_count);
 
     juce::initialiseJuce_GUI();

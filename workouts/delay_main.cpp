@@ -10,7 +10,8 @@
 
 #define CHANNEL_COUNT 2
 
-auto osc = ol::synth::OscillatorSoundSource(daisysp::Oscillator());
+daisysp::Oscillator dosc;
+auto osc = ol::synth::OscillatorSoundSource(dosc);
 auto v1_f = daisysp::Svf();
 auto v1_fe = daisysp::Adsr();
 auto v1_ae = daisysp::Adsr();
