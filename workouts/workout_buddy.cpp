@@ -97,7 +97,7 @@ namespace ol::workout {
             std::cout << "Input port " << i << ": " << midi_in->getPortName(i) << std::endl;
             const std::string &port_name = midi_in->getPortName(i);
             // XXX: Fix the hard-coding
-            if (strstr(port_name.c_str(), "Max") != nullptr) {
+            if (strstr(port_name.c_str(), "IAC") != nullptr) {
                 std::cout << "Connecting to " << port_name << std::endl;
                 midi_in->openPort(i);
             }

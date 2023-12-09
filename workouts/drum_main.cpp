@@ -7,10 +7,14 @@
 using namespace ol::workout;
 
 void note_on_callback(workout_buddy *buddy, uint8_t channel, uint8_t note, uint8_t velocity) {
-
+    auto voices = static_cast<ol::synth::Polyvoice *>(buddy->audio_data);
+    voices->NoteOn(note, velocity);
 }
 
-void note_off_callback(workout_buddy *buddy, uint8_t channel, uint8_t note, uint8_t velocity) {}
+void note_off_callback(workout_buddy *buddy, uint8_t channel, uint8_t note, uint8_t velocity) {
+    auto voices = static_cast<ol::synth::Polyvoice *>(buddy->audio_data);
+    voices->NoteOff(note, velocity);
+}
 
 void cc_callback(workout_buddy *buddy, uint8_t channel, uint8_t controller, uint8_t value) {
     auto voices = static_cast<ol::synth::Polyvoice *>(buddy->audio_data);
@@ -45,7 +49,9 @@ int main() {
     daisysp::Adsr kick_amp_env;
     daisysp::Port kick_port;
     auto kick_voice = ol::synth::SynthVoice(kick_sound_source, kick_filter, kick_filter_env, kick_amp_env, kick_port);
+
     voicemap.SetVoice(60, kick_voice);
+
 
     printf("Starting audio...");
     Workout_Config(&buddy, &midi_in, &audio_device, note_on_callback, note_off_callback, cc_callback, audio_callback,
