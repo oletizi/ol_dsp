@@ -1,8 +1,11 @@
 //
 // Created by Orion Letizi on 12/8/23.
 //
+#include <fstream>
+#include <sstream>
 #include "workout_buddy.h"
 #include "synthlib/ol_synthlib.h"
+#include "VoiceLoader.h"
 
 using namespace ol::workout;
 
@@ -43,6 +46,16 @@ int main() {
     auto kick_sound_source = ol::synth::SampleSoundSource(kick_sample);
 
     auto voicemap = ol::synth::VoiceMap();
+
+    auto patch_path = "/Users/orion/work/ol_dsp/test/drumkit/drumkit.yaml";
+    std::fstream patch_stream(patch_path);
+    std::stringstream patch_buffer;
+    patch_buffer << patch_stream.rdbuf();
+    auto patch = patch_buffer.str();
+
+    auto voiceLoader = VoiceLoader(patch_path, patch);
+    voiceLoader.Load(voicemap);
+
     auto voices = ol::synth::Polyvoice(voicemap);
     daisysp::Svf kick_filter;
     daisysp::Adsr kick_filter_env;

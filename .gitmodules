@@ -34,3 +34,6 @@
 [submodule "libs/sfizz"]
 	path = libs/sfizz
 	url = git@github.com:oletizi/sfizz.git
+[submodule "libs/rapidyaml"]
+	path = libs/rapidyaml
+	url = git@github.com:oletizi/rapidyaml.git
