@@ -17,6 +17,8 @@ namespace ol::synth {
 
         virtual void Seek(uint64_t frame_index) = 0;
 
+        virtual SoundSource::InitStatus UpdateSample(const char * sample_path) = 0;
+
         /**
          * @param out frame to read into
          * @return frames read

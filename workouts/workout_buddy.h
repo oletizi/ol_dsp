@@ -12,24 +12,35 @@
 #include "corelib/ol_corelib.h"
 #include "synthlib/ol_synthlib.h"
 
-
+#define MAX_PATH_LENGTH 256
 namespace ol::workout {
 
     class MaSampleSource : public ol::synth::SampleDataSource {
     public:
-        explicit MaSampleSource(const char * sample_path, ma_decoder *decoder) : sample_path_(sample_path), decoder_(decoder) {}
+        explicit MaSampleSource(const char *sample_path, ma_decoder *decoder) :
+                decoder_(decoder) {
+            set_path(sample_path);
+        }
 
         uint64_t GetChannelCount() override;
 
         SoundSource::InitStatus Init(t_sample sample_rate) override;
 
+        SoundSource::InitStatus UpdateSample(const char *sample_path) override;
+
         void Seek(uint64_t) override;
 
         uint64_t Read(t_sample *frames_out) override;
 
+
     private:
+        inline void set_path(const char *path) {
+            std::snprintf(path_buffer, MAX_PATH_LENGTH, "%s", path);
+        }
+
+        char path_buffer[MAX_PATH_LENGTH] = {};
         ma_decoder *decoder_;
-        const char *sample_path_;
+        t_sample sample_rate_ = 0;
     };
 
     enum InitStatus {

@@ -39,9 +39,11 @@ int main() {
     RtMidiIn midi_in;
     ma_device audio_device;
 
-    const auto kickfile = "/Users/orion/Dropbox/Music/Sample Library/Splice/LOFI MOODS/OS_LFM_Base_Kick.wav";
-    ma_decoder kickdecoder{};
-    auto kick_sample_data_source = MaSampleSource(kickfile, &kickdecoder);
+    const auto soundfile1 = "/Users/orion/Dropbox/Music/Sample Library/Splice/LOFI MOODS/OS_LFM_Base_Kick.wav";
+    const auto soundfile2 = "/Users/orion/Dropbox/Music/Sample Library/Splice/LOFI MOODS/OS_LFM_Byte_Snare.wav";
+    const char *sample_paths[] = {soundfile1, soundfile2};
+    ma_decoder decoder1{};
+    auto kick_sample_data_source = MaSampleSource(soundfile1, &decoder1);
     auto kick_sample = ol::synth::MultiChannelSample(kick_sample_data_source);
     auto kick_sound_source = ol::synth::SampleSoundSource(kick_sample);
 
@@ -84,7 +86,7 @@ int main() {
 //    }
     SoundSource::InitStatus initStatus = kick_sound_source.Init(sample_rate);
     if (initStatus != SoundSource::InitStatus::Ok) {
-        printf("Error loading sample: %s", kickfile);
+        printf("Error loading sample: %s", soundfile1);
         return -2;
     }
     voices.Init(sample_rate);
@@ -92,12 +94,21 @@ int main() {
     Workout_Start(&buddy);
 
     printf("Play note: p\n");
+    printf("Swap samples: s\n");
     printf("command: ");
+    int current_soundfile = 0;
     while (auto c = getchar()) {
         if (c == 'p') {
             printf("  playing note...\n");
             voices.NoteOff(60, 100);
             voices.NoteOn(60, 100);
+        }
+        if (c == 's') {
+            current_soundfile = !current_soundfile;
+            auto init_status = kick_sample_data_source.UpdateSample(sample_paths[current_soundfile]);
+            if (init_status != SoundSource::InitStatus::Ok) {
+                printf("Yikes. Error loading sample: %s", sample_paths[current_soundfile]);
+            }
         }
         //printf("\ncommand: ");
     }

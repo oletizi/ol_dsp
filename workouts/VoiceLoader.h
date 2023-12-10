@@ -11,30 +11,29 @@
 #include "SampleDataSource.h"
 
 #define BUF_LENGTH 128
-namespace ol {
-    namespace workout {
+namespace ol::workout {
 
-        class VoiceLoader {
-        private:
-            const char *patch_path_;
-            const std::string &patch_;
-            char buf[BUF_LENGTH] = {};
-            ol::synth::SampleDataSource *sources[128] = {};
+    class VoiceLoader {
+    private:
+        const char *patch_path_;
+        const std::string &patch_;
+        char buf[BUF_LENGTH] = {};
+        ol::synth::SampleDataSource *sources[128] = {};
 
-            inline void fill_buf(const c4::csubstr &s) {
-                std::snprintf(buf, BUF_LENGTH, "%.*s", (int) s.len, s.str);
-            }
+        inline void fill_buf(const c4::csubstr &s) {
+            std::snprintf(buf, BUF_LENGTH, "%.*s", (int) s.len, s.str);
+        }
 
-        public:
-            typedef ol::synth::SampleDataSource (*data_source_factory)(const char *sample_path);
+    public:
+        typedef ol::synth::SampleDataSource (*data_source_factory)(const char *sample_path);
 
-            VoiceLoader(const char *patch_path, const std::string &patch) :
-                    patch_path_(patch_path), patch_(patch) {}
+        VoiceLoader(const char *patch_path, const std::string &patch) :
+                patch_path_(patch_path), patch_(patch) {}
 
-            void Load(data_source_factory factory, ol::synth::VoiceMap voice_map);
-        };
+        void Load(data_source_factory factory, ol::synth::VoiceMap voice_map);
+    };
 
-    } // ol
-} // workout
+} // ol
+// workout
 
 #endif //OL_DSP_VOICELOADER_H

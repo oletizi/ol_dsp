@@ -22,14 +22,20 @@ namespace ol::workout {
     }
 
     SoundSource::InitStatus MaSampleSource::Init(t_sample sample_rate) {
+        sample_rate_ = sample_rate;
         auto status = SoundSource::InitStatus::Ok;
         ma_decoder_config config = ma_decoder_config_init(ma_format_f32, 2, uint32_t(sample_rate));
-        ma_result result = ma_decoder_init_file(sample_path_, &config, decoder_);
+        ma_result result = ma_decoder_init_file(path_buffer, &config, decoder_);
         if (result != MA_SUCCESS) {
-            printf("Could not load file: %s\n", sample_path_);
+            printf("Could not load file: %s\n", path_buffer);
             status = SoundSource::Error;
         }
         return status;
+    }
+
+    SoundSource::InitStatus MaSampleSource::UpdateSample(const char *sample_path) {
+        set_path(sample_path);
+        return Init(sample_rate_);
     }
 
     void
