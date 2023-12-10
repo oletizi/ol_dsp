@@ -7,9 +7,10 @@
 
 
 namespace ol::synth {
-    void OscillatorSoundSource::Init(t_sample sample_rate) {
+    SoundSource::InitStatus OscillatorSoundSource::Init(t_sample sample_rate) {
         osc_.Init(sample_rate);
         osc_.SetWaveform(daisysp::Oscillator::WAVE_POLYBLEP_SAW);
+        return SoundSource::InitStatus::Ok;
     }
 
     void OscillatorSoundSource::SetFreq(t_sample freq) {

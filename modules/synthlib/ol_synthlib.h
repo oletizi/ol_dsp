@@ -5,7 +5,7 @@
 #ifndef JUCE_TEST_OL_SYNTHLIB_H
 #define JUCE_TEST_OL_SYNTHLIB_H
 #include "corelib/ol_corelib.h"
-#include "synthlib/PitchedSoundSource.h"
+#include "synthlib/SoundSource.h"
 #include "synthlib/SampleDataSource.h"
 #include "synthlib/MultiChannelSample.h"
 #include "synthlib/SampleSoundSource.h"

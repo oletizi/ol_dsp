@@ -17,9 +17,11 @@ namespace ol::workout {
 
     class MaSampleSource : public ol::synth::SampleDataSource {
     public:
-        explicit MaSampleSource(ma_decoder *decoder) : decoder_(decoder) {}
+        explicit MaSampleSource(const char * sample_path, ma_decoder *decoder) : sample_path_(sample_path), decoder_(decoder) {}
 
         uint64_t GetChannelCount() override;
+
+        SoundSource::InitStatus Init(t_sample sample_rate) override;
 
         void Seek(uint64_t) override;
 
@@ -27,6 +29,7 @@ namespace ol::workout {
 
     private:
         ma_decoder *decoder_;
+        const char *sample_path_;
     };
 
     enum InitStatus {

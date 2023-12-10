@@ -39,9 +39,9 @@ int main() {
     RtMidiIn midi_in;
     ma_device audio_device;
 
-    auto kickfile = "/Users/orion/Dropbox/Music/Sample Library/Splice/LOFI MOODS/OS_LFM_Base_Kick.wav";
+    const auto kickfile = "/Users/orion/Dropbox/Music/Sample Library/Splice/LOFI MOODS/OS_LFM_Base_Kick.wav";
     ma_decoder kickdecoder{};
-    auto kick_sample_data_source = MaSampleSource(&kickdecoder);
+    auto kick_sample_data_source = MaSampleSource(kickfile, &kickdecoder);
     auto kick_sample = ol::synth::MultiChannelSample(kick_sample_data_source);
     auto kick_sound_source = ol::synth::SampleSoundSource(kick_sample);
 
@@ -53,8 +53,8 @@ int main() {
     patch_buffer << patch_stream.rdbuf();
     auto patch = patch_buffer.str();
 
-    auto voiceLoader = VoiceLoader(patch_path, patch);
-    voiceLoader.Load(voicemap);
+//    auto voiceLoader = VoiceLoader(patch_path, patch);
+//    voiceLoader.Load(voicemap);
 
     auto voices = ol::synth::Polyvoice(voicemap);
     daisysp::Svf kick_filter;
@@ -76,13 +76,17 @@ int main() {
     t_sample sample_rate = Workout_SampleRate(&buddy);
     printf("Sample rate: %d\n", int(sample_rate));
 
-    ma_decoder_config config = ma_decoder_config_init(ma_format_f32, 2, uint32_t(sample_rate));
-    ma_result result = ma_decoder_init_file(kickfile, &config, &kickdecoder);
-    if (result != MA_SUCCESS) {
-        printf("Could not load file: %s\n", kickfile);
+//    ma_decoder_config config = ma_decoder_config_init(ma_format_f32, 2, uint32_t(sample_rate));
+//    ma_result result = ma_decoder_init_file(kickfile, &config, &kickdecoder);
+//    if (result != MA_SUCCESS) {
+//        printf("Could not load file: %s\n", kickfile);
+//        return -2;
+//    }
+    SoundSource::InitStatus initStatus = kick_sound_source.Init(sample_rate);
+    if (initStatus != SoundSource::InitStatus::Ok) {
+        printf("Error loading sample: %s", kickfile);
         return -2;
     }
-
     voices.Init(sample_rate);
 
     Workout_Start(&buddy);

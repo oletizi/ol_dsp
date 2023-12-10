@@ -10,7 +10,7 @@
 namespace ol::synth {
     class SynthVoice : public Voice {
     public:
-        explicit SynthVoice(PitchedSoundSource &sound_source,
+        explicit SynthVoice(SoundSource &sound_source,
                             daisysp::Svf &filter,
                             daisysp::Adsr &filter_envelope,
                             daisysp::Adsr &amp_envelope,
@@ -53,7 +53,7 @@ namespace ol::synth {
         t_sample sample_rate = 0;
 
         // Oscillator, sample player, etc.
-        PitchedSoundSource &sound_source;
+        SoundSource &sound_source;
 
         t_sample freq_ = 0;
 

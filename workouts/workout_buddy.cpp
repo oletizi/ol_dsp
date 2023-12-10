@@ -6,6 +6,7 @@
 
 namespace ol::workout {
 
+
     uint64_t MaSampleSource::Read(t_sample *frames_out) {
         uint64_t frames_read = 0;
         ma_decoder_read_pcm_frames(decoder_, frames_out, 1, &frames_read);
@@ -18,6 +19,17 @@ namespace ol::workout {
 
     uint64_t MaSampleSource::GetChannelCount() {
         return decoder_->outputChannels;
+    }
+
+    SoundSource::InitStatus MaSampleSource::Init(t_sample sample_rate) {
+        auto status = SoundSource::InitStatus::Ok;
+        ma_decoder_config config = ma_decoder_config_init(ma_format_f32, 2, uint32_t(sample_rate));
+        ma_result result = ma_decoder_init_file(sample_path_, &config, decoder_);
+        if (result != MA_SUCCESS) {
+            printf("Could not load file: %s\n", sample_path_);
+            status = SoundSource::Error;
+        }
+        return status;
     }
 
     void

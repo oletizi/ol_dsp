@@ -13,8 +13,8 @@ namespace ol::synth {
         sample_.Process(frame_out);
     }
 
-    void SampleSoundSource::Init(t_sample sample_rate) {
-        sample_.Init(sample_rate);
+    SoundSource::InitStatus SampleSoundSource::Init(t_sample sample_rate) {
+        return sample_.Init(sample_rate);
     }
 
 }

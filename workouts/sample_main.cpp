@@ -29,8 +29,11 @@ int main() {
     RtMidiIn midi_in;
     ma_device audio_device;
 
+    auto filename = "/Users/orion/Dropbox/Music/Sample Library/Splice/LOFI MOODS/OS_LFM_90_Drum_Loop_Salty.wav";
+    printf("Using audio file: %s", filename);
+    
     ma_decoder decoder{};
-    auto sample_source = MaSampleSource(&decoder);
+    auto sample_source = MaSampleSource(filename, &decoder);
     auto sample = ol::synth::MultiChannelSample(sample_source);
 
 
@@ -44,18 +47,21 @@ int main() {
     t_sample sample_rate = Workout_SampleRate(&buddy);
     printf("Sample rate: %d\n", int(sample_rate));
 
-    auto filename = "/Users/orion/Dropbox/Music/Sample Library/Splice/LOFI MOODS/OS_LFM_90_Drum_Loop_Salty.wav";
-    printf("Loading audio file: %s", filename);
 
 
-    ma_decoder_config config = ma_decoder_config_init(ma_format_f32, 2, uint32_t(sample_rate));
-    ma_result result = ma_decoder_init_file(filename, &config, &decoder);
-    if (result != MA_SUCCESS) {
+
+//    ma_decoder_config config = ma_decoder_config_init(ma_format_f32, 2, uint32_t(sample_rate));
+//    ma_result result = ma_decoder_init_file(filename, &config, &decoder);
+//    if (result != MA_SUCCESS) {
+//        printf("Could not load file: %s\n", filename);
+//        return -2;
+//    }
+
+    SoundSource::InitStatus initStatus = sample.Init(sample_rate);
+    if (initStatus != SoundSource::InitStatus::Ok) {
         printf("Could not load file: %s\n", filename);
         return -2;
     }
-
-    sample.Init(sample_rate);
 
     Workout_Start(&buddy);
 

@@ -10,14 +10,14 @@
 
 namespace ol::synth {
 
-    class OscillatorSoundSource : public PitchedSoundSource {
+    class OscillatorSoundSource : public SoundSource {
     public:
         explicit OscillatorSoundSource(daisysp::Oscillator &osc,
                                        const int frame_offset = 0)
                 : osc_(osc), frame_offset_(frame_offset) {
         }
 
-        void Init(t_sample sample_rate) override;
+        SoundSource::InitStatus Init(t_sample sample_rate) override;
 
         void Process(t_sample *frame) override;
 

@@ -9,11 +9,11 @@
 
 namespace ol::synth {
 
-    class SampleSoundSource : public PitchedSoundSource {
+    class SampleSoundSource : public SoundSource {
     public:
         SampleSoundSource(MultiChannelSample &s) : sample_(s), freq_(0) {}
 
-        void Init(t_sample sample_rate) override;
+        SoundSource::InitStatus Init(t_sample sample_rate) override;
 
         void Process(t_sample *frame) override;
 

@@ -2,35 +2,39 @@
 // Created by Orion Letizi on 12/9/23.
 //
 #include "VoiceLoader.h"
-#include "ryml.hpp"
 
-namespace ol {
-    namespace workout {
-        static void print_substr(const c4::csubstr &s) {
-            char buf[s.len + 1];
-            std::snprintf(buf, s.len + 1, "%.*s", (int) s.len, s.str);
-            printf("%s\n", buf);
-        }
+namespace ol::workout {
 
-        void VoiceLoader::Load(ol::synth::VoiceMap voice_map) {
+    void VoiceLoader::Load(data_source_factory factory, ol::synth::VoiceMap voice_map) {
+        // XXX: This is super fragile and bad
+        char char_array[patch_.length() + 1];
+        strcpy(char_array, patch_.c_str());
+        auto tree = ryml::parse_in_place(char_array);
+        auto root = tree.rootref();
+        const auto &patch_node = root["patch"];
+        const auto &regions = patch_node["regions"];
+        for (auto const &region: regions.children()) {
+            if (region.has_child("sample")) {
+                auto sample_name = region["sample"];
+                printf("sample has value: %d\n", sample_name.has_val());
+                if (sample_name.has_val()) {
+                    fill_buf(sample_name.val());
+                    std::string sample_path = patch_path_ + std::string(buf);
+                    printf("  sample name: %s\n", buf);
+                    printf("  patch path: %s\n", patch_path_);
+                    printf("  sample path: %s\n", sample_path.c_str());
+                    //synth::SampleDataSource &source = factory(sample_path.c_str());
 
-            char char_array[patch_.length() + 1];
-            strcpy(char_array, patch_.c_str());
-            auto tree = ryml::parse_in_place(char_array);
-            auto root = tree.rootref();
-            const auto &patch_node = root["patch"];
-            const auto &regions = patch_node["regions"];
-            for (auto const &region: regions.children()) {
-                if (region.has_child("sample")) {
-                    auto sample_name = region["sample"];
-                    printf("sample has value: %d\n", sample_name.has_val());
-                    if (sample_name.has_val()) {
-                        printf("  sample name: ");
-                        print_substr(sample_name.val());
+                    auto note = region["note"];
+                    if (note.valid() && note.has_val() && note.val().is_unsigned_integer()) {
+                        uint64_t note_value = 0;
+                        atou(note.val(), &note_value);
+                        printf("  note: %llu\n", note_value);
                     }
                 }
             }
         }
+    }
 
-    } // ol
-} // workout
+} // ol
+// workout

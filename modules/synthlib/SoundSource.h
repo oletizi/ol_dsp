@@ -2,12 +2,17 @@
 // Created by Orion Letizi on 12/5/23.
 //
 
-#ifndef OL_DSP_PITCHEDSOUNDSOURCE_H
-#define OL_DSP_PITCHEDSOUNDSOURCE_H
+#ifndef OL_DSP_SOUNDSOURCE_H
+#define OL_DSP_SOUNDSOURCE_H
 
-class PitchedSoundSource {
+class SoundSource {
 public:
-    virtual void Init(t_sample sample_rate) = 0;
+
+    enum InitStatus {
+        Ok, Error
+    };
+
+    virtual InitStatus Init(t_sample sample_rate) = 0;
 
     virtual void Process(t_sample *frame) = 0;
 
@@ -17,4 +22,4 @@ public:
 
     virtual void SetFreq(t_sample freq) = 0;
 };
-#endif //OL_DSP_PITCHEDSOUNDSOURCE_H
+#endif //OL_DSP_SOUNDSOURCE_H

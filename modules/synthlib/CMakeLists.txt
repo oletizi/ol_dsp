@@ -5,7 +5,7 @@ add_library(ol_synthlib
         OscillatorSoundSource.cpp
         SampleDataSource.h
         SampleSoundSource.h
-        PitchedSoundSource.h
+        SoundSource.h
         OscillatorSoundSource.h
         SynthVoice.h
         Polyvoice.h
