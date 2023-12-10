@@ -5,7 +5,7 @@
 
 namespace ol::workout {
 
-    void VoiceLoader::Load(data_source_factory factory, ol::synth::VoiceMap voice_map) {
+    void VoiceLoader::Load(data_source_callback callback) {
         // XXX: This is super fragile and bad
         char char_array[patch_.length() + 1];
         strcpy(char_array, patch_.c_str());
@@ -23,13 +23,12 @@ namespace ol::workout {
                     printf("  sample name: %s\n", buf);
                     printf("  patch path: %s\n", patch_path_);
                     printf("  sample path: %s\n", sample_path.c_str());
-                    //synth::SampleDataSource &source = factory(sample_path.c_str());
-
                     auto note = region["note"];
                     if (note.valid() && note.has_val() && note.val().is_unsigned_integer()) {
                         uint64_t note_value = 0;
                         atou(note.val(), &note_value);
                         printf("  note: %llu\n", note_value);
+                        callback(note_value, sample_path.c_str());
                     }
                 }
             }

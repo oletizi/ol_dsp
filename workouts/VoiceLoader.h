@@ -25,12 +25,12 @@ namespace ol::workout {
         }
 
     public:
-        typedef ol::synth::SampleDataSource (*data_source_factory)(const char *sample_path);
+        typedef void(*data_source_callback)(const uint8_t note, const char *sample_path);
 
         VoiceLoader(const char *patch_path, const std::string &patch) :
                 patch_path_(patch_path), patch_(patch) {}
 
-        void Load(data_source_factory factory, ol::synth::VoiceMap voice_map);
+        void Load(data_source_callback callback);
     };
 
 } // ol

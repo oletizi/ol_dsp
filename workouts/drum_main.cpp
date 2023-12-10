@@ -55,8 +55,10 @@ int main() {
     patch_buffer << patch_stream.rdbuf();
     auto patch = patch_buffer.str();
 
-//    auto voiceLoader = VoiceLoader(patch_path, patch);
-//    voiceLoader.Load(voicemap);
+    auto voiceLoader = VoiceLoader(patch_path, patch);
+    voiceLoader.Load([](const uint8_t note, const char* sample_path) {
+        printf("Should load %d => %s\n", note, sample_path);
+    });
 
     auto voices = ol::synth::Polyvoice(voicemap);
     daisysp::Svf kick_filter;
