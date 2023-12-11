@@ -13,7 +13,7 @@ namespace ol::synth {
 
         virtual uint64_t GetChannelCount() = 0;
 
-        virtual SoundSource::InitStatus Init(t_sample sample_rate, const char * sample_path) = 0;
+        virtual InitStatus Init(t_sample sample_rate, const char * sample_path) = 0;
 
         virtual void Seek(uint64_t frame_index) = 0;
 

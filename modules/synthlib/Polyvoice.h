@@ -9,71 +9,135 @@
 #include "VoiceMap.h"
 
 namespace ol::synth {
+    template<int CHANNEL_COUNT, int VOICE_COUNT>
     class Polyvoice {
     private:
         // init functions
         typedef void (*init_function)(Polyvoice *, t_sample sample_rate);
 
-        static void voices_init(Polyvoice *p, t_sample sample_rate);
+        static void voices_init(Polyvoice *p, t_sample sample_rate) {
+            for (int i = 0; i < p->voice_count; i++) {
+                p->voices_[i]->Init(sample_rate);
+            }
+            p->initialized = true;
+        }
 
-        static void map_init(Polyvoice *p, t_sample sample_rate);
-
-        init_function init;
+        static void map_init(Polyvoice *p, t_sample sample_rate) {
+            p->voice_map_->Init(sample_rate);
+        }
 
         // process functions
         typedef void (*process_function)(Polyvoice *, t_sample *frame_out);
-        static void voices_process(Polyvoice *, t_sample *frame_out);
-        static void map_process(Polyvoice *, t_sample *frame_out);
-        process_function process;
+
+        static void voices_process(Polyvoice *p, t_sample *frame_out) {
+            for (int i = 0; i < p->voice_count; i++) {
+                t_sample s = 0;
+                p->voices_[i]->Process(&s);
+                *frame_out += s;
+            }
+        }
+
+        static void map_process(Polyvoice *p, t_sample *frame_out) {
+            p->voice_map_->Process(frame_out);
+        }
 
         // note on functions
         typedef void (*note_on_function)(Polyvoice *, uint8_t note, uint8_t velocity);
-        static void voices_note_on(Polyvoice *, uint8_t note, uint8_t velocity);
-        static void map_note_on(Polyvoice *, uint8_t note, uint8_t velocity);
-        note_on_function note_on;
+
+        static void voices_note_on(Polyvoice *p, uint8_t note, uint8_t velocity) {
+            for (int i = 0; i < p->voice_count; i++) {
+                auto v = p->voices_[i];
+                if (!v->Playing()) {
+                    v->NoteOn(note, velocity);
+                    break;
+                }
+            }
+        }
+
+        static void map_note_on(Polyvoice *p, uint8_t note, uint8_t velocity) {
+            p->voice_map_->NoteOn(note, velocity);
+        }
 
         // note off functions
-        typedef void (*note_off_function) (Polyvoice *, uint8_t note, uint8_t velocity);
-        static void voices_note_off(Polyvoice *, uint8_t note, uint8_t velocity);
-        static void map_note_off(Polyvoice *, uint8_t note, uint8_t velocity);
-        note_off_function note_off;
+        typedef void (*note_off_function)(Polyvoice *, uint8_t note, uint8_t velocity);
+
+        static void voices_note_off(Polyvoice *p, uint8_t note, uint8_t velocity) {
+            for (int i = 0; i < p->voice_count; i++) {
+                auto v = p->voices_[i];
+                if (v->Playing() == note) {
+                    v->NoteOff(note, velocity);
+                    break;
+                }
+            }
+        }
+
+        static void map_note_off(Polyvoice *p, uint8_t note, uint8_t velocity) {
+            p->voice_map_->NoteOff(note, velocity);
+        }
+
 
         // controller functions
         typedef void(*midi_controller_function)(Polyvoice *, uint8_t control, uint8_t value);
-        static void voices_controller_function(Polyvoice *, uint8_t control, uint8_t value);
-        static void map_controller_function(Polyvoice *, uint8_t control, uint8_t value);
+
+        static void voices_controller_function(Polyvoice *p, uint8_t control, uint8_t value) {
+            for (int i = 0; i < p->voice_count; i++) {
+                p->voices_[i]->UpdateMidiControl(control, value);
+            }
+        }
+
+        static void map_controller_function(Polyvoice *p, uint8_t control, uint8_t value) {
+            p->voice_map_->UpdateMidiControl(control, value);
+        }
+
+        init_function init;
+        process_function process;
+        note_on_function note_on;
+        note_off_function note_off;
         midi_controller_function update_midi_control;
 
-        Voice **voices_ = nullptr;
+        Voice *voices_[VOICE_COUNT] = {};
         bool initialized = false;
-        uint8_t voice_count = 0;
-        VoiceMap *voice_map_ = nullptr;
+        VoiceMap<CHANNEL_COUNT> *voice_map_;
 
+        t_sample frame_buffer[CHANNEL_COUNT] = {};
     public:
-        Polyvoice(Voice **voices, uint8_t voice_count) : voices_(voices), voice_count(voice_count),
-                                                         voice_map_(nullptr),
+        explicit Polyvoice(Voice *voices[VOICE_COUNT]) : voice_map_(nullptr),
                                                          init(voices_init),
                                                          process(voices_process),
                                                          note_on(voices_note_on),
                                                          note_off(voices_note_off),
-                                                         update_midi_control(voices_controller_function){}
+                                                         update_midi_control(voices_controller_function) {
+            for (int i=0; i<VOICE_COUNT; i++) {
+                voices_[i] = voices[i];
+            }
+        }
 
-        explicit Polyvoice(VoiceMap &voice_map) : voice_map_(&voice_map),
-                                                  init(map_init),
-                                                  process(map_process),
-                                                  note_on(map_note_on),
-                                                  note_off(map_note_off),
-                                                  update_midi_control(map_controller_function){}
+        explicit Polyvoice(VoiceMap<CHANNEL_COUNT> &voice_map) : voice_map_(&voice_map),
+                                                                 init(map_init),
+                                                                 process(map_process),
+                                                                 note_on(map_note_on),
+                                                                 note_off(map_note_off),
+                                                                 update_midi_control(map_controller_function) {}
 
-        void Init(t_sample sample_rate);
+        void Init(t_sample sample_rate) {
+            init(this, sample_rate);
+        }
 
-        void Process(t_sample *frame_out);
+        void Process(t_sample *frame_out) {
+            process(this, frame_out);
+        }
 
-        void NoteOn(uint8_t note, uint8_t velocity);
+        void NoteOn(const uint8_t note, const uint8_t velocity) {
+            note_on(this, note, velocity);
+        }
 
-        void NoteOff(uint8_t note, uint8_t velocity);
+        void NoteOff(const uint8_t note, const uint8_t velocity) {
+            note_off(this, note, velocity);
+        }
 
-        void UpdateMidiControl(uint8_t control, uint8_t value);
+        void UpdateMidiControl(uint8_t control, uint8_t value) {
+            update_midi_control(this, control, value);
+        }
 
 
     };

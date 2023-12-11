@@ -5,7 +5,7 @@
 
 namespace ol::workout {
 
-    SoundSource::InitStatus PatchLoader::Load(PatchLoaderCallback  *callback) {
+    ol::synth::InitStatus PatchLoader::Load(PatchLoaderCallback  *callback) {
         // XXX: This is super fragile and bad
         char char_array[patch_.length() + 1];
         strcpy(char_array, patch_.c_str());
@@ -29,14 +29,14 @@ namespace ol::workout {
                         atou(note.val(), &note_value);
                         printf("  note: %llu\n", note_value);
                         auto status = callback->LoadSample(note_value, sample_path);
-                        if (status != SoundSource::Ok) {
+                        if (status != ol::synth::InitStatus::Ok) {
                             return status;
                         }
                     }
                 }
             }
         }
-        return SoundSource::Ok;
+        return ol::synth::InitStatus::Ok;
     }
 
 } // ol

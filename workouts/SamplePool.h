@@ -10,7 +10,7 @@
 #include "workout_buddy.h"
 
 namespace ol::workout {
-    template<int POOL_SIZE>
+    template<int POOL_SIZE, int CHANNEL_COUNT>
     class SamplePool : public PatchLoader::PatchLoaderCallback {
     private:
         struct voice_data {
@@ -18,19 +18,19 @@ namespace ol::workout {
             ol::synth::Voice *voice;
         };
         voice_data *voices[POOL_SIZE] = {};
-        synth::VoiceMap &voice_map_;
+        synth::VoiceMap<CHANNEL_COUNT> &voice_map_;
         PatchLoader &patch_loader_;
         int pool_index_ = 0;
         t_sample sample_rate_ = 0;
 
     public:
-        SamplePool<POOL_SIZE>(ol::synth::VoiceMap &voice_map, ol::synth::SampleDataSource *sources[POOL_SIZE],
+        SamplePool(ol::synth::VoiceMap<CHANNEL_COUNT> &voice_map, ol::synth::SampleDataSource *sources[POOL_SIZE],
                               PatchLoader &patch_loader) : voice_map_(voice_map),
                                                            patch_loader_(patch_loader) {
             for (int i = 0; i < POOL_SIZE; i++) {
                 auto data_source = sources[i];
                 auto sample = new ol::synth::MultiChannelSample(*data_source);
-                auto sample_sound_source = new ol::synth::SampleSoundSource(sample);
+                auto sample_sound_source = new ol::synth::SampleSoundSource<CHANNEL_COUNT>(sample);
                 auto filter1 = daisysp::Svf();
                 auto f_env = daisysp::Adsr();
                 auto a_env = daisysp::Adsr();
@@ -40,10 +40,10 @@ namespace ol::workout {
             }
         }
 
-        SoundSource::InitStatus LoadSample(uint8_t note, std::string sample_path) override {
+        ol::synth::InitStatus LoadSample(uint8_t note, std::string sample_path) override {
             if (pool_index_ >= POOL_SIZE) {
                 printf("Can't load any more samples! Pool size: %d, samples loaded: %d\n", POOL_SIZE, pool_index_);
-                return SoundSource::Error;
+                return ol::synth::InitStatus::Error;
             }
             printf("I should load %d => %s\n", note, sample_path.c_str());
             // initialize the sample data source
@@ -51,10 +51,10 @@ namespace ol::workout {
             // set the voice in the voice map
             voice_map_.SetVoice(note, voices[pool_index_]->voice);
             pool_index_++;
-            return SoundSource::Ok;
+            return ol::synth::InitStatus::Ok;
         }
 
-        inline SoundSource::InitStatus Init(t_sample sample_rate) {
+        inline ol::synth::InitStatus Init(t_sample sample_rate) {
             sample_rate_ = sample_rate;
             auto status = patch_loader_.Load(this);
             for (int i=0;i<pool_index_; i++) {

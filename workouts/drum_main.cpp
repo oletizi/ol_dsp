@@ -7,27 +7,30 @@
 #include "PatchLoader.h"
 #include "SamplePool.h"
 
+#define VOICE_COUNT 4
+#define CHANNEL_COUNT 2
+
 using namespace ol::workout;
 
 void note_on_callback(workout_buddy *buddy, uint8_t channel, uint8_t note, uint8_t velocity) {
-    auto voices = static_cast<ol::synth::Polyvoice *>(buddy->audio_data);
+    auto voices = static_cast<ol::synth::Polyvoice<CHANNEL_COUNT, VOICE_COUNT> *>(buddy->audio_data);
     voices->NoteOn(note, velocity);
 }
 
 void note_off_callback(workout_buddy *buddy, uint8_t channel, uint8_t note, uint8_t velocity) {
-    auto voices = static_cast<ol::synth::Polyvoice *>(buddy->audio_data);
+    auto voices = static_cast<ol::synth::Polyvoice<CHANNEL_COUNT, VOICE_COUNT> *>(buddy->audio_data);
     voices->NoteOff(note, velocity);
 }
 
 void cc_callback(workout_buddy *buddy, uint8_t channel, uint8_t controller, uint8_t value) {
-    auto voices = static_cast<ol::synth::Polyvoice *>(buddy->audio_data);
+    auto voices = static_cast<ol::synth::Polyvoice<CHANNEL_COUNT, VOICE_COUNT> *>(buddy->audio_data);
     voices->UpdateMidiControl(controller, value);
 }
 
 
 void audio_callback(workout_buddy *buddy, t_sample &in1, t_sample &in2, t_sample *out1, t_sample *out2) {
     t_sample out_buffer[] = {0, 0};
-    auto *voices = static_cast<ol::synth::Polyvoice *>(buddy->audio_data);
+    auto *voices = static_cast<ol::synth::Polyvoice<CHANNEL_COUNT, VOICE_COUNT> *>(buddy->audio_data);
     //sample->Process(frame_out);
     voices->Process(out_buffer);
     *out1 = out_buffer[0];
@@ -56,10 +59,10 @@ int main() {
 
     auto patch_loader = PatchLoader("/Users/orion/work/ol_dsp/test/drumkit/", patch);
 
-    auto voicemap = ol::synth::VoiceMap();
-    auto pool = SamplePool<pool_size>(voicemap, data_sources, patch_loader);
+    auto voicemap = ol::synth::VoiceMap<CHANNEL_COUNT>();
+    auto pool = SamplePool<pool_size, CHANNEL_COUNT>(voicemap, data_sources, patch_loader);
 
-    auto voices = ol::synth::Polyvoice(voicemap);
+    ol::synth::Polyvoice<CHANNEL_COUNT, VOICE_COUNT> voices(voicemap);
 
     printf("Starting audio...");
     Workout_Config(&buddy, &midi_in, &audio_device, note_on_callback, note_off_callback, cc_callback, audio_callback,

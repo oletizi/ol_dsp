@@ -27,7 +27,7 @@ namespace ol::synth {
         current_frame_ = frame_index;
     }
 
-    SoundSource::InitStatus ol::synth::MultiChannelSample::Init(t_sample sample_rate) {
+    InitStatus ol::synth::MultiChannelSample::Init(t_sample sample_rate) {
         sample_rate = sample_rate;
         //return data_source_.Init(sample_rate);
     }

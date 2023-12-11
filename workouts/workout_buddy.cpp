@@ -21,14 +21,14 @@ namespace ol::workout {
         return decoder_->outputChannels;
     }
 
-    SoundSource::InitStatus MaSampleSource::Init(t_sample sample_rate, const char * sample_path) {
+    ol::synth::InitStatus MaSampleSource::Init(t_sample sample_rate, const char * sample_path) {
         sample_rate_ = sample_rate;
-        auto status = SoundSource::InitStatus::Ok;
+        auto status = ol::synth::InitStatus::Ok;
         ma_decoder_config config = ma_decoder_config_init(ma_format_f32, 2, uint32_t(sample_rate));
         ma_result result = ma_decoder_init_file(sample_path, &config, decoder_);
         if (result != MA_SUCCESS) {
             printf("Could not load file: %s\n", path_buffer);
-            status = SoundSource::Error;
+            status = ol::synth::InitStatus::Error;
         }
         return status;
     }

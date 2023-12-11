@@ -24,7 +24,7 @@ namespace ol::workout {
 
         uint64_t GetChannelCount() override;
 
-        SoundSource::InitStatus Init(t_sample sample_rate, const char * sample_path) override;
+        ol::synth::InitStatus Init(t_sample sample_rate, const char * sample_path) override;
 
         void Seek(uint64_t) override;
 

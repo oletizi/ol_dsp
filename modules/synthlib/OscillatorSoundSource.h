@@ -17,7 +17,7 @@ namespace ol::synth {
                 : osc_(osc), frame_offset_(frame_offset) {
         }
 
-        SoundSource::InitStatus Init(t_sample sample_rate) override;
+        InitStatus Init(t_sample sample_rate) override;
 
         void Process(t_sample *frame) override;
 

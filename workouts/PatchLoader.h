@@ -27,13 +27,13 @@ namespace ol::workout {
     public:
         class PatchLoaderCallback {
         public:
-            virtual SoundSource::InitStatus LoadSample(uint8_t note, std::string sample_path) = 0;
+            virtual ol::synth::InitStatus LoadSample(uint8_t note, std::string sample_path) = 0;
         };
 
         PatchLoader(const char *patch_path, const std::string &patch) :
                 patch_path_(patch_path), patch_(patch) {}
 
-        SoundSource::InitStatus Load(PatchLoaderCallback *callback);
+        ol::synth::InitStatus Load(PatchLoaderCallback *callback);
     };
 
 } // ol

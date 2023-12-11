@@ -22,7 +22,7 @@ namespace ol::synth {
 
         void Seek(uint64_t frame_index);
 
-        SoundSource::InitStatus Init(t_sample sample_rate);
+        InitStatus Init(t_sample sample_rate);
 
         void SetLoopStart(uint64_t frame_index);
 

@@ -9,13 +9,14 @@
 
 namespace ol::synth {
 
+    template<int CHANNEL_COUNT>
     class SampleSoundSource : public SoundSource {
     public:
-        SampleSoundSource(MultiChannelSample *s) : sample_(s), freq_(0) {}
+        explicit SampleSoundSource(MultiChannelSample *s) : sample_(s), freq_(0) {}
 
-        SoundSource::InitStatus Init(t_sample sample_rate) override;
-
-        void Process(t_sample *frame) override;
+        void Process(t_sample *frame_out) override {
+            sample_->Process(frame_out);
+        }
 
         inline void GateOn() override {
             sample_->Seek(0);
@@ -24,13 +25,18 @@ namespace ol::synth {
 
         void GateOff() override { sample_->Pause(); }
 
-        void SetFreq(t_sample freq) override;
+        void SetFreq(t_sample freq) override {
+            freq_ = freq;
+        }
 
+        InitStatus Init(t_sample sample_rate) override {
+            return sample_->Init(sample_rate);
+        }
 
     private:
         MultiChannelSample *sample_;
         t_sample freq_;
-        t_sample *frame_buffer_;
+        t_sample *frame_buffer_[CHANNEL_COUNT] = {};
     };
 
 }
