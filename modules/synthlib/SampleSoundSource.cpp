@@ -10,11 +10,11 @@ namespace ol::synth {
     }
 
     void SampleSoundSource::Process(t_sample *frame_out) {
-        sample_.Process(frame_out);
+        sample_->Process(frame_out);
     }
 
     SoundSource::InitStatus SampleSoundSource::Init(t_sample sample_rate) {
-        return sample_.Init(sample_rate);
+        return sample_->Init(sample_rate);
     }
 
 }

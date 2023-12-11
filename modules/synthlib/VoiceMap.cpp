@@ -21,9 +21,9 @@ void ol::synth::VoiceMap::NoteOff(uint8_t note, uint8_t velocity) {
     }
 }
 
-void ol::synth::VoiceMap::SetVoice(uint8_t note, ol::synth::Voice &voice) {
+void ol::synth::VoiceMap::SetVoice(uint8_t note, ol::synth::Voice *voice) {
     if (note < 128) {
-        note2voice[note] = &voice;
+        note2voice[note] = voice;
     }
 }
 

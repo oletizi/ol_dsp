@@ -29,7 +29,7 @@ namespace ol::synth {
 
     SoundSource::InitStatus ol::synth::MultiChannelSample::Init(t_sample sample_rate) {
         sample_rate = sample_rate;
-        return data_source_.Init(sample_rate);
+        //return data_source_.Init(sample_rate);
     }
 
     void ol::synth::MultiChannelSample::SetLoopStart(uint64_t frame_index) {

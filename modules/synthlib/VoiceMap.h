@@ -18,7 +18,7 @@ namespace ol::synth {
         }
         void NoteOn(uint8_t note, uint8_t velocity);
         void NoteOff(uint8_t note, uint8_t velocity);
-        void SetVoice(uint8_t note, Voice& voice);
+        void SetVoice(uint8_t note, Voice *voice);
 
         void Init(t_sample sample_rate);
 

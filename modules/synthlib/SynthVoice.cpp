@@ -11,9 +11,9 @@ namespace ol::synth {
     void SynthVoice::Process(t_sample *frame_out) {
         t_sample freq = freq_;
         freq = portamento.Process(freq);
-        sound_source.SetFreq(freq);
+        sound_source->SetFreq(freq);
 
-        sound_source.Process(frame_out);
+        sound_source->Process(frame_out);
 //        frame_out[frame_offset] *= osc_1_mix;
 //
 //        // Filter
@@ -105,12 +105,12 @@ namespace ol::synth {
 
     void SynthVoice::GateOn() {
         gate = true;
-        sound_source.GateOn();
+        sound_source->GateOn();
     }
 
     void SynthVoice::GateOff() {
         gate = false;
-        sound_source.GateOff();
+        sound_source->GateOff();
     }
 
     bool SynthVoice::Gate() {
@@ -156,7 +156,7 @@ namespace ol::synth {
 
     void SynthVoice::Init(t_sample sr) {
         sample_rate = sr;
-        sound_source.Init(sr);
+        sound_source->Init(sr);
 
         filter.Init(sample_rate);
         filter_envelope.Init(sample_rate);

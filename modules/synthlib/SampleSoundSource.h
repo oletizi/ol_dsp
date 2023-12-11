@@ -11,24 +11,24 @@ namespace ol::synth {
 
     class SampleSoundSource : public SoundSource {
     public:
-        SampleSoundSource(MultiChannelSample &s) : sample_(s), freq_(0) {}
+        SampleSoundSource(MultiChannelSample *s) : sample_(s), freq_(0) {}
 
         SoundSource::InitStatus Init(t_sample sample_rate) override;
 
         void Process(t_sample *frame) override;
 
         inline void GateOn() override {
-            sample_.Seek(0);
-            sample_.Play();
+            sample_->Seek(0);
+            sample_->Play();
         }
 
-        void GateOff() override { sample_.Pause(); }
+        void GateOff() override { sample_->Pause(); }
 
         void SetFreq(t_sample freq) override;
 
 
     private:
-        MultiChannelSample &sample_;
+        MultiChannelSample *sample_;
         t_sample freq_;
         t_sample *frame_buffer_;
     };

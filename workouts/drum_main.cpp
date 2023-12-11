@@ -4,8 +4,8 @@
 #include <fstream>
 #include <sstream>
 #include "workout_buddy.h"
-#include "synthlib/ol_synthlib.h"
-#include "VoiceLoader.h"
+#include "PatchLoader.h"
+#include "SamplePool.h"
 
 using namespace ol::workout;
 
@@ -39,36 +39,27 @@ int main() {
     RtMidiIn midi_in;
     ma_device audio_device;
 
-    const auto soundfile1 = "/Users/orion/Dropbox/Music/Sample Library/Splice/LOFI MOODS/OS_LFM_Base_Kick.wav";
-    const auto soundfile2 = "/Users/orion/Dropbox/Music/Sample Library/Splice/LOFI MOODS/OS_LFM_Byte_Snare.wav";
-    const char *sample_paths[] = {soundfile1, soundfile2};
-    ma_decoder decoder1{};
-    auto kick_sample_data_source = MaSampleSource(soundfile1, &decoder1);
-    auto kick_sample = ol::synth::MultiChannelSample(kick_sample_data_source);
-    auto kick_sound_source = ol::synth::SampleSoundSource(kick_sample);
 
-    auto voicemap = ol::synth::VoiceMap();
+    const int pool_size = 4;
 
+    ol::synth::SampleDataSource *data_sources[pool_size] = {};
+    for (auto &data_source: data_sources) {
+        data_source = new MaSampleSource("", new ma_decoder);
+    }
     auto patch_path = "/Users/orion/work/ol_dsp/test/drumkit/drumkit.yaml";
     std::fstream patch_stream(patch_path);
     std::stringstream patch_buffer;
     patch_buffer << patch_stream.rdbuf();
+    patch_buffer.str();
     auto patch = patch_buffer.str();
+    printf("Patch: %s", patch.c_str());
 
-    auto voiceLoader = VoiceLoader(patch_path, patch);
-    voiceLoader.Load([](const uint8_t note, const char* sample_path) {
-        printf("Should load %d => %s\n", note, sample_path);
-    });
+    auto patch_loader = PatchLoader("/Users/orion/work/ol_dsp/test/drumkit/", patch);
+
+    auto voicemap = ol::synth::VoiceMap();
+    auto pool = SamplePool<pool_size>(voicemap, data_sources, patch_loader);
 
     auto voices = ol::synth::Polyvoice(voicemap);
-    daisysp::Svf kick_filter;
-    daisysp::Adsr kick_filter_env;
-    daisysp::Adsr kick_amp_env;
-    daisysp::Port kick_port;
-    auto kick_voice = ol::synth::SynthVoice(kick_sound_source, kick_filter, kick_filter_env, kick_amp_env, kick_port);
-
-    voicemap.SetVoice(60, kick_voice);
-
 
     printf("Starting audio...");
     Workout_Config(&buddy, &midi_in, &audio_device, note_on_callback, note_off_callback, cc_callback, audio_callback,
@@ -80,39 +71,19 @@ int main() {
     t_sample sample_rate = Workout_SampleRate(&buddy);
     printf("Sample rate: %d\n", int(sample_rate));
 
-//    ma_decoder_config config = ma_decoder_config_init(ma_format_f32, 2, uint32_t(sample_rate));
-//    ma_result result = ma_decoder_init_file(kickfile, &config, &kickdecoder);
-//    if (result != MA_SUCCESS) {
-//        printf("Could not load file: %s\n", kickfile);
-//        return -2;
-//    }
-    SoundSource::InitStatus initStatus = kick_sound_source.Init(sample_rate);
-    if (initStatus != SoundSource::InitStatus::Ok) {
-        printf("Error loading sample: %s", soundfile1);
-        return -2;
-    }
-    voices.Init(sample_rate);
+    pool.Init(sample_rate);
 
     Workout_Start(&buddy);
 
     printf("Play note: p\n");
     printf("Swap samples: s\n");
     printf("command: ");
-    int current_soundfile = 0;
     while (auto c = getchar()) {
         if (c == 'p') {
             printf("  playing note...\n");
             voices.NoteOff(60, 100);
             voices.NoteOn(60, 100);
         }
-        if (c == 's') {
-            current_soundfile = !current_soundfile;
-            auto init_status = kick_sample_data_source.UpdateSample(sample_paths[current_soundfile]);
-            if (init_status != SoundSource::InitStatus::Ok) {
-                printf("Yikes. Error loading sample: %s", sample_paths[current_soundfile]);
-            }
-        }
-        //printf("\ncommand: ");
     }
     return 0;
 }

@@ -9,8 +9,9 @@ target_link_libraries(workout-buddy ol_corelib ol_fxlib ol_synthlib rtmidi)
 target_include_directories(workout-buddy PUBLIC ../libs/rtmidi ../libs/miniaudio)
 
 add_executable(drum-workout drum_main.cpp
-        VoiceLoader.cpp
-        VoiceLoader.h
+        PatchLoader.cpp
+        PatchLoader.h
+        SamplePool.h
 )
 target_link_libraries(drum-workout workout-buddy ryml ol_synthlib)
 target_include_directories(drum-workout PUBLIC ../libs/miniaudio ../libs/sfizz/src/sfizz)

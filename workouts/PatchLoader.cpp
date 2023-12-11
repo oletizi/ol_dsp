@@ -1,11 +1,11 @@
 //
 // Created by Orion Letizi on 12/9/23.
 //
-#include "VoiceLoader.h"
+#include "PatchLoader.h"
 
 namespace ol::workout {
 
-    void VoiceLoader::Load(data_source_callback callback) {
+    SoundSource::InitStatus PatchLoader::Load(PatchLoaderCallback  *callback) {
         // XXX: This is super fragile and bad
         char char_array[patch_.length() + 1];
         strcpy(char_array, patch_.c_str());
@@ -28,11 +28,15 @@ namespace ol::workout {
                         uint64_t note_value = 0;
                         atou(note.val(), &note_value);
                         printf("  note: %llu\n", note_value);
-                        callback(note_value, sample_path.c_str());
+                        auto status = callback->LoadSample(note_value, sample_path);
+                        if (status != SoundSource::Ok) {
+                            return status;
+                        }
                     }
                 }
             }
         }
+        return SoundSource::Ok;
     }
 
 } // ol
