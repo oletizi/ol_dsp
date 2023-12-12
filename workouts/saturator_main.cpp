@@ -4,7 +4,6 @@
 #include <iostream>
 #include "workout_buddy.h"
 #include "ol_fxlib.h"
-#include "ol_synthlib.h"
 
 using namespace ol::workout;
 using namespace ol::synth;
@@ -15,7 +14,7 @@ daisysp::Svf *filters[] = {new daisysp::Svf()};
 auto fe = daisysp::Adsr();
 auto ae = daisysp::Adsr();
 auto port = daisysp::Port();
-auto voice = SynthVoice<1>(osc, filters, fe, ae, port);
+auto voice = SynthVoice<1>(osc, filters, &fe, &ae, &port);
 
 SaturatorFx saturator1;
 SaturatorFx saturator2;

@@ -6,12 +6,13 @@
 #define OL_SYNTH_VOICE
 
 #include "corelib/ol_corelib.h"
-
+#include "synthlib/SoundSource.h"
 #define MAX_VOICES 8
 
 namespace ol::synth {
     class Voice {
     public:
+
         virtual void Init(t_sample sample_rate) = 0;
 
         virtual void Update() = 0;

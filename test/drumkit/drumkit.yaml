@@ -2,6 +2,15 @@ patch:
   regions:
     - region:
       sample: OS_LFM_Base_Kick.wav
+      note: 36
+    - region:
+      sample: OS_LFM_Bottled_Snare.wav
+      note: 37
+    - region:
+      sample: OS_LFM_Bite_Hat.wav
+      note: 38
+    - region:
+      sample: OS_LFM_Base_Kick.wav
       note: 60
     - region:
       sample: OS_LFM_Bottled_Snare.wav

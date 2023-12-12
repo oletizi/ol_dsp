@@ -24,7 +24,7 @@ namespace ol::workout {
 
         uint64_t GetChannelCount() override;
 
-        ol::synth::InitStatus Init(t_sample sample_rate, const char * sample_path) override;
+        ol::synth::InitStatus Init(t_sample sample_rate, const char *sample_path) override;
 
         void Seek(uint64_t) override;
 
@@ -39,6 +39,30 @@ namespace ol::workout {
         char path_buffer[MAX_PATH_LENGTH] = {};
         ma_decoder *decoder_;
         t_sample sample_rate_ = 0;
+    };
+
+    class NullSoundSource : public ol::synth::SoundSource {
+    public:
+        synth::InitStatus Init(t_sample sample_rate) override {
+            return synth::Ok;
+        }
+
+        void Process(t_sample *frame) override {
+
+        }
+
+        void GateOn() override {
+
+        }
+
+        void GateOff() override {
+
+        }
+
+        void SetFreq(t_sample freq) override {
+
+        }
+
     };
 
     enum InitStatus {

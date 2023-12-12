@@ -19,7 +19,7 @@ daisysp::Svf *vf[] = {new daisysp::Svf()};
 auto vfe = daisysp::Adsr();
 auto vae = daisysp::Adsr();
 auto vport = daisysp::Port();
-auto voice = SynthVoice<1>(osc, vf, vfe, vae, vport);
+auto voice = SynthVoice<1>(osc, vf, &vfe, &vae, &vport);
 
 daisysp::Svf df1;
 auto delay_filter1 = FilterFx(df1, 0);

@@ -81,7 +81,7 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[]) {
     auto v1_fe = daisysp::Adsr();
     auto v1_ae = daisysp::Adsr();
     auto v1_port = daisysp::Port();
-    auto voice = ol::synth::SynthVoice<CHANNEL_COUNT>(osc, v1_f, v1_fe, v1_ae, v1_port);
+    auto voice = ol::synth::SynthVoice<CHANNEL_COUNT>(osc, v1_f, &v1_fe, &v1_ae, &v1_port);
     ol::synth::Voice *voices[] = {&voice};
     auto poly = ol::synth::Polyvoice<CHANNEL_COUNT, VOICE_COUNT>(voices);
 

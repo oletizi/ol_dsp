@@ -15,34 +15,32 @@ namespace ol::synth {
     public:
         explicit SynthVoice(SoundSource *sound_source,
                             daisysp::Svf *filters[CHANNEL_COUNT],
-                            daisysp::Adsr &filter_envelope,
-                            daisysp::Adsr &amp_envelope,
-                            daisysp::Port &portamento)
+                            daisysp::Adsr *filter_envelope,
+                            daisysp::Adsr *amp_envelope,
+                            daisysp::Port *portamento)
                 : sound_source_(sound_source),
                   filter_envelope_(filter_envelope),
                   amp_envelope_(amp_envelope),
                   portamento_(portamento) {
-            for (int i=0; i<CHANNEL_COUNT; i++) {
+            for (int i = 0; i < CHANNEL_COUNT; i++) {
                 filters_[i] = filters[i];
             }
         }
-
-
         void Init(t_sample sr) override {
             sample_rate = sr;
             sound_source_->Init(sr);
             for (int i = 0; i < CHANNEL_COUNT; i++) {
                 filters_[i]->Init(sample_rate);
             }
-            filter_envelope_.Init(sample_rate);
-            amp_envelope_.Init(sample_rate);
-            portamento_.Init(sample_rate, 0);
+            filter_envelope_->Init(sample_rate);
+            amp_envelope_->Init(sample_rate);
+            portamento_->Init(sample_rate, 0);
             initialized = true;
         }
 
         void Update() override {
             // Portamento
-            portamento_.SetHtime(portamento_htime);
+            portamento_->SetHtime(portamento_htime);
 
             // Filter
             for (int i = 0; i < CHANNEL_COUNT; i++) {
@@ -53,26 +51,26 @@ namespace ol::synth {
                 filter->SetDrive(filt_drive);
             }
 
-            filter_envelope_.SetAttackTime(filter_attack);
-            filter_envelope_.SetDecayTime(filter_decay);
-            filter_envelope_.SetSustainLevel(filter_sustain);
-            filter_envelope_.SetReleaseTime(filter_release);
+            filter_envelope_->SetAttackTime(filter_attack);
+            filter_envelope_->SetDecayTime(filter_decay);
+            filter_envelope_->SetSustainLevel(filter_sustain);
+            filter_envelope_->SetReleaseTime(filter_release);
 
             // Amplifier
-            amp_envelope_.SetAttackTime(amp_attack);
-            amp_envelope_.SetDecayTime(amp_decay);
-            amp_envelope_.SetSustainLevel(amp_sustain);
-            amp_envelope_.SetReleaseTime(amp_release);
+            amp_envelope_->SetAttackTime(amp_attack);
+            amp_envelope_->SetDecayTime(amp_decay);
+            amp_envelope_->SetSustainLevel(amp_sustain);
+            amp_envelope_->SetReleaseTime(amp_release);
         }
 
 
         void Process(t_sample *frame_out) override {
-            sound_source_->SetFreq(portamento_.Process(freq_));
+            sound_source_->SetFreq(portamento_->Process(freq_));
             sound_source_->Process(frame_out);
 
             t_sample filter_frequency =
-                    filt_freq + ((filter_envelope_.Process(Gate()) * 20000) * filter_envelope_amount);
-            t_sample amp = amp_envelope_.Process(Gate());
+                    filt_freq + ((filter_envelope_->Process(Gate()) * 20000) * filter_envelope_amount);
+            t_sample amp = amp_envelope_->Process(Gate());
 
             for (int i = 0; i < CHANNEL_COUNT; i++) {
                 auto filter = filters_[i];
@@ -175,8 +173,8 @@ namespace ol::synth {
             GateOn();
             playing = midi_note;
             freq_ = daisysp::mtof(midi_note);
-            amp_envelope_.Retrigger(true);
-            filter_envelope_.Retrigger(true);
+            amp_envelope_->Retrigger(true);
+            filter_envelope_->Retrigger(true);
         }
 
         void NoteOff(uint8_t midi_note, uint8_t velocity) override {
@@ -204,14 +202,14 @@ namespace ol::synth {
         t_sample freq_ = 0;
 
         // Filter
-        daisysp::Svf *filters_[CHANNEL_COUNT];
-        daisysp::Adsr &filter_envelope_;
+        daisysp::Svf *filters_[CHANNEL_COUNT] = {};
+        daisysp::Adsr *filter_envelope_;
 
         // Amplifier
-        daisysp::Adsr &amp_envelope_;
+        daisysp::Adsr *amp_envelope_;
 
         // Portamento
-        daisysp::Port &portamento_;
+        daisysp::Port *portamento_;
 
         // Filter
         t_sample filt_freq = 0;
