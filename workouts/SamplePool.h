@@ -43,7 +43,9 @@ namespace ol::workout {
             // initialize the sample data source
             voice_data_[pool_index_]->data_source->Init(sample_rate_, sample_path.c_str());
             // set the voice in the voice map
-            voice_map_.SetVoice(channel, note, voice_data_[pool_index_]->voice);
+            // XXX: Check that note and channel aren't out of bounds.
+            // Channel is zero-based internally.
+            voice_map_.SetVoice(channel - 1, note, voice_data_[pool_index_]->voice);
             pool_index_++;
             return ol::synth::InitStatus::Ok;
         }

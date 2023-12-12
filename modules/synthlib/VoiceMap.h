@@ -44,17 +44,16 @@ namespace ol::synth {
 
         void SetVoice(uint8_t channel, uint8_t note, ol::synth::Voice *voice) {
             // XXX: This is super janky
-            int channel_index = channel - 1;
-            if (note < 128 && channel > 0 && channel_index < 16) {
-                voice_data &d = note2voice[note];
-                d.channel = channel;
-                d.note = note;
-                d.voice = voice;
+            if (note < 128 && channel < 16) {
+                voice_data &dn = note2voice[note];
+                dn.channel = channel;
+                dn.note = note;
+                dn.voice = voice;
 
-                d = channel2voice[channel_index];
-                d.channel = channel;
-                d.note = note;
-                d.voice = voice;
+                voice_data &dc = channel2voice[channel];
+                dc.channel = channel;
+                dc.note = note;
+                dc.voice = voice;
             }
         }
 
@@ -74,8 +73,8 @@ namespace ol::synth {
         }
 
         void UpdateMidiControl(uint8_t channel, uint8_t control, uint8_t value) {
-            if (channel > 0 && channel <= 16) {
-                Voice *voice = channel2voice[channel - 1].voice;
+            if (channel < 16) {
+                Voice *voice = channel2voice[channel].voice;
                 if (voice != nullptr) {
                     voice->UpdateMidiControl(control, value);
                 }
