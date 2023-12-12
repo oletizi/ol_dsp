@@ -12,7 +12,7 @@ void note_off_callback(workout_buddy *, uint8_t channel, uint8_t note, uint8_t v
 void cc_callback(workout_buddy *, uint8_t channel, uint8_t controller, uint8_t value) {}
 
 void audio_callback(workout_buddy *buddy, t_sample &in1, t_sample &in2, t_sample *out1, t_sample *out2) {
-    auto *sample = static_cast<ol::synth::MultiChannelSample *>(buddy->audio_data);
+    auto *sample = static_cast<ol::synth::Sample *>(buddy->audio_data);
     uint64_t channel_count = sample->GetChannelCount();
     t_sample frame_out[channel_count];
     sample->Process(frame_out);
@@ -34,7 +34,7 @@ int main() {
     
     ma_decoder decoder{};
     auto sample_source = MaSampleSource(filename, &decoder);
-    auto sample = ol::synth::MultiChannelSample(sample_source);
+    auto sample = ol::synth::Sample(sample_source);
 
 
     printf("Starting audio...");

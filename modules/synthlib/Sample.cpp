@@ -2,11 +2,11 @@
 // Created by Orion Letizi on 12/6/23.
 //
 #include "corelib/ol_corelib.h"
-#include "MultiChannelSample.h"
+#include "Sample.h"
 #include "SoundSource.h"
 
 namespace ol::synth {
-    void ol::synth::MultiChannelSample::Process(t_sample *frame_out) {
+    void ol::synth::Sample::Process(t_sample *frame_out) {
         if (playing) {
             uint64_t frames_read = data_source_.Read(frame_out);
             current_frame_ += frames_read;
@@ -22,41 +22,41 @@ namespace ol::synth {
         }
     }
 
-    void ol::synth::MultiChannelSample::Seek(uint64_t frame_index) {
+    void ol::synth::Sample::Seek(uint64_t frame_index) {
         data_source_.Seek(frame_index);
         current_frame_ = frame_index;
     }
 
-    InitStatus ol::synth::MultiChannelSample::Init(t_sample sample_rate) {
+    InitStatus ol::synth::Sample::Init(t_sample sample_rate) {
         sample_rate = sample_rate;
         //return data_source_.Init(sample_rate);
     }
 
-    void ol::synth::MultiChannelSample::SetLoopStart(uint64_t frame_index) {
+    void ol::synth::Sample::SetLoopStart(uint64_t frame_index) {
         loop_start_ = frame_index;
     }
 
-    void ol::synth::MultiChannelSample::SetLoopEnd(uint64_t frame_index) {
+    void ol::synth::Sample::SetLoopEnd(uint64_t frame_index) {
         loop_end_ = frame_index;
     }
 
-    void ol::synth::MultiChannelSample::SetPlayMode(ol::synth::SamplePlayMode mode) {
+    void ol::synth::Sample::SetPlayMode(ol::synth::SamplePlayMode mode) {
         play_mode_ = mode;
     }
 
-    void ol::synth::MultiChannelSample::TogglePlay() {
+    void ol::synth::Sample::TogglePlay() {
         playing = !playing;
     }
 
-    void ol::synth::MultiChannelSample::Play() {
+    void ol::synth::Sample::Play() {
         playing = true;
     }
 
-    void ol::synth::MultiChannelSample::Pause() {
+    void ol::synth::Sample::Pause() {
         playing = false;
     }
 
-    uint64_t ol::synth::MultiChannelSample::GetChannelCount() {
+    uint64_t ol::synth::Sample::GetChannelCount() {
         return data_source_.GetChannelCount();
     }
 }

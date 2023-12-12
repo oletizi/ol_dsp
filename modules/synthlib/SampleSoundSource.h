@@ -5,14 +5,14 @@
 #define OL_DSP_SAMPLESOUNDSOURCE_H
 
 #include "synthlib/ol_synthlib.h"
-#include "MultiChannelSample.h"
+#include "Sample.h"
 
 namespace ol::synth {
 
     template<int CHANNEL_COUNT>
     class SampleSoundSource : public SoundSource {
     public:
-        explicit SampleSoundSource(MultiChannelSample *s) : sample_(s), freq_(0) {}
+        explicit SampleSoundSource(Sample *s) : sample_(s), freq_(0) {}
 
         void Process(t_sample *frame_out) override {
             sample_->Process(frame_out);
@@ -34,7 +34,7 @@ namespace ol::synth {
         }
 
     private:
-        MultiChannelSample *sample_;
+        Sample *sample_;
         t_sample freq_;
         t_sample *frame_buffer_[CHANNEL_COUNT] = {};
     };

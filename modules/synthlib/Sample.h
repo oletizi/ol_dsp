@@ -2,8 +2,8 @@
 // Created by Orion Letizi on 12/6/23.
 //
 
-#ifndef OL_DSP_MULTICHANNELSAMPLE_H
-#define OL_DSP_MULTICHANNELSAMPLE_H
+#ifndef OL_DSP_SAMPLE_H
+#define OL_DSP_SAMPLE_H
 
 #include "SampleDataSource.h"
 
@@ -13,10 +13,10 @@ namespace ol::synth {
         Loop
     };
 
-    class MultiChannelSample {
+    class Sample {
     public:
 
-        explicit MultiChannelSample(SampleDataSource &data_source) : data_source_(data_source) {}
+        explicit Sample(SampleDataSource &data_source) : data_source_(data_source) {}
 
         void Process(t_sample *frame_out);
 
@@ -50,4 +50,4 @@ namespace ol::synth {
     };
 }
 
-#endif //OL_DSP_MULTICHANNELSAMPLE_H
+#endif //OL_DSP_SAMPLE_H

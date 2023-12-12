@@ -6,8 +6,8 @@ add_library(ol_synthlib
         OscillatorSoundSource.h
         SynthVoice.h
         Polyvoice.h
-        MultiChannelSample.cpp
-        MultiChannelSample.h
+        Sample.cpp
+        Sample.h
         VoiceMap.h)
 target_link_libraries(ol_synthlib ol_corelib ol_ctllib DaisySP)
 target_include_directories(ol_synthlib PUBLIC . ..)

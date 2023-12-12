@@ -7,7 +7,7 @@
 #include "corelib/ol_corelib.h"
 #include "synthlib/SoundSource.h"
 #include "synthlib/SampleDataSource.h"
-#include "synthlib/MultiChannelSample.h"
+#include "synthlib/Sample.h"
 #include "synthlib/SampleSoundSource.h"
 #include "synthlib/OscillatorSoundSource.h"
 #include "synthlib/Voice.h"

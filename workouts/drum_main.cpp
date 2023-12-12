@@ -61,7 +61,7 @@ int main() {
         for (auto &filter: filters) {
             filter = new daisysp::Svf();
         }
-        auto sample = new ol::synth::MultiChannelSample(*v->data_source);
+        auto sample = new ol::synth::Sample(*v->data_source);
         auto sound_source = new ol::synth::SampleSoundSource<CHANNEL_COUNT>(sample);
         v->voice = new ol::synth::SynthVoice<CHANNEL_COUNT>(sound_source, filters, new daisysp::Adsr(),
                                                             new daisysp::Adsr(), new daisysp::Port());
