@@ -27,14 +27,14 @@ namespace ol::workout {
     public:
         SamplePool(VoiceData *voice_data[POOL_SIZE],
                    ol::synth::VoiceMap<CHANNEL_COUNT> &voice_map,
-                   PatchLoader &patch_loader) :  voice_map_(voice_map),
+                   PatchLoader &patch_loader) : voice_map_(voice_map),
                                                 patch_loader_(patch_loader) {
-            for (int i=0; i<POOL_SIZE; i++) {
+            for (int i = 0; i < POOL_SIZE; i++) {
                 voice_data_[i] = voice_data[i];
             }
         }
 
-        ol::synth::InitStatus LoadSample(uint8_t note, std::string sample_path) override {
+        ol::synth::InitStatus LoadSample(uint8_t channel, uint8_t note, std::string sample_path) override {
             if (pool_index_ >= POOL_SIZE) {
                 printf("Can't load any more samples! Pool size: %d, samples loaded: %d\n", POOL_SIZE, pool_index_);
                 return ol::synth::InitStatus::Error;
@@ -43,7 +43,7 @@ namespace ol::workout {
             // initialize the sample data source
             voice_data_[pool_index_]->data_source->Init(sample_rate_, sample_path.c_str());
             // set the voice in the voice map
-            voice_map_.SetVoice(note, voice_data_[pool_index_]->voice);
+            voice_map_.SetVoice(channel, note, voice_data_[pool_index_]->voice);
             pool_index_++;
             return ol::synth::InitStatus::Ok;
         }

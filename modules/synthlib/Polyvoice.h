@@ -44,9 +44,11 @@ namespace ol::synth {
         }
 
         // note on functions
-        typedef void (*note_on_function)(Polyvoice<CHANNEL_COUNT, VOICE_COUNT> *, uint8_t note, uint8_t velocity);
+        typedef void (*note_on_function)(Polyvoice<CHANNEL_COUNT, VOICE_COUNT> *, uint8_t note,
+                                         uint8_t velocity);
 
-        static void voices_note_on(Polyvoice<CHANNEL_COUNT, VOICE_COUNT> *p, uint8_t note, uint8_t velocity) {
+        static void
+        voices_note_on(Polyvoice<CHANNEL_COUNT, VOICE_COUNT> *p, uint8_t note, uint8_t velocity) {
             for (int i = 0; i < VOICE_COUNT; i++) {
                 auto v = p->voices_[i];
                 if (!v->Playing()) {
@@ -61,9 +63,11 @@ namespace ol::synth {
         }
 
         // note off functions
-        typedef void (*note_off_function)(Polyvoice<CHANNEL_COUNT, VOICE_COUNT> *, uint8_t note, uint8_t velocity);
+        typedef void (*note_off_function)(Polyvoice<CHANNEL_COUNT, VOICE_COUNT> *, uint8_t note,
+                                          uint8_t velocity);
 
-        static void voices_note_off(Polyvoice<CHANNEL_COUNT, VOICE_COUNT> *p, uint8_t note, uint8_t velocity) {
+        static void
+        voices_note_off(Polyvoice<CHANNEL_COUNT, VOICE_COUNT> *p, uint8_t note, uint8_t velocity) {
             for (int i = 0; i < VOICE_COUNT; i++) {
                 auto v = p->voices_[i];
                 if (v->Playing() == note) {
@@ -79,18 +83,19 @@ namespace ol::synth {
 
 
         // controller functions
-        typedef void(*midi_controller_function)(Polyvoice<CHANNEL_COUNT, VOICE_COUNT> *, uint8_t control,
+        typedef void(*midi_controller_function)(Polyvoice<CHANNEL_COUNT, VOICE_COUNT> *, uint8_t channel, uint8_t control,
                                                 uint8_t value);
 
         static void
-        voices_controller_function(Polyvoice<CHANNEL_COUNT, VOICE_COUNT> *p, uint8_t control, uint8_t value) {
+        voices_controller_function(Polyvoice<CHANNEL_COUNT, VOICE_COUNT> *p, uint8_t channel, uint8_t control,
+                                   uint8_t value) {
             for (int i = 0; i < VOICE_COUNT; i++) {
                 p->voices_[i]->UpdateMidiControl(control, value);
             }
         }
 
-        static void map_controller_function(Polyvoice *p, uint8_t control, uint8_t value) {
-            p->voice_map_->UpdateMidiControl(control, value);
+        static void map_controller_function(Polyvoice *p, uint8_t channel, uint8_t control, uint8_t value) {
+            p->voice_map_->UpdateMidiControl(channel, control, value);
         }
 
         init_function init;
@@ -139,8 +144,8 @@ namespace ol::synth {
             note_off(this, note, velocity);
         }
 
-        void UpdateMidiControl(uint8_t control, uint8_t value) {
-            update_midi_control(this, control, value);
+        void UpdateMidiControl(uint8_t channel, uint8_t control, uint8_t value) {
+            update_midi_control(this, channel, control, value);
         }
 
 

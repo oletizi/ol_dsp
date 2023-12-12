@@ -22,8 +22,8 @@ public:
         } else if (message.isNoteOff()) {
             poly_.NoteOff(static_cast<unsigned char>(message.getNoteNumber()), message.getVelocity());
         } else if (message.isController()) {
-            poly_.UpdateMidiControl(message.getControllerNumber(),
-                                     message.getControllerValue());
+            poly_.UpdateMidiControl(message.getChannel(), message.getControllerNumber(),
+                                    message.getControllerValue());
         }
     }
 

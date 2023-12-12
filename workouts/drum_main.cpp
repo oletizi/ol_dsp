@@ -24,9 +24,8 @@ void note_off_callback(workout_buddy *buddy, uint8_t channel, uint8_t note, uint
 
 void cc_callback(workout_buddy *buddy, uint8_t channel, uint8_t controller, uint8_t value) {
     auto voices = static_cast<ol::synth::Polyvoice<CHANNEL_COUNT, VOICE_COUNT> *>(buddy->audio_data);
-    voices->UpdateMidiControl(controller, value);
+    voices->UpdateMidiControl(channel, controller, value);
 }
-
 
 void audio_callback(workout_buddy *buddy, t_sample &in1, t_sample &in2, t_sample *out1, t_sample *out2) {
     t_sample out_buffer[] = {0, 0};
@@ -40,7 +39,6 @@ int main() {
     ol::workout::workout_buddy buddy;
     RtMidiIn midi_in;
     ma_device audio_device;
-
 
     auto patch_path = "/Users/orion/work/ol_dsp/test/drumkit/drumkit.yaml";
     std::fstream patch_stream(patch_path);

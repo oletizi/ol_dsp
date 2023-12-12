@@ -185,7 +185,7 @@ static void handleMidiMessage(MidiEvent m) {
             fxrack.UpdateMidiControl(p.control_number, p.value);
         }
         if (m.channel == SYNTH_CHANNEL) {
-            poly.UpdateMidiControl(p.control_number, p.value);
+            poly.UpdateMidiControl(m.channel, p.control_number, p.value);
         }
         signalLed(LedSignal::Control);
     }

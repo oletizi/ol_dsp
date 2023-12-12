@@ -5,7 +5,7 @@
 
 namespace ol::workout {
 
-    ol::synth::InitStatus PatchLoader::Load(PatchLoaderCallback  *callback) {
+    ol::synth::InitStatus PatchLoader::Load(PatchLoaderCallback *callback) {
         // XXX: This is super fragile and bad
         char char_array[patch_.length() + 1];
         strcpy(char_array, patch_.c_str());
@@ -24,14 +24,25 @@ namespace ol::workout {
                     printf("  patch path: %s\n", patch_path_);
                     printf("  sample path: %s\n", sample_path.c_str());
                     auto note = region["note"];
+                    uint64_t note_value = 0;
                     if (note.valid() && note.has_val() && note.val().is_unsigned_integer()) {
-                        uint64_t note_value = 0;
                         atou(note.val(), &note_value);
                         printf("  note: %llu\n", note_value);
-                        auto status = callback->LoadSample(note_value, sample_path);
+                    }
+                    auto channel = region["channel"];
+                    uint64_t channel_value = 0;
+                    if (channel.valid() && channel.has_val() && channel.val().is_unsigned_integer()) {
+                        atou(channel.val(), &channel_value);
+                        printf("   channel: %llu\n", channel_value);
+                    }
+                    if (note_value && channel_value) {
+                        auto status = callback->LoadSample(channel_value, note_value, sample_path);
                         if (status != ol::synth::InitStatus::Ok) {
                             return status;
                         }
+                    } else {
+                        printf("Ignoring sample (bad/missing note or channel): channel: %llu, note: %llu",
+                               channel_value, note_value);
                     }
                 }
             }
