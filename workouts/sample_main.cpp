@@ -57,8 +57,8 @@ int main() {
 //        return -2;
 //    }
 
-    SoundSource::InitStatus initStatus = sample.Init(sample_rate);
-    if (initStatus != SoundSource::InitStatus::Ok) {
+    ol::synth::InitStatus initStatus = sample.Init(sample_rate);
+    if (initStatus != ol::synth::InitStatus::Ok) {
         printf("Could not load file: %s\n", filename);
         return -2;
     }

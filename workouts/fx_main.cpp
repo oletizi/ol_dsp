@@ -14,12 +14,12 @@ using namespace ol::fx;
 using namespace ol::synth;
 
 daisysp::Oscillator dosc;
-auto osc = OscillatorSoundSource(dosc);
-auto vf = daisysp::Svf();
+auto osc = new OscillatorSoundSource<1>(dosc);
+daisysp::Svf *vf[] = {new daisysp::Svf()};
 auto vfe = daisysp::Adsr();
 auto vae = daisysp::Adsr();
 auto vport = daisysp::Port();
-auto voice = SynthVoice(osc, vf, vfe, vae, vport);
+auto voice = SynthVoice<1>(osc, vf, vfe, vae, vport);
 
 daisysp::Svf df1;
 auto delay_filter1 = FilterFx(df1, 0);

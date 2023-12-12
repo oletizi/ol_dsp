@@ -3,32 +3,40 @@
 #include "SynthAudioCallback.h"
 #include "SynthMidiCallback.h"
 
+#define CHANNEL_COUNT 2
+#define VOICE_COUNT 2
+
 using namespace ol::synth;
 
 int main() {
     daisysp::Oscillator dosc1;
-    auto osc1 = ol::synth::OscillatorSoundSource(dosc1);
-    auto v1_f = daisysp::Svf();
+    auto osc1 = new OscillatorSoundSource<CHANNEL_COUNT>(dosc1);
+    daisysp::Svf *v1_f[CHANNEL_COUNT] = {};
+    for (auto & i : v1_f) {
+        i = new daisysp::Svf();
+    }
     auto v1_fe = daisysp::Adsr();
     auto v1_ae = daisysp::Adsr();
     auto v1_port = daisysp::Port();
-    auto v1 = ol::synth::SynthVoice(osc1, v1_f, v1_fe, v1_ae, v1_port);
+    auto v1 = SynthVoice<CHANNEL_COUNT>(osc1, v1_f, v1_fe, v1_ae, v1_port);
     daisysp::Svf v1_filter = daisysp::Svf();
     daisysp::Adsr v1_filter_envelope = daisysp::Adsr();
     daisysp::Adsr v1_amp_envelope = daisysp::Adsr();
     daisysp::Port v1_portamento = daisysp::Port();
 
     daisysp::Oscillator dosc2;
-    auto osc2 = ol::synth::OscillatorSoundSource(dosc2);
-    daisysp::Svf v2_filter = daisysp::Svf();
+    auto osc2 = new OscillatorSoundSource<CHANNEL_COUNT>(dosc2);
+    daisysp::Svf *v2_f[CHANNEL_COUNT] = {};
+    for (auto & i : v2_f) {
+        i = new daisysp::Svf();
+    }
     daisysp::Adsr v2_filter_envelope = daisysp::Adsr();
     daisysp::Adsr v2_amp_envelope = daisysp::Adsr();
     daisysp::Port v2_portamento = daisysp::Port();
-    auto v2 = ol::synth::SynthVoice(osc2, v2_filter, v2_filter_envelope, v2_amp_envelope, v2_portamento);
+    SynthVoice<CHANNEL_COUNT> v2 = SynthVoice<CHANNEL_COUNT>(osc2, v2_f, v2_filter_envelope, v2_amp_envelope, v2_portamento);
 
-    uint8_t voice_count = 1;
-    Voice *voices[] = {&v1};
-    auto poly = Polyvoice(voices, voice_count);
+    Voice *voices[VOICE_COUNT] = {&v1, &v2};
+    auto poly = Polyvoice<CHANNEL_COUNT, VOICE_COUNT>(voices);
 
     juce::initialiseJuce_GUI();
     juce::AudioDeviceManager deviceManager = juce::AudioDeviceManager();
@@ -37,6 +45,7 @@ int main() {
     auto midiDevices = juce::MidiInput::getAvailableDevices();
     std::cout << "MIDI inputs:" << std::endl;
 
+    //auto midi_callback = SynthMidiCallback(poly);
     auto midi_callback = SynthMidiCallback(poly);
 
     for (const auto &input: midiDevices) {

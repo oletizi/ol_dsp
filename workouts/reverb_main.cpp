@@ -7,9 +7,12 @@
 #include "fxlib/Fx.h"
 #include "synthlib/ol_synthlib.h"
 
+#define CHANNEL_COUNT 1
+#define VOICE_COUNT 1
+
 class ReverbAudioCallback : public juce::AudioIODeviceCallback {
 public:
-    explicit ReverbAudioCallback(ol::fx::ReverbFx *fx, SynthAudioCallback &synth) :
+    explicit ReverbAudioCallback(ol::fx::ReverbFx *fx, SynthAudioCallback<CHANNEL_COUNT, VOICE_COUNT> &synth) :
             fx_(fx), synth_(synth) {}
 
     void audioDeviceAboutToStart(juce::AudioIODevice *device) override {
@@ -55,7 +58,7 @@ public:
 
 
     ol::fx::ReverbFx *fx_;
-    SynthAudioCallback &synth_;
+    SynthAudioCallback<CHANNEL_COUNT, VOICE_COUNT> &synth_;
 };
 
 class ReverbMidiCallback : public juce::MidiInputCallback {
@@ -83,15 +86,15 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[]) {
     std::cout << "MIDI inputs:" << std::endl;
 
     daisysp::Oscillator dosc;
-    auto osc1 = ol::synth::OscillatorSoundSource(dosc);
-    auto v1_f = daisysp::Svf();
+    auto osc1 = new ol::synth::OscillatorSoundSource<CHANNEL_COUNT>(dosc);
+    daisysp::Svf *v1_f[] = {new daisysp::Svf()};
     auto v1_fe = daisysp::Adsr();
     auto v1_ae = daisysp::Adsr();
     auto v1_port = daisysp::Port();
-    auto v1 = ol::synth::SynthVoice(osc1, v1_f, v1_fe, v1_ae, v1_port);
+    auto v1 = ol::synth::SynthVoice<CHANNEL_COUNT>(osc1, v1_f, v1_fe, v1_ae, v1_port);
 
     ol::synth::Voice *voices[] = {&v1};
-    auto poly = ol::synth::Polyvoice(voices, 1);
+    auto poly = ol::synth::Polyvoice<CHANNEL_COUNT, VOICE_COUNT>(voices);
 
     auto synthCallback = SynthAudioCallback(poly);
     //daisysp::ReverbSc verb;

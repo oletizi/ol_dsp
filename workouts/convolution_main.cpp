@@ -3,11 +3,18 @@
 #include "SynthMidiCallback.h"
 #include "juce_dsp/juce_dsp.h"
 
+#define CHANNEL_COUNT 1
+#define VOICE_COUNT 1
+
 using namespace juce::dsp;
 
 class ConvolutionCallback : public juce::AudioIODeviceCallback {
+private:
+    SynthAudioCallback<CHANNEL_COUNT, VOICE_COUNT> *synth_callback_;
+    Convolution *convolution_;
 public:
-    explicit ConvolutionCallback(Convolution *convolution, SynthAudioCallback *synthCallback)
+    explicit ConvolutionCallback(Convolution *convolution,
+                                 SynthAudioCallback<CHANNEL_COUNT, VOICE_COUNT> *synthCallback)
             : convolution_(convolution), synth_callback_(synthCallback) {}
 
     void audioDeviceIOCallbackWithContext(const float *const *inputChannelData,
@@ -18,9 +25,9 @@ public:
                                           const juce::AudioIODeviceCallbackContext &context) override {
         // let the synth do its thing
         synth_callback_->audioDeviceIOCallbackWithContext(inputChannelData, numInputChannels,
-                                                                outputChannelData, numOutputChannels,
-                                                                numSamples,
-                                                                context);
+                                                          outputChannelData, numOutputChannels,
+                                                          numSamples,
+                                                          context);
         // Now do whatever else needs to happen
         // ...
         AudioBlock<float> audio_block(outputChannelData, numOutputChannels, numSamples);
@@ -42,9 +49,7 @@ public:
         synth_callback_->audioDeviceStopped();
     }
 
-private:
-    SynthAudioCallback *synth_callback_;
-    Convolution *convolution_;
+
 };
 
 //
@@ -71,14 +76,14 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[]) {
     std::cout << "MIDI inputs:" << std::endl;
 
     daisysp::Oscillator dosc;
-    auto osc = ol::synth::OscillatorSoundSource(dosc);
-    auto v1_f = daisysp::Svf();
+    auto osc = new ol::synth::OscillatorSoundSource<CHANNEL_COUNT>(dosc);
+    daisysp::Svf *v1_f[] = {new daisysp::Svf()};
     auto v1_fe = daisysp::Adsr();
     auto v1_ae = daisysp::Adsr();
     auto v1_port = daisysp::Port();
-    auto voice = ol::synth::SynthVoice(osc, v1_f, v1_fe, v1_ae, v1_port);
-    ol::synth::Voice * voices[] = {&voice};
-    ol::synth::Polyvoice poly = ol::synth::Polyvoice(voices, 1);
+    auto voice = ol::synth::SynthVoice<CHANNEL_COUNT>(osc, v1_f, v1_fe, v1_ae, v1_port);
+    ol::synth::Voice *voices[] = {&voice};
+    auto poly = ol::synth::Polyvoice<CHANNEL_COUNT, VOICE_COUNT>(voices);
 
     auto midi_callback = SynthMidiCallback(poly);
 
@@ -87,8 +92,6 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[]) {
         deviceManager.addMidiInputDeviceCallback(input.identifier, &midi_callback);
         std::cout << " name: " << input.name << "; identifier: " << input.identifier << std::endl;
     }
-
-
 
     auto synth = SynthAudioCallback(poly);
     ConvolutionCallback convolution_callback(&convolution, &synth);

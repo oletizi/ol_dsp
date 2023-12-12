@@ -7,9 +7,13 @@
 
 #include <juce_audio_devices/juce_audio_devices.h>
 
+template<int CHANNEL_COUNT, int VOICE_COUNT>
 class SynthMidiCallback : public juce::MidiInputCallback {
+private:
+    ol::synth::Polyvoice<CHANNEL_COUNT, VOICE_COUNT> &poly_;
+
 public:
-    explicit SynthMidiCallback(ol::synth::Polyvoice &poly) : poly_(poly) {}
+    explicit SynthMidiCallback(ol::synth::Polyvoice<CHANNEL_COUNT, VOICE_COUNT> &poly) : poly_(poly) {}
 
     void handleIncomingMidiMessage(juce::MidiInput *source, const juce::MidiMessage &message) override {
         std::cout << "MIDI!" << std::endl;
@@ -23,8 +27,7 @@ public:
         }
     }
 
-private:
-    ol::synth::Polyvoice &poly_;
+
 };
 
 #endif //OL_DSP_SYNTHMIDICALLBACK_H

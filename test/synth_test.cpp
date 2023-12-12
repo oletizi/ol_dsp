@@ -28,7 +28,7 @@ TEST(Synth, Polyvoice) {
     MockVoice v2 = MockVoice();
     uint64_t voice_count = 2;
     Voice *mock_voices[] = {&v1, &v2};
-    Polyvoice p = Polyvoice(mock_voices, voice_count);
+    auto p = Polyvoice<1, 2>(mock_voices);
 
     EXPECT_CALL(v1, NoteOn(10, 1)).Times(AtLeast(1));
     EXPECT_CALL(v1, Playing())

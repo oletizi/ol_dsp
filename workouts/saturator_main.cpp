@@ -10,12 +10,12 @@ using namespace ol::workout;
 using namespace ol::synth;
 using namespace ol::fx;
 daisysp::Oscillator dosc;
-auto osc = OscillatorSoundSource(dosc);
-auto filter = daisysp::Svf();
+auto osc = new OscillatorSoundSource<1>(dosc);
+daisysp::Svf *filters[] = {new daisysp::Svf()};
 auto fe = daisysp::Adsr();
 auto ae = daisysp::Adsr();
 auto port = daisysp::Port();
-auto voice = SynthVoice(osc, filter, fe, ae, port, 0);
+auto voice = SynthVoice<1>(osc, filters, fe, ae, port);
 
 SaturatorFx saturator1;
 SaturatorFx saturator2;
@@ -70,7 +70,7 @@ int main() {
     Workout_Config(&buddy, &midi_in, &audio_device, note_on_callback, note_off_callback, cc_callback, audio_callback);
 
     ol::workout::InitStatus status = Workout_Init(&buddy);
-    if (status != InitStatus::Ok) {
+    if (status != ol::workout::InitStatus::Ok) {
         return status;
     }
     t_sample sample_rate = Workout_SampleRate(&buddy);

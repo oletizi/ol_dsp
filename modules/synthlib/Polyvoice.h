@@ -15,25 +15,27 @@ namespace ol::synth {
         // init functions
         typedef void (*init_function)(Polyvoice *, t_sample sample_rate);
 
-        static void voices_init(Polyvoice *p, t_sample sample_rate) {
-            for (int i = 0; i < p->voice_count; i++) {
+        static void voices_init(Polyvoice<CHANNEL_COUNT, VOICE_COUNT> *p, t_sample sample_rate) {
+            for (int i = 0; i < VOICE_COUNT; i++) {
                 p->voices_[i]->Init(sample_rate);
             }
             p->initialized = true;
         }
 
-        static void map_init(Polyvoice *p, t_sample sample_rate) {
+        static void map_init(Polyvoice<CHANNEL_COUNT, VOICE_COUNT> *p, t_sample sample_rate) {
             p->voice_map_->Init(sample_rate);
         }
 
         // process functions
-        typedef void (*process_function)(Polyvoice *, t_sample *frame_out);
+        typedef void (*process_function)(Polyvoice<CHANNEL_COUNT, VOICE_COUNT> *, t_sample *frame_out);
 
-        static void voices_process(Polyvoice *p, t_sample *frame_out) {
-            for (int i = 0; i < p->voice_count; i++) {
-                t_sample s = 0;
-                p->voices_[i]->Process(&s);
-                *frame_out += s;
+        static void voices_process(Polyvoice<CHANNEL_COUNT, VOICE_COUNT> *p, t_sample *frame_out) {
+            for (int i = 0; i < VOICE_COUNT; i++) {
+                auto voice = p->voices_[i];
+                voice->Process(p->frame_buffer);
+                for (int j = 0; j < CHANNEL_COUNT; j++) {
+                    frame_out[j] += p->frame_buffer[j];
+                }
             }
         }
 
@@ -42,10 +44,10 @@ namespace ol::synth {
         }
 
         // note on functions
-        typedef void (*note_on_function)(Polyvoice *, uint8_t note, uint8_t velocity);
+        typedef void (*note_on_function)(Polyvoice<CHANNEL_COUNT, VOICE_COUNT> *, uint8_t note, uint8_t velocity);
 
-        static void voices_note_on(Polyvoice *p, uint8_t note, uint8_t velocity) {
-            for (int i = 0; i < p->voice_count; i++) {
+        static void voices_note_on(Polyvoice<CHANNEL_COUNT, VOICE_COUNT> *p, uint8_t note, uint8_t velocity) {
+            for (int i = 0; i < VOICE_COUNT; i++) {
                 auto v = p->voices_[i];
                 if (!v->Playing()) {
                     v->NoteOn(note, velocity);
@@ -59,10 +61,10 @@ namespace ol::synth {
         }
 
         // note off functions
-        typedef void (*note_off_function)(Polyvoice *, uint8_t note, uint8_t velocity);
+        typedef void (*note_off_function)(Polyvoice<CHANNEL_COUNT, VOICE_COUNT> *, uint8_t note, uint8_t velocity);
 
-        static void voices_note_off(Polyvoice *p, uint8_t note, uint8_t velocity) {
-            for (int i = 0; i < p->voice_count; i++) {
+        static void voices_note_off(Polyvoice<CHANNEL_COUNT, VOICE_COUNT> *p, uint8_t note, uint8_t velocity) {
+            for (int i = 0; i < VOICE_COUNT; i++) {
                 auto v = p->voices_[i];
                 if (v->Playing() == note) {
                     v->NoteOff(note, velocity);
@@ -77,10 +79,12 @@ namespace ol::synth {
 
 
         // controller functions
-        typedef void(*midi_controller_function)(Polyvoice *, uint8_t control, uint8_t value);
+        typedef void(*midi_controller_function)(Polyvoice<CHANNEL_COUNT, VOICE_COUNT> *, uint8_t control,
+                                                uint8_t value);
 
-        static void voices_controller_function(Polyvoice *p, uint8_t control, uint8_t value) {
-            for (int i = 0; i < p->voice_count; i++) {
+        static void
+        voices_controller_function(Polyvoice<CHANNEL_COUNT, VOICE_COUNT> *p, uint8_t control, uint8_t value) {
+            for (int i = 0; i < VOICE_COUNT; i++) {
                 p->voices_[i]->UpdateMidiControl(control, value);
             }
         }
@@ -97,17 +101,17 @@ namespace ol::synth {
 
         Voice *voices_[VOICE_COUNT] = {};
         bool initialized = false;
-        VoiceMap<CHANNEL_COUNT> *voice_map_;
+        VoiceMap<CHANNEL_COUNT> *voice_map_ = nullptr;
 
         t_sample frame_buffer[CHANNEL_COUNT] = {};
     public:
-        explicit Polyvoice(Voice *voices[VOICE_COUNT]) : voice_map_(nullptr),
-                                                         init(voices_init),
-                                                         process(voices_process),
-                                                         note_on(voices_note_on),
-                                                         note_off(voices_note_off),
-                                                         update_midi_control(voices_controller_function) {
-            for (int i=0; i<VOICE_COUNT; i++) {
+        explicit Polyvoice(Voice *voices[VOICE_COUNT]) :
+                init(voices_init),
+                process(voices_process),
+                note_on(voices_note_on),
+                note_off(voices_note_off),
+                update_midi_control(voices_controller_function) {
+            for (int i = 0; i < VOICE_COUNT; i++) {
                 voices_[i] = voices[i];
             }
         }

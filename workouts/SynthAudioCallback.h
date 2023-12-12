@@ -9,13 +9,14 @@
 #include "juce_audio_devices/juce_audio_devices.h"
 #include "synthlib/ol_synthlib.h"
 
-
+template <int CHANNEL_COUNT, int VOICE_COUNT>
 class SynthAudioCallback : public juce::AudioIODeviceCallback {
 private:
+    ol::synth::Polyvoice<CHANNEL_COUNT, VOICE_COUNT> poly_;
     uint32_t counter_ = 0;
     juce::AudioDeviceManager *device_manager_ = nullptr;
 public:
-    explicit SynthAudioCallback(ol::synth::Polyvoice &voices) : poly_(voices) {}
+    explicit SynthAudioCallback(ol::synth::Polyvoice<CHANNEL_COUNT, VOICE_COUNT> &voices) : poly_(voices) {}
 
     void audioDeviceIOCallbackWithContext(const float *const *inputChannelData,
                                           int numInputChannels,
@@ -41,8 +42,7 @@ public:
     void audioDeviceStopped() override {
     }
 
-private:
-    ol::synth::Polyvoice poly_;
+
 };
 
 

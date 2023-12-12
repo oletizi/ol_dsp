@@ -60,7 +60,7 @@ int main() {
     auto patch_loader = PatchLoader("/Users/orion/work/ol_dsp/test/drumkit/", patch);
 
     auto voicemap = ol::synth::VoiceMap<CHANNEL_COUNT>();
-    auto pool = SamplePool<pool_size, CHANNEL_COUNT>(voicemap, data_sources, patch_loader);
+    auto pool = SamplePool<CHANNEL_COUNT, VOICE_COUNT>(voicemap, data_sources, patch_loader);
 
     ol::synth::Polyvoice<CHANNEL_COUNT, VOICE_COUNT> voices(voicemap);
 

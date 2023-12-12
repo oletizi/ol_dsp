@@ -10,7 +10,7 @@
 #include "workout_buddy.h"
 
 namespace ol::workout {
-    template<int POOL_SIZE, int CHANNEL_COUNT>
+    template< int CHANNEL_COUNT, int POOL_SIZE>
     class SamplePool : public PatchLoader::PatchLoaderCallback {
     private:
         struct voice_data {
@@ -31,11 +31,14 @@ namespace ol::workout {
                 auto data_source = sources[i];
                 auto sample = new ol::synth::MultiChannelSample(*data_source);
                 auto sample_sound_source = new ol::synth::SampleSoundSource<CHANNEL_COUNT>(sample);
-                auto filter1 = daisysp::Svf();
+                daisysp::Svf *filters[CHANNEL_COUNT] = {};
+                for (int j=0; j<CHANNEL_COUNT; j++) {
+                    filters[j] = new daisysp::Svf();
+                }
                 auto f_env = daisysp::Adsr();
                 auto a_env = daisysp::Adsr();
                 auto port = daisysp::Port();
-                auto voice = new ol::synth::SynthVoice(sample_sound_source, filter1, f_env, a_env, port);
+                auto voice = new ol::synth::SynthVoice<CHANNEL_COUNT>(sample_sound_source, filters, f_env, a_env, port);
                 voices[i] = new voice_data{data_source, voice};
             }
         }

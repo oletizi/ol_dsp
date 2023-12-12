@@ -11,12 +11,12 @@
 #define CHANNEL_COUNT 2
 
 daisysp::Oscillator dosc;
-auto osc = ol::synth::OscillatorSoundSource(dosc);
-auto v1_f = daisysp::Svf();
+auto osc = new ol::synth::OscillatorSoundSource<1>(dosc);
+daisysp::Svf *v1_f[] = {new daisysp::Svf()};
 auto v1_fe = daisysp::Adsr();
 auto v1_ae = daisysp::Adsr();
 auto v1_port = daisysp::Port();
-auto voice = ol::synth::SynthVoice(osc, v1_f, v1_fe, v1_ae, v1_port, 0);
+auto voice = ol::synth::SynthVoice<1>(osc, v1_f, v1_fe, v1_ae, v1_port);
 auto svf = daisysp::Svf();
 
 auto filt = ol::fx::FilterFx(svf);
