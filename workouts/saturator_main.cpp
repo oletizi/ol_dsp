@@ -10,10 +10,10 @@ using namespace ol::synth;
 using namespace ol::fx;
 daisysp::Oscillator dosc;
 auto osc = new OscillatorSoundSource<1>(dosc);
-daisysp::Svf *filters[] = {new daisysp::Svf()};
-auto fe = daisysp::Adsr();
-auto ae = daisysp::Adsr();
-auto port = daisysp::Port();
+ol::synth::Filter *filters[] = {new ol::synth::SvfFilter};
+auto fe = ol::synth::DaisyAdsr();
+auto ae = ol::synth::DaisyAdsr();
+auto port = ol::synth::DaisyPortamento();
 auto voice = SynthVoice<1>(osc, filters, &fe, &ae, &port);
 
 SaturatorFx saturator1;

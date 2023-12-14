@@ -4,6 +4,24 @@ patch:
       sample: OS_LFM_Base_Kick.wav
       channel: 1
       note: 36
+      filter:
+        cutoff: 0.5
+        resonance: 0.5
+        drive: 0
+        envelope:
+          attack: 0
+          decay: 0.8
+          sustain: 0
+          release: 0
+          amount: 0.7
+      amp:
+        envelope:
+          attack: 0
+          decay: 0
+          sustain: 0
+          release: 0
+          amount: 8
+      portamento: 0.0
     - region:
       sample: OS_LFM_Bottled_Snare.wav
       channel: 2

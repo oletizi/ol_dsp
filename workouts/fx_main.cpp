@@ -15,10 +15,10 @@ using namespace ol::synth;
 
 daisysp::Oscillator dosc;
 auto osc = new OscillatorSoundSource<1>(dosc);
-daisysp::Svf *vf[] = {new daisysp::Svf()};
-auto vfe = daisysp::Adsr();
-auto vae = daisysp::Adsr();
-auto vport = daisysp::Port();
+ol::synth::Filter *vf[] = {new ol::synth::SvfFilter };
+auto vfe = ol::synth::DaisyAdsr();
+auto vae = ol::synth::DaisyAdsr();
+auto vport = ol::synth::DaisyPortamento();
 auto voice = SynthVoice<1>(osc, vf, &vfe, &vae, &vport);
 
 daisysp::Svf df1;

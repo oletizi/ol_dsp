@@ -57,14 +57,14 @@ int main() {
     for (auto &v: voice_data) {
         v = new VoiceData();
         v->data_source = new MaSampleSource("", new ma_decoder);
-        daisysp::Svf *filters[CHANNEL_COUNT] = {};
+        ol::synth::Filter *filters[CHANNEL_COUNT] = {};
         for (auto &filter: filters) {
-            filter = new daisysp::Svf();
+            filter = new ol::synth::SvfFilter;
         }
         auto sample = new ol::synth::Sample(*v->data_source);
         auto sound_source = new ol::synth::SampleSoundSource<CHANNEL_COUNT>(sample);
-        v->voice = new ol::synth::SynthVoice<CHANNEL_COUNT>(sound_source, filters, new daisysp::Adsr(),
-                                                            new daisysp::Adsr(), new daisysp::Port());
+        v->voice = new ol::synth::SynthVoice<CHANNEL_COUNT>(sound_source, filters, new ol::synth::DaisyAdsr,
+                                                            new ol::synth::DaisyAdsr, new ol::synth::DaisyPortamento);
     }
 
     auto sample_pool = SamplePool<CHANNEL_COUNT, VOICE_COUNT>(voice_data, voicemap, patch_loader);

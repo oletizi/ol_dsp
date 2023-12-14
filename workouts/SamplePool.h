@@ -34,7 +34,7 @@ namespace ol::workout {
             }
         }
 
-        ol::synth::InitStatus LoadSample(uint8_t channel, uint8_t note, std::string sample_path) override {
+        ol::synth::InitStatus LoadSample(ol::synth::Voice::Config config, uint8_t channel, uint8_t note, std::string sample_path) override {
             if (pool_index_ >= POOL_SIZE) {
                 printf("Can't load any more samples! Pool size: %d, samples loaded: %d\n", POOL_SIZE, pool_index_);
                 return ol::synth::InitStatus::Error;
@@ -45,7 +45,9 @@ namespace ol::workout {
             // set the voice in the voice map
             // XXX: Check that note and channel aren't out of bounds.
             // Channel is zero-based internally.
-            voice_map_.SetVoice(channel - 1, note, voice_data_[pool_index_]->voice);
+            synth::Voice *voice = voice_data_[pool_index_]->voice;
+            voice->UpdateConfig(config);
+            voice_map_.SetVoice(channel - 1, note, voice);
             pool_index_++;
             return ol::synth::InitStatus::Ok;
         }

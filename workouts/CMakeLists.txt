@@ -114,6 +114,7 @@ target_link_libraries(synth-workout
         # ConsoleAppData            # If you'd created a binary data target, you'd link to it here
         juce::juce_core
         juce::juce_audio_devices
+        workout-buddy
         PUBLIC
         ol_corelib
         ol_ctllib

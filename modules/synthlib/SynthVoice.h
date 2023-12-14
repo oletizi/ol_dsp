@@ -6,6 +6,9 @@
 #define OL_DSP_SYNTHVOICE_H
 
 #include "Voice.h"
+#include "Portamento.h"
+#include "Adsr.h"
+#include "Filter.h"
 
 #define PRINTF printf
 
@@ -14,10 +17,10 @@ namespace ol::synth {
     class SynthVoice : public Voice {
     public:
         explicit SynthVoice(SoundSource *sound_source,
-                            daisysp::Svf *filters[CHANNEL_COUNT],
-                            daisysp::Adsr *filter_envelope,
-                            daisysp::Adsr *amp_envelope,
-                            daisysp::Port *portamento)
+                            Filter *filters[CHANNEL_COUNT],
+                            Adsr *filter_envelope,
+                            Adsr *amp_envelope,
+                            Portamento *portamento)
                 : sound_source_(sound_source),
                   filter_envelope_(filter_envelope),
                   amp_envelope_(amp_envelope),
@@ -26,50 +29,25 @@ namespace ol::synth {
                 filters_[i] = filters[i];
             }
         }
+
         void Init(t_sample sr) override {
             sample_rate = sr;
             sound_source_->Init(sr);
             for (int i = 0; i < CHANNEL_COUNT; i++) {
                 filters_[i]->Init(sample_rate);
             }
-            filter_envelope_->Init(sample_rate);
-            amp_envelope_->Init(sample_rate);
-            portamento_->Init(sample_rate, 0);
+            filter_envelope_->Init(sample_rate,1);
+            amp_envelope_->Init(sample_rate, 1);
+            portamento_->Init(sample_rate, portamento_htime);
             initialized = true;
         }
-
-        void Update() override {
-            // Portamento
-            portamento_->SetHtime(portamento_htime);
-
-            // Filter
-            for (int i = 0; i < CHANNEL_COUNT; i++) {
-                auto filter = filters_[i];
-                // XXX: probably don't need to set frequency here, since it's calculated in process loop based envelope
-                filter->SetFreq(filt_freq);
-                filter->SetRes(filt_res);
-                filter->SetDrive(filt_drive);
-            }
-
-            filter_envelope_->SetAttackTime(filter_attack);
-            filter_envelope_->SetDecayTime(filter_decay);
-            filter_envelope_->SetSustainLevel(filter_sustain);
-            filter_envelope_->SetReleaseTime(filter_release);
-
-            // Amplifier
-            amp_envelope_->SetAttackTime(amp_attack);
-            amp_envelope_->SetDecayTime(amp_decay);
-            amp_envelope_->SetSustainLevel(amp_sustain);
-            amp_envelope_->SetReleaseTime(amp_release);
-        }
-
 
         void Process(t_sample *frame_out) override {
             sound_source_->SetFreq(portamento_->Process(freq_));
             sound_source_->Process(frame_out);
 
             t_sample filter_frequency =
-                    filt_freq + ((filter_envelope_->Process(Gate()) * 20000) * filter_envelope_amount);
+                    filter_cutoff + ((filter_envelope_->Process(Gate()) * 20000) * filter_env_amount);
             t_sample amp = amp_envelope_->Process(Gate());
 
             for (int i = 0; i < CHANNEL_COUNT; i++) {
@@ -77,37 +55,88 @@ namespace ol::synth {
                 frame_out[i] *= osc_1_mix;
                 filter->SetFreq(filter_frequency);
                 filter->Process(frame_out[i]);
-                frame_out[i] = filter->Low() * amp * master_volume;
+                frame_out[i] = filter->Low() * amp * amp_env_amount;
             }
         }
+
+        void UpdateConfig(Config &config) override {
+
+            filter_cutoff = config.filter_cutoff;
+            filter_resonance = config.filter_resonance;
+            filter_drive = config.filter_drive;
+
+            filter_attack = config.filter_attack;
+            filter_attack_shape = config.filter_attack_shape;
+            filter_decay = config.filter_decay;
+            filter_sustain = config.filter_sustain;
+            filter_release = config.filter_release;
+
+            amp_attack = config.amp_attack;
+            amp_attack_shape = config.amp_attack_shape;
+            amp_decay = config.amp_decay;
+            amp_sustain = config.amp_sustain;
+            amp_release = config.amp_release;
+
+            portamento_htime = config.portamento;
+            Update();
+        }
+
+        void Update() override {
+
+            // Filter
+            for (int i = 0; i < CHANNEL_COUNT; i++) {
+                auto filter = filters_[i];
+                // XXX: probably don't need to set frequency here, since it's calculated in process loop based envelope
+                filter->SetFreq(filter_cutoff);
+                filter->SetRes(filter_resonance);
+                filter->SetDrive(filter_drive);
+            }
+
+            filter_envelope_->SetAttackTime(filter_attack, filter_attack_shape);
+            filter_envelope_->SetDecayTime(filter_decay);
+            filter_envelope_->SetSustainLevel(filter_sustain);
+            filter_envelope_->SetReleaseTime(filter_release);
+
+            // Amplifier
+            amp_envelope_->SetAttackTime(amp_attack, amp_attack_shape);
+            amp_envelope_->SetDecayTime(amp_decay);
+            amp_envelope_->SetSustainLevel(amp_sustain);
+            amp_envelope_->SetReleaseTime(amp_release);
+
+            // Portamento
+            portamento_->SetHtime(portamento_htime);
+        }
+
+
+
 
         void UpdateMidiControl(uint8_t ctl, uint8_t val) override {
             bool update = true;
             t_sample scaled = ol::core::scale(val, 0, 127, 0, 1, 1);
             switch (ctl) {
                 case CC_CTL_VOLUME:
-                    master_volume = scaled;
-                    PRINTF("  volume: %f\n", master_volume);
+                    amp_env_amount = scaled;
+                    PRINTF("  volume: %f\n", amp_env_amount);
                     break;
                 case CC_CTL_PORTAMENTO:
                     portamento_htime = ol::core::scale(val, 0, 127, 0, 1, 4);
                     PRINTF("  port: %f\n", portamento_htime);
                     break;
                 case CC_FILT_CUTOFF:
-                    filt_freq = ol::core::scale(val, 0, 127, 0, 20000, 2.5);
-                    PRINTF("  cutoff: %f\n", filt_freq);
+                    filter_cutoff = ol::core::scale(val, 0, 127, 0, 20000, 2.5);
+                    PRINTF("  cutoff: %f\n", filter_cutoff);
                     break;
                 case CC_FILT_Q:
-                    filt_res = scaled;
-                    PRINTF("  q: %f\n", filt_res);
+                    filter_resonance = scaled;
+                    PRINTF("  q: %f\n", filter_resonance);
                     break;
                 case CC_FILT_DRIVE:
-                    filt_drive = scaled;
-                    PRINTF("  drive: %f\n", filt_drive);
+                    filter_drive = scaled;
+                    PRINTF("  drive: %f\n", filter_drive);
                     break;
                 case CC_ENV_FILT_AMT:
-                    filter_envelope_amount = scaled;
-                    PRINTF("  filt env amt %f\n", filter_envelope_amount);
+                    filter_env_amount = scaled;
+                    PRINTF("  filt env amt %f\n", filter_env_amount);
                     break;
                 case CC_ENV_FILT_A:
                     filter_attack = scaled;
@@ -159,7 +188,6 @@ namespace ol::synth {
             sound_source_->GateOn();
         }
 
-
         void GateOff() override {
             gate = false;
             sound_source_->GateOff();
@@ -187,49 +215,51 @@ namespace ol::synth {
         }
 
     private:
-
+        // Init state
         bool initialized = false;
-
-        t_sample portamento_htime = 0;
-
-        t_sample master_volume = 0.8f;
-
         t_sample sample_rate = 0;
 
         // Oscillator, sample player, etc.
         SoundSource *sound_source_;
 
+        // Oscillator/sound source params
         t_sample freq_ = 0;
+        t_sample osc_1_mix = 0.8f;
 
         // Filter
-        daisysp::Svf *filters_[CHANNEL_COUNT] = {};
-        daisysp::Adsr *filter_envelope_;
+        Filter *filters_[CHANNEL_COUNT] = {};
+        ol::synth::Adsr *filter_envelope_;
 
-        // Amplifier
-        daisysp::Adsr *amp_envelope_;
-
-        // Portamento
-        daisysp::Port *portamento_;
-
-        // Filter
-        t_sample filt_freq = 0;
-        t_sample filt_res = 0;
-        t_sample filt_drive = 0;
+        // Filter parameters
+        t_sample filter_cutoff = 0;
+        t_sample filter_resonance = 0;
+        t_sample filter_drive = 0;
 
         t_sample filter_attack = 0;
+        t_sample filter_attack_shape = 1;
         t_sample filter_decay = 0.2f;
         t_sample filter_sustain = 0;
         t_sample filter_release = 0;
-        t_sample filter_envelope_amount = 1;
+        t_sample filter_env_amount = 1;
 
-        // Amp envelope
+        // Amplifier
+        ol::synth::Adsr *amp_envelope_;
+
+        // Amplifier parameters
         t_sample amp_attack = 0.01f; // a little lag on attack and release help reduce clicking
+        t_sample amp_attack_shape = 1;
         t_sample amp_decay = 0;
         t_sample amp_sustain = 1;
         t_sample amp_release = 0.01f;
+        t_sample amp_env_amount = 0.8f; // AKA voice volume
 
-        // Oscillator mixer
-        t_sample osc_1_mix = 0.8f;
+        // Portamento
+        Portamento *portamento_;
+
+        // Portamento parameters
+        t_sample portamento_htime = 0;
+
+        // Gate/note on status
         uint8_t playing = 0;
         bool gate = false;
     };

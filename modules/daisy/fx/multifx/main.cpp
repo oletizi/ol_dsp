@@ -35,43 +35,42 @@ t_sample led2_blue = 0;
 
 daisysp::Oscillator dosc1;
 auto osc1 = new OscillatorSoundSource<1>(dosc1);
-daisysp::Svf DSY_SDRAM_BSS *v1_f[] = {new daisysp::Svf(),};
-
-daisysp::Adsr v1_fe;
-daisysp::Adsr v1_ae;
-daisysp::Port v1_port;
+ol::synth::Filter DSY_SDRAM_BSS *v1_f[] = {new ol::synth::SvfFilter()};
+ol::synth::DaisyAdsr v1_fe;
+ol::synth::DaisyAdsr v1_ae;
+ol::synth::DaisyPortamento v1_port;
 auto v1 = new SynthVoice<1>(osc1, v1_f, &v1_fe, &v1_ae, &v1_port);
 
 daisysp::Oscillator dosc2;
 auto osc2 = new OscillatorSoundSource<1>(dosc2);
-daisysp::Svf DSY_SDRAM_BSS *v2_f[] = {new daisysp::Svf()};
-daisysp::Adsr v2_fe;
-daisysp::Adsr v2_ae;
-daisysp::Port v2_port;
+ol::synth::Filter DSY_SDRAM_BSS *v2_f[] = {new ol::synth::SvfFilter()};
+ol::synth::DaisyAdsr v2_fe;
+ol::synth::DaisyAdsr v2_ae;
+ol::synth::DaisyPortamento v2_port;
 auto v2 = new SynthVoice<1>(osc2, v2_f, &v2_fe, &v2_ae, &v2_port);
 
 daisysp::Oscillator dosc3;
 auto osc3 = new OscillatorSoundSource<1>(dosc3);
-daisysp::Svf DSY_SDRAM_BSS *v3_f[] = {new daisysp::Svf()};
-daisysp::Adsr v3_fe;
-daisysp::Adsr v3_ae;
-daisysp::Port v3_port;
+ol::synth::Filter DSY_SDRAM_BSS *v3_f[] = {new ol::synth::SvfFilter()};
+ol::synth::DaisyAdsr v3_fe;
+ol::synth::DaisyAdsr v3_ae;
+ol::synth::DaisyPortamento v3_port;
 auto v3 = new SynthVoice<1>(osc3, v3_f, &v3_fe, &v3_ae, &v3_port);
 
 daisysp::Oscillator dosc4;
 auto osc4 = new OscillatorSoundSource<1>(dosc4);
-daisysp::Svf DSY_SDRAM_BSS *v4_f[] = {new daisysp::Svf()};
-daisysp::Adsr v4_fe;
-daisysp::Adsr v4_ae;
-daisysp::Port v4_port;
+ol::synth::Filter DSY_SDRAM_BSS *v4_f[] = {new ol::synth::SvfFilter()};
+ol::synth::DaisyAdsr v4_fe;
+ol::synth::DaisyAdsr v4_ae;
+ol::synth::DaisyPortamento v4_port;
 auto v4 = new SynthVoice<1>(osc4, v4_f, &v4_fe, &v4_ae, &v4_port);
 
 daisysp::Oscillator dosc5;
 auto osc5 = new OscillatorSoundSource<1>(dosc5);
-daisysp::Svf DSY_SDRAM_BSS *v5_f[] = {new daisysp::Svf()};
-daisysp::Adsr v5_fe;
-daisysp::Adsr v5_ae;
-daisysp::Port v5_port;
+ol::synth::Filter DSY_SDRAM_BSS *v5_f[] = {new ol::synth::SvfFilter()};
+ol::synth::DaisyAdsr v5_fe;
+ol::synth::DaisyAdsr v5_ae;
+ol::synth::DaisyPortamento v5_port;
 auto v5 = new SynthVoice<1>(osc5, v5_f, &v5_fe, &v5_ae, &v5_port);
 
 Voice *voices[VOICE_COUNT] = {v1, v2, v3, v4, v5};

@@ -7,11 +7,28 @@
 
 #include "corelib/ol_corelib.h"
 #include "synthlib/SoundSource.h"
-#define MAX_VOICES 8
 
 namespace ol::synth {
-    class Voice {
+class Voice {
     public:
+        struct Config {
+            t_sample filter_cutoff;
+            t_sample filter_resonance;
+            t_sample filter_drive;
+            t_sample filter_env_amount;
+            t_sample filter_attack;
+            t_sample filter_attack_shape;
+            t_sample filter_decay;
+            t_sample filter_sustain;
+            t_sample filter_release;
+            t_sample amp_env_amount;
+            t_sample amp_attack;
+            t_sample amp_attack_shape;
+            t_sample amp_decay;
+            t_sample amp_sustain;
+            t_sample amp_release;
+            t_sample portamento;
+        };
 
         virtual void Init(t_sample sample_rate) = 0;
 
@@ -20,6 +37,8 @@ namespace ol::synth {
         virtual void Process(t_sample *frame_out) = 0;
 
         virtual void UpdateMidiControl(uint8_t control, uint8_t value) = 0;
+
+        virtual void UpdateConfig(Config &config) = 0;
 
         virtual void GateOn() = 0;
 

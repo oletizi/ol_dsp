@@ -87,10 +87,10 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[]) {
 
     daisysp::Oscillator dosc;
     auto osc1 = new ol::synth::OscillatorSoundSource<CHANNEL_COUNT>(dosc);
-    daisysp::Svf *v1_f[] = {new daisysp::Svf()};
-    auto v1_fe = daisysp::Adsr();
-    auto v1_ae = daisysp::Adsr();
-    auto v1_port = daisysp::Port();
+    ol::synth::Filter *v1_f[] = {new ol::synth::SvfFilter()};
+    auto v1_fe = ol::synth::DaisyAdsr();
+    auto v1_ae = ol::synth::DaisyAdsr();
+    auto v1_port = ol::synth::DaisyPortamento();
     auto v1 = ol::synth::SynthVoice<CHANNEL_COUNT>(osc1, v1_f, &v1_fe, &v1_ae, &v1_port);
 
     ol::synth::Voice *voices[] = {&v1};

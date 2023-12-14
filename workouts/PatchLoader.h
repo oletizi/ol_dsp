@@ -27,7 +27,7 @@ namespace ol::workout {
     public:
         class PatchLoaderCallback {
         public:
-            virtual ol::synth::InitStatus LoadSample(uint8_t channel, uint8_t note, std::string sample_path) = 0;
+            virtual ol::synth::InitStatus LoadSample(ol::synth::Voice::Config c, uint8_t channel, uint8_t note, std::string sample_path) = 0;
         };
 
         PatchLoader(const char *patch_path, const std::string &patch) :

@@ -17,6 +17,7 @@ namespace ol::synth {
         float freq_ = 0;
 
     public:
+
         explicit OscillatorSoundSource(daisysp::Oscillator &osc)
                 : osc_(osc) {
         }
@@ -29,7 +30,7 @@ namespace ol::synth {
 
         void Process(t_sample *frame) override {
             t_sample out = osc_.Process();
-            for (int i=0; i<CHANNEL_COUNT; i++) {
+            for (int i = 0; i < CHANNEL_COUNT; i++) {
                 frame[i] = out;
             }
         }

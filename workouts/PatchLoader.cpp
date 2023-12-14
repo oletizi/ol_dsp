@@ -7,6 +7,7 @@ namespace ol::workout {
 
     ol::synth::InitStatus PatchLoader::Load(PatchLoaderCallback *callback) {
         // XXX: This is super fragile and bad
+        ol::synth::Voice::Config config = {};
         char char_array[patch_.length() + 1];
         strcpy(char_array, patch_.c_str());
         auto tree = ryml::parse_in_place(char_array);
@@ -36,7 +37,7 @@ namespace ol::workout {
                         printf("   channel: %llu\n", channel_value);
                     }
                     if (note_value && channel_value) {
-                        auto status = callback->LoadSample(channel_value, note_value, sample_path);
+                        auto status = callback->LoadSample(config, channel_value, note_value, sample_path);
                         if (status != ol::synth::InitStatus::Ok) {
                             return status;
                         }
