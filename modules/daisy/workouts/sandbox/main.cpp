@@ -1,74 +1,156 @@
 #ifdef DAISY_NATIVE
 
-#include "daisy/daisy_dummy.h"
-#include "hid/logger.h"
+//#include "daisy/daisy_dummy.h"
+//#include "hid/logger.h"
 
 #else
 
-#include "daisy.h"
-#include "daisy_seed.h"
 
 #endif
+
 #include <cstdio>
-#include "dev/lcd_hd44780.h"
+#include "daisy.h"
+#include "daisy_seed.h"
+#include "dev/oled_ssd130x.h"
+
+
+#include "corelib/ol_corelib.h"
+#include "synthlib/ol_synthlib.h"
 
 #define AUDIO_BLOCK_SIZE 4
-
-#define PIN_LCD_RS 15 // LCD: pin 8
-#define PIN_LCD_EN 16 // LCD: pin 9
-#define PIN_LCD_D4 20 // LCD: D4
-#define PIN_LCD_D5 19 // LCD: D5
-#define PIN_LCD_D6 18 // LCD: D6
-#define PIN_LCD_D7 17 // LCD: D7
-
+#define CHANNEL_COUNT 2
 using namespace daisy;
 using Log = Logger<LOGGER_SEMIHOST>;
-static DaisySeed hardware;
+using MyOledDisplay = OledDisplay<SSD130x4WireSpi128x64Driver>;
+static DaisySeed hw;
 
+MyOledDisplay display;
 
-//static void Println(const char* format) {
-//    Logger<LOGGER_SEMIHOST>::PrintLine(format);
-//}
-//
-//static void Println(const char* format, __builtin_va_list v) {
-//    Logger<LOGGER_SEMIHOST>::PrintLine(format, v);
-//}
+daisysp::Oscillator osc;
+t_sample gate = 0;
+daisysp::Adsr adsr;
+auto voice = ol::synth::SynthVoice<CHANNEL_COUNT>();
+auto rms = ol::core::Rms();
+t_sample rms_value = 0;
+t_sample peak_value = 0;
+t_sample peak_hold = 2 * 48000;
+t_sample peak_count = 0;
+
+void audio_callback(daisy::AudioHandle::InputBuffer in,
+                    daisy::AudioHandle::OutputBuffer out,
+                    size_t size) {
+    for (int i = 0; i < size; i++) {
+        //voice.Process(out[i]);
+
+        *out[i] = osc.Process() * adsr.Process(gate);
+        rms_value = rms.Process(*out[i]);
+        peak_value = peak_value < abs(*out[i]) ? abs(*out[i]) : peak_value;
+        peak_count++;
+        if (peak_count == peak_hold) {
+            peak_count = 0;
+            peak_value = 0;
+        }
+    }
+}
 
 int main() {
 
-    hardware.Configure();
-    hardware.Init();
+    hw.Configure();
+    hw.Init();
+    hw.SetAudioBlockSize(AUDIO_BLOCK_SIZE);
+    hw.StartAudio(audio_callback);
+    auto sample_rate = hw.AudioSampleRate();
 
-    // LCD
-    LcdHD44780 lcd;
-    LcdHD44780::Config lcd_config;
-    lcd_config.cursor_on = true;
-    lcd_config.cursor_blink = false;
-    lcd_config.rs = hardware.GetPin(PIN_LCD_RS);
-    lcd_config.en = hardware.GetPin(PIN_LCD_EN);
-    lcd_config.d4 = hardware.GetPin(PIN_LCD_D4);
-    lcd_config.d5 = hardware.GetPin(PIN_LCD_D5);
-    lcd_config.d6 = hardware.GetPin(PIN_LCD_D6);
-    lcd_config.d7 = hardware.GetPin(PIN_LCD_D7);
-    lcd.Init(lcd_config);
+    osc.Init(sample_rate);
+    osc.SetFreq(10000.0f);
+    osc.SetWaveform(daisysp::Oscillator::WAVE_POLYBLEP_SAW);
 
+    ol::synth::Voice::Config vc = {};
+    vc.filter_env_amount = 0;
+    vc.filter_cutoff = 1;
+    vc.amp_env_amount = 1;
+    voice.UpdateConfig(vc);
+    voice.Init(sample_rate);
+
+    adsr.Init(sample_rate);
+    adsr.SetAttackTime(0.5);
+    adsr.SetDecayTime(0.5);
+    adsr.SetSustainLevel(0);
+    adsr.SetReleaseTime(0.5);
+
+    rms.Init(sample_rate, 128);
+
+    /** Configure the Display */
+    MyOledDisplay::Config disp_cfg = {};
+    disp_cfg.driver_config.transport_config.pin_config.dc = daisy::DaisySeed::GetPin(9);
+    disp_cfg.driver_config.transport_config.pin_config.reset = daisy::DaisySeed::GetPin(30);
+    /** And Initialize */
+    display.Init(disp_cfg);
     // printf("showtime\n");
     Log::StartLog(true);
     Log::PrintLine("I should be printing to LOGGER_SEMIHOST");
     DaisySeed::StartLog(false);
-    bool led_state = false;
     int counter = 0;
+    char strbuff[128];
+    int direction = 1;
+    Switch button;
+    int pin_number = 15;
+    button.Init(hw.GetPin(pin_number), 1000);
+
+    //ol::synth::SynthVoice<2>(ol::synth::OscillatorSoundSource<2>, ol::synth::Filter, ol::synth::Adsr, ol::synth::Adsr, ol::synth::Portamento);
+    //ol::synth::SynthVoice<2> voice;
+
+    int line_number;
+    auto font = Font_11x18;//Font_7x10;
+    auto peak_scaled = 0;
+    auto rms_scaled = 0;
     while (true) {
+        button.Debounce();
         // Set the onboard LED
-        hardware.SetLed(led_state);
+        hw.SetLed(button.Pressed());
         // Toggle the LED state for the next time around.
-        led_state = !led_state;
+        //led_state = !led_state;
+        if (button.RisingEdge()) {
+            voice.NoteOn(63, 100);
+            gate = 1;
+            adsr.Retrigger(true);
+        }
+        if (button.FallingEdge()) {
+            voice.NoteOff(63, 100);
+            gate = 0;
+        }
+        line_number = 0;
+        display.Fill(false);
 
-        lcd.Clear();
-        lcd.SetCursor(0, 0);
-        lcd.Print("Counter: ");
-        lcd.PrintInt(counter++);
+        display.SetCursor(0, 0);
+        sprintf(strbuff, "counter: %d", counter);
+        display.WriteString(strbuff, font, false);
 
-        System::Delay(250);
+        line_number++;
+        rms_scaled = int(ol::core::scale(rms_value, 0, 1, 0, 127, 1));
+        display.DrawRect(0, 16, rms_scaled, 24, true, true);
+
+        peak_scaled = int(ol::core::scale(peak_value, 0, 1, 0, 127, 1));
+        display.DrawLine(peak_scaled, 16, peak_scaled, 25, true);
+        line_number++;
+        display.SetCursor(0, 24);
+//        sprintf(strbuff, "rms : 0.%d", int(rms_value * 10000));
+        sprintf(strbuff, "peak: %d", int(peak_value * 10000));
+        display.WriteString(strbuff, font, true);
+
+        line_number++;
+        display.SetCursor(0, 44);
+        sprintf(strbuff, "note: %d", voice.Playing());
+        display.WriteString(strbuff, font, true);
+
+        display.Update();
+
+        counter += direction;
+        if (counter % 99 == 0) {
+            direction *= -1;
+        }
+        System::Delay(1);
+
     }
+
 }

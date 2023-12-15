@@ -10,7 +10,7 @@
 namespace ol::synth {
 
     template<int CHANNEL_COUNT>
-    class SampleSoundSource : public SoundSource {
+    class SampleSoundSource : public SoundSource<CHANNEL_COUNT> {
     public:
         explicit SampleSoundSource(Sample *s) : sample_(s), freq_(0) {}
 

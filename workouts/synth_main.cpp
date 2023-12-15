@@ -38,8 +38,10 @@ int main() {
 //    SynthVoice<CHANNEL_COUNT> v2 = SynthVoice<CHANNEL_COUNT>(osc2, v2_f, &v2_filter_envelope, &v2_amp_envelope,
 //                                                             &v2_portamento);
 
-    Voice *voices[VOICE_COUNT] = {ol::workout::VoiceFactory<CHANNEL_COUNT>(),
-                                  ol::workout::VoiceFactory<CHANNEL_COUNT>()};
+    Voice *voices[VOICE_COUNT];
+    for (auto &v : voices) {
+        v = new SynthVoice<CHANNEL_COUNT>();
+    }
     auto poly = Polyvoice<CHANNEL_COUNT, VOICE_COUNT>(voices);
 
     juce::initialiseJuce_GUI();

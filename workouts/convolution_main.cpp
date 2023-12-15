@@ -75,14 +75,18 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[]) {
     auto midiDevices = juce::MidiInput::getAvailableDevices();
     std::cout << "MIDI inputs:" << std::endl;
 
-    daisysp::Oscillator dosc;
-    auto osc = new ol::synth::OscillatorSoundSource<CHANNEL_COUNT>(dosc);
-    ol::synth::Filter *v1_f[] = {new ol::synth::SvfFilter()};
-    auto v1_fe = ol::synth::DaisyAdsr();
-    auto v1_ae = ol::synth::DaisyAdsr();
-    auto v1_port = ol::synth::DaisyPortamento();
-    auto voice = ol::synth::SynthVoice<CHANNEL_COUNT>(osc, v1_f, &v1_fe, &v1_ae, &v1_port);
-    ol::synth::Voice *voices[] = {&voice};
+//    daisysp::Oscillator dosc;
+//    auto osc = new ol::synth::OscillatorSoundSource<CHANNEL_COUNT>();
+//    ol::synth::Filter *v1_f[] = {new ol::synth::SvfFilter()};
+//    auto v1_fe = ol::synth::DaisyAdsr();
+//    auto v1_ae = ol::synth::DaisyAdsr();
+//    auto v1_port = ol::synth::DaisyPortamento();
+//    auto voice = ol::synth::SynthVoice<CHANNEL_COUNT>(osc, v1_f, &v1_fe, &v1_ae, &v1_port);
+//    ol::synth::Voice *voices[] = {&voice};
+    ol::synth::Voice *voices[VOICE_COUNT];
+    for (auto &v : voices) {
+        v = new ol::synth::SynthVoice<CHANNEL_COUNT>();
+    }
     auto poly = ol::synth::Polyvoice<CHANNEL_COUNT, VOICE_COUNT>(voices);
 
     auto midi_callback = SynthMidiCallback(poly);

@@ -10,13 +10,12 @@
 #include "VoiceMap.h"
 #include "SampleDataSource.h"
 
-#define BUF_LENGTH 128
-namespace ol::workout {
-
+#define BUF_LENGTH 256
+namespace ol::io {
 
     class PatchLoader {
     private:
-        const char *patch_path_;
+        const char *patch_directory_;
         const std::string &patch_;
         char buf[BUF_LENGTH] = {};
 
@@ -30,8 +29,8 @@ namespace ol::workout {
             virtual ol::synth::InitStatus LoadSample(ol::synth::Voice::Config c, uint8_t channel, uint8_t note, std::string sample_path) = 0;
         };
 
-        PatchLoader(const char *patch_path, const std::string &patch) :
-                patch_path_(patch_path), patch_(patch) {}
+        PatchLoader(const char *patch_directory, const std::string &patch) :
+                patch_directory_(patch_directory), patch_(patch) {}
 
         ol::synth::InitStatus Load(PatchLoaderCallback *callback);
     };

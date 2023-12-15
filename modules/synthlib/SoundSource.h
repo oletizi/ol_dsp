@@ -10,6 +10,7 @@ namespace ol::synth {
         Ok, Error
     };
 
+    template<int SOUND_SOURCE>
     class SoundSource {
     public:
 

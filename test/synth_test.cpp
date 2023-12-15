@@ -4,7 +4,6 @@
 #include "gtest/gtest.h"
 #include "gmock/gmock.h"
 #include "ol_synthlib.h"
-#include "soundpipe.h"
 
 using namespace ol::synth;
 
@@ -23,7 +22,7 @@ public:
     MOCK_METHOD(uint8_t, Playing, (), (override));
 };
 
-class MockSoundSource : public SoundSource {
+class MockSoundSource : public SoundSource<1> {
 public:
     MOCK_METHOD(InitStatus, Init, (t_sample sample_rate), (override));
 
@@ -85,18 +84,66 @@ public:
 
     MOCK_METHOD(t_sample, Low, (), (override));
 
-    MOCK_METHOD(t_sample, High,(), (override));
+    MOCK_METHOD(t_sample, High, (), (override));
 
-    MOCK_METHOD(t_sample, Band,(), (override));
+    MOCK_METHOD(t_sample, Band, (), (override));
 
-    MOCK_METHOD(t_sample, Notch,(), (override));
+    MOCK_METHOD(t_sample, Notch, (), (override));
 
-    MOCK_METHOD(t_sample, Peak,(), (override));
+    MOCK_METHOD(t_sample, Peak, (), (override));
 };
 
 using ::testing::AtLeast;
 using ::testing::Exactly;
 using ::testing::Return;
+TEST(Synth, VoiceDefaultConstructor) {
+    auto v = SynthVoice<1>();
+    t_sample sample_rate = 48000;
+    v.Init(sample_rate);
+    EXPECT_EQ(v.Playing(), 0);
+    EXPECT_FALSE(v.Gate());
+
+    uint8_t midi_note = 60;
+    uint8_t velocity = 100;
+    v.NoteOn(midi_note, velocity);
+
+    EXPECT_EQ(v.Playing(), midi_note);
+    EXPECT_TRUE(v.Gate());
+
+    v.NoteOff(midi_note, velocity);
+    EXPECT_EQ(v.Playing(), 0);
+    EXPECT_FALSE(v.Gate());
+
+    t_sample frame_out = 1;
+    v.Process(&frame_out);
+    EXPECT_EQ(frame_out, 0);
+
+    v.NoteOn(midi_note, velocity);
+    v.Process(&frame_out);
+    EXPECT_NE(frame_out, 0);
+    EXPECT_NE(frame_out, 1);
+    v.NoteOff(midi_note, velocity);
+
+    // turn off master volume (amp env amount)
+    Voice::Config config = {};
+    config.amp_env_amount = 0;
+    v.UpdateConfig(config);
+
+    v.NoteOn(midi_note, velocity);
+    v.Process(&frame_out);
+    EXPECT_EQ(frame_out, 0);
+    v.NoteOff(midi_note, velocity);
+
+    // turn master volume back up
+    config.amp_env_amount = 1;
+    v.UpdateConfig(config);
+
+    v.NoteOn(midi_note, velocity);
+    v.Process(&frame_out);
+    EXPECT_NE(frame_out, 0);
+    v.NoteOff(midi_note, velocity);
+}
+
 
 TEST(Synth, Voice) {
     MockSoundSource source = MockSoundSource();
@@ -106,6 +153,7 @@ TEST(Synth, Voice) {
     auto amp_envelope = MockAdsr();
     MockPortamento portamento;
     auto v = SynthVoice<1>(&source, filters, &filter_envelope, &amp_envelope, &portamento);
+    //auto v = SynthVoice<1>();
     Voice::Config config = {};
 
     config.filter_cutoff = 0.1f;

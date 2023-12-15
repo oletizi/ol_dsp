@@ -48,5 +48,34 @@ namespace ol::core {
     private:
         t_sample in_min_, in_max_, out_min_, out_max_, pow_;
     };
+
+
+    class Rms {
+    private:
+        t_sample rms = 0;
+        t_sample sum_of_squares = 0;
+        t_sample sample_count = 0;
+        t_sample window_ = 1;
+    public:
+        explicit Rms(){}
+
+        //explicit Rms(int window = 1024) : window_(window) {}
+        void Init(t_sample sample_rate, t_sample window = 0) {
+            window_ = window != 0 ? window : sample_rate / 375;
+        }
+
+        t_sample Process(const t_sample &in) {
+            if (sample_count == window_) {
+                sum_of_squares = 0;
+                sample_count = 0;
+            }
+            sum_of_squares += in * in;
+            sample_count++;
+            rms = sqrt(sum_of_squares / sample_count);
+            return rms;
+        }
+    };
+
 }
+
 #endif //OL_DSP_OL_CORELIB_H

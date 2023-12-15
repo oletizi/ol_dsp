@@ -10,7 +10,7 @@ DATTORRO_DIR = ${PROJECT_DIR}/libs/dattorro-verb
 SOUNDPIPE_DIR = ${PROJECT_DIR}/libs/Soundpipe
 # Includes
 
-#C_INCLUDES += -I${OL_DSP_DIR} -I${DATTORRO_DIR} -I${SOUNDPIPE_DIR}/h
+C_INCLUDES += -I${OL_DSP_DIR} -I${DATTORRO_DIR} -I${SOUNDPIPE_DIR}/h
 # Sources
 CPP_SOURCES += main.cpp #\
 #	${OL_DSP_DIR}/corelib/ol_corelib.cpp \
@@ -24,7 +24,7 @@ CPP_SOURCES += main.cpp #\
 #	${DATTORRO_DIR}/verb.cpp
 
 #OPT = -O3
-OPT = -Os
+#OPT = -Os
 
 # Library Locations
 LIBDAISY_DIR = ${PROJECT_DIR}/libs/libDaisy

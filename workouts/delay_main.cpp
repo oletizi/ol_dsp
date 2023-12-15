@@ -10,13 +10,14 @@
 
 #define CHANNEL_COUNT 2
 
-daisysp::Oscillator dosc;
-auto osc = new ol::synth::OscillatorSoundSource<1>(dosc);
-ol::synth::Filter *v1_f[] = {new ol::synth::SvfFilter()};
-auto v1_fe = ol::synth::DaisyAdsr();
-auto v1_ae = ol::synth::DaisyAdsr();
-auto v1_port = ol::synth::DaisyPortamento();
-auto voice = ol::synth::SynthVoice<1>(osc, v1_f, &v1_fe, &v1_ae, &v1_port);
+//daisysp::Oscillator dosc;
+//auto osc = new ol::synth::OscillatorSoundSource<1>(dosc);
+//ol::synth::Filter *v1_f[] = {new ol::synth::SvfFilter()};
+//auto v1_fe = ol::synth::DaisyAdsr();
+//auto v1_ae = ol::synth::DaisyAdsr();
+//auto v1_port = ol::synth::DaisyPortamento();
+//auto voice = ol::synth::SynthVoice<1>(osc, v1_f, &v1_fe, &v1_ae, &v1_port);
+auto voice = ol::synth::SynthVoice<1>();
 daisysp::DelayLine<t_sample, MAX_DELAY> delay_line;
 
 auto df = daisysp::Svf();

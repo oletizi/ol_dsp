@@ -8,9 +8,9 @@
 
 #include "corelib/ol_corelib.h"
 
-extern "C" {
-#include "soundpipe.h"
-}
+//extern "C" {
+//#include "soundpipe.h"
+//}
 
 #include "verb.h"
 #include "daisysp.h"

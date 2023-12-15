@@ -3,7 +3,7 @@
 //
 #include "PatchLoader.h"
 
-namespace ol::workout {
+namespace ol::io {
 
     ol::synth::InitStatus PatchLoader::Load(PatchLoaderCallback *callback) {
         // XXX: This is super fragile and bad
@@ -20,9 +20,9 @@ namespace ol::workout {
                 printf("sample has value: %d\n", sample_name.has_val());
                 if (sample_name.has_val()) {
                     fill_buf(sample_name.val());
-                    std::string sample_path = patch_path_ + std::string(buf);
+                    std::string sample_path = patch_directory_ + std::string(buf);
                     printf("  sample name: %s\n", buf);
-                    printf("  patch path: %s\n", patch_path_);
+                    printf("  patch path: %s\n", patch_directory_);
                     printf("  sample path: %s\n", sample_path.c_str());
                     auto note = region["note"];
                     uint64_t note_value = 0;

@@ -16,11 +16,11 @@ namespace ol::synth {
     template<int CHANNEL_COUNT>
     class SynthVoice : public Voice {
     public:
-        explicit SynthVoice(SoundSource *sound_source,
-                            Filter *filters[CHANNEL_COUNT],
-                            Adsr *filter_envelope,
-                            Adsr *amp_envelope,
-                            Portamento *portamento)
+        SynthVoice(SoundSource<CHANNEL_COUNT> *sound_source,
+                   Filter *filters[CHANNEL_COUNT],
+                   Adsr *filter_envelope,
+                   Adsr *amp_envelope,
+                   Portamento *portamento)
                 : sound_source_(sound_source),
                   filter_envelope_(filter_envelope),
                   amp_envelope_(amp_envelope),
@@ -30,13 +30,21 @@ namespace ol::synth {
             }
         }
 
+        SynthVoice() : SynthVoice<CHANNEL_COUNT>(new OscillatorSoundSource<CHANNEL_COUNT>(),
+                                                 new Filter*[CHANNEL_COUNT], new DaisyAdsr(), new DaisyAdsr(),
+                                                 new DaisyPortamento()) {
+            for (int i=0; i<CHANNEL_COUNT; i++) {
+                filters_[i] = new SvfFilter();
+            }
+        }
+
         void Init(t_sample sr) override {
             sample_rate = sr;
             sound_source_->Init(sr);
             for (int i = 0; i < CHANNEL_COUNT; i++) {
                 filters_[i]->Init(sample_rate);
             }
-            filter_envelope_->Init(sample_rate,1);
+            filter_envelope_->Init(sample_rate, 1);
             amp_envelope_->Init(sample_rate, 1);
             portamento_->Init(sample_rate, portamento_htime);
             initialized = true;
@@ -70,12 +78,14 @@ namespace ol::synth {
             filter_decay = config.filter_decay;
             filter_sustain = config.filter_sustain;
             filter_release = config.filter_release;
+            filter_env_amount = config.filter_env_amount;
 
             amp_attack = config.amp_attack;
             amp_attack_shape = config.amp_attack_shape;
             amp_decay = config.amp_decay;
             amp_sustain = config.amp_sustain;
             amp_release = config.amp_release;
+            amp_env_amount = config.amp_env_amount;
 
             portamento_htime = config.portamento;
             Update();
@@ -106,8 +116,6 @@ namespace ol::synth {
             // Portamento
             portamento_->SetHtime(portamento_htime);
         }
-
-
 
 
         void UpdateMidiControl(uint8_t ctl, uint8_t val) override {
@@ -220,7 +228,7 @@ namespace ol::synth {
         t_sample sample_rate = 0;
 
         // Oscillator, sample player, etc.
-        SoundSource *sound_source_;
+        SoundSource<CHANNEL_COUNT> *sound_source_{};
 
         // Oscillator/sound source params
         t_sample freq_ = 0;
@@ -228,7 +236,7 @@ namespace ol::synth {
 
         // Filter
         Filter *filters_[CHANNEL_COUNT] = {};
-        ol::synth::Adsr *filter_envelope_;
+        ol::synth::Adsr *filter_envelope_{};
 
         // Filter parameters
         t_sample filter_cutoff = 0;
@@ -243,7 +251,7 @@ namespace ol::synth {
         t_sample filter_env_amount = 1;
 
         // Amplifier
-        ol::synth::Adsr *amp_envelope_;
+        ol::synth::Adsr *amp_envelope_{};
 
         // Amplifier parameters
         t_sample amp_attack = 0.01f; // a little lag on attack and release help reduce clicking
@@ -254,7 +262,7 @@ namespace ol::synth {
         t_sample amp_env_amount = 0.8f; // AKA voice volume
 
         // Portamento
-        Portamento *portamento_;
+        Portamento *portamento_{};
 
         // Portamento parameters
         t_sample portamento_htime = 0;

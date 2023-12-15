@@ -8,5 +8,5 @@ add_library(ol_fxlib
         Saturator.cpp
         ol_fxlib.h
 )
-target_link_libraries(ol_fxlib ol_corelib ol_ctllib DaisySP dattorro-verb soundpipe)
+target_link_libraries(ol_fxlib ol_corelib ol_ctllib DaisySP dattorro-verb)
 target_include_directories(ol_fxlib PUBLIC .)

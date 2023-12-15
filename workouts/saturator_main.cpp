@@ -5,16 +5,10 @@
 #include "workout_buddy.h"
 #include "ol_fxlib.h"
 
-using namespace ol::workout;
+using namespace ol::io;
 using namespace ol::synth;
 using namespace ol::fx;
-daisysp::Oscillator dosc;
-auto osc = new OscillatorSoundSource<1>(dosc);
-ol::synth::Filter *filters[] = {new ol::synth::SvfFilter};
-auto fe = ol::synth::DaisyAdsr();
-auto ae = ol::synth::DaisyAdsr();
-auto port = ol::synth::DaisyPortamento();
-auto voice = SynthVoice<1>(osc, filters, &fe, &ae, &port);
+auto voice = SynthVoice<1>();
 
 SaturatorFx saturator1;
 SaturatorFx saturator2;
@@ -32,8 +26,6 @@ void note_off_callback(workout_buddy *, uint8_t channel, uint8_t note, uint8_t v
 }
 
 void cc_callback(workout_buddy *, uint8_t channel, uint8_t control, uint8_t value) {
-//    Saturator_UpdateMidiControl(&saturator1, control, value);
-//    Saturator_UpdateMidiControl(&saturator2, control, value);
     saturator1.UpdateMidiControl(control, value);
     saturator2.UpdateMidiControl(control, value);
 }
@@ -55,12 +47,8 @@ void audio_callback(workout_buddy *, t_sample &in1, t_sample &in2, t_sample *out
 }
 
 int main() {
-    sp_saturator sat1;
-    sp_data sp_data1;
-    sp_saturator sat2;
-    sp_data sp_data2;
 
-    ol::workout::workout_buddy buddy;
+    ol::io::workout_buddy buddy;
     RtMidiIn midi_in;
     std::cout << "Hello, world!" << std::endl;
 
@@ -68,8 +56,8 @@ int main() {
 
     Workout_Config(&buddy, &midi_in, &audio_device, note_on_callback, note_off_callback, cc_callback, audio_callback);
 
-    ol::workout::InitStatus status = Workout_Init(&buddy);
-    if (status != ol::workout::InitStatus::Ok) {
+    ol::io::InitStatus status = Workout_Init(&buddy);
+    if (status != ol::io::InitStatus::Ok) {
         return status;
     }
     t_sample sample_rate = Workout_SampleRate(&buddy);

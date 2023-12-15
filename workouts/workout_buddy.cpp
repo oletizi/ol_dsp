@@ -4,7 +4,7 @@
 
 #include "workout_buddy.h"
 
-namespace ol::workout {
+namespace ol::io {
 
 
     uint64_t MaSampleSource::Read(t_sample *frames_out) {

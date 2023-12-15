@@ -13,21 +13,7 @@
 #include "synthlib/ol_synthlib.h"
 
 #define MAX_PATH_LENGTH 256
-namespace ol::workout {
-
-    template<int CHANNEL_COUNT>
-    static ol::synth::SynthVoice<CHANNEL_COUNT> *VoiceFactory() {
-        auto osc = daisysp::Oscillator();
-        auto source = new ol::synth::OscillatorSoundSource<CHANNEL_COUNT>(osc);
-        ol::synth::Filter *filters[CHANNEL_COUNT] = {};
-        for (int i = 0; i < CHANNEL_COUNT; i++) {
-            filters[i] = new ol::synth::SvfFilter;
-        }
-        auto fe = new ol::synth::DaisyAdsr();
-        auto ae = new ol::synth::DaisyAdsr();
-        auto port = new ol::synth::DaisyPortamento();
-        return new ol::synth::SynthVoice<CHANNEL_COUNT>(source, filters, fe, ae, port);
-    }
+namespace ol::io {
 
     class MaSampleSource : public ol::synth::SampleDataSource {
     public:
@@ -55,7 +41,7 @@ namespace ol::workout {
         t_sample sample_rate_ = 0;
     };
 
-    class NullSoundSource : public ol::synth::SoundSource {
+    class NullSoundSource : public ol::synth::SoundSource<1> {
     public:
         synth::InitStatus Init(t_sample sample_rate) override {
             return synth::Ok;

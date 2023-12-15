@@ -6,10 +6,10 @@
 #define OL_DSP_SAMPLEPOOL_H
 
 #include "ol_synthlib.h"
-#include "PatchLoader.h"
+#include "iolib/PatchLoader.h"
 #include "workout_buddy.h"
 
-namespace ol::workout {
+namespace ol::io {
     struct VoiceData {
         ol::synth::SampleDataSource *data_source;
         ol::synth::Voice *voice;

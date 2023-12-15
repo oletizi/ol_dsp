@@ -3,7 +3,7 @@
 //
 #include "workout_buddy.h"
 
-using namespace ol::workout;
+using namespace ol::io;
 
 void note_on_callback(workout_buddy *, uint8_t channel, uint8_t note, uint8_t velocity) {}
 
@@ -25,7 +25,7 @@ void audio_callback(workout_buddy *buddy, t_sample &in1, t_sample &in2, t_sample
 }
 
 int main() {
-    ol::workout::workout_buddy buddy;
+    ol::io::workout_buddy buddy;
     RtMidiIn midi_in;
     ma_device audio_device;
 
@@ -40,7 +40,7 @@ int main() {
     printf("Starting audio...");
     Workout_Config(&buddy, &midi_in, &audio_device, note_on_callback, note_off_callback, cc_callback, audio_callback,
                    &sample);
-    ol::workout::InitStatus status = Workout_Init(&buddy);
+    ol::io::InitStatus status = Workout_Init(&buddy);
     if (status != InitStatus::Ok) {
         return status;
     }
