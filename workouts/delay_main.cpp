@@ -9,15 +9,12 @@
 #include "synthlib/ol_synthlib.h"
 
 #define CHANNEL_COUNT 2
+#define VOICE_COUNT 4
 
-//daisysp::Oscillator dosc;
-//auto osc = new ol::synth::OscillatorSoundSource<1>(dosc);
-//ol::synth::Filter *v1_f[] = {new ol::synth::SvfFilter()};
-//auto v1_fe = ol::synth::DaisyAdsr();
-//auto v1_ae = ol::synth::DaisyAdsr();
-//auto v1_port = ol::synth::DaisyPortamento();
-//auto voice = ol::synth::SynthVoice<1>(osc, v1_f, &v1_fe, &v1_ae, &v1_port);
-auto voice = ol::synth::SynthVoice<1>();
+
+//auto voice = ol::synth::SynthVoice<1>();
+ol::synth::Voice *voices[VOICE_COUNT] = {};
+ol::synth::Polyvoice<1, VOICE_COUNT> poly(voices);
 daisysp::DelayLine<t_sample, MAX_DELAY> delay_line;
 
 auto df = daisysp::Svf();
@@ -29,7 +26,7 @@ int notes_on = 0;
 void handleNoteOn(int channel, int note, int velocity) {
     std::cout << "NOTE ON: chan: " << channel << "; note: " << note << "; vel: " << velocity << std::endl;
     notes_on++;
-    voice.NoteOn(note, velocity);
+    poly.NoteOn(note, velocity);
 }
 
 void handleNoteOff(int channel, int note, int velocity) {
@@ -37,12 +34,12 @@ void handleNoteOff(int channel, int note, int velocity) {
     if (notes_on > 0) {
         notes_on--;
     }
-    voice.NoteOff(note, velocity);
+    poly.NoteOff(note, velocity);
 }
 
 void handleCC(int channel, int control, int value) {
     std::cout << "CC: chan: " << channel << "; control: " << control << "; val: " << value << std::endl;
-    voice.UpdateMidiControl(control, value);
+    poly.UpdateMidiControl(0, control, value);
     delay.UpdateMidiControl(control, value);
 }
 
@@ -83,15 +80,15 @@ void audio_callback([[maybe_unused]] ma_device *pDevice, void *pOutput, [[maybe_
     auto *out = (float *) pOutput;
     for (int i = 0; i < frameCount; i++) {
         t_sample voice_out = 0;
-        voice.Process(&voice_out);
+        poly.Process(&voice_out);
         t_sample delay_out = 0;
         delay.Process(&voice_out, &delay_out);
 
         t_sample out1 = voice_out + delay_out;
-        t_sample out2 = voice_out + delay_out;
+//        t_sample out2 = voice_out + delay_out;
 
         out[i * CHANNEL_COUNT + 0] = out1;
-        out[i * CHANNEL_COUNT + 1] = out2;
+        out[i * CHANNEL_COUNT + 1] = out1;
     }
 }
 
@@ -110,7 +107,7 @@ int main() {
 
         std::cout << "Input port " << i << ": " << midiin->getPortName(i) << std::endl;
         const std::string &port_name = midiin->getPortName(i);
-        if (strstr(port_name.c_str(), "Maschine") != nullptr) {
+        if (strstr(port_name.c_str(), "IAC") != nullptr) {
             std::cout << "Connecting to " << port_name << std::endl;
             midiin->openPort(i);
         }
@@ -131,7 +128,10 @@ int main() {
         return -1;  // Failed to initialize the device.
     }
 
-    voice.Init(device.sampleRate);
+    for (auto & voice : voices) {
+        voice = new ol::synth::SynthVoice<1>();
+    }
+    poly.Init(device.sampleRate);
     delay.Init(device.sampleRate);
 
     ma_device_start(&device);     // The device is sleeping by default so you'll need to start it manually.
