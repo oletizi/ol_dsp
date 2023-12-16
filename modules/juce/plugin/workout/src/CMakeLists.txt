@@ -1,1 +1,0 @@
-target_sources(ol-workout-plugin PRIVATE PluginProcessor.h PluginProcessor.cpp)

@@ -2,6 +2,9 @@ cmake_minimum_required(VERSION 3.26)
 project(ol_dsp VERSION 0.1)
 set(CMAKE_CXX_STANDARD 17)
 
+set(JUCE_BUILD_EXTRAS OFF)
+set(JUCE_BUILD_EXAMPLES OFF)
+
 add_subdirectory(libs/DaisySP)
 add_subdirectory(libs/dattorro-verb)
 add_subdirectory(libs/JUCE)
@@ -17,6 +20,7 @@ add_subdirectory(modules/juce/plugin/workout)
 add_subdirectory(modules/synthlib)
 add_subdirectory(workouts)
 add_subdirectory(test)
+
 
 add_library(stmlib
         libs/stmlib/stmlib/stmlib.h

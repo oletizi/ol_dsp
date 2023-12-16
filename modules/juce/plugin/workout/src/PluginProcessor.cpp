@@ -5,11 +5,13 @@
 #include "PluginProcessor.h"
 
 const juce::String PluginProcessor::getName() const {
-    return juce::String( "OL Workout");
+    return juce::String("OL Workout");
 }
 
 void PluginProcessor::prepareToPlay(double sampleRate, int maximumExpectedSamplesPerBlock) {
-
+    voice.Init(sampleRate);
+    osc.Init(sampleRate);
+    osc.SetFreq(4000);
 }
 
 void PluginProcessor::releaseResources() {
@@ -17,7 +19,27 @@ void PluginProcessor::releaseResources() {
 }
 
 void PluginProcessor::processBlock(juce::AudioBuffer<float> &buffer, juce::MidiBuffer &midiMessages) {
-
+    //const juce::MidiBufferIterator &iterator = midiMessages.begin();
+    for (const auto &m: midiMessages) {
+        const auto message = m.getMessage();
+        if (message.isNoteOn()) {
+            voice.NoteOn(message.getNoteNumber(), message.getVelocity());
+        } else if (message.isNoteOff()) {
+            voice.NoteOff(message.getNoteNumber(), message.getVelocity());
+        } else if (message.isController()) {
+            voice.UpdateMidiControl(message.getControllerNumber(), message.getControllerValue());
+        }
+    }
+    const int channel_count = buffer.getNumChannels();
+    t_sample voice_out = 0;
+    for (int i = 0; i < buffer.getNumSamples(); i++) {
+        voice.Process(&voice_out);
+        //voice_out = osc.Process();
+        for (int j = 0; j < channel_count; j++) {
+            *buffer.getWritePointer(j, i) = voice_out;
+        }
+    }
+    //for (auto &message: midiMessages.begin()) {}
 }
 
 double PluginProcessor::getTailLengthSeconds() const {
@@ -66,8 +88,4 @@ void PluginProcessor::getStateInformation(juce::MemoryBlock &destData) {
 
 void PluginProcessor::setStateInformation(const void *data, int sizeInBytes) {
 
-}
-
-juce::AudioProcessor *PluginProcessor::createPluginFilter() JUCE_CALLTYPE {
-     return new PluginProcessor();
 }

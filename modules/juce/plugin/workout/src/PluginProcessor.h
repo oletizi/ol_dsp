@@ -6,10 +6,17 @@
 #define OL_DSP_PLUGINPROCESSOR_H
 #include <juce_core/juce_core.h>
 #include <juce_audio_processors/juce_audio_processors.h>
+#include "synthlib/ol_synthlib.h"
+
+#define CHANNEL_COUNT 1
 
 class PluginProcessor : public juce::AudioProcessor {
+private:
+    ol::synth::SynthVoice<CHANNEL_COUNT> voice;
+    daisysp::Oscillator osc;
+
+
 public:
-    static juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter();// { return new PluginProcessor(); }
 
     const juce::String getName() const override;
 

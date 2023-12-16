@@ -11,7 +11,7 @@ juce_add_plugin(ol-workout-plugin
         COMPANY_NAME oletizi
 #        COMPANY_WEBSITE "https://orionletizi.com"
 #        COMPANY_EMAIL "orion@orionletizi.com"
-        FORMATS AU
+        FORMATS AU Standalone
         PLUGIN_NAME "OL Workout"
         PLUGIN_MANUFACTURER_CODE Olet
         PLUGIN_CODE Olwo
@@ -23,6 +23,12 @@ juce_add_plugin(ol-workout-plugin
         AU_COPY_DIR /Users/orion/Library/Audio/Plug-Ins/Components
 )
 target_sources(ol-workout-plugin PUBLIC src/ol_workout_plugin.cpp src/PluginProcessor.cpp)
+target_link_libraries(ol-workout-plugin PRIVATE
+        juce::juce_core
+        juce::juce_audio_devices
+        juce::juce_audio_utils
+        juce::juce_dsp
+        ol_synthlib)
 target_include_directories(ol-workout-plugin PUBLIC src)
 juce_generate_juce_header(ol-workout-plugin)
 #add_subdirectory(src)
