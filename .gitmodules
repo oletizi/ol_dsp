@@ -37,3 +37,6 @@
 [submodule "libs/rapidyaml"]
 	path = libs/rapidyaml
 	url = git@github.com:oletizi/rapidyaml.git
+[submodule "libs/stmlib"]
+	path = libs/stmlib/stmlib
+	url = git@github.com:oletizi/stmlib.git

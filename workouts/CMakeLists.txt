@@ -8,6 +8,9 @@ add_library(workout-buddy workout_buddy.cpp)
 target_link_libraries(workout-buddy ol_corelib ol_fxlib ol_synthlib rtmidi)
 target_include_directories(workout-buddy PUBLIC ../libs/rtmidi ../libs/miniaudio)
 
+add_executable(stmlib-workout stmlib_main.cpp)
+target_link_libraries(stmlib-workout rtmidi stmlib workout-buddy ol_corelib ol_fxlib ol_synthlib)
+
 add_executable(drum-workout drum_main.cpp
         ../modules/iolib/PatchLoader.cpp
         ../modules/iolib/PatchLoader.h
