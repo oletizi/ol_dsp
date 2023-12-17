@@ -56,9 +56,9 @@ namespace ol::synth {
                 frame_buffer[i] *= osc_1_mix;
             }
             filter_->Process(frame_buffer);
-            filter_->Low(frame_out);
+            filter_->Low(frame_buffer);
             for (int i = 0; i < CHANNEL_COUNT; i++) {
-                frame_out[i] *= amp * amp_env_amount;
+                frame_out[i] = amp * amp_env_amount * frame_buffer[i];
             }
         }
 
@@ -89,7 +89,6 @@ namespace ol::synth {
         void Update() override {
 
             //filter_->SetFreq(filter_cutoff);
-            PRINTF("  cutoff: %d", filter_cutoff * 1000);
             filter_->SetRes(filter_resonance);
             filter_->SetDrive(filter_drive);
 
@@ -123,7 +122,7 @@ namespace ol::synth {
                     break;
                 case CC_FILT_CUTOFF:
                     filter_cutoff = ol::core::scale(val, 0, 127, 0, 20000, 2.5);
-                    PRINTF("  cutoff: %f\n", filter_cutoff);
+                    PRINTF("  Cutoff: %f\n", int(filter_cutoff));
                     break;
                 case CC_FILT_Q:
                     filter_resonance = scaled;

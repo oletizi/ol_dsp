@@ -10,6 +10,8 @@ const juce::String PluginProcessor::getName() const {
 
 void PluginProcessor::prepareToPlay(double sampleRate, int maximumExpectedSamplesPerBlock) {
     voice.Init(sampleRate);
+    fx.Init(sampleRate);
+    osc.Init(sampleRate);
 }
 
 void PluginProcessor::releaseResources() {
@@ -22,10 +24,13 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float> &buffer, juce::MidiB
     for (const auto &m: midiMessages) {
         const auto message = m.getMessage();
         if (message.isNoteOn()) {
+            DBG("Note on");
             voice.NoteOn(message.getNoteNumber(), message.getVelocity());
         } else if (message.isNoteOff()) {
+            DBG("Note off");
             voice.NoteOff(message.getNoteNumber(), message.getVelocity());
         } else if (message.isController()) {
+            DBG("Controller");
             voice.UpdateMidiControl(message.getControllerNumber(), message.getControllerValue());
             fx.UpdateMidiControl(message.getControllerNumber(), message.getControllerValue());
         }
@@ -36,6 +41,7 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float> &buffer, juce::MidiB
         fx.Process(ibuf, obuf);
 
         for (int j = 0; j < channel_count; j++) {
+
             *buffer.getWritePointer(j, i) = obuf[j];
         }
     }

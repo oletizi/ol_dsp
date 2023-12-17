@@ -15,6 +15,7 @@ using namespace ol::synth;
 using namespace ol::fx;
 class PluginProcessor : public juce::AudioProcessor {
 private:
+    daisysp::Oscillator osc;
     SynthVoice<CHANNEL_COUNT> voice;
     FxRack<CHANNEL_COUNT> fx;
     t_sample ibuf[128] {};

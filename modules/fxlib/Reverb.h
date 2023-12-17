@@ -47,12 +47,15 @@ namespace ol::fx {
 
         void Process(const t_sample *frame_in, t_sample *frame_out) override {
             in1 = frame_in[0];
+            // XXX: This could be more elegant
             in2 = CHANNEL_COUNT > 1 ? frame_in[1] : in1;
-            out1 = out2 = 0;
+            //out1 = out2 = 0;
+
             verb.Process(in1, in2, &out1, &out2);
+            // XXX: This could be more elegant
             if (CHANNEL_COUNT > 1) {
                 frame_out[0] = out1;
-                frame_out[2] = out2;
+                frame_out[1] = out2;
             } else {
                 *frame_out = out1 + out2 / 2;
             }
