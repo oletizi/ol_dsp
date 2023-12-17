@@ -28,6 +28,7 @@ target_link_libraries(ol-workout-plugin PRIVATE
         juce::juce_audio_devices
         juce::juce_audio_utils
         juce::juce_dsp
+        ol_fxlib
         ol_synthlib)
 target_include_directories(ol-workout-plugin PUBLIC src)
 juce_generate_juce_header(ol-workout-plugin)

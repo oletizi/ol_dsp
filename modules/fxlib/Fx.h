@@ -16,6 +16,7 @@
 #include "daisysp.h"
 #include "corelib/cc_map.h"
 #include "synthlib/Filter.h"
+#include "Reverb.h"
 
 #define MAX_DELAY 48000
 namespace ol::fx {
@@ -34,7 +35,8 @@ namespace ol::fx {
 
         void Process(const t_sample *frame_in, t_sample *frame_out) {
             for (int i = 0; i < CHANNEL_COUNT; i++) {
-                frame_out[CHANNEL_COUNT] = transferFunction(this, frame_in[CHANNEL_COUNT]);
+                t_sample out = transferFunction(this, frame_in[CHANNEL_COUNT]);
+                frame_out[CHANNEL_COUNT] = out;
             }
         }
 
@@ -248,11 +250,9 @@ namespace ol::fx {
     };
 
     // Reverb
+    template<int CHANNEL_COUNT>
     class ReverbFx {
     private:
-        const int input_channels = 0;
-        const int output_channels = 0;
-        t_sample sample_rate = 44100;
         t_sample decay_time = 0.5;
         t_sample cutoff = 1;
         t_sample early_predelay = 0.1;
@@ -262,67 +262,114 @@ namespace ol::fx {
         t_sample input_diffusion2 = 0.5;
         t_sample decay_diffusion = 0.5;
         t_sample balance = 0.5;
-        void *reverb = nullptr;
-
-        typedef void (*init_function)(ReverbFx *, t_sample sample_rate);
-
-        typedef void (*process_function)(ReverbFx *, const t_sample *frame_in, t_sample *frame_out);
-
-        typedef void (*update_function)(ReverbFx *reverb);
-
-        static void dattorro_init(ReverbFx *, t_sample sample_rate);
-
-        static void dattorro_process(ReverbFx *, const t_sample *frame_in, t_sample *frame_out);
-
-        static void dattorro_update(ReverbFx *);
-
-        static void reverbSc_init(ReverbFx *, t_sample sample_rate);
-
-        static void reverbSc_process(ReverbFx *, const t_sample *frame_in, t_sample *frame_out);
-
-        static void reverbSc_update(ReverbFx *);
-
-        init_function init = nullptr;
-        process_function process = nullptr;
-        update_function update = nullptr;
-
-
-        inline daisysp::ReverbSc *asReverbSc() { return static_cast<daisysp::ReverbSc *>(reverb); }
-
-        inline sDattorroVerb *asDattorroVerb() { return static_cast<sDattorroVerb *>(reverb); }
+        Reverb *reverb;
+        t_sample buf[CHANNEL_COUNT]{};
 
     public:
-        // Daisy ReverbSc ctor
-        ReverbFx() : reverb(new daisysp::ReverbSc()), input_channels(2), output_channels(2) {}
+        ReverbFx() : reverb(new DaisyVerb<CHANNEL_COUNT>) {}
 
-        explicit ReverbFx(daisysp::ReverbSc &reverb,
-                          int input_channels = 2,
-                          int output_channels = 2) :
-                reverb(static_cast<void *>(&reverb)),
-                input_channels(input_channels),
-                output_channels(output_channels),
-                init(reverbSc_init),
-                process(reverbSc_process),
-                update(reverbSc_update) {}
+        explicit ReverbFx(Reverb *verb) : reverb(verb) {}
 
-        // Dattorro reverb ctor
-        explicit ReverbFx(sDattorroVerb *reverb, int input_channels = 2, int output_channels = 2) :
-                reverb(static_cast<void *>(reverb)),
-                input_channels(input_channels),
-                output_channels(output_channels),
-                init(dattorro_init),
-                process(dattorro_process),
-                update(dattorro_update) {}
+        void Init(const t_sample sample_rate) {
+            reverb->Init(sample_rate);
+        }
 
-        void Init(t_sample sample_rate);
+        void Process(const t_sample *frame_in, t_sample *frame_out) {
+            reverb->Process(frame_in, buf);
+            for (int i = 0; i < CHANNEL_COUNT; i++) {
+                frame_out[i] = (buf[i] * balance) + (frame_in[i] * (1 - balance));
+            }
+        }
 
-        void Process(const t_sample *frame_in, t_sample *frame_out);
+        void Update() {
+            reverb->SetTime(decay_time);
+            reverb->SetCutoff(cutoff);
+            reverb->SetEarlyPredelay(early_predelay);
+            reverb->SetPredelay(predelay);
+            reverb->SetPrefilter(pre_cutoff);
+            reverb->SetInputDiffusion1(input_diffusion1);
+            reverb->SetInputDiffusion2(input_diffusion2);
+            reverb->SetDecayDiffusion(decay_diffusion);
+        }
 
-        void Update();
+        void UpdateMidiControl(uint8_t control, uint8_t value) {
+            bool do_update = true;
+            t_sample scaled = core::scale(value, 0, 127, 0, 1, 1);
+            switch (control) {
+                case CC_REVERB_DECAY_DIFFUSION:
+                    decay_diffusion = scaled;
+                    break;
+                case CC_REVERB_INPUT_DIFFUSION_1:
+                    input_diffusion1 = scaled;
+                    break;
+                case CC_REVERB_INPUT_DIFFUSION_2:
+                    decay_diffusion = scaled;
+                    break;
+                case CC_REVERB_CUTOFF:
+                    cutoff = scaled;
+                    break;
+                case CC_REVERB_BALANCE:
+                    balance = scaled;
+                    break;
+                case CC_REVERB_PREDELAY:
+                    predelay = scaled;
+                    break;
+                case CC_EARLY_PREDELAY:
+                    early_predelay = scaled;
+                    break;
+                case CC_REVERB_PREFILTER:
+                    pre_cutoff = scaled;
+                    break;
+                case CC_REVERB_TIME:
+                    decay_time = scaled;
+                    break;
+                default:
+                    do_update = false;
+                    break;
+            }
+            if (do_update) {
+                Update();
+            }
+        }
 
-        void UpdateMidiControl(uint8_t control, uint8_t value);
-
-        void UpdateHardwareControl(uint8_t control, t_sample value);
+        void UpdateHardwareControl(uint8_t control, t_sample value) {
+            bool do_update = true;
+            switch (control) {
+                case CC_REVERB_DECAY_DIFFUSION:;
+                    decay_diffusion = value;
+                    break;
+                case CC_REVERB_INPUT_DIFFUSION_1:;
+                    input_diffusion1 = value;
+                    break;
+                case CC_REVERB_INPUT_DIFFUSION_2:;
+                    decay_diffusion = value;
+                    break;
+                case CC_REVERB_CUTOFF:;
+                    cutoff = value;
+                    break;
+                case CC_REVERB_BALANCE:;
+                    balance = value;
+                    break;
+                case CC_REVERB_PREDELAY:;
+                    predelay = value;
+                    break;
+                case CC_EARLY_PREDELAY:;
+                    early_predelay = value;
+                    break;
+                case CC_REVERB_PREFILTER:;
+                    pre_cutoff = value;
+                    break;
+                case CC_REVERB_TIME:;
+                    decay_time = value;
+                    break;
+                default:
+                    do_update = false;
+                    break;
+            }
+            if (do_update) {
+                Update();
+            }
+        }
 
     };
 
@@ -332,7 +379,7 @@ namespace ol::fx {
     class FxRack {
     private:
         ol::fx::DelayFx<CHANNEL_COUNT> delay1;
-        ol::fx::ReverbFx reverb;
+        ol::fx::ReverbFx<CHANNEL_COUNT> reverb;
         FilterFx<CHANNEL_COUNT> filter1;
         SaturatorFx<CHANNEL_COUNT> saturator1;
         SaturatorFx<CHANNEL_COUNT> interstage_saturator;
@@ -342,7 +389,7 @@ namespace ol::fx {
     public:
         FxRack() = default;
 
-        FxRack(DelayFx<CHANNEL_COUNT> &delay1, ReverbFx &reverb, FilterFx<CHANNEL_COUNT> &filt1,
+        FxRack(DelayFx<CHANNEL_COUNT> &delay1, ReverbFx<CHANNEL_COUNT> &reverb, FilterFx<CHANNEL_COUNT> &filt1,
                SaturatorFx<CHANNEL_COUNT> &sat1,
                SaturatorFx<CHANNEL_COUNT> &interstage_saturator,
                int channel_count = 2)

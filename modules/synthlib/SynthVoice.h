@@ -16,7 +16,7 @@ namespace ol::synth {
     template<int CHANNEL_COUNT>
     class SynthVoice : public Voice {
     private:
-        t_sample frame_buffer[CHANNEL_COUNT];
+        t_sample frame_buffer[CHANNEL_COUNT]{};
     public:
         SynthVoice(SoundSource<CHANNEL_COUNT> *sound_source,
                    Filter *filter,
@@ -88,7 +88,8 @@ namespace ol::synth {
 
         void Update() override {
 
-            filter_->SetFreq(filter_cutoff);
+            //filter_->SetFreq(filter_cutoff);
+            PRINTF("  cutoff: %d", filter_cutoff * 1000);
             filter_->SetRes(filter_resonance);
             filter_->SetDrive(filter_drive);
 

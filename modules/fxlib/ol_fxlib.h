@@ -5,4 +5,5 @@
 #ifndef OL_DSP_OL_FXLIB_H
 #define OL_DSP_OL_FXLIB_H
 #include "fxlib/Fx.h"
+#include "fxlib/Reverb.h"
 #endif //OL_DSP_OL_FXLIB_H

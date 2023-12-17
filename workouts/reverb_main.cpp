@@ -10,9 +10,12 @@
 #define CHANNEL_COUNT 1
 #define VOICE_COUNT 1
 
+using namespace ol::fx;
+using namespace ol::synth;
+
 class ReverbAudioCallback : public juce::AudioIODeviceCallback {
 public:
-    explicit ReverbAudioCallback(ol::fx::ReverbFx *fx, SynthAudioCallback<CHANNEL_COUNT, VOICE_COUNT> &synth) :
+    explicit ReverbAudioCallback(ol::fx::ReverbFx<CHANNEL_COUNT> *fx, SynthAudioCallback<CHANNEL_COUNT, VOICE_COUNT> &synth) :
             fx_(fx), synth_(synth) {}
 
     void audioDeviceAboutToStart(juce::AudioIODevice *device) override {
@@ -57,13 +60,13 @@ public:
     }
 
 
-    ol::fx::ReverbFx *fx_;
+    ol::fx::ReverbFx<CHANNEL_COUNT> *fx_;
     SynthAudioCallback<CHANNEL_COUNT, VOICE_COUNT> &synth_;
 };
 
 class ReverbMidiCallback : public juce::MidiInputCallback {
 public:
-    explicit ReverbMidiCallback(ol::fx::ReverbFx *fx) : fx_(fx) {}
+    explicit ReverbMidiCallback(ol::fx::ReverbFx<CHANNEL_COUNT> *fx) : fx_(fx) {}
 
     void handleIncomingMidiMessage(juce::MidiInput *source, const juce::MidiMessage &message) override {
         if (message.isController()) {
@@ -74,7 +77,7 @@ public:
         }
     }
 
-    ol::fx::ReverbFx *fx_;
+    ReverbFx<CHANNEL_COUNT> *fx_;
 };
 
 int main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[]) {
@@ -85,24 +88,11 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[]) {
     auto midiDevices = juce::MidiInput::getAvailableDevices();
     std::cout << "MIDI inputs:" << std::endl;
 
-//    daisysp::Oscillator dosc;
-//    auto osc1 = new ol::synth::OscillatorSoundSource<CHANNEL_COUNT>(dosc);
-//    ol::synth::Filter *v1_f[] = {new ol::synth::SvfFilter()};
-//    auto v1_fe = ol::synth::DaisyAdsr();
-//    auto v1_ae = ol::synth::DaisyAdsr();
-//    auto v1_port = ol::synth::DaisyPortamento();
-//    auto v1 = ol::synth::SynthVoice<CHANNEL_COUNT>(osc1, v1_f, &v1_fe, &v1_ae, &v1_port);
-    ol::synth::Voice *voices[VOICE_COUNT];
-    for (auto & voice : voices) {
-        voice = new ol::synth::SynthVoice<CHANNEL_COUNT>();
-    }
-    //ol::synth::Voice *voices[] = {&v1};
-    auto poly = ol::synth::Polyvoice<CHANNEL_COUNT, VOICE_COUNT>(voices);
+    Polyvoice<CHANNEL_COUNT, VOICE_COUNT> poly;
 
     auto synthCallback = SynthAudioCallback(poly);
-    //daisysp::ReverbSc verb;
-    auto verb = DattorroVerb_create();
-    auto reverb = ol::fx::ReverbFx(verb);
+
+    ReverbFx<CHANNEL_COUNT> reverb;
 
     auto midi_callback = SynthMidiCallback(poly);
     ReverbMidiCallback reverb_midi_callback(&reverb);
@@ -115,7 +105,6 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[]) {
     }
 
 
-    //ol::fx::Dattorro_Config(&reverb, DattorroVerb_create());
 
     ReverbAudioCallback reverb_callback(&reverb, synthCallback);
     deviceManager.addAudioCallback(&reverb_callback);

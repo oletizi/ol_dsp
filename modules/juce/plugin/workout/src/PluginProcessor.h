@@ -7,15 +7,18 @@
 #include <juce_core/juce_core.h>
 #include <juce_audio_processors/juce_audio_processors.h>
 #include "synthlib/ol_synthlib.h"
+#include "fxlib/ol_fxlib.h"
 
-#define CHANNEL_COUNT 1
+#define CHANNEL_COUNT 2
 
+using namespace ol::synth;
+using namespace ol::fx;
 class PluginProcessor : public juce::AudioProcessor {
 private:
-    ol::synth::SynthVoice<CHANNEL_COUNT> voice;
-    daisysp::Oscillator osc;
-
-
+    SynthVoice<CHANNEL_COUNT> voice;
+    FxRack<CHANNEL_COUNT> fx;
+    t_sample ibuf[128] {};
+    t_sample obuf[128] {};
 public:
 
     const juce::String getName() const override;

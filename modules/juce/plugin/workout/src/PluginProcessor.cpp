@@ -10,8 +10,6 @@ const juce::String PluginProcessor::getName() const {
 
 void PluginProcessor::prepareToPlay(double sampleRate, int maximumExpectedSamplesPerBlock) {
     voice.Init(sampleRate);
-    osc.Init(sampleRate);
-    osc.SetFreq(4000);
 }
 
 void PluginProcessor::releaseResources() {
@@ -20,6 +18,7 @@ void PluginProcessor::releaseResources() {
 
 void PluginProcessor::processBlock(juce::AudioBuffer<float> &buffer, juce::MidiBuffer &midiMessages) {
     //const juce::MidiBufferIterator &iterator = midiMessages.begin();
+    // XXX: figure out how to handle the midi messages aligned with the proper sample frame
     for (const auto &m: midiMessages) {
         const auto message = m.getMessage();
         if (message.isNoteOn()) {
@@ -28,15 +27,16 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float> &buffer, juce::MidiB
             voice.NoteOff(message.getNoteNumber(), message.getVelocity());
         } else if (message.isController()) {
             voice.UpdateMidiControl(message.getControllerNumber(), message.getControllerValue());
+            fx.UpdateMidiControl(message.getControllerNumber(), message.getControllerValue());
         }
     }
     const int channel_count = buffer.getNumChannels();
-    t_sample voice_out = 0;
     for (int i = 0; i < buffer.getNumSamples(); i++) {
-        voice.Process(&voice_out);
-        //voice_out = osc.Process();
+        voice.Process(ibuf);
+        fx.Process(ibuf, obuf);
+
         for (int j = 0; j < channel_count; j++) {
-            *buffer.getWritePointer(j, i) = voice_out;
+            *buffer.getWritePointer(j, i) = obuf[j];
         }
     }
     //for (auto &message: midiMessages.begin()) {}
