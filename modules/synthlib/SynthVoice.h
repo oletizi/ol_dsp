@@ -15,35 +15,29 @@
 namespace ol::synth {
     template<int CHANNEL_COUNT>
     class SynthVoice : public Voice {
+    private:
+        t_sample frame_buffer[CHANNEL_COUNT];
     public:
         SynthVoice(SoundSource<CHANNEL_COUNT> *sound_source,
-                   Filter *filters[CHANNEL_COUNT],
+                   Filter *filter,
                    Adsr *filter_envelope,
                    Adsr *amp_envelope,
                    Portamento *portamento)
                 : sound_source_(sound_source),
+                  filter_(filter),
                   filter_envelope_(filter_envelope),
                   amp_envelope_(amp_envelope),
-                  portamento_(portamento) {
-            for (int i = 0; i < CHANNEL_COUNT; i++) {
-                filters_[i] = filters[i];
-            }
-        }
+                  portamento_(portamento) {}
 
         SynthVoice() : SynthVoice<CHANNEL_COUNT>(new OscillatorSoundSource<CHANNEL_COUNT>(),
-                                                 new Filter*[CHANNEL_COUNT], new DaisyAdsr(), new DaisyAdsr(),
-                                                 new DaisyPortamento()) {
-            for (int i=0; i<CHANNEL_COUNT; i++) {
-                filters_[i] = new SvfFilter();
-            }
-        }
+                                                 new SvfFilter<CHANNEL_COUNT>(),
+                                                 new DaisyAdsr(), new DaisyAdsr(),
+                                                 new DaisyPortamento()) {}
 
         void Init(t_sample sr) override {
             sample_rate = sr;
             sound_source_->Init(sr);
-            for (int i = 0; i < CHANNEL_COUNT; i++) {
-                filters_[i]->Init(sample_rate);
-            }
+            filter_->Init(sr);
             filter_envelope_->Init(sample_rate, 1);
             amp_envelope_->Init(sample_rate, 1);
             portamento_->Init(sample_rate, portamento_htime);
@@ -52,18 +46,19 @@ namespace ol::synth {
 
         void Process(t_sample *frame_out) override {
             sound_source_->SetFreq(portamento_->Process(freq_));
-            sound_source_->Process(frame_out);
+            sound_source_->Process(frame_buffer);
 
             t_sample filter_frequency =
                     filter_cutoff + ((filter_envelope_->Process(Gate()) * 20000) * filter_env_amount);
             t_sample amp = amp_envelope_->Process(Gate());
-
+            filter_->SetFreq(filter_frequency);
             for (int i = 0; i < CHANNEL_COUNT; i++) {
-                auto filter = filters_[i];
-                frame_out[i] *= osc_1_mix;
-                filter->SetFreq(filter_frequency);
-                filter->Process(frame_out[i]);
-                frame_out[i] = filter->Low() * amp * amp_env_amount;
+                frame_buffer[i] *= osc_1_mix;
+            }
+            filter_->Process(frame_buffer);
+            filter_->Low(frame_out);
+            for (int i = 0; i < CHANNEL_COUNT; i++) {
+                frame_out[i] *= amp * amp_env_amount;
             }
         }
 
@@ -93,14 +88,9 @@ namespace ol::synth {
 
         void Update() override {
 
-            // Filter
-            for (int i = 0; i < CHANNEL_COUNT; i++) {
-                auto filter = filters_[i];
-                // XXX: probably don't need to set frequency here, since it's calculated in process loop based envelope
-                filter->SetFreq(filter_cutoff);
-                filter->SetRes(filter_resonance);
-                filter->SetDrive(filter_drive);
-            }
+            filter_->SetFreq(filter_cutoff);
+            filter_->SetRes(filter_resonance);
+            filter_->SetDrive(filter_drive);
 
             filter_envelope_->SetAttackTime(filter_attack, filter_attack_shape);
             filter_envelope_->SetDecayTime(filter_decay);
@@ -235,7 +225,8 @@ namespace ol::synth {
         t_sample osc_1_mix = 0.8f;
 
         // Filter
-        Filter *filters_[CHANNEL_COUNT] = {};
+        //Filter *filters_[CHANNEL_COUNT] = {};
+        Filter *filter_ = nullptr;
         ol::synth::Adsr *filter_envelope_{};
 
         // Filter parameters

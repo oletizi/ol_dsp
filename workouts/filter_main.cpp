@@ -9,7 +9,8 @@
 #include "synthlib/ol_synthlib.h"
 
 #define CHANNEL_COUNT 2
-
+using namespace ol::fx;
+using namespace ol::synth;
 //daisysp::Oscillator dosc;
 //auto osc = new ol::synth::OscillatorSoundSource<1>(dosc);
 //ol::synth::Filter *v1_f[] = {new ol::synth::SvfFilter()};
@@ -17,10 +18,13 @@
 //auto v1_ae = ol::synth::DaisyAdsr();
 //auto v1_port = ol::synth::DaisyPortamento();
 //auto voice = ol::synth::SynthVoice<1>(osc, v1_f, &v1_fe, &v1_ae, &v1_port);
-auto voice = ol::synth::SynthVoice<1>();
-auto svf = daisysp::Svf();
+//auto svf = daisysp::Svf();
+//auto filt = ol::fx::FilterFx(svf);
+//auto voice = ol::synth::SynthVoice<1>();
+SynthVoice<1> voice;
+FilterFx<1> filter;
+daisysp::Oscillator osc;
 
-auto filt = ol::fx::FilterFx(svf);
 int notes_on = 0;
 
 void handleNoteOn(int channel, int note, int velocity) {
@@ -41,7 +45,7 @@ void handleCC(int channel, int control, int value) {
     std::cout << "CC: chan: " << channel << "; control: " << control << "; val: " << value << std::endl;
     //synth_control_panel.UpdateMidi(control, value);
     voice.UpdateMidiControl(control, value);
-    filt.UpdateMidiControl(control, value);
+    filter.UpdateMidiControl(control, value);
 }
 
 void midi_callback(double deltatime, std::vector<unsigned char> *message, void *userData) {
@@ -75,22 +79,23 @@ void midi_error_callback(RtMidiError::Type type, const std::string &errorText, v
 }
 
 void audio_callback(ma_device *device, void *pOutput, const void *pInput, ma_uint32 frameCount) {
-    const uint32_t inputs = device->capture.channels;
+
     const uint32_t outputs = device->playback.channels;
-    auto *in = (t_sample *) pInput;
     auto *out = (t_sample *) pOutput;
-    t_sample buf_in = 0;
-    t_sample buf_out = 0;
+//    t_sample buf_in = 0;
+//    t_sample buf_out = 0;
     for (int i = 0; i < frameCount; i++) {
 
         //t_sample filt_out = voice.Process();
+        t_sample buf = 0;
+        voice.Process(&buf);
+        filter.Process(&buf, &buf);
+        //out[i] = frame_buffer[i];
+        //t_sample buf = osc.Process();
 
-        voice.Process(&buf_in);
-        filt.Process(&buf_in, &buf_out);
-        //filt.Process(in[i * inputs], &filt_out);;
-
-        out[i * outputs + 0] = buf_out;
-        out[i * outputs + 1] = buf_out;
+        out[i * outputs + 0] = buf;
+        out[i * outputs + 1] = buf;
+        //filter.Process(frame_buffer, &out[i]);
     }
 }
 
@@ -109,7 +114,7 @@ int main() {
 
         std::cout << "Input port " << i << ": " << midiin->getPortName(i) << std::endl;
         const std::string &port_name = midiin->getPortName(i);
-        if (strstr(port_name.c_str(), "Maschine") != nullptr) {
+        if (strstr(port_name.c_str(), "IAC Driver") != nullptr) {
             std::cout << "Connecting to " << port_name << std::endl;
             midiin->openPort(i);
         }
@@ -130,8 +135,9 @@ int main() {
         return -1;  // Failed to initialize the device.
     }
 
+    osc.Init(device.sampleRate);
     voice.Init(device.sampleRate);
-    filt.Init(device.sampleRate);
+    filter.Init(device.sampleRate);
 
     ma_device_start(&device);     // The device is sleeping by default so you'll need to start it manually.
 

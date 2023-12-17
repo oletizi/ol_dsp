@@ -104,12 +104,18 @@ namespace ol::synth {
         note_off_function note_off;
         midi_controller_function update_midi_control;
 
-        Voice *voices_[VOICE_COUNT] = {};
+        Voice *voices_[VOICE_COUNT]{};
         bool initialized = false;
         VoiceMap<CHANNEL_COUNT> *voice_map_ = nullptr;
 
-        t_sample frame_buffer[CHANNEL_COUNT] = {};
+        t_sample frame_buffer[CHANNEL_COUNT]{};
     public:
+
+        Polyvoice() {
+            for (auto &v : voices_){
+                v = new SynthVoice<CHANNEL_COUNT>;
+            }
+        }
         explicit Polyvoice(Voice *voices[VOICE_COUNT]) :
                 init(voices_init),
                 process(voices_process),

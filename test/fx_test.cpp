@@ -6,7 +6,7 @@
 #include "fxlib/Fx.h"
 using namespace ol::fx;
 TEST(FX, Saturator) {
-    SaturatorFx saturator;
+    SaturatorFx<1> saturator;
     saturator.Init( 48000);
 
     t_sample in = 0;
@@ -21,10 +21,8 @@ TEST(FX, Saturator) {
 }
 
 TEST(FX, Delay) {
-    daisysp::Svf svf;
-    auto filter = ol::fx::FilterFx(svf);
-    daisysp::DelayLine<t_sample, MAX_DELAY> delay_line;
-    auto delay = DelayFx(delay_line, filter);
+
+    DelayFx<1> delay;
 
     delay.Init(128);
     t_sample in = 1;
@@ -33,8 +31,7 @@ TEST(FX, Delay) {
     t_sample sample_rate = 48000;
     t_sample freq = 20000;
 
-    //delay.time = 0.5;
-    delay.UpdateHardwareControl(CC_DELAY_TIME, 0.5);
+    delay.UpdateHardwareControl(CC_DELAY_TIME, 0.5f);
     delay.Update();
     daisysp::Oscillator osc;
     delay.Init(sample_rate);

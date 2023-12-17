@@ -10,23 +10,25 @@
 
 #define CHANNEL_COUNT 2
 #define VOICE_COUNT 4
-
+using namespace ol::fx;
+using namespace ol::synth;
 
 //auto voice = ol::synth::SynthVoice<1>();
-ol::synth::Voice *voices[VOICE_COUNT] = {};
-ol::synth::Polyvoice<1, VOICE_COUNT> poly(voices);
-daisysp::DelayLine<t_sample, MAX_DELAY> delay_line;
+//ol::synth::Voice *voices[VOICE_COUNT] = {};
+//ol::synth::Polyvoice<1, VOICE_COUNT> poly(voices);
+SynthVoice<1> voice;
+//daisysp::DelayLine<t_sample, MAX_DELAY> delay_line;
 
-auto df = daisysp::Svf();
-auto dfx = ol::fx::FilterFx(df);
-auto delay = ol::fx::DelayFx(delay_line, dfx);
+//auto dfx = ol::fx::FilterFx(df);
 
+//auto delay = ol::fx::DelayFx(delay_line, dfx);
+DelayFx<1> delay;
 int notes_on = 0;
 
 void handleNoteOn(int channel, int note, int velocity) {
     std::cout << "NOTE ON: chan: " << channel << "; note: " << note << "; vel: " << velocity << std::endl;
     notes_on++;
-    poly.NoteOn(note, velocity);
+    voice.NoteOn(note, velocity);
 }
 
 void handleNoteOff(int channel, int note, int velocity) {
@@ -34,12 +36,12 @@ void handleNoteOff(int channel, int note, int velocity) {
     if (notes_on > 0) {
         notes_on--;
     }
-    poly.NoteOff(note, velocity);
+    voice.NoteOff(note, velocity);
 }
 
 void handleCC(int channel, int control, int value) {
     std::cout << "CC: chan: " << channel << "; control: " << control << "; val: " << value << std::endl;
-    poly.UpdateMidiControl(0, control, value);
+    voice.UpdateMidiControl(control, value);
     delay.UpdateMidiControl(control, value);
 }
 
@@ -80,7 +82,7 @@ void audio_callback([[maybe_unused]] ma_device *pDevice, void *pOutput, [[maybe_
     auto *out = (float *) pOutput;
     for (int i = 0; i < frameCount; i++) {
         t_sample voice_out = 0;
-        poly.Process(&voice_out);
+        voice.Process(&voice_out);
         t_sample delay_out = 0;
         delay.Process(&voice_out, &delay_out);
 
@@ -128,10 +130,8 @@ int main() {
         return -1;  // Failed to initialize the device.
     }
 
-    for (auto & voice : voices) {
-        voice = new ol::synth::SynthVoice<1>();
-    }
-    poly.Init(device.sampleRate);
+
+    voice.Init(device.sampleRate);
     delay.Init(device.sampleRate);
 
     ma_device_start(&device);     // The device is sleeping by default so you'll need to start it manually.

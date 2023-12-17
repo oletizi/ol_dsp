@@ -9,33 +9,18 @@
 #include "daisy/ui/ui.h"
 #include "fxlib/Fx.h"
 #include "synthlib/ol_synthlib.h"
-
+#define CHANNEL_COUNT 2
 using namespace ol::fx;
 using namespace ol::synth;
 
-auto voice = SynthVoice<1>();
-
-daisysp::Svf df1;
-auto delay_filter1 = FilterFx(df1, 0);
-daisysp::Svf df2;
-auto delay_filter2 = FilterFx(df2, 1);
-
-daisysp::DelayLine<t_sample, MAX_DELAY> delay_line1;
-daisysp::DelayLine<t_sample, MAX_DELAY> delay_line2;
-auto delay1 = DelayFx(delay_line1, delay_filter1, 0);
-auto delay2 = DelayFx(delay_line2, delay_filter2, 1);
-daisysp::ReverbSc verb;
-auto reverb = ReverbFx(verb);
-
-daisysp::Svf svf1;
-daisysp::Svf svf2;
-auto filter1 = FilterFx(svf1, 0);
-auto filter2 = FilterFx(svf2, 1);
-
-auto sat1 = SaturatorFx(0);
-auto sat2 = SaturatorFx(1);
-auto sat3 = SaturatorFx();
-auto fxrack = FxRack(delay1, delay2, reverb, filter1, filter2, sat1, sat2, sat3);
+//DelayFx<CHANNEL_COUNT> delay;
+//ReverbFx reverb;
+//FilterFx<CHANNEL_COUNT> filter;
+//SaturatorFx<CHANNEL_COUNT> saturator;
+//auto sat3 = SaturatorFx();
+//auto fxrack = FxRack(delay1, delay2, reverb, filter1, filter2, sat1, sat2, sat3);
+SynthVoice<CHANNEL_COUNT> voice;
+FxRack<CHANNEL_COUNT> fxrack;
 
 int notes_on = 0;
 

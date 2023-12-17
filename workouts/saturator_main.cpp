@@ -5,13 +5,15 @@
 #include "workout_buddy.h"
 #include "ol_fxlib.h"
 
+#define CHANNEL_COUNT 2
+
 using namespace ol::io;
 using namespace ol::synth;
 using namespace ol::fx;
-auto voice = SynthVoice<1>();
 
-SaturatorFx saturator1;
-SaturatorFx saturator2;
+SynthVoice<CHANNEL_COUNT> voice;
+SaturatorFx<CHANNEL_COUNT> saturator;
+
 
 int notes_on = 0;
 
@@ -26,24 +28,17 @@ void note_off_callback(workout_buddy *, uint8_t channel, uint8_t note, uint8_t v
 }
 
 void cc_callback(workout_buddy *, uint8_t channel, uint8_t control, uint8_t value) {
-    saturator1.UpdateMidiControl(control, value);
-    saturator2.UpdateMidiControl(control, value);
+    saturator.UpdateMidiControl(control, value);
 }
 
 uint64_t counter = 0;
+t_sample frame_buffer[CHANNEL_COUNT]{};
 
 void audio_callback(workout_buddy *, t_sample &in1, t_sample &in2, t_sample *out1, t_sample *out2) {
-    counter++;
-    //t_sample voice_out = voice.Process();
-    t_sample voice_out = 0;
-    voice.Process(&voice_out);
-    t_sample next_in1 = voice_out + in1;
-    t_sample next_in2 = voice_out + in2;
-    saturator1.Process(&next_in1, out1);
-    saturator2.Process(&next_in2, out2);
-    if (counter % 20000 == 0) {
-        counter = 0;
-    }
+    voice.Process(frame_buffer);
+    saturator.Process(frame_buffer, frame_buffer);
+    *out1 = frame_buffer[0];
+    *out2 = frame_buffer[1];
 }
 
 int main() {
@@ -63,8 +58,7 @@ int main() {
     t_sample sample_rate = Workout_SampleRate(&buddy);
 
     voice.Init(sample_rate);
-    saturator1.Init(sample_rate);
-    saturator2.Init(sample_rate);
+    saturator.Init(sample_rate);
 
 
     Workout_Start(&buddy);

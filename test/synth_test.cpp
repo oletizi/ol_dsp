@@ -22,7 +22,8 @@ public:
     MOCK_METHOD(uint8_t, Playing, (), (override));
 };
 
-class MockSoundSource : public SoundSource<1> {
+template<int CHANNEL_COUNT>
+class MockSoundSource : public SoundSource<CHANNEL_COUNT> {
 public:
     MOCK_METHOD(InitStatus, Init, (t_sample sample_rate), (override));
 
@@ -80,17 +81,17 @@ public:
 
     MOCK_METHOD(void, SetDrive, (t_sample drive), (override));
 
-    MOCK_METHOD(void, Process, (t_sample in), (override));
+    MOCK_METHOD(void, Process, (const t_sample *in), (override));
 
-    MOCK_METHOD(t_sample, Low, (), (override));
+    MOCK_METHOD(void, Low, (t_sample *out), (override));
 
-    MOCK_METHOD(t_sample, High, (), (override));
+    MOCK_METHOD(void, High, (t_sample *out), (override));
 
-    MOCK_METHOD(t_sample, Band, (), (override));
+    MOCK_METHOD(void, Band, (t_sample *out), (override));
 
-    MOCK_METHOD(t_sample, Notch, (), (override));
+    MOCK_METHOD(void, Notch, (t_sample *out), (override));
 
-    MOCK_METHOD(t_sample, Peak, (), (override));
+    MOCK_METHOD(void, Peak, (t_sample *out), (override));
 };
 
 using ::testing::AtLeast;
@@ -146,14 +147,14 @@ TEST(Synth, VoiceDefaultConstructor) {
 
 
 TEST(Synth, Voice) {
-    MockSoundSource source = MockSoundSource();
-    MockFilter filter = MockFilter();
-    Filter *filters[1] = {&filter};
-    auto filter_envelope = MockAdsr();
-    auto amp_envelope = MockAdsr();
+    MockSoundSource<1> source;
+    MockFilter filter;
+    MockAdsr filter_envelope;
+    MockAdsr amp_envelope;
     MockPortamento portamento;
-    auto v = SynthVoice<1>(&source, filters, &filter_envelope, &amp_envelope, &portamento);
+    auto v = SynthVoice<1>(&source, &filter, &filter_envelope, &amp_envelope, &portamento);
     //auto v = SynthVoice<1>();
+
     Voice::Config config = {};
 
     config.filter_cutoff = 0.1f;
