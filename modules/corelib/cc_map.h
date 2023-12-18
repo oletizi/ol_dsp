@@ -47,9 +47,6 @@
 #define CC_CTL_MOD_WHEEL 1
 #define CC_CTL_PORTAMENTO 5
 #define CC_CTL_VOLUME 7
-#define CC_FILT_CUTOFF 70
-#define CC_FILT_Q 71
-#define CC_FILT_DRIVE 72
 #define CC_ENV_FILT_AMT 73
 #define CC_ENV_FILT_A 74
 #define CC_ENV_FILT_D 75

@@ -13,6 +13,7 @@ public:
     MOCK_METHOD(void, Update, (), (override));
     MOCK_METHOD(void, Process, (t_sample * frame_out), (override));
     MOCK_METHOD(void, UpdateMidiControl, (uint8_t control, uint8_t value), (override));
+    MOCK_METHOD(void, UpdateHardwareControl, (uint8_t control, t_sample value), (override));
     MOCK_METHOD(void, UpdateConfig, (Voice::Config & config));
     MOCK_METHOD(void, GateOn, (), (override));
     MOCK_METHOD(void, GateOff, (), (override));

@@ -9,7 +9,7 @@
 #include "synthlib/SoundSource.h"
 
 namespace ol::synth {
-class Voice {
+    class Voice {
     public:
         struct Config {
             t_sample filter_cutoff;
@@ -37,6 +37,8 @@ class Voice {
         virtual void Process(t_sample *frame_out) = 0;
 
         virtual void UpdateMidiControl(uint8_t control, uint8_t value) = 0;
+
+        virtual void UpdateHardwareControl(uint8_t control, t_sample value) = 0;
 
         virtual void UpdateConfig(Config &config) = 0;
 

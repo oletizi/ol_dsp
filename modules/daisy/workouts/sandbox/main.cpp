@@ -97,6 +97,18 @@ int main() {
     int pin_number = 15;
     button.Init(hw.GetPin(pin_number), 1000);
 
+
+    AdcChannelConfig adcConfig{};
+    //Configure pin 21 as an ADC input. This is where we'll read the knob.
+    pin_number++;
+    adcConfig.InitSingle(hw.GetPin(pin_number));
+
+    //Initialize the adc with the config we just made
+    hw.adc.Init(&adcConfig, 1);
+    //Start reading values
+    hw.adc.Start();
+    t_sample analog1;
+
     //ol::synth::SynthVoice<2>(ol::synth::OscillatorSoundSource<2>, ol::synth::Filter, ol::synth::Adsr, ol::synth::Adsr, ol::synth::Portamento);
     //ol::synth::SynthVoice<2> voice;
 
@@ -105,6 +117,7 @@ int main() {
     auto peak_scaled = 0;
     auto rms_scaled = 0;
     while (true) {
+        analog1 = hw.adc.GetFloat(0);
         button.Debounce();
         // Set the onboard LED
         hw.SetLed(button.Pressed());
@@ -123,7 +136,7 @@ int main() {
         display.Fill(false);
 
         display.SetCursor(0, 0);
-        sprintf(strbuff, "counter: %d", counter);
+        sprintf(strbuff, "an_1: %d", int(analog1 * 1000));
         display.WriteString(strbuff, font, false);
 
         line_number++;

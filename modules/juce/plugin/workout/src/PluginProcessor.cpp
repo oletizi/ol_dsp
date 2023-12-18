@@ -3,6 +3,7 @@
 //
 
 #include "PluginProcessor.h"
+#include "Editor.h"
 
 const juce::String PluginProcessor::getName() const {
     return juce::String("OL Workout");
@@ -61,11 +62,12 @@ bool PluginProcessor::producesMidi() const {
 }
 
 juce::AudioProcessorEditor *PluginProcessor::createEditor() {
-    return nullptr;
+    //return new juce::GenericAudioProcessorEditor (*this);
+    return new Editor(*this);
 }
 
 bool PluginProcessor::hasEditor() const {
-    return false;
+    return true;
 }
 
 int PluginProcessor::getNumPrograms() {
@@ -94,4 +96,8 @@ void PluginProcessor::getStateInformation(juce::MemoryBlock &destData) {
 
 void PluginProcessor::setStateInformation(const void *data, int sizeInBytes) {
 
+}
+
+void PluginProcessor::UpdateHardwareControl(uint8_t controller, t_sample value) {
+    voice.UpdateHardwareControl(controller, value);
 }

@@ -54,7 +54,11 @@ public:
 
     void setStateInformation(const void *data, int sizeInBytes) override;
 
+    void UpdateHardwareControl(uint8_t controller, t_sample value);
 };
 
-
+juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
+{
+    return new PluginProcessor();
+}
 #endif //OL_DSP_PLUGINPROCESSOR_H

@@ -22,10 +22,11 @@ juce_add_plugin(ol-workout-plugin
         COPY_PLUGIN_AFTER_BUILD TRUE
         AU_COPY_DIR /Users/orion/Library/Audio/Plug-Ins/Components
 )
-target_sources(ol-workout-plugin PUBLIC src/ol_workout_plugin.cpp src/PluginProcessor.cpp)
+target_sources(ol-workout-plugin PUBLIC src/PluginProcessor.cpp src/Editor.h)
 target_link_libraries(ol-workout-plugin PRIVATE
         juce::juce_core
         juce::juce_audio_devices
+        juce::juce_audio_processors
         juce::juce_audio_utils
         juce::juce_dsp
         ol_fxlib
