@@ -48,6 +48,8 @@ namespace ol::synth {
 
         virtual bool Gate() = 0;
 
+        virtual void SetFrequency(t_sample) = 0;
+
         virtual void NoteOn(uint8_t midi_note, uint8_t velocity) = 0;
 
         virtual void NoteOff(uint8_t midi_note, uint8_t velocity) = 0;

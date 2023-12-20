@@ -194,7 +194,7 @@ namespace ol::synth {
                     break;
                 case CC_FILTER_CUTOFF:
                     filter_cutoff = ol::core::scale(val, 0, 127, 0, 20000, 2.5);
-                    PRINTF("  Cutoff: %f\n", int(filter_cutoff));
+                    PRINTF("  Cutoff: %d\n", int(filter_cutoff));
                     break;
                 case CC_FILTER_RESONANCE:
                     filter_resonance = scaled;
@@ -282,6 +282,11 @@ namespace ol::synth {
 
         uint8_t Playing() override {
             return playing;
+        }
+
+        void SetFrequency(t_sample freq) override {
+            freq_ = freq;
+            //sound_source_->SetFreq(freq);
         }
 
     private:
