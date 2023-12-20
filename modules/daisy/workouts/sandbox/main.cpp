@@ -39,12 +39,16 @@ ol::synth::DaisyAdsr amp_env;
 ol::synth::DaisyPortamento portamento;
 
 
-auto voice = ol::synth::SynthVoice<CHANNEL_COUNT>(&osc, &filter, &filt_env, &amp_env, &portamento);
+//auto voice = ol::synth::SynthVoice<CHANNEL_COUNT>(&osc, &filter, &filt_env, &amp_env, &portamento);
+auto voice = ol::synth::SynthVoice<CHANNEL_COUNT>();
+
 auto rms = ol::core::Rms();
 t_sample rms_value = 0;
 t_sample peak_value = 0;
 t_sample peak_hold = 2 * 48000;
 t_sample peak_count = 0;
+
+Switch cv_gate;
 
 t_sample frame_buffer[CHANNEL_COUNT]{};
 
@@ -54,12 +58,36 @@ void audio_callback(daisy::AudioHandle::InterleavingInputBuffer in,
     for (int i = 0; i < size; i += 2) {
         frame_buffer[i] = 0;
         frame_buffer[i + 1] = 0;
-        voice.SetFrequency(cv_freq);
-        free_osc.SetFreq(cv_freq);
 
-        //voice.Process(frame_buffer);
-        frame_buffer[i] += free_osc.Process();
-        frame_buffer[i + 1] += frame_buffer[i];
+
+        // calculate frequency from CV input
+        t_sample voct_cv = hw.adc.GetFloat(0);
+        //t_sample voct    = daisysp::fmap(voct_cv, 0.f, 60.f);
+        t_sample voct = daisysp::fmap(voct_cv, 0.f, 40.f);
+        //t_sample voct = daisysp::fmap(voct_cv, 0.f, 26.f, daisysp::Mapping::EXP);
+        t_sample coarse_tune = 30.93;
+        t_sample midi_nn = daisysp::fclamp( coarse_tune + voct, 0.f, 127.f);
+        t_sample freq = daisysp::mtof(midi_nn);
+        cv_freq    = freq;
+
+        // calculate gate from CV input
+        if (cv_gate.FallingEdge()) {
+            voice.GateOn();
+            gate = 1;
+            adsr.Retrigger(true);
+        }
+        if (cv_gate.RisingEdge()) {
+            voice.GateOff();
+            gate = 0;
+        }
+
+
+        voice.SetFrequency(cv_freq);
+        //free_osc.SetFreq(cv_freq);
+
+        voice.Process(frame_buffer);
+//        frame_buffer[i] += free_osc.Process();
+//        frame_buffer[i + 1] += frame_buffer[i];
         rms_value = rms.Process(frame_buffer[0]);
         peak_value = peak_value < abs(frame_buffer[0]) ? abs(frame_buffer[0]) : peak_value;
         peak_count++;
@@ -105,6 +133,25 @@ int main() {
 
     rms.Init(sample_rate, 128);
 
+    voice.UpdateMidiControl(CC_CTL_PORTAMENTO, 30);
+
+    voice.UpdateMidiControl(CC_FILTER_CUTOFF, 0);
+    voice.UpdateMidiControl(CC_FILTER_RESONANCE, 30);
+    voice.UpdateMidiControl(CC_ENV_FILT_A, 0);
+    voice.UpdateMidiControl(CC_ENV_FILT_D, 60);
+    voice.UpdateMidiControl(CC_ENV_FILT_S, 0);
+    voice.UpdateMidiControl(CC_ENV_FILT_R, 15);
+    voice.UpdateMidiControl(CC_ENV_FILT_AMT, 60);
+
+    voice.UpdateMidiControl(CC_ENV_AMP_A, 0);
+    voice.UpdateMidiControl(CC_ENV_AMP_D, 127);
+    voice.UpdateMidiControl(CC_ENV_AMP_S, 127);
+    voice.UpdateMidiControl(CC_ENV_AMP_R, 25);
+    voice.UpdateMidiControl(CC_OSC_1_VOLUME, 127);
+    voice.UpdateMidiControl(CC_CTL_VOLUME, 100);
+
+
+
     /** Configure the Display */
     MyOledDisplay::Config disp_cfg = {};
     disp_cfg.driver_config.transport_config.pin_config.dc = daisy::DaisySeed::GetPin(9);
@@ -124,7 +171,7 @@ int main() {
 
     AdcChannelConfig adcConfig{};
     //Configure pin 21 as an ADC input. This is where we'll read the knob.
-    pin_number++;
+    pin_number = 16;
     adcConfig.InitSingle(hw.GetPin(pin_number));
     //Initialize the adc with the config we just made
     hw.adc.Init(&adcConfig, 1);
@@ -132,8 +179,7 @@ int main() {
     //voice.SetFrequency(cv_freq);
     osc.SetFreq(cv_freq);
 
-    pin_number++;
-    Switch cv_gate;
+    pin_number = 17;
     cv_gate.Init(hw.GetPin(pin_number), 1000);
 
     //Start reading values
@@ -148,13 +194,7 @@ int main() {
     auto rms_scaled = 0;
     while (true) {
 
-        t_sample voct_cv = hw.adc.GetFloat(0);
-        //t_sample voct    = daisysp::fmap(voct_cv, 0.f, 60.f);
-        t_sample voct = daisysp::fmap(voct_cv, 0.f, 40.f);
-        t_sample coarse_tune = 40;
-        t_sample midi_nn = daisysp::fclamp( coarse_tune + voct, 0.f, 127.f);
-        t_sample freq = daisysp::mtof(midi_nn);
-        cv_freq    = freq;
+
 
 //        voice.SetFrequency(t_sample(cv_freq) * 10);
 //        osc.SetFreq(t_sample(cv_freq) * 100);
@@ -176,21 +216,13 @@ int main() {
 //            voice.NoteOff(63, 100);
 //            gate = 0;
 //        }
-        if (cv_gate.FallingEdge()) {
-            voice.GateOn();
-            gate = 1;
-            adsr.Retrigger(true);
-        }
-        if (cv_gate.RisingEdge()) {
-            voice.GateOff();
-            gate = 0;
-        }
+
         if (display_on) {
             line_number = 0;
             display.Fill(false);
 
             display.SetCursor(0, 0);
-            sprintf(strbuff, "an_1: %d", int(cv_freq));
+            sprintf(strbuff, "freq: %d", int(cv_freq));
             display.WriteString(strbuff, font, false);
 
             line_number++;
