@@ -19,6 +19,7 @@
 #include "synthlib/ol_synthlib.h"
 
 #define AUDIO_BLOCK_SIZE 4
+#define DISPLAY_ON true
 #define CHANNEL_COUNT 2
 using namespace daisy;
 
@@ -26,10 +27,9 @@ using MyOledDisplay = OledDisplay<SSD130x4WireSpi128x64Driver>;
 static DaisySeed hw;
 MyOledDisplay display;
 
-bool display_on = true;
-//t_sample gate = 0;
-t_sample cv_freq = 220;
+auto fx = ol::fx::FxRack<CHANNEL_COUNT>();
 
+t_sample cv_freq = 220;
 auto voice = ol::synth::SynthVoice<CHANNEL_COUNT>();
 
 auto rms = ol::core::Rms();
@@ -46,9 +46,6 @@ void audio_callback(daisy::AudioHandle::InterleavingInputBuffer in,
                     daisy::AudioHandle::InterleavingOutputBuffer out,
                     size_t size) {
     for (int i = 0; i < size; i += 2) {
-
-        frame_buffer[i] = 0;
-        frame_buffer[i + 1] = 0;
 
         // CV Frequency
         t_sample voct_cv = hw.adc.GetFloat(0);
@@ -69,6 +66,8 @@ void audio_callback(daisy::AudioHandle::InterleavingInputBuffer in,
         // Synth voice
         voice.SetFrequency(cv_freq);
         voice.Process(frame_buffer);
+
+//        fx.Process(frame_buffer, frame_buffer);
 
         // RMS and Peak
         rms_value = rms.Process(frame_buffer[0]);
@@ -95,13 +94,8 @@ int main() {
     hw.StartAudio(audio_callback);
     auto sample_rate = hw.AudioSampleRate();
 
-    ol::synth::Voice::Config vc = {};
-    vc.filter_env_amount = 0;
-    vc.filter_cutoff = 1;
-    vc.amp_env_amount = 1;
-    voice.UpdateConfig(vc);
+ //   fx.Init(sample_rate);
     voice.Init(sample_rate);
-
     rms.Init(sample_rate, 128);
 
     voice.UpdateMidiControl(CC_CTL_PORTAMENTO, 30);
@@ -175,7 +169,7 @@ int main() {
 //            gate = 0;
 //        }
 
-        if (display_on) {
+        if (DISPLAY_ON) {
             line_number = 0;
             display.Fill(false);
 

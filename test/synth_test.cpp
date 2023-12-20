@@ -10,6 +10,7 @@ using namespace ol::synth;
 class MockVoice : public Voice {
 public:
     MOCK_METHOD(void, Init, (t_sample sample_rate), (override));
+    MOCK_METHOD(void, SetFrequency, (t_sample freq), (override));
     MOCK_METHOD(void, Update, (), (override));
     MOCK_METHOD(void, Process, (t_sample * frame_out), (override));
     MOCK_METHOD(void, UpdateMidiControl, (uint8_t control, uint8_t value), (override));

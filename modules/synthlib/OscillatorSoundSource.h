@@ -13,25 +13,19 @@ namespace ol::synth {
     class OscillatorSoundSource : public SoundSource<CHANNEL_COUNT> {
 
     private:
-        daisysp::Oscillator *osc_;
+        daisysp::Oscillator osc_;
         float freq_ = 0;
 
     public:
 
-        explicit OscillatorSoundSource(daisysp::Oscillator *osc)
-                : osc_(osc) {
-        }
-
-        OscillatorSoundSource<CHANNEL_COUNT>() : osc_(new daisysp::Oscillator()){}
-
         InitStatus Init(t_sample sample_rate) override {
-            osc_->Init(sample_rate);
-            osc_->SetWaveform(daisysp::Oscillator::WAVE_POLYBLEP_SAW);
+            osc_.Init(sample_rate);
+            osc_.SetWaveform(daisysp::Oscillator::WAVE_POLYBLEP_SAW);
             return InitStatus::Ok;
         }
 
         void Process(t_sample *frame) override {
-            t_sample out = osc_->Process();
+            t_sample out = osc_.Process();
             for (int i = 0; i < CHANNEL_COUNT; i++) {
                 frame[i] = out;
             }
@@ -42,7 +36,7 @@ namespace ol::synth {
         inline void GateOff() override {};
 
         void SetFreq(t_sample freq) override {
-            osc_->SetFreq(freq);
+            osc_.SetFreq(freq);
         }
 
     };
