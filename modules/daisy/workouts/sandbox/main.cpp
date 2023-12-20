@@ -15,31 +15,21 @@
 
 
 #include "corelib/ol_corelib.h"
+#include "fxlib/ol_fxlib.h"
 #include "synthlib/ol_synthlib.h"
 
 #define AUDIO_BLOCK_SIZE 4
 #define CHANNEL_COUNT 2
 using namespace daisy;
-using Log = Logger<LOGGER_SEMIHOST>;
-//using Log = Logger<LOGGER_EXTERNAL>;
+
 using MyOledDisplay = OledDisplay<SSD130x4WireSpi128x64Driver>;
 static DaisySeed hw;
 MyOledDisplay display;
 
 bool display_on = true;
-t_sample gate = 0;
+//t_sample gate = 0;
 t_sample cv_freq = 220;
-daisysp::Adsr adsr;
-daisysp::Oscillator free_osc;
-daisysp::Oscillator daisy_osc;
-ol::synth::OscillatorSoundSource<CHANNEL_COUNT> osc(&daisy_osc);
-ol::synth::SvfFilter<CHANNEL_COUNT> filter;
-ol::synth::DaisyAdsr filt_env;
-ol::synth::DaisyAdsr amp_env;
-ol::synth::DaisyPortamento portamento;
 
-
-//auto voice = ol::synth::SynthVoice<CHANNEL_COUNT>(&osc, &filter, &filt_env, &amp_env, &portamento);
 auto voice = ol::synth::SynthVoice<CHANNEL_COUNT>();
 
 auto rms = ol::core::Rms();
@@ -56,38 +46,31 @@ void audio_callback(daisy::AudioHandle::InterleavingInputBuffer in,
                     daisy::AudioHandle::InterleavingOutputBuffer out,
                     size_t size) {
     for (int i = 0; i < size; i += 2) {
+
         frame_buffer[i] = 0;
         frame_buffer[i + 1] = 0;
 
-
-        // calculate frequency from CV input
+        // CV Frequency
         t_sample voct_cv = hw.adc.GetFloat(0);
-        //t_sample voct    = daisysp::fmap(voct_cv, 0.f, 60.f);
         t_sample voct = daisysp::fmap(voct_cv, 0.f, 40.f);
-        //t_sample voct = daisysp::fmap(voct_cv, 0.f, 26.f, daisysp::Mapping::EXP);
         t_sample coarse_tune = 30.93;
         t_sample midi_nn = daisysp::fclamp( coarse_tune + voct, 0.f, 127.f);
         t_sample freq = daisysp::mtof(midi_nn);
         cv_freq    = freq;
 
-        // calculate gate from CV input
+        // CV Gate
         if (cv_gate.FallingEdge()) {
             voice.GateOn();
-            gate = 1;
-            adsr.Retrigger(true);
         }
         if (cv_gate.RisingEdge()) {
             voice.GateOff();
-            gate = 0;
         }
 
-
+        // Synth voice
         voice.SetFrequency(cv_freq);
-        //free_osc.SetFreq(cv_freq);
-
         voice.Process(frame_buffer);
-//        frame_buffer[i] += free_osc.Process();
-//        frame_buffer[i + 1] += frame_buffer[i];
+
+        // RMS and Peak
         rms_value = rms.Process(frame_buffer[0]);
         peak_value = peak_value < abs(frame_buffer[0]) ? abs(frame_buffer[0]) : peak_value;
         peak_count++;
@@ -95,6 +78,8 @@ void audio_callback(daisy::AudioHandle::InterleavingInputBuffer in,
             peak_count = 0;
             peak_value = 0;
         }
+
+        // Write buffer to output
         for (int j = 0; j < CHANNEL_COUNT; j++) {
             out[i + j] = frame_buffer[j];
         }
@@ -105,17 +90,10 @@ int main() {
 
     hw.Configure();
     hw.Init();
-    //hw.usb_handle.Init(UsbHandle::FS_INTERNAL);
-    //hw.usb_handle.Init(UsbHandle::FS_EXTERNAL);
 
-    Log::StartLog(true);
-    Log::PrintLine("print this string");
     hw.SetAudioBlockSize(AUDIO_BLOCK_SIZE);
     hw.StartAudio(audio_callback);
     auto sample_rate = hw.AudioSampleRate();
-
-    free_osc.Init(sample_rate);
-    free_osc.SetFreq(440);
 
     ol::synth::Voice::Config vc = {};
     vc.filter_env_amount = 0;
@@ -123,13 +101,6 @@ int main() {
     vc.amp_env_amount = 1;
     voice.UpdateConfig(vc);
     voice.Init(sample_rate);
-    osc.Init(sample_rate);
-
-    adsr.Init(sample_rate);
-    adsr.SetAttackTime(0.5);
-    adsr.SetDecayTime(0.5);
-    adsr.SetSustainLevel(0);
-    adsr.SetReleaseTime(0.5);
 
     rms.Init(sample_rate, 128);
 
@@ -176,17 +147,11 @@ int main() {
     //Initialize the adc with the config we just made
     hw.adc.Init(&adcConfig, 1);
 
-    //voice.SetFrequency(cv_freq);
-    osc.SetFreq(cv_freq);
-
     pin_number = 17;
     cv_gate.Init(hw.GetPin(pin_number), 1000);
 
     //Start reading values
     hw.adc.Start();
-
-    //ol::synth::SynthVoice<2>(ol::synth::OscillatorSoundSource<2>, ol::synth::Filter, ol::synth::Adsr, ol::synth::Adsr, ol::synth::Portamento);
-    //ol::synth::SynthVoice<2> voice;
 
     int line_number;
     auto font = Font_11x18;//Font_7x10;
@@ -194,19 +159,12 @@ int main() {
     auto rms_scaled = 0;
     while (true) {
 
-
-
-//        voice.SetFrequency(t_sample(cv_freq) * 10);
-//        osc.SetFreq(t_sample(cv_freq) * 100);
-        //Log::PrintLine("print this string");
-        //free_osc.SetFreq(counter * 100);
-
         button.Debounce();
         cv_gate.Debounce();
         // Set the onboard LED
         hw.SetLed(button.Pressed() || !cv_gate.Pressed());
-        // Toggle the LED state for the next time around.
-        //led_state = !led_state;
+
+
 //        if (button.RisingEdge()) {
 //            voice.NoteOn(63, 100);
 //            gate = 1;
