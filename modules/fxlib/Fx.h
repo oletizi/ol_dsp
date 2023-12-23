@@ -6,6 +6,8 @@
 #define OL_DSP_FX_H
 #define SPFLOAT t_sample
 
+#include <utility>
+
 #include "corelib/ol_corelib.h"
 
 //extern "C" {
@@ -31,7 +33,7 @@ namespace ol::fx {
         // Default implementation uses hyberbolic tangent
         explicit SaturatorFx() : SaturatorFx(hyperbolic_tangent) {}
 
-        void Init(const t_sample sample_rate) { /* nop */ }
+        void Init([[maybe_unused]] const t_sample sample_rate) { /* nop */ }
 
         void Process(const t_sample *frame_in, t_sample *frame_out) {
             for (int i = 0; i < CHANNEL_COUNT; i++) {
@@ -74,44 +76,41 @@ namespace ol::fx {
         t_sample resonance = 0;
         t_sample drive = 0;
         FilterType type = LowPass;
-        ol::synth::Filter *filter_;
+        ol::synth::SvfFilter<CHANNEL_COUNT> filter_;
 
     public:
 
-        FilterFx() : filter_(new ol::synth::SvfFilter<CHANNEL_COUNT>()) {}
-
-        explicit FilterFx(ol::synth::Filter *filter) : filter_(filter) {}
-
         void Init(t_sample sample_rate) {
-            filter_->Init(sample_rate);
+            filter_.Init(sample_rate);
+            Update();
         }
 
         void Process(const t_sample *frame_in, t_sample *frame_out) {
-            filter_->Process(frame_in);
+            filter_.Process(frame_in);
             switch (type) {
                 case HighPass:
-                    filter_->High(frame_out);
+                    filter_.High(frame_out);
                     break;
                 case BandPass:
-                    filter_->Band(frame_out);
+                    filter_.Band(frame_out);
                     break;
                 case Peak:
-                    filter_->Peak(frame_out);
+                    filter_.Peak(frame_out);
                     break;
                 case Notch:
-                    filter_->Notch(frame_out);
+                    filter_.Notch(frame_out);
                     break;
                 case LowPass:
                 default:
-                    filter_->Low(frame_out);
+                    filter_.Low(frame_out);
                     break;
             }
         };
 
         void Update() {
-            filter_->SetFreq(cutoff);
-            filter_->SetRes(resonance);
-            filter_->SetDrive(drive);
+            filter_.SetFreq(cutoff);
+            filter_.SetRes(resonance);
+            filter_.SetDrive(drive);
         }
 
         void UpdateMidiControl(uint8_t control, uint8_t value) {
@@ -148,54 +147,48 @@ namespace ol::fx {
         t_sample time = 0.5;
         t_sample feedback = 0.5;
         t_sample balance = 0.33;
-        t_sample dbuf = 0;
-        t_sample ibuf[CHANNEL_COUNT]{};
-        t_sample obuf[CHANNEL_COUNT]{};
-        daisysp::DelayLine<t_sample, MAX_DELAY> *delay_lines_[CHANNEL_COUNT]{};
-        FilterFx<CHANNEL_COUNT> filter;
+        //daisysp::DelayLine<t_sample, MAX_DELAY> *d1_;
+        std::vector<daisysp::DelayLine<t_sample, MAX_DELAY> *> delay_lines_;
+        //daisysp::Svf filter_;
+        FilterFx<CHANNEL_COUNT> filter_;
+        //daisysp::MoogLadder *filter_;
     public:
-        DelayFx() {
-            for (auto &d: delay_lines_) {
-                d = new daisysp::DelayLine<t_sample, MAX_DELAY>();
-            }
-        }
-
-        explicit DelayFx(daisysp::DelayLine<t_sample, MAX_DELAY> *delay_lines[CHANNEL_COUNT]) : delay_lines_(
-                delay_lines) {}
-
-        DelayFx(daisysp::DelayLine<t_sample, MAX_DELAY> *delay_lines[CHANNEL_COUNT], FilterFx<CHANNEL_COUNT> &filter)
-                : delay_lines_(delay_lines), filter(filter) {}
+        DelayFx(std::vector<daisysp::DelayLine<t_sample, MAX_DELAY> *> &delay_lines) : delay_lines_(delay_lines) {}
 
         void Init(const t_sample sample_rate) {
+            //d1_->Init();
             for (auto &d: delay_lines_) {
                 d->Init();
             }
-            filter.Init(sample_rate);
+            filter_.Init(sample_rate);
+            filter_.UpdateMidiControl(CC_FILTER_CUTOFF, 64);
+            filter_.UpdateMidiControl(CC_FILTER_RESONANCE, 24);
             Update();
         }
 
         void Process(const t_sample *frame_in, t_sample *frame_out) {
-
+            t_sample buf[CHANNEL_COUNT];
+            //d1_->Write(*frame_in + (feedback * buf));
             for (int i = 0; i < CHANNEL_COUNT; i++) {
-                ibuf[i] = obuf[i] = dbuf = delay_lines_[i]->Read();
-                delay_lines_[i]->Write(frame_in[i] + (feedback * dbuf));
+                auto d = delay_lines_.at(i);
+                buf[i] = d->Read();
+                d->Write(frame_in[i] + (feedback * buf[i]));
             }
-
-            filter.Process(ibuf, obuf);
-
+            //buf = filter_->Process(buf);
+            filter_.Process(buf, buf);
+            //buf = filter_.Low();
             for (int i = 0; i < CHANNEL_COUNT; i++) {
-                frame_out[i] = (obuf[i] * balance) + (frame_in[i] * (1 - balance));
+                frame_out[i] = (buf[i] * balance) + (frame_in[i] * (1 - balance));
             }
         }
 
         void Update() {
             // TODO: try using a read index for multi-tap support.
-
-            for (int i = 0; i < CHANNEL_COUNT; i++) {
-                delay_lines_[i]->SetDelay(ol::core::scale(time, 0, 1, 0, MAX_DELAY, 1));
+            //delay_.SetDelay(ol::core::scale(time, 0, 1, 0, MAX_DELAY, 1));
+            for (auto &d: delay_lines_) {
+                d->SetDelay(ol::core::scale(time, 0, 1, 0, MAX_DELAY, 1));
             }
-
-            filter.Update();
+            filter_.Update();
         }
 
         void UpdateHardwareControl(uint8_t control, t_sample value) {
@@ -213,7 +206,6 @@ namespace ol::fx {
                 default:
                     update = false;
             }
-            //filter.UpdateHardwareControl(control, value);
             if (update) {
                 Update();
             }
@@ -222,11 +214,9 @@ namespace ol::fx {
         void UpdateMidiControl(uint8_t control, uint8_t value) {
             bool update = true;
             t_sample scaled = ol::core::scale(value, 0, 127, 0, 1, 1);
-            printf("Delay midi control: %d, %d\n", control, value);
             switch (control) {
                 case CC_DELAY_TIME:
                     time = scaled;
-                    printf("Delay time: %d\n", int(time) * 1000);
                     break;
                 case CC_DELAY_FEEDBACK:
                     feedback = scaled;
@@ -235,10 +225,12 @@ namespace ol::fx {
                     balance = scaled;
                     break;
                 case CC_DELAY_CUTOFF:
-                    filter.UpdateMidiControl(CC_FILTER_CUTOFF, value);
+                    filter_.UpdateMidiControl(CC_FILTER_CUTOFF, value);
+//                    filter_.SetFreq(ol::core::scale(value, 0, 127, 0, 20000, 1));
                     break;
                 case CC_DELAY_RESONANCE:
-                    filter.UpdateMidiControl(CC_FILTER_RESONANCE, value);
+                    filter_.UpdateMidiControl(CC_FILTER_RESONANCE, value);
+//                    filter_.SetRes(scaled);
                     break;
                 default:
                     update = false;
@@ -262,36 +254,35 @@ namespace ol::fx {
         t_sample input_diffusion1 = 0.5;
         t_sample input_diffusion2 = 0.5;
         t_sample decay_diffusion = 0.5;
-        t_sample balance = 0.5;
-        Reverb *reverb;
-        t_sample buf[CHANNEL_COUNT]{};
+        t_sample balance = 0.1;
+        DaisyVerb<CHANNEL_COUNT> verb_;
 
     public:
-        ReverbFx() : reverb(new DaisyVerb<CHANNEL_COUNT>) {}
 
-        explicit ReverbFx(Reverb *verb) : reverb(verb) {}
+        ReverbFx(DaisyVerb<CHANNEL_COUNT> &verb) : verb_(verb) {};
 
         void Init(const t_sample sample_rate) {
-            reverb->Init(sample_rate);
-            //Update();
+            verb_.Init(sample_rate);
+            Update();
         }
 
         void Process(const t_sample *frame_in, t_sample *frame_out) {
-            reverb->Process(frame_in, buf);
+            t_sample buf[CHANNEL_COUNT]{};
+            verb_.Process(frame_in, buf);
             for (int i = 0; i < CHANNEL_COUNT; i++) {
                 frame_out[i] = (buf[i] * balance) + (frame_in[i] * (1 - balance));
             }
         }
 
         void Update() {
-            reverb->SetTime(decay_time);
-            reverb->SetCutoff(cutoff);
-            reverb->SetEarlyPredelay(early_predelay);
-            reverb->SetPredelay(predelay);
-            reverb->SetPrefilter(pre_cutoff);
-            reverb->SetInputDiffusion1(input_diffusion1);
-            reverb->SetInputDiffusion2(input_diffusion2);
-            reverb->SetDecayDiffusion(decay_diffusion);
+            verb_.SetTime(decay_time);
+            verb_.SetCutoff(cutoff);
+            verb_.SetEarlyPredelay(early_predelay);
+            verb_.SetPredelay(predelay);
+            verb_.SetPrefilter(pre_cutoff);
+            verb_.SetInputDiffusion1(input_diffusion1);
+            verb_.SetInputDiffusion2(input_diffusion2);
+            verb_.SetDecayDiffusion(decay_diffusion);
         }
 
         void UpdateMidiControl(uint8_t control, uint8_t value) {
@@ -338,31 +329,31 @@ namespace ol::fx {
         void UpdateHardwareControl(uint8_t control, t_sample value) {
             bool do_update = true;
             switch (control) {
-                case CC_REVERB_DECAY_DIFFUSION:;
+                case CC_REVERB_DECAY_DIFFUSION:
                     decay_diffusion = value;
                     break;
-                case CC_REVERB_INPUT_DIFFUSION_1:;
+                case CC_REVERB_INPUT_DIFFUSION_1:
                     input_diffusion1 = value;
                     break;
-                case CC_REVERB_INPUT_DIFFUSION_2:;
+                case CC_REVERB_INPUT_DIFFUSION_2:
                     decay_diffusion = value;
                     break;
-                case CC_REVERB_CUTOFF:;
+                case CC_REVERB_CUTOFF:
                     cutoff = ol::core::scale(value, 0, 1, 0, 20000, 1);
                     break;
-                case CC_REVERB_BALANCE:;
+                case CC_REVERB_BALANCE:
                     balance = value;
                     break;
-                case CC_REVERB_PREDELAY:;
+                case CC_REVERB_PREDELAY:
                     predelay = value;
                     break;
-                case CC_EARLY_PREDELAY:;
+                case CC_EARLY_PREDELAY:
                     early_predelay = value;
                     break;
-                case CC_REVERB_PREFILTER:;
+                case CC_REVERB_PREFILTER:
                     pre_cutoff = value;
                     break;
-                case CC_REVERB_TIME:;
+                case CC_REVERB_TIME:
                     decay_time = value;
                     break;
                 default:
@@ -381,31 +372,25 @@ namespace ol::fx {
     template<int CHANNEL_COUNT>
     class FxRack {
     private:
-        ol::fx::DelayFx<CHANNEL_COUNT> delay1;
-        ol::fx::ReverbFx<CHANNEL_COUNT> reverb;
+        DelayFx<CHANNEL_COUNT> &delay_;
+        ol::fx::ReverbFx<CHANNEL_COUNT> &reverb_;
         FilterFx<CHANNEL_COUNT> filter1;
         SaturatorFx<CHANNEL_COUNT> saturator1;
         SaturatorFx<CHANNEL_COUNT> interstage_saturator;
         t_sample master_volume = 0.8f;
-        t_sample abuf[CHANNEL_COUNT]{};
-        t_sample bbuf[CHANNEL_COUNT]{};
-        t_sample obuf[CHANNEL_COUNT]{};
+        t_sample buf_a[CHANNEL_COUNT]{};
+        t_sample buf_b[CHANNEL_COUNT]{};
+        t_sample buf_c[CHANNEL_COUNT]{};
+        t_sample buf_d[CHANNEL_COUNT]{};
 
     public:
-        FxRack() = default;
 
-        FxRack(DelayFx<CHANNEL_COUNT> &delay1, ReverbFx<CHANNEL_COUNT> &reverb, FilterFx<CHANNEL_COUNT> &filt1,
-               SaturatorFx<CHANNEL_COUNT> &sat1,
-               SaturatorFx<CHANNEL_COUNT> &interstage_saturator)
-                : delay1(delay1),
-                  reverb(reverb),
-                  filter1(filt1),
-                  saturator1(sat1),
-                  interstage_saturator(interstage_saturator) {}
+        FxRack(DelayFx<CHANNEL_COUNT> &delay, ReverbFx<CHANNEL_COUNT> &reverb) : delay_(delay), reverb_(reverb) {}
 
         void Init(t_sample sample_rate) {
-            delay1.Init(sample_rate);
-            reverb.Init(sample_rate);
+            delay_.Init(sample_rate);
+
+            reverb_.Init(sample_rate);
             filter1.Init(sample_rate);
             saturator1.Init(sample_rate);
             interstage_saturator.Init(sample_rate);
@@ -413,21 +398,19 @@ namespace ol::fx {
         };
 
         void Process(const t_sample *frame_in, t_sample *frame_out) {
-
-            delay1.Process(frame_in, abuf);
-            reverb.Process(abuf, abuf);
-//            saturator1.Process(abuf, obuf);
-//
-            filter1.Process(abuf, obuf);
+            delay_.Process(frame_in, buf_a);
+            reverb_.Process(buf_a, buf_b);
+            //saturator1.Process(buf_b, buf_c);
+            filter1.Process(buf_a, buf_b);
 
             for (int i = 0; i < CHANNEL_COUNT; i++) {
-                frame_out[i] = obuf[i] * master_volume;
+                frame_out[i] = buf_b[i] * master_volume;
             }
         };
 
         void Update() {
-            delay1.Update();
-            reverb.Update();
+            delay_.Update();
+            reverb_.Update();
             filter1.Update();
             saturator1.Update();
         }
@@ -450,8 +433,8 @@ namespace ol::fx {
                     break;
             }
 
-            delay1.UpdateMidiControl(control, value);
-            reverb.UpdateMidiControl(control, value);
+            delay_.UpdateMidiControl(control, value);
+            reverb_.UpdateMidiControl(control, value);
             saturator1.UpdateMidiControl(control, value);
             if (control == CC_CTL_VOLUME) {
                 master_volume = ol::core::scale(value, 0, 127, 0, 1, 1);

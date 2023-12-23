@@ -1,5 +1,4 @@
 #ifdef DAISY_NATIVE
-
 //#include "daisy/daisy_dummy.h"
 //#include "hid/logger.h"
 
@@ -22,15 +21,26 @@
 #define DISPLAY_ON true
 #define CHANNEL_COUNT 2
 using namespace daisy;
+using namespace ol::fx;
+using namespace ol::synth;
 
 using MyOledDisplay = OledDisplay<SSD130x4WireSpi128x64Driver>;
 static DaisySeed hw;
 MyOledDisplay display;
 
-auto fx = ol::fx::FxRack<CHANNEL_COUNT>();
+daisysp::DelayLine<t_sample, MAX_DELAY> DSY_SDRAM_BSS d1;
+daisysp::DelayLine<t_sample, MAX_DELAY> DSY_SDRAM_BSS d2;
+std::vector<daisysp::DelayLine<t_sample, MAX_DELAY> *> delay_lines = {&d1, &d2};
+
+DelayFx<CHANNEL_COUNT> delay(delay_lines);
+daisysp::ReverbSc DSY_SDRAM_BSS verb;
+DaisyVerb<CHANNEL_COUNT> daisyVerb(verb);
+ReverbFx<CHANNEL_COUNT> reverb(daisyVerb);
+
+FxRack<CHANNEL_COUNT> fx(delay, reverb);
 
 t_sample cv_freq = 220;
-auto voice = ol::synth::SynthVoice<CHANNEL_COUNT>();
+ol::synth::SynthVoice<CHANNEL_COUNT> voice;
 
 auto rms = ol::core::Rms();
 t_sample rms_value = 0;
@@ -46,14 +56,13 @@ void audio_callback(daisy::AudioHandle::InterleavingInputBuffer in,
                     daisy::AudioHandle::InterleavingOutputBuffer out,
                     size_t size) {
     for (int i = 0; i < size; i += 2) {
-
         // CV Frequency
         t_sample voct_cv = hw.adc.GetFloat(0);
         t_sample voct = daisysp::fmap(voct_cv, 0.f, 40.f);
         t_sample coarse_tune = 30.93;
-        t_sample midi_nn = daisysp::fclamp( coarse_tune + voct, 0.f, 127.f);
+        t_sample midi_nn = daisysp::fclamp(coarse_tune + voct, 0.f, 127.f);
         t_sample freq = daisysp::mtof(midi_nn);
-        cv_freq    = freq;
+        cv_freq = freq;
 
         // CV Gate
         if (cv_gate.FallingEdge()) {
@@ -67,7 +76,9 @@ void audio_callback(daisy::AudioHandle::InterleavingInputBuffer in,
         voice.SetFrequency(cv_freq);
         voice.Process(frame_buffer);
 
-//        fx.Process(frame_buffer, frame_buffer);
+        // FX
+        fx.Process(frame_buffer, frame_buffer);
+       // delay.Process(frame_buffer, frame_buffer);
 
         // RMS and Peak
         rms_value = rms.Process(frame_buffer[0]);
@@ -91,22 +102,23 @@ int main() {
     hw.Init();
 
     hw.SetAudioBlockSize(AUDIO_BLOCK_SIZE);
-    hw.StartAudio(audio_callback);
     auto sample_rate = hw.AudioSampleRate();
 
- //   fx.Init(sample_rate);
     voice.Init(sample_rate);
+    fx.Init(sample_rate);
     rms.Init(sample_rate, 128);
+
+    hw.StartAudio(audio_callback);
 
     voice.UpdateMidiControl(CC_CTL_PORTAMENTO, 30);
 
     voice.UpdateMidiControl(CC_FILTER_CUTOFF, 0);
-    voice.UpdateMidiControl(CC_FILTER_RESONANCE, 30);
+    voice.UpdateMidiControl(CC_FILTER_RESONANCE, 0);
     voice.UpdateMidiControl(CC_ENV_FILT_A, 0);
     voice.UpdateMidiControl(CC_ENV_FILT_D, 60);
     voice.UpdateMidiControl(CC_ENV_FILT_S, 0);
     voice.UpdateMidiControl(CC_ENV_FILT_R, 15);
-    voice.UpdateMidiControl(CC_ENV_FILT_AMT, 60);
+    voice.UpdateMidiControl(CC_ENV_FILT_AMT, 24);
 
     voice.UpdateMidiControl(CC_ENV_AMP_A, 0);
     voice.UpdateMidiControl(CC_ENV_AMP_D, 127);
@@ -115,7 +127,19 @@ int main() {
     voice.UpdateMidiControl(CC_OSC_1_VOLUME, 127);
     voice.UpdateMidiControl(CC_CTL_VOLUME, 100);
 
+    // Delay defaults
+    fx.UpdateMidiControl(CC_DELAY_BALANCE, 32);
+    fx.UpdateMidiControl(CC_DELAY_CUTOFF, 32);
+    fx.UpdateMidiControl(CC_DELAY_RESONANCE, 32);
 
+    // Reverb defaults
+    fx.UpdateMidiControl(CC_REVERB_BALANCE, 8);
+    fx.UpdateMidiControl(CC_REVERB_TIME, 120);
+    fx.UpdateMidiControl(CC_REVERB_CUTOFF, 32);
+
+    // FX Filter defaults
+    fx.UpdateMidiControl(CC_FX_FILTER_CUTOFF, 127);
+    fx.UpdateMidiControl(CC_FX_FILTER_RESONANCE, 9);
 
     /** Configure the Display */
     MyOledDisplay::Config disp_cfg = {};

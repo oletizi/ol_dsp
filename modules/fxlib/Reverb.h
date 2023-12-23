@@ -35,30 +35,27 @@ namespace ol::fx {
     template<int CHANNEL_COUNT>
     class DaisyVerb : public Reverb {
     private:
-        daisysp::ReverbSc verb;
+        daisysp::ReverbSc &verb_;
         t_sample in1 = 0;
         t_sample in2 = 0;
         t_sample out1 = 0;
         t_sample out2 = 0;
     public:
+        DaisyVerb(daisysp::ReverbSc &verb) : verb_(verb) {}
+
         void Init(t_sample sample_rate) override {
-            verb.Init(sample_rate);
+            verb_.Init(sample_rate);
         }
 
         void Process(const t_sample *frame_in, t_sample *frame_out) override {
-            in1 = frame_in[0];
-            // XXX: This could be more elegant
-            in2 = CHANNEL_COUNT > 1 ? frame_in[1] : in1;
-            //out1 = out2 = 0;
-
-            verb.Process(in1, in2, &out1, &out2);
-            // XXX: This could be more elegant
+            t_sample in1 = frame_in[0], in2 = in1;
+            t_sample *out1 = &frame_out[0];
+            t_sample *out2 = out1;
             if (CHANNEL_COUNT > 1) {
-                frame_out[0] = out1;
-                frame_out[1] = out2;
-            } else {
-                *frame_out = out1 + out2 / 2;
+                in2 = frame_in[1];
+                out2 = &frame_out[1];
             }
+            verb_.Process(in1, in2, out1, out2);
         }
 
         void SetPredelay(t_sample sample) override {
@@ -86,11 +83,11 @@ namespace ol::fx {
         }
 
         void SetCutoff(t_sample freq) override {
-            verb.SetLpFreq(freq);
+            verb_.SetLpFreq(freq);
         }
 
         void SetTime(t_sample time) override {
-            verb.SetFeedback(time);
+            verb_.SetFeedback(time);
         }
     };
 }

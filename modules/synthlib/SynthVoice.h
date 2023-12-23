@@ -121,7 +121,7 @@ namespace ol::synth {
                     break;
                 case CC_FILTER_CUTOFF:
                     filter_cutoff = ol::core::scale( value, 0, 1, 0, 20000, 2.5);
-                    PRINTF("  Cutoff: %f\n", int(filter_cutoff));
+                    PRINTF("  Cutoff: %d\n", int(filter_cutoff));
                     break;
                 case CC_FILTER_RESONANCE:
                     filter_resonance = value;
