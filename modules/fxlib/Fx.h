@@ -137,6 +137,31 @@ namespace ol::fx {
                 Update();
             }
         }
+
+        void UpdateHardwareControl(uint8_t control, t_sample value) {
+            bool update = true;
+            switch (control) {
+                case CC_FILTER_CUTOFF:
+                    cutoff = ol::core::scale(value, 0, 1, 0, 20000, 1.02);
+                    break;
+                case CC_FILTER_RESONANCE:
+                    resonance = value;
+                    break;
+                case CC_FILTER_DRIVE:
+                    drive = value;
+                    break;
+                case CC_FILTER_TYPE:
+                    type = FilterType(ol::core::scale(value, 0, 1, 0, 5, 1));
+                    break;
+                default:
+                    update = false;
+                    break;
+            }
+            if (update) {
+                Update();
+            }
+        }
+
     };
 
     // Delay
@@ -374,7 +399,8 @@ namespace ol::fx {
     private:
         DelayFx<CHANNEL_COUNT> &delay_;
         ol::fx::ReverbFx<CHANNEL_COUNT> &reverb_;
-        FilterFx<CHANNEL_COUNT> filter1;
+        //FilterFx<CHANNEL_COUNT> filter1;
+        FilterFx<CHANNEL_COUNT> &filter1;
         SaturatorFx<CHANNEL_COUNT> saturator1;
         SaturatorFx<CHANNEL_COUNT> interstage_saturator;
         t_sample master_volume = 0.8f;
@@ -384,7 +410,8 @@ namespace ol::fx {
 
     public:
 
-        FxRack(DelayFx<CHANNEL_COUNT> &delay, ReverbFx<CHANNEL_COUNT> &reverb) : delay_(delay), reverb_(reverb) {}
+        FxRack(DelayFx<CHANNEL_COUNT> &delay, ReverbFx<CHANNEL_COUNT> &reverb, FilterFx<CHANNEL_COUNT> filter)
+                : delay_(delay), reverb_(reverb), filter1(filter) {}
 
         void Init(t_sample sample_rate) {
             delay_.Init(sample_rate);
@@ -439,6 +466,29 @@ namespace ol::fx {
             }
         }
 
+        void UpdateHardwareControl(uint8_t control, t_sample value) {
+            switch (control) {
+                case CC_FX_FILTER_CUTOFF:
+                    filter1.UpdateHardwareControl(CC_FILTER_CUTOFF, value);
+                    break;
+                case CC_FX_FILTER_RESONANCE:
+                    filter1.UpdateHardwareControl(CC_FILTER_RESONANCE, value);
+                    break;
+                case CC_FX_FILTER_DRIVE:
+                    filter1.UpdateHardwareControl(CC_FILTER_DRIVE, value);
+                    break;
+                case CC_FX_FILTER_TYPE:
+                    filter1.UpdateHardwareControl(CC_FILTER_TYPE, value);
+                    break;
+                case CC_CTL_VOLUME:
+                    master_volume = value;
+                    break;
+                default:
+                    break;
+            }
+            delay_.UpdateHardwareControl(control, value);
+            reverb_.UpdateHardwareControl(control, value);
+        }
     };
 
 

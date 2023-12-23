@@ -36,8 +36,9 @@ DelayFx<CHANNEL_COUNT> delay(delay_lines);
 daisysp::ReverbSc DSY_SDRAM_BSS verb;
 DaisyVerb<CHANNEL_COUNT> daisyVerb(verb);
 ReverbFx<CHANNEL_COUNT> reverb(daisyVerb);
+FilterFx<CHANNEL_COUNT> filter;
 
-FxRack<CHANNEL_COUNT> fx(delay, reverb);
+//FxRack<CHANNEL_COUNT> fx(delay, reverb, filter);
 
 t_sample cv_freq = 220;
 ol::synth::SynthVoice<CHANNEL_COUNT> voice;
@@ -77,8 +78,11 @@ void audio_callback(daisy::AudioHandle::InterleavingInputBuffer in,
         voice.Process(frame_buffer);
 
         // FX
-        fx.Process(frame_buffer, frame_buffer);
-       // delay.Process(frame_buffer, frame_buffer);
+//        fx.Process(frame_buffer, frame_buffer);
+        delay.Process(frame_buffer, frame_buffer);
+        reverb.Process(frame_buffer, frame_buffer);
+        filter.Process(frame_buffer, frame_buffer);
+
 
         // RMS and Peak
         rms_value = rms.Process(frame_buffer[0]);
@@ -105,7 +109,10 @@ int main() {
     auto sample_rate = hw.AudioSampleRate();
 
     voice.Init(sample_rate);
-    fx.Init(sample_rate);
+    //fx.Init(sample_rate);
+    delay.Init(sample_rate);
+    reverb.Init(sample_rate);
+    filter.Init(sample_rate);
     rms.Init(sample_rate, 128);
 
     hw.StartAudio(audio_callback);
@@ -128,18 +135,18 @@ int main() {
     voice.UpdateMidiControl(CC_CTL_VOLUME, 100);
 
     // Delay defaults
-    fx.UpdateMidiControl(CC_DELAY_BALANCE, 32);
-    fx.UpdateMidiControl(CC_DELAY_CUTOFF, 32);
-    fx.UpdateMidiControl(CC_DELAY_RESONANCE, 32);
+    delay.UpdateMidiControl(CC_DELAY_BALANCE, 32);
+    delay.UpdateMidiControl(CC_DELAY_CUTOFF, 32);
+    delay.UpdateMidiControl(CC_DELAY_RESONANCE, 32);
 
     // Reverb defaults
-    fx.UpdateMidiControl(CC_REVERB_BALANCE, 8);
-    fx.UpdateMidiControl(CC_REVERB_TIME, 120);
-    fx.UpdateMidiControl(CC_REVERB_CUTOFF, 32);
+    reverb.UpdateMidiControl(CC_REVERB_BALANCE, 24);
+    reverb.UpdateMidiControl(CC_REVERB_TIME, 120);
+    reverb.UpdateMidiControl(CC_REVERB_CUTOFF, 32);
 
     // FX Filter defaults
-    fx.UpdateMidiControl(CC_FX_FILTER_CUTOFF, 127);
-    fx.UpdateMidiControl(CC_FX_FILTER_RESONANCE, 9);
+    filter.UpdateMidiControl(CC_FX_FILTER_CUTOFF, 127);
+    filter.UpdateMidiControl(CC_FX_FILTER_RESONANCE, 9);
 
     /** Configure the Display */
     MyOledDisplay::Config disp_cfg = {};
@@ -158,15 +165,27 @@ int main() {
     button.Init(hw.GetPin(pin_number), 1000);
 
 
-    AdcChannelConfig adcConfig{};
+    AdcChannelConfig cv_pitch_config{};
     //Configure pin 21 as an ADC input. This is where we'll read the knob.
     pin_number = 16;
-    adcConfig.InitSingle(hw.GetPin(pin_number));
-    //Initialize the adc with the config we just made
-    hw.adc.Init(&adcConfig, 1);
+    cv_pitch_config.InitSingle(hw.GetPin(pin_number));
+
 
     pin_number = 17;
     cv_gate.Init(hw.GetPin(pin_number), 1000);
+
+    pin_number = 18;
+    AdcChannelConfig cv_1_config{};
+    cv_1_config.InitSingle(hw.GetPin(pin_number));
+
+
+    //Initialize the adc with the config we just made
+    AdcChannelConfig adc_configs[2];
+    adc_configs[0] = cv_pitch_config;
+    adc_configs[1] = cv_1_config;
+    hw.adc.Init(adc_configs, 2);
+    //hw.adc.Init(&ch1Config, 1);
+
 
     //Start reading values
     hw.adc.Start();
@@ -175,13 +194,20 @@ int main() {
     auto font = Font_11x18;//Font_7x10;
     auto peak_scaled = 0;
     auto rms_scaled = 0;
+    t_sample cv_1_previous = 0;
     while (true) {
 
         button.Debounce();
         cv_gate.Debounce();
         // Set the onboard LED
         hw.SetLed(button.Pressed() || !cv_gate.Pressed());
+        t_sample cv_1 = hw.adc.GetFloat(1);
 
+        t_sample window = 0.05f;
+        if (cv_1_previous > cv_1 + window || cv_1_previous < cv_1 - window) {
+            delay.UpdateHardwareControl(CC_DELAY_TIME, 1 - cv_1);
+            cv_1_previous = cv_1;
+        }
 
 //        if (button.RisingEdge()) {
 //            voice.NoteOn(63, 100);
@@ -215,7 +241,7 @@ int main() {
 
             line_number++;
             display.SetCursor(0, 44);
-            sprintf(strbuff, "note: %d", voice.Playing());
+            sprintf(strbuff, "ch2: %d", int(cv_1 * 1000));
             display.WriteString(strbuff, font, true);
 
             display.Update();
