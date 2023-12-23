@@ -381,7 +381,6 @@ namespace ol::fx {
         t_sample buf_a[CHANNEL_COUNT]{};
         t_sample buf_b[CHANNEL_COUNT]{};
         t_sample buf_c[CHANNEL_COUNT]{};
-        t_sample buf_d[CHANNEL_COUNT]{};
 
     public:
 
@@ -400,11 +399,10 @@ namespace ol::fx {
         void Process(const t_sample *frame_in, t_sample *frame_out) {
             delay_.Process(frame_in, buf_a);
             reverb_.Process(buf_a, buf_b);
-            //saturator1.Process(buf_b, buf_c);
-            filter1.Process(buf_a, buf_b);
+            filter1.Process(buf_b, buf_c);
 
             for (int i = 0; i < CHANNEL_COUNT; i++) {
-                frame_out[i] = buf_b[i] * master_volume;
+                frame_out[i] = buf_c[i] * master_volume;
             }
         };
 
