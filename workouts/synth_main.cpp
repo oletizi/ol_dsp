@@ -13,8 +13,8 @@ using namespace ol::synth;
 int main() {
     //Voice *voices[VOICE_COUNT];
     std::vector<Voice *> voices;
-    for (auto &v: voices) {
-        v = new SynthVoice<CHANNEL_COUNT>();
+    for (int i=0; i<CHANNEL_COUNT; i++) {
+        voices.push_back(new SynthVoice<CHANNEL_COUNT>());
     }
     Voice *poly = new Polyvoice<CHANNEL_COUNT>(voices);
 

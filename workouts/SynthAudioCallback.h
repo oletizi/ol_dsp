@@ -27,6 +27,9 @@ public:
                                           const juce::AudioIODeviceCallbackContext &context) override {
         counter_++;
         for (int i = 0; i < numSamples; i++) {
+            for (int i=0; i<CHANNEL_COUNT; i++) {
+                frame_buffer_[i] = 0;
+            }
             voice_->Process(frame_buffer_);
             for (int j = 0; j < numOutputChannels; j++) {
                 outputChannelData[j][i] = frame_buffer_[j];
@@ -36,6 +39,11 @@ public:
 
     void audioDeviceAboutToStart(juce::AudioIODevice *device) override {
         voice_->Init(static_cast<float>(device->getCurrentSampleRate()));
+        voice_->UpdateMidiControl(CC_FILTER_CUTOFF, 0);
+        voice_->UpdateMidiControl(CC_FILTER_RESONANCE, 24);
+        voice_->UpdateMidiControl(CC_ENV_FILT_D, 64);
+        voice_->UpdateMidiControl(CC_ENV_FILT_S, 0);
+        voice_->UpdateMidiControl(CC_ENV_FILT_AMT, 64);
     }
 
     void audioDeviceStopped() override {

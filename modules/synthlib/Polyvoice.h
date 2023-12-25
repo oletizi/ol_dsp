@@ -27,7 +27,10 @@ namespace ol::synth {
         }
 
         void Process(t_sample *frame_out) override {
-
+//            for (int i=0; i< CHANNEL_COUNT; i++) {
+//                frame_buffer[i] = 0;
+//            }
+//
             for (auto voice: voices_) {
                 voice->Process(frame_buffer);
                 for (int i = 0; i < CHANNEL_COUNT; i++) {
