@@ -10,11 +10,11 @@ using namespace juce::dsp;
 
 class ConvolutionCallback : public juce::AudioIODeviceCallback {
 private:
-    SynthAudioCallback<CHANNEL_COUNT, VOICE_COUNT> *synth_callback_;
+    SynthAudioCallback<CHANNEL_COUNT> *synth_callback_;
     Convolution *convolution_;
 public:
     explicit ConvolutionCallback(Convolution *convolution,
-                                 SynthAudioCallback<CHANNEL_COUNT, VOICE_COUNT> *synthCallback)
+                                 SynthAudioCallback<CHANNEL_COUNT> *synthCallback)
             : convolution_(convolution), synth_callback_(synthCallback) {}
 
     void audioDeviceIOCallbackWithContext(const float *const *inputChannelData,
@@ -75,13 +75,13 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[]) {
     auto midiDevices = juce::MidiInput::getAvailableDevices();
     std::cout << "MIDI inputs:" << std::endl;
 
-    ol::synth::Voice *voices[VOICE_COUNT];
-    for (auto &v : voices) {
+    std::vector<ol::synth::Voice *> voices;
+    for (auto &v: voices) {
         v = new ol::synth::SynthVoice<CHANNEL_COUNT>();
     }
-    auto poly = ol::synth::Polyvoice<CHANNEL_COUNT, VOICE_COUNT>(voices);
+    ol::synth::Polyvoice<CHANNEL_COUNT> poly(voices);
 
-    auto midi_callback = SynthMidiCallback(poly);
+    SynthMidiCallback<CHANNEL_COUNT> midi_callback(&poly);
 
     for (const auto &input: midiDevices) {
         deviceManager.setMidiInputDeviceEnabled(input.identifier, true);
@@ -89,7 +89,7 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[]) {
         std::cout << " name: " << input.name << "; identifier: " << input.identifier << std::endl;
     }
 
-    auto synth = SynthAudioCallback(poly);
+    SynthAudioCallback<CHANNEL_COUNT> synth(&poly);
     ConvolutionCallback convolution_callback(&convolution, &synth);
     deviceManager.addAudioCallback(&convolution_callback);
 

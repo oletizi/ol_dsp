@@ -10,12 +10,13 @@
 #define CHANNEL_COUNT 1
 #define VOICE_COUNT 1
 
+using namespace daisysp;
 using namespace ol::fx;
 using namespace ol::synth;
 
 class ReverbAudioCallback : public juce::AudioIODeviceCallback {
 public:
-    explicit ReverbAudioCallback(ol::fx::ReverbFx<CHANNEL_COUNT> *fx, SynthAudioCallback<CHANNEL_COUNT, VOICE_COUNT> &synth) :
+    explicit ReverbAudioCallback(ol::fx::ReverbFx<CHANNEL_COUNT> *fx, SynthAudioCallback<CHANNEL_COUNT> &synth) :
             fx_(fx), synth_(synth) {}
 
     void audioDeviceAboutToStart(juce::AudioIODevice *device) override {
@@ -61,7 +62,7 @@ public:
 
 
     ol::fx::ReverbFx<CHANNEL_COUNT> *fx_;
-    SynthAudioCallback<CHANNEL_COUNT, VOICE_COUNT> &synth_;
+    SynthAudioCallback<CHANNEL_COUNT> synth_;
 };
 
 class ReverbMidiCallback : public juce::MidiInputCallback {
@@ -88,13 +89,19 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[]) {
     auto midiDevices = juce::MidiInput::getAvailableDevices();
     std::cout << "MIDI inputs:" << std::endl;
 
-    Polyvoice<CHANNEL_COUNT, VOICE_COUNT> poly;
+    std::vector<Voice *> voices;
+    for (int i=0;i < VOICE_COUNT; i++) {
+        voices.push_back(new SynthVoice<CHANNEL_COUNT>());
+    }
+    Polyvoice<CHANNEL_COUNT> poly(voices);
 
-    auto synthCallback = SynthAudioCallback(poly);
+    SynthAudioCallback<CHANNEL_COUNT> synthCallback(&poly);
 
-    ReverbFx<CHANNEL_COUNT> reverb;
+    ReverbSc verb;
+    DaisyVerb<CHANNEL_COUNT> daisy_verb(verb);
+    ReverbFx<CHANNEL_COUNT> reverb(daisy_verb);
 
-    auto midi_callback = SynthMidiCallback(poly);
+    SynthMidiCallback<CHANNEL_COUNT> midi_callback(&poly);
     ReverbMidiCallback reverb_midi_callback(&reverb);
 
     for (const auto &input: midiDevices) {
@@ -103,8 +110,6 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[]) {
         deviceManager.addMidiInputDeviceCallback(input.identifier, &reverb_midi_callback);
         std::cout << " name: " << input.name << "; identifier: " << input.identifier << std::endl;
     }
-
-
 
     ReverbAudioCallback reverb_callback(&reverb, synthCallback);
     deviceManager.addAudioCallback(&reverb_callback);

@@ -410,7 +410,7 @@ namespace ol::fx {
 
     public:
 
-        FxRack(DelayFx<CHANNEL_COUNT> &delay, ReverbFx<CHANNEL_COUNT> &reverb, FilterFx<CHANNEL_COUNT> filter)
+        FxRack(DelayFx<CHANNEL_COUNT> &delay, ReverbFx<CHANNEL_COUNT> &reverb, FilterFx<CHANNEL_COUNT> &filter)
                 : delay_(delay), reverb_(reverb), filter1(filter) {}
 
         void Init(t_sample sample_rate) {

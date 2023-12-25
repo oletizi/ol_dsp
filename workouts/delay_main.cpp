@@ -10,19 +10,20 @@
 
 #define CHANNEL_COUNT 2
 #define VOICE_COUNT 4
+using namespace daisysp;
 using namespace ol::fx;
 using namespace ol::synth;
 
-//auto voice = ol::synth::SynthVoice<1>();
-//ol::synth::Voice *voices[VOICE_COUNT] = {};
-//ol::synth::Polyvoice<1, VOICE_COUNT> poly(voices);
 SynthVoice<1> voice;
 //daisysp::DelayLine<t_sample, MAX_DELAY> delay_line;
 
 //auto dfx = ol::fx::FilterFx(df);
 
 //auto delay = ol::fx::DelayFx(delay_line, dfx);
-DelayFx<1> delay;
+DelayLine<t_sample, MAX_DELAY> dl_1;
+DelayLine<t_sample, MAX_DELAY> dl_2;
+std::vector<DelayLine<t_sample, MAX_DELAY> *> delay_lines = {&dl_1, &dl_2};
+DelayFx<1> delay(delay_lines);
 int notes_on = 0;
 
 void handleNoteOn(int channel, int note, int velocity) {

@@ -9,7 +9,9 @@
 #include "daisy/ui/ui.h"
 #include "fxlib/Fx.h"
 #include "synthlib/ol_synthlib.h"
+
 #define CHANNEL_COUNT 2
+using namespace daisysp;
 using namespace ol::fx;
 using namespace ol::synth;
 
@@ -20,7 +22,18 @@ using namespace ol::synth;
 //auto sat3 = SaturatorFx();
 //auto fxrack = FxRack(delay1, delay2, reverb, filter1, filter2, sat1, sat2, sat3);
 SynthVoice<CHANNEL_COUNT> voice;
-FxRack<CHANNEL_COUNT> fxrack;
+
+DelayLine<t_sample, MAX_DELAY> dl_1;
+DelayLine<t_sample, MAX_DELAY> dl_2;
+std::vector<DelayLine<t_sample, MAX_DELAY> *> delay_lines = {&dl_1, &dl_2};
+DelayFx<CHANNEL_COUNT> delay(delay_lines);
+
+ReverbSc verb;
+DaisyVerb<CHANNEL_COUNT> daisy_verb(verb);
+ReverbFx reverb(daisy_verb);
+
+FilterFx<CHANNEL_COUNT> filter;
+FxRack<CHANNEL_COUNT> fxrack(delay, reverb, filter);
 
 int notes_on = 0;
 

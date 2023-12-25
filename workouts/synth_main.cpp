@@ -11,11 +11,12 @@
 using namespace ol::synth;
 
 int main() {
-    Voice *voices[VOICE_COUNT];
-    for (auto &v : voices) {
+    //Voice *voices[VOICE_COUNT];
+    std::vector<Voice *> voices;
+    for (auto &v: voices) {
         v = new SynthVoice<CHANNEL_COUNT>();
     }
-    auto poly = Polyvoice<CHANNEL_COUNT, VOICE_COUNT>(voices);
+    Voice *poly = new Polyvoice<CHANNEL_COUNT>(voices);
 
     juce::initialiseJuce_GUI();
     juce::AudioDeviceManager deviceManager = juce::AudioDeviceManager();
@@ -24,7 +25,7 @@ int main() {
     auto midiDevices = juce::MidiInput::getAvailableDevices();
     std::cout << "MIDI inputs:" << std::endl;
 
-    auto midi_callback = SynthMidiCallback(poly);
+    SynthMidiCallback<CHANNEL_COUNT> midi_callback(poly);
 
     for (const auto &input: midiDevices) {
         deviceManager.setMidiInputDeviceEnabled(input.identifier, true);
@@ -33,7 +34,7 @@ int main() {
     }
 
 
-    auto callback = SynthAudioCallback(poly);
+    SynthAudioCallback<CHANNEL_COUNT> callback(poly);
     deviceManager.addAudioCallback(&callback);
 
     std::cout << "Send me some MIDI" << std::endl;

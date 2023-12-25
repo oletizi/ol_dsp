@@ -7,23 +7,22 @@
 
 #include <juce_audio_devices/juce_audio_devices.h>
 
-template<int CHANNEL_COUNT, int VOICE_COUNT>
+template<int CHANNEL_COUNT>
 class SynthMidiCallback : public juce::MidiInputCallback {
 private:
-    ol::synth::Polyvoice<CHANNEL_COUNT, VOICE_COUNT> &poly_;
+    ol::synth::Voice *voice_;
 
 public:
-    explicit SynthMidiCallback(ol::synth::Polyvoice<CHANNEL_COUNT, VOICE_COUNT> &poly) : poly_(poly) {}
+    explicit SynthMidiCallback(ol::synth::Voice *voice) : voice_(voice) {}
 
     void handleIncomingMidiMessage(juce::MidiInput *source, const juce::MidiMessage &message) override {
         std::cout << "MIDI!" << std::endl;
         if (message.isNoteOn()) {
-            poly_.NoteOn(static_cast<unsigned char>(message.getNoteNumber()), message.getVelocity());
+            voice_->NoteOn(static_cast<unsigned char>(message.getNoteNumber()), message.getVelocity());
         } else if (message.isNoteOff()) {
-            poly_.NoteOff(static_cast<unsigned char>(message.getNoteNumber()), message.getVelocity());
+            voice_->NoteOff(static_cast<unsigned char>(message.getNoteNumber()), message.getVelocity());
         } else if (message.isController()) {
-            poly_.UpdateMidiControl(message.getChannel(), message.getControllerNumber(),
-                                    message.getControllerValue());
+            voice_->UpdateMidiControl(message.getControllerNumber(), message.getControllerValue());
         }
     }
 

@@ -9,14 +9,15 @@
 #include "juce_audio_devices/juce_audio_devices.h"
 #include "synthlib/ol_synthlib.h"
 
-template <int CHANNEL_COUNT, int VOICE_COUNT>
+template<int CHANNEL_COUNT>
 class SynthAudioCallback : public juce::AudioIODeviceCallback {
 private:
-    ol::synth::Polyvoice<CHANNEL_COUNT, VOICE_COUNT> poly_;
+    ol::synth::Voice *voice_;
     uint32_t counter_ = 0;
+    t_sample frame_buffer_[CHANNEL_COUNT] {};
     juce::AudioDeviceManager *device_manager_ = nullptr;
 public:
-    explicit SynthAudioCallback(ol::synth::Polyvoice<CHANNEL_COUNT, VOICE_COUNT> &voices) : poly_(voices) {}
+    explicit SynthAudioCallback(ol::synth::Voice *voice) : voice_(voice) {}
 
     void audioDeviceIOCallbackWithContext(const float *const *inputChannelData,
                                           int numInputChannels,
@@ -25,18 +26,16 @@ public:
                                           int numSamples,
                                           const juce::AudioIODeviceCallbackContext &context) override {
         counter_++;
-        t_sample output_buffer = 0;
         for (int i = 0; i < numSamples; i++) {
-            output_buffer = 0;
-            poly_.Process(&output_buffer);
+            voice_->Process(frame_buffer_);
             for (int j = 0; j < numOutputChannels; j++) {
-                outputChannelData[j][i] = output_buffer;
+                outputChannelData[j][i] = frame_buffer_[j];
             }
         }
     }
 
     void audioDeviceAboutToStart(juce::AudioIODevice *device) override {
-        poly_.Init(static_cast<float>(device->getCurrentSampleRate()));
+        voice_->Init(static_cast<float>(device->getCurrentSampleRate()));
     }
 
     void audioDeviceStopped() override {

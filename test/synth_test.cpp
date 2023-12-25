@@ -209,9 +209,9 @@ TEST(Synth, Voice) {
 TEST(Synth, Polyvoice) {
     MockVoice v1;
     MockVoice v2;
-    uint64_t voice_count = 2;
-    Voice *mock_voices[] = {&v1, &v2};
-    auto p = Polyvoice<1, 2>(mock_voices);
+    //    Voice *mock_voices[] = {&v1, &v2};
+    std::vector<Voice *> voices = {&v1, &v2};
+    auto p = Polyvoice<1>(voices);
 
     EXPECT_CALL(v1, NoteOn(10, 1)).Times(AtLeast(1));
     EXPECT_CALL(v1, Playing())

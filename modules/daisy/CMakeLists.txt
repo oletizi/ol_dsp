@@ -16,6 +16,11 @@ add_executable(ol_daisy_workouts_sandbox workouts/sandbox/main.cpp)
 target_link_libraries(ol_daisy_workouts_sandbox daisy DaisySP ol_daisy_ui ol_corelib ol_fxlib ol_synthlib)
 target_compile_definitions(ol_daisy_workouts_sandbox PRIVATE DAISY_NATIVE)
 
+add_executable(ol_daisy_workouts_display workouts/display/main.cpp)
+target_link_libraries(ol_daisy_workouts_display daisy DaisySP)
+target_compile_definitions(ol_daisy_workouts_display PRIVATE DAISY_NATIVE)
+
+
 
 add_executable(ol_daisy_sampler sampler/main.cpp)
 target_link_libraries(ol_daisy_sampler daisy DaisySP ol_daisy_ui ol_corelib ol_fxlib ol_synthlib)

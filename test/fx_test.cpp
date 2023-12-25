@@ -4,6 +4,8 @@
 #include "gtest/gtest.h"
 #include "daisysp.h"
 #include "fxlib/Fx.h"
+
+using namespace daisysp;
 using namespace ol::fx;
 TEST(FX, Saturator) {
 //    SaturatorFx<1> saturator;
@@ -22,12 +24,15 @@ TEST(FX, Saturator) {
 
 TEST(FX, Delay) {
 
-    DelayFx<1> delay;
+    daisysp::DelayLine<t_sample, MAX_DELAY> dl;
+    std::vector<DelayLine<t_sample, MAX_DELAY> *> delay_lines{&dl};
+
+    DelayFx<1> delay(delay_lines);
 
     delay.Init(128);
     t_sample in = 1;
     t_sample out = 0;
-    delay.Process( &in, &out);
+    delay.Process(&in, &out);
     t_sample sample_rate = 48000;
     t_sample freq = 20000;
 
