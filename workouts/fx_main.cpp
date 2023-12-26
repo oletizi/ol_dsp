@@ -6,7 +6,7 @@
 #include "RtMidi.h"
 #include "verb.h"
 #include "verb_structs.h"
-#include "daisy/ui/ui.h"
+//#include "daisy/ui/ui.h"
 #include "fxlib/Fx.h"
 #include "synthlib/ol_synthlib.h"
 

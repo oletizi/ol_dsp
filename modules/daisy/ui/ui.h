@@ -4,6 +4,9 @@
 
 #ifndef OL_DSP_UI_H
 #define OL_DSP_UI_H
+#include "GpioPool.h"
+#include "PolyvoiceInputs.h"
+
 struct Page {
     const char *name;
     Page *next = nullptr;

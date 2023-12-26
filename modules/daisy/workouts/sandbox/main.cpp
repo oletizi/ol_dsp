@@ -57,7 +57,8 @@ Switch cv_gate_1;
 Switch cv_gate_2;
 Switch cv_gate_3;
 Switch cv_gate_4;
-std::vector<Switch *> gates = {&cv_gate_1, &cv_gate_2, &cv_gate_3, &cv_gate_4};
+//std::vector<Switch> gates = {cv_gate_1, cv_gate_2, cv_gate_3, cv_gate_4};
+std::vector<Switch> gates = {cv_gate_1};
 
 t_sample frame_buffer[CHANNEL_COUNT]{};
 
@@ -80,14 +81,23 @@ void audio_callback(daisy::AudioHandle::InterleavingInputBuffer in,
 //        t_sample freq = daisysp::mtof(midi_nn);
 //        cv_freq = freq;
 
+        for (int j = 0; j < CHANNEL_COUNT; j++) {
+            frame_buffer[i] = 0;
+        }
+
         for (int j = 0; j < gates.size(); j++) {
             auto &g = gates.at(j);
             auto note = cv_pitch_to_midi(hw.adc.GetFloat(j));
             // CV Gate
-            if (g->FallingEdge()) {
+            if (g.FallingEdge()) {
                 poly.NoteOn(note, 100);
             }
-            if (g->RisingEdge()) {
+
+            if (g.Pressed()) {
+                hw.SetLed(true);
+            }
+
+            if (g.RisingEdge()) {
                 poly.NoteOff(note, 100);
             }
         }
@@ -135,8 +145,8 @@ int main() {
     filter.Init(sample_rate);
     rms.Init(sample_rate, 128);
 
-    hw.StartAudio(audio_callback);
 
+    /*
     poly.UpdateMidiControl( CC_CTL_PORTAMENTO, 30);
 
     poly.UpdateMidiControl( CC_FILTER_CUTOFF, 0);
@@ -167,6 +177,8 @@ int main() {
     // FX Filter defaults
     filter.UpdateMidiControl(CC_FX_FILTER_CUTOFF, 127);
     filter.UpdateMidiControl(CC_FX_FILTER_RESONANCE, 9);
+*/
+    hw.StartAudio(audio_callback);
 
     /** Configure the Display */
     MyOledDisplay::Config disp_cfg = {};
@@ -181,16 +193,16 @@ int main() {
     char strbuff[128];
     int direction = 1;
 
-
+    int pin_number = -1;
     // Voice 1
-    int pin_number = 15;
-    AdcChannelConfig cv_pitch_1_config{};
-    //Configure pin 21 as an ADC input. This is where we'll read the knob.
-    cv_pitch_1_config.InitSingle(hw.GetPin(pin_number));
+//    int pin_number = 15;
+//    AdcChannelConfig cv_pitch_1_config{};
+//    //Configure pin 21 as an ADC input. This is where we'll read the knob.
+//    cv_pitch_1_config.InitSingle(hw.GetPin(pin_number));
 
-    pin_number = 16;
+    pin_number = 15;
     cv_gate_1.Init(hw.GetPin(pin_number), 1000);
-
+/*
     // Voice 2
     pin_number = 17;
     AdcChannelConfig cv_pitch_2_config{};
@@ -214,15 +226,13 @@ int main() {
 
     pin_number = 22;
     cv_gate_4.Init(hw.GetPin(pin_number), 1000);
-
+*/
 
 
     //Initialize the adc with the config we just made
-    AdcChannelConfig adc_configs[4] = {cv_pitch_1_config, cv_pitch_2_config, cv_pitch_3_config, cv_pitch_4_config};
-//    adc_configs[0] = cv_pitch_config;
-//    adc_configs[1] = cv_1_config;
-    hw.adc.Init(adc_configs, 4);
-    //hw.adc.Init(&ch1Config, 1);
+    //AdcChannelConfig adc_configs[4] = {cv_pitch_1_config, cv_pitch_2_config, cv_pitch_3_config, cv_pitch_4_config};
+//    AdcChannelConfig adc_configs[]{cv_pitch_1_config};
+//    hw.adc.Init(adc_configs, sizeof(adc_configs));
 
 
     //Start reading values
@@ -232,18 +242,17 @@ int main() {
     auto font = Font_11x18;//Font_7x10;
     auto peak_scaled = 0;
     auto rms_scaled = 0;
-    t_sample cv_1_previous = 0;
-    t_sample window = 0.05f;
+//    t_sample window = 0.05f;
     bool led_state = false;
     while (true) {
-        led_state = false;
+        led_state = counter % 100 == 0;
 //        button.Debounce();
 //        cv_gate_1.Debounce();
         // Set the onboard LED
 
         for (auto &g: gates) {
-            g->Debounce();
-            led_state = g->RisingEdge() || led_state;
+            g.Debounce();
+            led_state = g.Pressed() || led_state;
         }
         hw.SetLed(led_state);
 
