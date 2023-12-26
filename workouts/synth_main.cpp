@@ -6,17 +6,17 @@
 #include "workout_buddy.h"
 
 #define CHANNEL_COUNT 2
-#define VOICE_COUNT 2
 
 using namespace ol::synth;
 
 int main() {
     //Voice *voices[VOICE_COUNT];
-    std::vector<Voice *> voices;
-    for (int i=0; i<CHANNEL_COUNT; i++) {
-        voices.push_back(new SynthVoice<CHANNEL_COUNT>());
-    }
-    Voice *poly = new Polyvoice<CHANNEL_COUNT>(voices);
+    SynthVoice<CHANNEL_COUNT> sv1;
+    SynthVoice<CHANNEL_COUNT> sv2;
+    std::vector<Voice *> voices = {&sv1, &sv2};
+    Polyvoice<CHANNEL_COUNT> poly(voices);
+
+//    Voice *poly = new Polyvoice<CHANNEL_COUNT>(voices);
 
     juce::initialiseJuce_GUI();
     juce::AudioDeviceManager deviceManager = juce::AudioDeviceManager();
@@ -25,7 +25,7 @@ int main() {
     auto midiDevices = juce::MidiInput::getAvailableDevices();
     std::cout << "MIDI inputs:" << std::endl;
 
-    SynthMidiCallback<CHANNEL_COUNT> midi_callback(poly);
+    SynthMidiCallback<CHANNEL_COUNT> midi_callback(&poly);
 
     for (const auto &input: midiDevices) {
         deviceManager.setMidiInputDeviceEnabled(input.identifier, true);
@@ -34,7 +34,7 @@ int main() {
     }
 
 
-    SynthAudioCallback<CHANNEL_COUNT> callback(poly);
+    SynthAudioCallback<CHANNEL_COUNT> callback(&poly);
     deviceManager.addAudioCallback(&callback);
 
     std::cout << "Send me some MIDI" << std::endl;

@@ -14,23 +14,24 @@ namespace ol::synth {
     private:
         std::vector<Voice *> &voices_;
         bool initialized = false;
-        t_sample frame_buffer[CHANNEL_COUNT]{};
+//        t_sample frame_buffer[CHANNEL_COUNT]{};
 
     public:
         explicit Polyvoice(std::vector<Voice *> &voices) : voices_(voices) {}
 
         void Init(t_sample sample_rate) override {
-            for (auto voice: voices_) {
+            for (auto &voice: voices_) {
                 voice->Init(sample_rate);
             }
             initialized = true;
         }
 
         void Process(t_sample *frame_out) override {
-//            for (int i=0; i< CHANNEL_COUNT; i++) {
-//                frame_buffer[i] = 0;
-//            }
-//
+            t_sample frame_buffer[CHANNEL_COUNT] {};
+            for (int i=0; i< CHANNEL_COUNT; i++) {
+                frame_buffer[i] = 0;
+            }
+
             for (auto voice: voices_) {
                 voice->Process(frame_buffer);
                 for (int i = 0; i < CHANNEL_COUNT; i++) {

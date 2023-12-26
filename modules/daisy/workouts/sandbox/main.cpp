@@ -1,7 +1,6 @@
 #ifdef DAISY_NATIVE
 //#include "daisy/daisy_dummy.h"
 //#include "hid/logger.h"
-
 #else
 
 
@@ -13,13 +12,16 @@
 #include "dev/oled_ssd130x.h"
 
 
+#include "daisy/ui/ui.h"
 #include "corelib/ol_corelib.h"
 #include "fxlib/ol_fxlib.h"
 #include "synthlib/ol_synthlib.h"
 
 #define AUDIO_BLOCK_SIZE 4
-#define DISPLAY_ON true
+#define DISPLAY_ON false
+#define DISPLAY_UPDATE_FREQUENCY 100
 #define CHANNEL_COUNT 2
+#define VOICE_COUNT 4
 
 using namespace daisy;
 using namespace ol::fx;
@@ -39,13 +41,44 @@ DaisyVerb<CHANNEL_COUNT> daisyVerb(verb);
 ReverbFx<CHANNEL_COUNT> reverb(daisyVerb);
 FilterFx<CHANNEL_COUNT> filter;
 
-//FxRack<CHANNEL_COUNT> fx(delay, reverb, filter);
+SynthVoice<1> sv1;
+SynthVoice<1> sv2;
+SynthVoice<1> sv3;
+SynthVoice<1> sv4;
 
-t_sample cv_freq = 220;
-//ol::synth::SynthVoice<CHANNEL_COUNT> voice;
-std::vector<Voice *> voices = {new SynthVoice<CHANNEL_COUNT>, new SynthVoice<CHANNEL_COUNT>,
-                               new SynthVoice<CHANNEL_COUNT>, new SynthVoice<CHANNEL_COUNT>};
-Polyvoice<CHANNEL_COUNT> poly(voices);
+std::vector<Voice *> voices = {&sv1, &sv2, &sv3, &sv4};
+Polyvoice<1> poly(voices);
+
+class InputListener : public ol_daisy::ui::VoiceInputListener {
+private:
+    int notes_on = 0;
+public:
+
+    void PitchCv(int channel, t_sample volts_per_octave) override {
+        auto v = voices.at(channel);
+        auto f = ol_daisy::ui::cv_volts_per_octave_to_frequency(volts_per_octave);
+        v->SetFrequency(f);
+    }
+
+    void GateOn(int channel) override {
+        hw.SetLed(true);
+        auto v = voices.at(channel);
+        v->GateOn();
+        notes_on++;
+    }
+
+    void GateOff(int channel) override {
+        hw.SetLed(false);
+        auto v = voices.at(channel);
+        v->GateOff();
+        notes_on = notes_on > 0 ? notes_on - 1 : 0;
+    };
+};
+
+ol_daisy::ui::GpioPool<VOICE_COUNT> gpio(hw);
+InputListener input_listener;
+ol_daisy::ui::PolyvoiceInputs<VOICE_COUNT> inputs(gpio, input_listener);
+
 
 auto rms = ol::core::Rms();
 t_sample rms_value = 0;
@@ -53,79 +86,49 @@ t_sample peak_value = 0;
 t_sample peak_hold = 2 * 48000;
 t_sample peak_count = 0;
 
-Switch cv_gate_1;
-Switch cv_gate_2;
-Switch cv_gate_3;
-Switch cv_gate_4;
-//std::vector<Switch> gates = {cv_gate_1, cv_gate_2, cv_gate_3, cv_gate_4};
-std::vector<Switch> gates = {cv_gate_1};
+daisysp::Oscillator osc;
 
-t_sample frame_buffer[CHANNEL_COUNT]{};
-
-uint8_t cv_pitch_to_midi(t_sample cv_pitch) {
-    t_sample voct = daisysp::fmap(cv_pitch, 0.f, 40.f);
-    t_sample coarse_tune = 30.93;
-    t_sample midi_nn = daisysp::fclamp(coarse_tune + voct, 0.f, 127.f);
-    return uint8_t(daisysp::mtof(midi_nn));
-}
+//t_sample frame_buffer[CHANNEL_COUNT]{};
 
 void audio_callback(daisy::AudioHandle::InterleavingInputBuffer in,
                     daisy::AudioHandle::InterleavingOutputBuffer out,
                     size_t size) {
+    inputs.Process();
     for (int i = 0; i < size; i += 2) {
-        // CV Frequency
-//        t_sample voct_cv = hw.adc.GetFloat(0);
-//        t_sample voct = daisysp::fmap(voct_cv, 0.f, 40.f);
-//        t_sample coarse_tune = 30.93;
-//        t_sample midi_nn = daisysp::fclamp(coarse_tune + voct, 0.f, 127.f);
-//        t_sample freq = daisysp::mtof(midi_nn);
-//        cv_freq = freq;
-
-        for (int j = 0; j < CHANNEL_COUNT; j++) {
-            frame_buffer[i] = 0;
+        t_sample frame_buffer[CHANNEL_COUNT]{};
+        t_sample voices_out = 0;
+        for (auto &v: voices) {
+            v->Process(frame_buffer);
+            voices_out += frame_buffer[0];
         }
 
-        for (int j = 0; j < gates.size(); j++) {
-            auto &g = gates.at(j);
-            auto note = cv_pitch_to_midi(hw.adc.GetFloat(j));
-            // CV Gate
-            if (g.FallingEdge()) {
-                poly.NoteOn(note, 100);
-            }
-
-            if (g.Pressed()) {
-                hw.SetLed(true);
-            }
-
-            if (g.RisingEdge()) {
-                poly.NoteOff(note, 100);
-            }
+        for (auto &f: frame_buffer) {
+            f = voices_out;
         }
-
-        // Synth voice
-//        voice.SetFrequency(cv_freq);
-//        voice.Process(frame_buffer);
-        poly.Process(frame_buffer);
-
-        // FX
-//        fx.Process(frame_buffer, frame_buffer);
-        delay.Process(frame_buffer, frame_buffer);
-        reverb.Process(frame_buffer, frame_buffer);
-        filter.Process(frame_buffer, frame_buffer);
-
-
-        // RMS and Peak
-        rms_value = rms.Process(frame_buffer[0]);
-        peak_value = peak_value < abs(frame_buffer[0]) ? abs(frame_buffer[0]) : peak_value;
-        peak_count++;
-        if (peak_count == peak_hold) {
-            peak_count = 0;
-            peak_value = 0;
-        }
+//        poly.Process(frame_buffer);
+//        single_voice.Process(frame_buffer);
+//        t_sample osc_out = osc.Process();
+//        for (float &j: frame_buffer) {
+//            j += osc_out;
+//        }
+//
+//        // FX
+//        delay.Process(frame_buffer, frame_buffer);
+//        reverb.Process(frame_buffer, frame_buffer);
+//        filter.Process(frame_buffer, frame_buffer);
+//
+//        // RMS and Peak
+//        rms_value = rms.Process(frame_buffer[0]);
+//        peak_value = peak_value < abs(frame_buffer[0]) ? abs(frame_buffer[0]) : peak_value;
+//        peak_count++;
+//        if (peak_count == peak_hold) {
+//            peak_count = 0;
+//            peak_value = 0;
+//        }
 
         // Write buffer to output
-        for (int j = 0; j < CHANNEL_COUNT; j++) {
-            out[i + j] = frame_buffer[j];
+        for (int j = 0; j < 2; j++) {
+            out[i + j] = frame_buffer[0];
         }
     }
 }
@@ -134,35 +137,34 @@ int main() {
 
     hw.Configure();
     hw.Init();
+    gpio.Start();
 
     hw.SetAudioBlockSize(AUDIO_BLOCK_SIZE);
     auto sample_rate = hw.AudioSampleRate();
 
     poly.Init(sample_rate);
-    //fx.Init(sample_rate);
     delay.Init(sample_rate);
     reverb.Init(sample_rate);
     filter.Init(sample_rate);
     rms.Init(sample_rate, 128);
+    osc.Init(sample_rate);
 
 
-    /*
-    poly.UpdateMidiControl( CC_CTL_PORTAMENTO, 30);
+    poly.UpdateMidiControl(CC_CTL_PORTAMENTO, 0);
+    poly.UpdateMidiControl(CC_FILTER_CUTOFF, 15000);
+    poly.UpdateMidiControl(CC_FILTER_RESONANCE, 0);
+    poly.UpdateMidiControl(CC_ENV_FILT_A, 0);
+    poly.UpdateMidiControl(CC_ENV_FILT_D, 60);
+    poly.UpdateMidiControl(CC_ENV_FILT_S, 127);
+    poly.UpdateMidiControl(CC_ENV_FILT_R, 15);
+    poly.UpdateMidiControl(CC_ENV_FILT_AMT, 24);
 
-    poly.UpdateMidiControl( CC_FILTER_CUTOFF, 0);
-    poly.UpdateMidiControl( CC_FILTER_RESONANCE, 0);
-    poly.UpdateMidiControl( CC_ENV_FILT_A, 0);
-    poly.UpdateMidiControl( CC_ENV_FILT_D, 60);
-    poly.UpdateMidiControl( CC_ENV_FILT_S, 0);
-    poly.UpdateMidiControl( CC_ENV_FILT_R, 15);
-    poly.UpdateMidiControl( CC_ENV_FILT_AMT, 24);
-
-    poly.UpdateMidiControl( CC_ENV_AMP_A, 0);
-    poly.UpdateMidiControl( CC_ENV_AMP_D, 127);
-    poly.UpdateMidiControl( CC_ENV_AMP_S, 127);
-    poly.UpdateMidiControl( CC_ENV_AMP_R, 25);
-    poly.UpdateMidiControl( CC_OSC_1_VOLUME, 127);
-    poly.UpdateMidiControl( CC_CTL_VOLUME, 100);
+    poly.UpdateMidiControl(CC_ENV_AMP_A, 0);
+    poly.UpdateMidiControl(CC_ENV_AMP_D, 127);
+    poly.UpdateMidiControl(CC_ENV_AMP_S, 127);
+    poly.UpdateMidiControl(CC_ENV_AMP_R, 25);
+    poly.UpdateMidiControl(CC_OSC_1_VOLUME, 127);
+    poly.UpdateMidiControl(CC_CTL_VOLUME, 100);
 
     // Delay defaults
     delay.UpdateMidiControl(CC_DELAY_BALANCE, 32);
@@ -177,7 +179,7 @@ int main() {
     // FX Filter defaults
     filter.UpdateMidiControl(CC_FX_FILTER_CUTOFF, 127);
     filter.UpdateMidiControl(CC_FX_FILTER_RESONANCE, 9);
-*/
+
     hw.StartAudio(audio_callback);
 
     /** Configure the Display */
@@ -186,57 +188,11 @@ int main() {
     disp_cfg.driver_config.transport_config.pin_config.reset = daisy::DaisySeed::GetPin(30);
     /** And Initialize */
     display.Init(disp_cfg);
-    // printf("showtime\n");
 
-    //DaisySeed::StartLog(false);
     int counter = 0;
     char strbuff[128];
     int direction = 1;
 
-    int pin_number = -1;
-    // Voice 1
-//    int pin_number = 15;
-//    AdcChannelConfig cv_pitch_1_config{};
-//    //Configure pin 21 as an ADC input. This is where we'll read the knob.
-//    cv_pitch_1_config.InitSingle(hw.GetPin(pin_number));
-
-    pin_number = 15;
-    cv_gate_1.Init(hw.GetPin(pin_number), 1000);
-/*
-    // Voice 2
-    pin_number = 17;
-    AdcChannelConfig cv_pitch_2_config{};
-    cv_pitch_2_config.InitSingle(hw.GetPin(pin_number));
-
-    pin_number = 18;
-    cv_gate_2.Init(hw.GetPin(pin_number), 1000);
-
-    // Voice 3
-    pin_number = 19;
-    AdcChannelConfig cv_pitch_3_config{};
-    cv_pitch_3_config.InitSingle(hw.GetPin(pin_number));
-
-    pin_number = 20;
-    cv_gate_3.Init(hw.GetPin(pin_number), 1000);
-
-    //Voice 4
-    pin_number = 21;
-    AdcChannelConfig cv_pitch_4_config{};
-    cv_pitch_4_config.InitSingle(hw.GetPin(pin_number));
-
-    pin_number = 22;
-    cv_gate_4.Init(hw.GetPin(pin_number), 1000);
-*/
-
-
-    //Initialize the adc with the config we just made
-    //AdcChannelConfig adc_configs[4] = {cv_pitch_1_config, cv_pitch_2_config, cv_pitch_3_config, cv_pitch_4_config};
-//    AdcChannelConfig adc_configs[]{cv_pitch_1_config};
-//    hw.adc.Init(adc_configs, sizeof(adc_configs));
-
-
-    //Start reading values
-    hw.adc.Start();
 
     int line_number;
     auto font = Font_11x18;//Font_7x10;
@@ -245,38 +201,15 @@ int main() {
 //    t_sample window = 0.05f;
     bool led_state = false;
     while (true) {
-        led_state = counter % 100 == 0;
-//        button.Debounce();
-//        cv_gate_1.Debounce();
-        // Set the onboard LED
+//        inputs.Process();
+//        led_state = counter % 100 == 0;
+//        hw.SetLed(led_state);
 
-        for (auto &g: gates) {
-            g.Debounce();
-            led_state = g.Pressed() || led_state;
-        }
-        hw.SetLed(led_state);
-
-//        if (cv_1_previous > cv_1 + window || cv_1_previous < cv_1 - window) {
-//            delay.UpdateHardwareControl(CC_DELAY_TIME, 1 - cv_1);
-//            cv_1_previous = cv_1;
-//        }
-
-//        if (button.RisingEdge()) {
-//            voice.NoteOn(63, 100);
-//            gate = 1;
-//            adsr.Retrigger(true);
-//        }
-//        if (button.FallingEdge()) {
-//            voice.NoteOff(63, 100);
-//            gate = 0;
-//        }
-
-        if (DISPLAY_ON && counter % 100 == 0) {
+        if (DISPLAY_ON && (counter % DISPLAY_UPDATE_FREQUENCY == 0)) {
             line_number = 0;
             display.Fill(false);
 
             display.SetCursor(0, 0);
-            sprintf(strbuff, "freq: %d", int(cv_freq));
             display.WriteString(strbuff, font, false);
 
             line_number++;
@@ -287,19 +220,14 @@ int main() {
             display.DrawLine(peak_scaled, 16, peak_scaled, 25, true);
             line_number++;
             display.SetCursor(0, 24);
-//        sprintf(strbuff, "rms : 0.%d", int(rms_value * 10000));
+
             sprintf(strbuff, "peak: %d", int(peak_value * 10000));
             display.WriteString(strbuff, font, true);
-
-//            line_number++;
-//            display.SetCursor(0, 44);
-//            sprintf(strbuff, "ch2: %d", int(cv_1 * 1000));
-//            display.WriteString(strbuff, font, true);
 
             display.Update();
         }
         counter += direction;
-        if (counter % 99 == 0) {
+        if (counter % 1000 == 0) {
             direction *= -1;
         }
         System::Delay(1);

@@ -10,7 +10,7 @@ DaisySeed hw;
 
 
 class InputListener : public ol_daisy::ui::VoiceInputListener {
-    void GateOn(float pitch) override {
+    void GateOn(t_sample pitch) override {
         hw.SetLed(true);
     }
 

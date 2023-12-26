@@ -4,18 +4,23 @@ set(CMAKE_CXX_STANDARD 17)
 
 set(JUCE_BUILD_EXTRAS OFF)
 set(JUCE_BUILD_EXAMPLES OFF)
+set(BUILD_DAISY OFF)
 
 add_subdirectory(libs/DaisySP)
 add_subdirectory(libs/dattorro-verb)
 add_subdirectory(libs/JUCE)
-#add_subdirectory(libs/libDaisy)
+
+if (${BUILD_DAISY})
+    add_subdirectory(libs/libDaisy)
+    add_subdirectory(modules/daisy)
+endif ()
+
 add_subdirectory(libs/rapidyaml)
 add_subdirectory(libs/rtmidi)
 add_subdirectory(libs/Soundpipe)
 
 add_subdirectory(modules/corelib)
 add_subdirectory(modules/ctllib)
-#add_subdirectory(modules/daisy)
 add_subdirectory(modules/fxlib)
 add_subdirectory(modules/iolib)
 #add_subdirectory(modules/juce/plugin/workout)

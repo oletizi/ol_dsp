@@ -20,7 +20,8 @@ namespace ol::synth {
 
         InitStatus Init(t_sample sample_rate) override {
             osc_.Init(sample_rate);
-            osc_.SetWaveform(daisysp::Oscillator::WAVE_POLYBLEP_SAW);
+            //osc_.SetWaveform(daisysp::Oscillator::WAVE_POLYBLEP_SAW);
+            osc_.SetWaveform(daisysp::Oscillator::WAVE_SIN);
             return InitStatus::Ok;
         }
 

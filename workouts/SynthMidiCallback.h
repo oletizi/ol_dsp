@@ -16,7 +16,7 @@ public:
     explicit SynthMidiCallback(ol::synth::Voice *voice) : voice_(voice) {}
 
     void handleIncomingMidiMessage(juce::MidiInput *source, const juce::MidiMessage &message) override {
-        std::cout << "MIDI!" << std::endl;
+        //std::cout << "MIDI!" << std::endl;
         if (message.isNoteOn()) {
             voice_->NoteOn(static_cast<unsigned char>(message.getNoteNumber()), message.getVelocity());
         } else if (message.isNoteOff()) {

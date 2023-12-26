@@ -5,12 +5,12 @@
 #ifndef OL_DSP_GPIOPOOL_H
 #define OL_DSP_GPIOPOOL_H
 
+#include <vector>
 #include "daisy.h"
 #include "daisy_seed.h"
 
 namespace ol_daisy::ui {
     struct InputHandle {
-
     public:
         daisy::AdcChannelConfig channel_config{};
         int channel_index = 0;

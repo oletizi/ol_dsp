@@ -172,14 +172,14 @@ static void handleMidiMessage(MidiEvent m) {
     if (m.type == daisy::NoteOn) {
         auto n = m.AsNoteOn();
         if (m.channel == SYNTH_CHANNEL) {
-            poly.NoteOn(n.note, n.velocity);
+            poly.GateOn(n.note, n.velocity);
         }
         signalLed(LedSignal::NoteOn);
     }
     if (m.type == daisy::NoteOff) {
         NoteOffEvent n = m.AsNoteOff();
         if (m.channel == SYNTH_CHANNEL) {
-            poly.NoteOff(n.note, n.velocity);
+            poly.GateOff(n.note, n.velocity);
         }
         signalLed(LedSignal::NoteOff);
     }

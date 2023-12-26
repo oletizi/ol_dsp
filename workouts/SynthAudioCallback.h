@@ -14,7 +14,7 @@ class SynthAudioCallback : public juce::AudioIODeviceCallback {
 private:
     ol::synth::Voice *voice_;
     uint32_t counter_ = 0;
-    t_sample frame_buffer_[CHANNEL_COUNT] {};
+    t_sample frame_buffer_[CHANNEL_COUNT]{};
     juce::AudioDeviceManager *device_manager_ = nullptr;
 public:
     explicit SynthAudioCallback(ol::synth::Voice *voice) : voice_(voice) {}
@@ -27,7 +27,7 @@ public:
                                           const juce::AudioIODeviceCallbackContext &context) override {
         counter_++;
         for (int i = 0; i < numSamples; i++) {
-            for (int i=0; i<CHANNEL_COUNT; i++) {
+            for (int i = 0; i < CHANNEL_COUNT; i++) {
                 frame_buffer_[i] = 0;
             }
             voice_->Process(frame_buffer_);

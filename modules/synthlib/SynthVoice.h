@@ -16,7 +16,7 @@ namespace ol::synth {
     template<int CHANNEL_COUNT>
     class SynthVoice : public Voice {
     private:
-        t_sample frame_buffer[CHANNEL_COUNT]{};
+        //t_sample frame_buffer[CHANNEL_COUNT]{};
     public:
         SynthVoice(SoundSource<CHANNEL_COUNT> *sound_source,
                    Filter *filter,
@@ -45,6 +45,10 @@ namespace ol::synth {
         }
 
         void Process(t_sample *frame_out) override {
+            t_sample frame_buffer[CHANNEL_COUNT]{};
+            for (int i = 0; i < CHANNEL_COUNT; i++) {
+                frame_buffer[i] = 0;
+            }
             sound_source_->SetFreq(portamento_->Process(freq_));
             sound_source_->Process(frame_buffer);
 
@@ -120,7 +124,7 @@ namespace ol::synth {
                     PRINTF("  port: %f\n", portamento_htime);
                     break;
                 case CC_FILTER_CUTOFF:
-                    filter_cutoff = ol::core::scale( value, 0, 1, 0, 20000, 2.5);
+                    filter_cutoff = ol::core::scale(value, 0, 1, 0, 20000, 2.5);
                     PRINTF("  Cutoff: %d\n", int(filter_cutoff));
                     break;
                 case CC_FILTER_RESONANCE:
