@@ -10,9 +10,10 @@
 #include "daisy_seed.h"
 
 namespace ol_daisy::ui {
+
     struct InputHandle {
-    public:
         daisy::AdcChannelConfig channel_config{};
+        daisy::AnalogControl *control = nullptr;
         int channel_index = 0;
     };
 
@@ -26,18 +27,14 @@ namespace ol_daisy::ui {
         int switch_cursor_ = 0;
         InputHandle input_pool_[MAX_SIZE]{};
         daisy::Switch switch_pool_[MAX_SIZE]{};
-        std::vector <InputHandle> inputs_;
-        std::vector <daisy::Switch> switches_;
+        std::vector<InputHandle> inputs_;
+        std::vector<daisy::Switch> switches_;
 
     public:
         explicit GpioPool(daisy::DaisySeed &hardware) : hw_(hardware) {
             for (int i = 0; i < MAX_SIZE; i++) {
                 input_pool_[i].channel_index = i;
             }
-        }
-
-        float GetFloat(const InputHandle &input) {
-            return hw_.adc.GetFloat(input.channel_index);
         }
 
         daisy::Switch &AddSwitch() {
@@ -51,24 +48,32 @@ namespace ol_daisy::ui {
             return sw;
         }
 
-        InputHandle &AddInput() {
+       void AddInput(daisy::AnalogControl *ctl) {
             InputHandle &input_handle = input_pool_[channel_cursor_];
+            input_handle.control = ctl;
             input_handle.channel_config.InitSingle(daisy::DaisySeed::GetPin(pin_number_));
+            
             inputs_.push_back(input_handle);
 
             channel_cursor_++;
             pin_number_++;
-            return input_handle;
         }
+
 
         void Start() {
             daisy::AdcChannelConfig configs[MAX_SIZE]{};
-            for (int i = 0; i < inputs_.size(); i++) {
-                auto h = inputs_.at(i);
+            for (size_t i = 0; i < inputs_.size(); i++) {
+                auto &h = inputs_.at(i);
                 configs[i] = h.channel_config;
             }
 
             hw_.adc.Init(configs, inputs_.size());
+            // for (InputHandle &h: inputs_) {
+                for (size_t channel = 0; channel<inputs_.size(); channel++) {
+                daisy::AnalogControl *ctl = inputs_.at(channel).control;
+                auto ptr = hw_.adc.GetPtr(channel);
+                ctl->Init(ptr, hw_.AudioCallbackRate());
+            }
             hw_.adc.Start();
         }
     };
