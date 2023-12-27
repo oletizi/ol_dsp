@@ -21,7 +21,7 @@
 #define DISPLAY_ON false
 #define DISPLAY_UPDATE_FREQUENCY 100
 #define CHANNEL_COUNT 2
-#define VOICE_COUNT 1
+#define VOICE_COUNT 3
 
 using namespace daisy;
 using namespace ol::fx;
@@ -47,7 +47,7 @@ SynthVoice<1> sv3;
 SynthVoice<1> sv4;
 
 //std::vector<Voice *> voices = {&sv1, &sv2, &sv3, &sv4};
-std::vector<Voice *> voices = {&sv1};
+std::vector<Voice *> voices = {&sv1, &sv2, &sv3};
 Polyvoice<1> poly(voices);
 
 class InputListener : public ol_daisy::ui::VoiceInputListener {
