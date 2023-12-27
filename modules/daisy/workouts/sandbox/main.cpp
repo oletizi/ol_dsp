@@ -21,7 +21,7 @@
 #define DISPLAY_ON false
 #define DISPLAY_UPDATE_FREQUENCY 100
 #define CHANNEL_COUNT 2
-#define VOICE_COUNT 4
+#define VOICE_COUNT 1
 
 using namespace daisy;
 using namespace ol::fx;
@@ -46,7 +46,8 @@ SynthVoice<1> sv2;
 SynthVoice<1> sv3;
 SynthVoice<1> sv4;
 
-std::vector<Voice *> voices = {&sv1, &sv2, &sv3, &sv4};
+//std::vector<Voice *> voices = {&sv1, &sv2, &sv3, &sv4};
+std::vector<Voice *> voices = {&sv1};
 Polyvoice<1> poly(voices);
 
 class InputListener : public ol_daisy::ui::VoiceInputListener {
@@ -56,7 +57,7 @@ public:
 
     void PitchCv(int channel, t_sample volts_per_octave) override {
         auto v = voices.at(channel);
-        auto f = ol_daisy::ui::cv_volts_per_octave_to_frequency(volts_per_octave);
+        auto f = ol_daisy::ui::cv_to_frequency(volts_per_octave);
         v->SetFrequency(f);
     }
 

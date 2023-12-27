@@ -14,14 +14,18 @@ namespace ol_daisy::ui {
 
     // XXX: This should probably live somewhere else.
 
-    t_sample cv_volts_per_octave_to_frequency(t_sample cv_volts_per_octave) {
-        auto voct = daisysp::fmap(cv_volts_per_octave, 0.f, 40.f);
-        t_sample coarse_tune = 30.93; // XXX: parameterize this
-        return coarse_tune * voct;
+    t_sample cv_to_frequency(t_sample cv_value) {
+
+        t_sample referenceVoltage = 0;
+        t_sample baseFrequency = 130.81; // C3
+        t_sample voct = ol::core::scale(cv_value, 0, 1, 0, 3.283, 1); // 3.283 is some weird magic number I got by hand tuning.
+
+        t_sample frequency = baseFrequency * pow(2, voct - referenceVoltage);//baseFrequency * pow(2, (voltsPerOctave - referenceVoltage));
+        return frequency;
     }
 
     uint8_t cv_pitch_to_midi(t_sample cv_pitch) {
-        auto frequency = cv_volts_per_octave_to_frequency(cv_pitch);
+        auto frequency = cv_to_frequency(cv_pitch);
         auto midi_nn = uint8_t(daisysp::fclamp(frequency, 0.f, 127.f));
         return uint8_t(midi_nn);
     }
@@ -68,7 +72,7 @@ namespace ol_daisy::ui {
                 // XXX: the channel should be on the InputHandle
                 auto channel = vi.pitch_cv.channel_index;
                 gate_cv.Debounce();
-                listener_.PitchCv(channel,pool_.GetFloat(vi.pitch_cv));
+                listener_.PitchCv(channel, pool_.GetFloat(vi.pitch_cv));
                 if (gate_cv.RisingEdge()) {
                     listener_.GateOff(channel);
                 }

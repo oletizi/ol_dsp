@@ -4,7 +4,7 @@ set(CMAKE_CXX_STANDARD 17)
 
 set(JUCE_BUILD_EXTRAS OFF)
 set(JUCE_BUILD_EXAMPLES OFF)
-set(BUILD_DAISY OFF)
+set(BUILD_DAISY ON)
 
 add_subdirectory(libs/DaisySP)
 add_subdirectory(libs/dattorro-verb)
