@@ -12,18 +12,19 @@
 #include "dev/oled_ssd130x.h"
 
 
-#include "daisy/ui/ui.h"
+#include "daisy/io/io.h"
 #include "corelib/ol_corelib.h"
 #include "fxlib/ol_fxlib.h"
 #include "synthlib/ol_synthlib.h"
 
 #define AUDIO_BLOCK_SIZE 4
-#define DISPLAY_ON false
+#define DISPLAY_ON true
 #define DISPLAY_UPDATE_FREQUENCY 100
 #define CHANNEL_COUNT 2
-#define VOICE_COUNT 3
-
+#define VOICE_COUNT 1
+#define MAX_CONTROLS 5
 using namespace daisy;
+using namespace ol_daisy::io;
 using namespace ol::fx;
 using namespace ol::synth;
 
@@ -47,39 +48,52 @@ SynthVoice<1> sv3;
 SynthVoice<1> sv4;
 
 //std::vector<Voice *> voices = {&sv1, &sv2, &sv3, &sv4};
-std::vector<Voice *> voices = {&sv1, &sv2, &sv3};
+std::vector<Voice *> voices = {&sv1, &sv2, &sv3, &sv4};
 Polyvoice<1> poly(voices);
 
-class InputListener : public ol_daisy::ui::VoiceInputListener {
+class ControlListener : public VoiceControlListener {
 private:
     int notes_on = 0;
 public:
 
     void PitchCv(int channel, t_sample volts_per_octave) override {
-        auto v = voices.at(channel);
-        auto f = ol_daisy::ui::cv_to_frequency(volts_per_octave);
-        v->SetFrequency(f);
+//        auto v = voices.at(channel);
+//        auto f = ol_daisy::io::cv_to_frequency(volts_per_octave);
+//        v->SetFrequency(f);
     }
 
     void GateOn(int channel) override {
-        hw.SetLed(true);
-        auto v = voices.at(channel);
-        v->GateOn();
-        notes_on++;
+//        hw.SetLed(true);
+//        auto v = voices.at(channel);
+//        v->GateOn();
+//        notes_on++;
     }
 
     void GateOff(int channel) override {
-        hw.SetLed(false);
-        auto v = voices.at(channel);
-        v->GateOff();
-        notes_on = notes_on > 0 ? notes_on - 1 : 0;
+//        hw.SetLed(false);
+//        auto v = voices.at(channel);
+//        v->GateOff();
+//        notes_on = notes_on > 0 ? notes_on - 1 : 0;
+    }
+
+    void UpdateHardwareControl(uint8_t control, t_sample value) override {
+//        for (auto v: voices) {
+//            v->UpdateHardwareControl(control, value);
+//        }
     };
 };
 
-ol_daisy::ui::GpioPool<VOICE_COUNT> gpio(hw);
-InputListener input_listener;
-ol_daisy::ui::PolyvoiceInputs<VOICE_COUNT> inputs(gpio, input_listener);
+daisy::MidiUartHandler midi;
 
+GpioPool<MAX_CONTROLS> gpio(hw);
+ControlListener input_listener;
+Control cv_1(CC_FILTER_CUTOFF);
+Control cv_2(CC_FILTER_RESONANCE);
+Control cv_3(CC_FILTER_DRIVE);
+Control cv_4(CC_ENV_FILT_AMT);
+Control cv_5(CC_ENV_FILT_D);
+std::vector<Control *> controls = {&cv_1, &cv_2, &cv_3, &cv_4};
+PolyvoiceControls<0, MAX_CONTROLS> inputs(gpio, controls, input_listener);
 
 auto rms = ol::core::Rms();
 t_sample rms_value = 0;
@@ -87,45 +101,40 @@ t_sample peak_value = 0;
 t_sample peak_hold = 2 * 48000;
 t_sample peak_count = 0;
 
-daisysp::Oscillator osc;
-
-//t_sample frame_buffer[CHANNEL_COUNT]{};
-
 void audio_callback(daisy::AudioHandle::InterleavingInputBuffer in,
                     daisy::AudioHandle::InterleavingOutputBuffer out,
                     size_t size) {
     inputs.Process();
-    for (int i = 0; i < size; i += 2) {
+    for (size_t i = 0; i < size; i += 2) {
         t_sample frame_buffer[CHANNEL_COUNT]{};
         t_sample voices_out = 0;
-        for (auto &v: voices) {
-            v->Process(frame_buffer);
-            voices_out += frame_buffer[0];
-        }
 
-        for (auto &f: frame_buffer) {
-            f = voices_out;
+        poly.Process(frame_buffer);
+        for (auto &f : frame_buffer) {
+            f = frame_buffer[0];
         }
-//        poly.Process(frame_buffer);
-//        single_voice.Process(frame_buffer);
-//        t_sample osc_out = osc.Process();
-//        for (float &j: frame_buffer) {
-//            j += osc_out;
+//        for (auto &v: voices) {
+//            v->Process(frame_buffer);
+//            voices_out += frame_buffer[0];
 //        }
-//
-//        // FX
+
+//        for (auto &f: frame_buffer) {
+//            f = voices_out;
+//        }
+
+        // FX
 //        delay.Process(frame_buffer, frame_buffer);
 //        reverb.Process(frame_buffer, frame_buffer);
 //        filter.Process(frame_buffer, frame_buffer);
 //
 //        // RMS and Peak
-//        rms_value = rms.Process(frame_buffer[0]);
-//        peak_value = peak_value < abs(frame_buffer[0]) ? abs(frame_buffer[0]) : peak_value;
-//        peak_count++;
-//        if (peak_count == peak_hold) {
-//            peak_count = 0;
-//            peak_value = 0;
-//        }
+        rms_value = rms.Process(frame_buffer[0]);
+        peak_value = peak_value < abs(frame_buffer[0]) ? abs(frame_buffer[0]) : peak_value;
+        peak_count++;
+        if (peak_count == peak_hold) {
+            peak_count = 0;
+            peak_value = 0;
+        }
 
         // Write buffer to output
         for (int j = 0; j < 2; j++) {
@@ -138,7 +147,11 @@ int main() {
 
     hw.Configure();
     hw.Init();
+    MidiUartHandler::Config midi_config;
+    // midi_config.transport_config.rx.pin = 14;
+    midi.Init(midi_config);
     gpio.Start();
+    midi.StartReceive();
 
     hw.SetAudioBlockSize(AUDIO_BLOCK_SIZE);
     auto sample_rate = hw.AudioSampleRate();
@@ -148,17 +161,16 @@ int main() {
     reverb.Init(sample_rate);
     filter.Init(sample_rate);
     rms.Init(sample_rate, 128);
-    osc.Init(sample_rate);
 
 
     poly.UpdateMidiControl(CC_CTL_PORTAMENTO, 0);
-    poly.UpdateMidiControl(CC_FILTER_CUTOFF, 15000);
+    poly.UpdateMidiControl(CC_FILTER_CUTOFF, 0);
     poly.UpdateMidiControl(CC_FILTER_RESONANCE, 0);
     poly.UpdateMidiControl(CC_ENV_FILT_A, 0);
     poly.UpdateMidiControl(CC_ENV_FILT_D, 60);
-    poly.UpdateMidiControl(CC_ENV_FILT_S, 127);
+    poly.UpdateMidiControl(CC_ENV_FILT_S, 0);
     poly.UpdateMidiControl(CC_ENV_FILT_R, 15);
-    poly.UpdateMidiControl(CC_ENV_FILT_AMT, 24);
+    poly.UpdateMidiControl(CC_ENV_FILT_AMT, 100);
 
     poly.UpdateMidiControl(CC_ENV_AMP_A, 0);
     poly.UpdateMidiControl(CC_ENV_AMP_D, 127);
@@ -199,30 +211,49 @@ int main() {
     auto font = Font_11x18;//Font_7x10;
     auto peak_scaled = 0;
     auto rms_scaled = 0;
-//    t_sample window = 0.05f;
-    bool led_state = false;
+    bool note_on = false;
+    uint8_t note_value = 0;
     while (true) {
-//        inputs.Process();
-//        led_state = counter % 100 == 0;
-//        hw.SetLed(led_state);
+        midi.Listen();
+        while (midi.HasEvents()) {
+            MidiEvent e = midi.PopEvent();
+            switch (e.type) {
+                case NoteOff:
+                    note_on = false;
+                    poly.NoteOff(e.AsNoteOff().note, e.AsNoteOff().velocity);
+                    break;
+                case NoteOn:
+                    note_on = true;
+                    note_value = e.AsNoteOn().note;
+                    poly.NoteOn(note_value, e.AsNoteOn().velocity);
+                    break;
+                case ControlChange:
+                default:
+                    break;
+            }
+        }
+
+        hw.SetLed(note_on);
 
         if (DISPLAY_ON && (counter % DISPLAY_UPDATE_FREQUENCY == 0)) {
             line_number = 0;
             display.Fill(false);
 
-            display.SetCursor(0, 0);
-            display.WriteString(strbuff, font, false);
+//            display.SetCursor(0, 0);
+//            display.WriteString(strbuff, font, false);
 
-            line_number++;
             rms_scaled = int(ol::core::scale(rms_value, 0, 1, 0, 127, 1));
             display.DrawRect(0, 16, rms_scaled, 24, true, true);
 
             peak_scaled = int(ol::core::scale(peak_value, 0, 1, 0, 127, 1));
             display.DrawLine(peak_scaled, 16, peak_scaled, 25, true);
-            line_number++;
-            display.SetCursor(0, 24);
 
-            sprintf(strbuff, "peak: %d", int(peak_value * 10000));
+            display.SetCursor(0, 24);
+            sprintf(strbuff, "midi: %d", note_on);
+            display.WriteString(strbuff, font, true);
+
+            display.SetCursor(0, 44);
+            sprintf(strbuff, "note: %d", note_value);
             display.WriteString(strbuff, font, true);
 
             display.Update();

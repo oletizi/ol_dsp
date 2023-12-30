@@ -2,15 +2,15 @@
 // Created by Orion Letizi on 12/25/23.
 //
 
-#ifndef OL_DSP_POLYVOICEINPUTS_H
-#define OL_DSP_POLYVOICEINPUTS_H
+#ifndef OL_DSP_POLYVOICECONTROLS_H
+#define OL_DSP_POLYVOICECONTROLS_H
 
 #include <vector>
 #include "daisy.h"
 #include "GpioPool.h"
 #include "synthlib/ol_synthlib.h"
 
-namespace ol_daisy::ui {
+namespace ol_daisy::io {
 
     // XXX: This should probably live somewhere else.
 
@@ -32,6 +32,29 @@ namespace ol_daisy::ui {
         return uint8_t(midi_nn);
     }
 
+
+    // XXX: this belongs in ui, not io
+    class Control {
+    private:
+        uint8_t control_id_ = 0;
+        daisy::AnalogControl ctl_;
+    public:
+        // XXX: making these public is gross
+
+
+        Control(uint8_t control_id) : control_id_(control_id) {}
+
+        uint8_t ControlId() {
+            return control_id_;
+        }
+
+        t_sample Process() {
+            return ctl_.Process();
+        }
+        // XXX: this is gross
+        daisy::AnalogControl * DaisyControl() { return &ctl_;}
+    };
+
     struct VoiceInput {
     public:
         daisy::Switch gate_cv;
@@ -40,7 +63,7 @@ namespace ol_daisy::ui {
         t_sample noise_window = 0.01f;
     };
 
-    class VoiceInputListener {
+    class VoiceControlListener {
     public:
 
         virtual void PitchCv(int channel, t_sample pitch_cv) = 0;
@@ -48,35 +71,45 @@ namespace ol_daisy::ui {
         virtual void GateOn(int channel) = 0;
 
         virtual void GateOff(int channel) = 0;
+
+        virtual void UpdateHardwareControl(uint8_t control, t_sample value) = 0;
+
     };
 
-    template<int VOICE_COUNT>
-    class PolyvoiceInputs {
+    template<int VOICE_COUNT, int MAX_CONTROLS>
+    class PolyvoiceControls {
     private:
-        VoiceInput voice_inputs_[VOICE_COUNT]{};
-        GpioPool<VOICE_COUNT> &pool_;
-        VoiceInputListener &listener_;
+        VoiceInput voice_input_pool_[VOICE_COUNT]{};
+        std::vector<Control *> &controls_;
+        VoiceControlListener &listener_;
 
     public:
-        explicit PolyvoiceInputs(GpioPool<VOICE_COUNT> &pool, VoiceInputListener &listener) : pool_(pool),
-                                                                                              listener_(listener) {
+        explicit PolyvoiceControls(GpioPool<VOICE_COUNT + MAX_CONTROLS> &pool,
+                                   std::vector<Control *> &controls,
+                                   VoiceControlListener &listener) : controls_(controls),
+                                                                     listener_(listener) {
             for (int i = 0; i < VOICE_COUNT; i++) {
-                auto &vi = voice_inputs_[i];
-//                vi.pitch_cv = pool.AddInput();
+                auto &vi = voice_input_pool_[i];
                 pool.AddInput(&vi.pitch_cv);
                 vi.gate_cv = pool.AddSwitch();
+            }
+
+            for (int i = 0; i < MAX_CONTROLS && i < controls_.size(); i++) {
+                auto p = controls_.at(i);
+                pool.AddInput(p->DaisyControl());
             }
         }
 
         void Process() {
-//            for (auto &vi: voice_inputs_) {
+            for (auto c : controls_) {
+                listener_.UpdateHardwareControl(c->ControlId(), c->Process());
+            }
+
             for (int channel = 0; channel < VOICE_COUNT; channel++) {
-                auto &vi = voice_inputs_[channel];
+                auto &vi = voice_input_pool_[channel];
                 // XXX: the interface of InputHandle is pretty different than the interface of Switch. They should
                 // probably be more similar.
                 auto &gate_cv = vi.gate_cv;
-                // XXX: the channel should be on the InputHandle
-                //auto channel = vi.pitch_cv.channel_index;
                 auto pitch_cv_value = vi.pitch_cv.Process();
                 gate_cv.Debounce();
                 if (pitch_cv_value < vi.previous_pitch_cv - vi.noise_window ||
@@ -91,10 +124,9 @@ namespace ol_daisy::ui {
                     listener_.GateOn(channel);
                 }
             }
-
         }
 
     };
 }
 
-#endif //OL_DSP_POLYVOICEINPUTS_H
+#endif //OL_DSP_POLYVOICECONTROLS_H

@@ -9,7 +9,7 @@
 #include "daisy.h"
 #include "daisy_seed.h"
 
-namespace ol_daisy::ui {
+namespace ol_daisy::io {
 
     struct InputHandle {
         daisy::AdcChannelConfig channel_config{};
@@ -48,11 +48,11 @@ namespace ol_daisy::ui {
             return sw;
         }
 
-       void AddInput(daisy::AnalogControl *ctl) {
+        void AddInput(daisy::AnalogControl *ctl) {
             InputHandle &input_handle = input_pool_[channel_cursor_];
             input_handle.control = ctl;
             input_handle.channel_config.InitSingle(daisy::DaisySeed::GetPin(pin_number_));
-            
+
             inputs_.push_back(input_handle);
 
             channel_cursor_++;
@@ -68,8 +68,7 @@ namespace ol_daisy::ui {
             }
 
             hw_.adc.Init(configs, inputs_.size());
-            // for (InputHandle &h: inputs_) {
-                for (size_t channel = 0; channel<inputs_.size(); channel++) {
+            for (size_t channel = 0; channel < inputs_.size(); channel++) {
                 daisy::AnalogControl *ctl = inputs_.at(channel).control;
                 auto ptr = hw_.adc.GetPtr(channel);
                 ctl->Init(ptr, hw_.AudioCallbackRate());

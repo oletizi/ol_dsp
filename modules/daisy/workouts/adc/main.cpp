@@ -21,7 +21,7 @@ int main() {
 //    hw.adc.Init(&cv_1_config, 1);
 //    cv_1.Init(hw.adc.GetPtr(0), hw.AudioCallbackRate());
 //    hw.adc.Start();
-    ol_daisy::ui::GpioPool<12> gpio(hw);
+    ol_daisy::io::GpioPool<12> gpio(hw);
     daisy::AnalogControl cv_1;
     gpio.AddInput(&cv_1);
     gpio.Start();
