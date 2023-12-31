@@ -7,6 +7,7 @@
 
 #include "GpioPool.h"
 #include "PolyvoiceControls.h"
+#include "Serial.h"
 
 namespace ol_daisy::io {
     struct Page {
