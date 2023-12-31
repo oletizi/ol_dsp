@@ -16,6 +16,7 @@
 
 #define STRING_BUF_SIZE 256
 #define OUT_BUF_SIZE 8
+#define IN_BUF_SIZE 8
 #define DISPLAY_ON false
 #define DISPLAY_UPDATE_FREQUENCY 250
 using namespace daisy;
@@ -83,14 +84,27 @@ int main() {
     uint8_t counter = 0;
     char strbuff[STRING_BUF_SIZE];
     uint8_t outbuf[OUT_BUF_SIZE];
+    uint8_t inbuf[IN_BUF_SIZE];
     int direction = 1;
-
+    size_t bytes_read = 0;
     while (true) {
-        serial.Printf("Hello. Counter: %d\n", counter);
+        if (!a_handler.RxActive()) {
+            a_handler.FlushRx();
+            a_handler.StartRx();
+        }
+        serial.Printf("Hello from daisy! Counter: %d\n", counter);
+
         counter += direction;
         if (counter % 100 == 0) {
             direction *= -1;
         }
+//        for (bytes_read = 0; bytes_read< IN_BUF_SIZE && a_handler.Readable() > 0; bytes_read++) {
+//            inbuf[bytes_read] = a_handler.PopRx();
+//        }
+//        while (a_handler.Readable() > 0) {
+//            bytes_read = a_handler.PollReceive(inbuf, sizeof(inbuf), 10);
+//            serial.Write(inbuf, bytes_read);
+//        }
         System::Delay(1000);
 
     }

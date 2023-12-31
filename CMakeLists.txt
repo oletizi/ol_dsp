@@ -5,6 +5,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(JUCE_BUILD_EXTRAS OFF)
 set(JUCE_BUILD_EXAMPLES OFF)
 set(BUILD_DAISY ON)
+set(BUILD_TEENSY ON)
 
 add_subdirectory(libs/DaisySP)
 add_subdirectory(libs/dattorro-verb)
@@ -13,6 +14,10 @@ add_subdirectory(libs/JUCE)
 if (${BUILD_DAISY})
     add_subdirectory(libs/libDaisy)
     add_subdirectory(modules/daisy)
+endif ()
+
+if (${BUILD_TEENSY})
+    add_subdirectory(modules/ol_teensy)
 endif ()
 
 add_subdirectory(libs/rapidyaml)
