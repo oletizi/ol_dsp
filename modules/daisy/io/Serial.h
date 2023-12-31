@@ -7,8 +7,30 @@
 
 namespace ol_daisy::io {
     class Serial {
+
     public:
         explicit Serial(daisy::UartHandler &uart) : uart_(uart) {}
+
+        void Print(const std::string& msg) {
+            uint8_t data[msg.length() + 1];
+            strcpy((char *)data, msg.data());
+            Write(data, msg.length());
+        }
+
+        void Printf(const char* format, ...) {
+            va_list va;
+            va_start(va, format);
+            PrintfV(format, va);
+            va_end(va);
+        }
+        void PrintfV(const char* format, const va_list va) {
+            vsnprintf(string_buffer, sizeof(string_buffer), format, va);
+            Print(string_buffer);
+        }
+
+        void Println(const std::string& msg) {
+            Print(msg + "\n");
+        }
 
         void Write(const char* data, const size_t size) {
             Write(reinterpret_cast<const uint8_t *>(data), size);
@@ -29,6 +51,7 @@ namespace ol_daisy::io {
     private:
         daisy::UartHandler &uart_;
         uint8_t outbuf_[8]{};
+        char string_buffer[256]{};
     };
 }
 #endif //OL_DSP_SERIAL_H

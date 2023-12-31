@@ -85,20 +85,8 @@ int main() {
     uint8_t outbuf[OUT_BUF_SIZE];
     int direction = 1;
 
-//    UartHandler::Result tx_result;
-//    size_t bytes_to_write = 0;
-//    size_t bytes_written = 0;
     while (true) {
-        int string_size = sprintf(strbuff, "D: %d... here's some more stuff\n", counter);
-//        bytes_written = 0;
-//        while (bytes_written < string_size) {
-//            bytes_to_write = 0;
-//            for (int i = 0; i < OUT_BUF_SIZE && bytes_written <= string_size; i++, bytes_written++, bytes_to_write++) {
-//                outbuf[i] = strbuff[bytes_written];
-//            }
-//            a_handler.PollTx(outbuf, bytes_to_write);
-//        }
-        serial.Write(strbuff, string_size);
+        serial.Printf("Hello. Counter: %d\n", counter);
         counter += direction;
         if (counter % 100 == 0) {
             direction *= -1;
