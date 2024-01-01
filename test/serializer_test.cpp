@@ -10,11 +10,12 @@ using namespace ol::ctl;
 class LoopbackSerial : public Serial {
 private:
     uint8_t *write_buf_;
+    size_t buffer_size_;
     int read_index_ = 0;
     int write_index_ = 0;
 
 public:
-    explicit LoopbackSerial(uint8_t *buf) : write_buf_(buf) {}
+    explicit LoopbackSerial(uint8_t *buf, size_t buffer_size) : write_buf_(buf), buffer_size_(buffer_size) {}
 
     int Write(const char *data, const size_t size) override {
         return 0;
@@ -23,7 +24,7 @@ public:
     int Write(const uint8_t *data, const size_t size) override {
         int bytes_written = 0;
         for (int i = 0; i < size; i++, write_index_++) {
-            if (write_index_ == sizeof(write_buf_)) {
+            if (write_index_ == buffer_size_) {
                 write_index_ = 0;
             }
             write_buf_[write_index_] = data[i];
@@ -43,7 +44,7 @@ public:
         if (Available() > 0 && read_index_ < write_index_) {
             rv = write_buf_[read_index_++];
         }
-        if (read_index_ == sizeof(write_buf_)) {
+        if (read_index_ == buffer_size_) {
             read_index_ = 0;
         }
         return rv;
@@ -57,6 +58,7 @@ public:
         }
         return Write(byte_array, size);
     }
+
 };
 
 TEST(Loopback, Basics) {
@@ -64,7 +66,7 @@ TEST(Loopback, Basics) {
     const int WRITE_BUF_SIZE = 8;
     uint8_t write_buf[WRITE_BUF_SIZE]{};
     uint8_t byte_read;
-    LoopbackSerial lb(write_buf);
+    LoopbackSerial lb(write_buf, sizeof(write_buf));
     EXPECT_EQ(lb.Available(), 0);
     EXPECT_EQ(lb.Read(), -1);
 
@@ -129,7 +131,7 @@ TEST(Serializer, Basics) {
     uint8_t write_buf[WRITE_BUF_SIZE]{};
     Control c1{1, 2};
     MockControlListener listener;
-    LoopbackSerial loopback(write_buf);
+    LoopbackSerial loopback(write_buf, sizeof(write_buf));
 
     SimpleSerializer simple_serializer(loopback);
     Serializer &s = simple_serializer;
@@ -140,6 +142,9 @@ TEST(Serializer, Basics) {
     s.WriteControl(c1);
     EXPECT_GT(loopback.Available(), 0);
 
-//    simple_serializer.Process();
-//    EXPECT_EQ(listener.handled_controls.size(), 1);
+    simple_serializer.Process();
+    EXPECT_EQ(listener.handled_controls.size(), 1);
+    auto c_deserialized = listener.handled_controls[0];
+    EXPECT_EQ(c_deserialized.controller, c1.controller);
+    EXPECT_EQ(c_deserialized.value, c1.value);
 }
