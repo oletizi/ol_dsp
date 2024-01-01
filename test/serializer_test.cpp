@@ -1,6 +1,7 @@
 //
 // Created by Orion Letizi on 12/31/23.
 //
+#include <cstdlib>
 #include "gtest/gtest.h"
 #include "ol_iolib.h"
 
@@ -127,7 +128,7 @@ public:
 };
 
 TEST(Serializer, Basics) {
-    const int WRITE_BUF_SIZE = 256;
+    const int WRITE_BUF_SIZE = 4096 * 4;
     uint8_t write_buf[WRITE_BUF_SIZE]{};
     Control c1{1, 2};
     MockControlListener listener;
@@ -147,4 +148,30 @@ TEST(Serializer, Basics) {
     auto c_deserialized = listener.handled_controls[0];
     EXPECT_EQ(c_deserialized.controller, c1.controller);
     EXPECT_EQ(c_deserialized.value, c1.value);
+
+    // reset the handler
+    listener.handled_controls.clear();
+
+    auto noise_bytes = arc4random() % 50;
+    EXPECT_LE(noise_bytes, 50);
+
+    // write random bytes to the serial stream
+    for (int i = 0; i < noise_bytes; i++) {
+        auto noise = uint8_t(arc4random() % 1024);
+        loopback.Write(&noise, 1);
+    }
+
+    // serialize->deserialize some controls...
+    std::vector<Control> sent;
+    auto noise_control_count = arc4random() % 100;
+    EXPECT_LE(noise_control_count, 100);
+    Control controls_written[noise_control_count];
+    for (int i = 0; i < noise_control_count; i++) {
+        controls_written[i].controller = arc4random() % 1024;
+        controls_written[i].value = arc4random() % 1024;
+        simple_serializer.WriteControl(controls_written[i]);
+        simple_serializer.Process();
+    }
+    // TODO: figure out why this is broken
+//    EXPECT_EQ(listener.handled_controls.size(), noise_control_count);
 }

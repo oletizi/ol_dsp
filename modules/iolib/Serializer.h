@@ -64,6 +64,7 @@ namespace ol::io {
         }
 
         void Process() {
+            // XXX: This is pretty ugly. Maybe use protocol buffers?
             while (serial_.Available()) {
                 auto byte_read = uint8_t(serial_.Read());
 
