@@ -6,7 +6,15 @@
 #define OL_DSP_LOOP_H
 
 #include <cstdint>
+
+#ifdef TEENSY_LOCAL
+
+#include "usb_serial.h"
 #include "ol_teensy.h"
+
+#else
+#include "ol_teensy.h"
+#endif
 
 #define BUF_SIZE 256
 
@@ -18,6 +26,8 @@ uint8_t inbuf[BUF_SIZE]{};
 unsigned int bytes_read = 0;
 
 void doSetup() {
+    analogReadResolution(13);
+    analogReadAveraging(16);
     Serial1.begin(9600);
     pinMode(led, OUTPUT);
     // put your setup code here, to run once:
@@ -28,9 +38,16 @@ void doSetup() {
     Serial.println("This line will definitely appear in the serial monitor");
 }
 
+
 void doLoop() {
-    for (int i = 0; i < BUF_SIZE; i++) {
-        inbuf[i] = 0;
+    counter++;
+    if (counter % 100 == 0) {
+        int cc_1 = analogRead(A9);
+        Serial.printf("cc_1: %d\n", cc_1);
+    }
+
+    for (unsigned char &i: inbuf) {
+        i = 0;
     }
 
     Serial1.println("Teensy!");
@@ -42,7 +59,11 @@ void doLoop() {
     if (bytes_read > 0) {
         Serial.write(inbuf, bytes_read);
     }
+
     bytes_read = 0;
+    if (counter == 100000) {
+        counter = 0;
+    }
 }
 
 #endif //OL_DSP_LOOP_H

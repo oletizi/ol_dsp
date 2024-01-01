@@ -8,6 +8,7 @@ add_executable(gtest_run
         workout_test.cpp
         synth_test.cpp
         patch_test.cpp
+        serializer_test.cpp
 )
 message("GTEST_BOTH_LIBRARIES: ${GTEST_BOTH_LIBRARIES}")
 target_link_libraries(gtest_run ${GTEST_BOTH_LIBRARIES} gmock ol_corelib ol_ctllib ol_fxlib ol_iolib ol_synthlib DaisySP)

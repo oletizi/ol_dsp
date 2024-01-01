@@ -43,7 +43,7 @@ MyOledDisplay display;
 
 UartHandler::Config usart_a;
 UartHandler a_handler;
-ol_daisy::io::Serial serial(a_handler);
+ol_daisy::io::DaisySerial serial(a_handler);
 UartHandler::Result a_init_result = UartHandler::Result::ERR;
 
 

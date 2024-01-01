@@ -4,12 +4,23 @@ set(CMAKE_CXX_STANDARD 17)
 
 set(JUCE_BUILD_EXTRAS OFF)
 set(JUCE_BUILD_EXAMPLES OFF)
-set(BUILD_DAISY ON)
-set(BUILD_TEENSY ON)
+set(BUILD_LLHTTP OFF)
+set(BUILD_DAISY OFF)
+set(BUILD_TEENSY OFF)
 
 add_subdirectory(libs/DaisySP)
 add_subdirectory(libs/dattorro-verb)
 add_subdirectory(libs/JUCE)
+
+if (${BUILD_LLHTTP})
+include(FetchContent)
+FetchContent_Declare(llhttp
+        URL "https://github.com/nodejs/llhttp/archive/refs/tags/release/v8.1.0.tar.gz")
+
+set(BUILD_SHARED_LIBS OFF CACHE INTERNAL "")
+set(BUILD_STATIC_LIBS ON CACHE INTERNAL "")
+FetchContent_MakeAvailable(llhttp)
+endif()
 
 if (${BUILD_DAISY})
     add_subdirectory(libs/libDaisy)
@@ -30,7 +41,7 @@ add_subdirectory(modules/fxlib)
 add_subdirectory(modules/iolib)
 #add_subdirectory(modules/juce/plugin/workout)
 add_subdirectory(modules/synthlib)
-add_subdirectory(workouts)
+#add_subdirectory(workouts)
 add_subdirectory(test)
 
 

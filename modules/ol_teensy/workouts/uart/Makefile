@@ -21,15 +21,15 @@ lib: build-dir config
 	echo "LIB SRC: ${LIB_SRC_DIR}"
 	echo "LIB ZIP FILE: ${LIB_ZIP_FILE}"
 	if test -f ${LIB_ZIP_FILE}; then rm ${LIB_ZIP_FILE}; fi
-	(cd ${LIB_SRC_DIR} && zip -r ${LIB_ZIP_FILE} ./ol_teensy)
-	# enable_unsafe_install
+	(cd ${LIB_SRC_DIR} && zip -x "*workouts*" -r ${LIB_ZIP_FILE}  ./ol_teensy)
+	#arduino-cli lib uninstall ol_teensy
 	arduino-cli lib install --zip-path ${LIB_ZIP_FILE}
 
 build: lib
 	arduino-cli compile $(CLEAN) --fqbn teensy:avr:teensy41 --build-property build.usbtype=USB_MIDI_SERIAL .
 
 upload:
-	arduino-cli upload -p $(PORT) --fqbn teensy:avr:teensy41 . #&& arduino-cli monitor -p $(PORT)
+	arduino-cli upload -p $(PORT) --fqbn teensy:avr:teensy41 .
 
 monitor:
 	arduino-cli monitor -p $(PORT)
