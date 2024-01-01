@@ -104,14 +104,14 @@ TEST(Serializer, Conversion) {
     int64_t b;
     std::vector<uint8_t> serialized;
 //    serialized.reserve(sizeof(int64_t));
-    serialized = int64_to_byte_array(a);
-    b = byte_array_to_int64(serialized);
+    serialized = int64_to_bytes(a);
+    b = bytes_to_int64(serialized);
 
     EXPECT_EQ(a, b);
 
     a = -999999999;
-    serialized = int64_to_byte_array(a);
-    b = byte_array_to_int64(serialized);
+    serialized = int64_to_bytes(a);
+    b = bytes_to_int64(serialized);
     EXPECT_EQ(a, b);
 }
 

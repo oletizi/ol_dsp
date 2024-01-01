@@ -63,8 +63,8 @@ namespace ol::io {
 
         void WriteControl(ol::ctl::Control control) override {
             // XXX: I'm sure there's a more efficient/elegant way to do this.
-            auto controller_data = int64_to_byte_array(control.controller);
-            auto value_data = int64_to_byte_array(control.value);
+            auto controller_data = int64_to_bytes(control.controller);
+            auto value_data = int64_to_bytes(control.value);
             std::vector<uint8_t> serialized;
             serialized.reserve(controller_data.size() + value_data.size());
             serialized.insert(serialized.end(), controller_data.begin(), controller_data.end());

@@ -6,7 +6,7 @@
 #define OL_DSP_OL_IOLIB_CORE_H
 namespace ol::io {
     // XXX: these should probably live somewhere else. util?
-    static std::vector<uint8_t> int64_to_byte_array(int64_t value) {
+    static std::vector<uint8_t> int64_to_bytes(int64_t value) {
         std::vector<uint8_t> rv;
         rv.reserve(8);
         for (int i = 0; i < 8; ++i) {
@@ -15,7 +15,7 @@ namespace ol::io {
         return rv;
     }
 
-    static int64_t byte_array_to_int64(std::vector<uint8_t> data) {
+    static int64_t bytes_to_int64(std::vector<uint8_t> data) {
         int64_t result = 0;
         if (data.size() >= 8) {
             for (int i = 7; i >= 0; --i) {
