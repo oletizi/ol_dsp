@@ -9,9 +9,12 @@
 
 namespace ol::io {
     class Serial {
+    public:
         virtual int Write(const char *data, size_t size) = 0;
 
         virtual int Write(const uint8_t *data, size_t size) = 0;
+
+        virtual int Write(std::vector<uint8_t> data, size_t size) = 0;
 
         virtual int Available() = 0;
 

@@ -6,9 +6,8 @@
 #include "iolib/ol_iolib.h"
 
 using namespace ol::synth;
-using namespace ol::io;
 
-class MockPatchLoaderCallback : public PatchLoader::PatchLoaderCallback {
+class MockPatchLoaderCallback : public ol::io::PatchLoader::PatchLoaderCallback {
 public:
     MOCK_METHOD(InitStatus, LoadSample,
                 (ol::synth::Voice::Config c, uint8_t channel, uint8_t note, std::string sample_path), (override));

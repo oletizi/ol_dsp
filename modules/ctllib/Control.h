@@ -9,8 +9,8 @@
 
 namespace ol::ctl {
     struct Control {
-        uint16_t controller;
-        uint16_t value;
+        int64_t controller;
+        int64_t value;
     };
 }
 
