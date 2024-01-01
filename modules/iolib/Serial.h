@@ -9,11 +9,11 @@
 
 namespace ol::io {
     class Serial {
-        virtual size_t Write(const char *data, size_t size) = 0;
+        virtual int Write(const char *data, size_t size) = 0;
 
-        virtual size_t Write(const uint8_t *data, size_t size) = 0;
+        virtual int Write(const uint8_t *data, size_t size) = 0;
 
-        virtual size_t Available() = 0;
+        virtual int Available() = 0;
 
         virtual int Read() = 0;
     };
