@@ -5,6 +5,7 @@
 #ifndef OL_DSP_OL_TEENSY_H
 #define OL_DSP_OL_TEENSY_H
 #include "Arduino.h"
+#include "io/ol_teensy_io.h"
 
 #ifdef TEENSY_LOCAL
 extern HardwareSerial Serial;

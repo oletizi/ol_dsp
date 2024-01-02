@@ -5,7 +5,7 @@
 #ifndef OL_DSP_SERIAL_H
 #define OL_DSP_SERIAL_H
 
-#include "ol_corelib.h"
+#include "corelib/ol_corelib.h"
 
 namespace ol::io {
     class Serial {

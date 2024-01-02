@@ -4,5 +4,5 @@ add_library(ol_daisy_io
         io.h
         DaisySerial.h
 )
-target_link_libraries(ol_daisy_io daisy ol_iolib ol_synthlib)
+target_link_libraries(ol_daisy_io daisy ryml ol_iolib ol_synthlib)
 target_include_directories(ol_daisy_io PUBLIC .)

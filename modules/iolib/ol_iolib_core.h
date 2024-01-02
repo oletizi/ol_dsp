@@ -4,6 +4,9 @@
 
 #ifndef OL_DSP_OL_IOLIB_CORE_H
 #define OL_DSP_OL_IOLIB_CORE_H
+
+#include <vector>
+
 namespace ol::io {
     // XXX: these should probably live somewhere else. util?
     static std::vector<uint8_t> int64_to_bytes(int64_t value) {

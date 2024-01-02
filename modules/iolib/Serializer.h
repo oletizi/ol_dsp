@@ -6,8 +6,8 @@
 #define OL_DSP_SERIALIZER_H
 
 #include <vector>
-#include "ol_ctllib.h"
-#include "ol_iolib_core.h"
+#include "ctllib/ol_ctllib.h"
+#include "iolib/ol_iolib_core.h"
 #include "Serial.h"
 
 namespace ol::io {

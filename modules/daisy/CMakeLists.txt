@@ -1,7 +1,12 @@
 add_subdirectory(io)
 
+add_executable(ol_daisy_workouts_serialization workouts/serialization/main.cpp)
+target_link_libraries(ol_daisy_workouts_serialization daisy ol_corelib ol_daisy_io ol_ctllib)
+target_compile_definitions(ol_daisy_workouts_serialization PRIVATE DAISY_NATIVE)
+
 add_executable(ol_daisy_workouts_uart workouts/uart/main.cpp)
 target_link_libraries(ol_daisy_workouts_uart daisy ol_corelib ol_daisy_io)
+target_compile_definitions(ol_daisy_workouts_uart PRIVATE DAISY_NATIVE)
 
 add_executable(ol_daisy_workouts_adc workouts/adc/main.cpp)
 target_link_libraries(ol_daisy_workouts_adc daisy ol_daisy_io)

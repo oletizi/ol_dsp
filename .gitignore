@@ -12,3 +12,4 @@
 /modules/daisy/workouts/display/build/
 /modules/daisy/workouts/uart/build/
 /modules/ol_teensy/workouts/uart/build/
+/modules/daisy/workouts/serialization/build/
