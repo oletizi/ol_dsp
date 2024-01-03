@@ -20,6 +20,10 @@
 #define IN_BUF_SIZE 8
 #define DISPLAY_ON false
 #define DISPLAY_UPDATE_FREQUENCY 250
+#define CHANNEL_COUNT 2
+#define VOICE_COUNT 1
+#define AUDIO_BLOCK_SIZE 4
+
 using namespace daisy;
 
 
@@ -59,9 +63,18 @@ ol::io::SimpleSerializer serializer(serial);
 MyControlListener control_listener;
 UartHandler::Result a_init_result = UartHandler::Result::ERR;
 
+daisysp::Oscillator voice;
 
-//UartHandler::Config usart_b;
-//UartHandler b_handler;
+void audio_callback(daisy::AudioHandle::InterleavingInputBuffer in,
+                    daisy::AudioHandle::InterleavingOutputBuffer out,
+                    size_t size) {
+    for(size_t i = 0; i < size; i += 2) {
+        t_sample voice_out = voice.Process();
+        out[i]     = voice_out;
+        out[i + 1] = voice_out;
+
+    }
+}
 
 int main() {
 
@@ -88,6 +101,12 @@ int main() {
     usart_a.pin_config.tx = a_tx_pin;//{DSY_GPIOB, 6};
 
     a_init_result = a_handler.Init(usart_a);
+
+    hw.SetAudioBlockSize(AUDIO_BLOCK_SIZE);
+    auto sample_rate = hw.AudioSampleRate();
+    voice.Init(sample_rate);
+    voice.SetFreq(440);
+    hw.StartAudio(audio_callback);
 
     /** Configure the Display */
     MyOledDisplay::Config disp_cfg = {};
@@ -116,11 +135,14 @@ int main() {
         // while (serial.Available()) {
         //     serial.Printf("Daisy found: %d\n", serial.Read());
         // }
-         while (!control_queue.empty()) {
-             auto &c = control_queue.front();
-             serial.Printf("control: controller: %d, value: %d\n", c.controller, c.value);
-             control_queue.pop_front();
-         }
+        while (!control_queue.empty()) {
+            auto &c = control_queue.front();
+            auto int_value = c.value;
+            auto float_value = ol::core::scale(int_value, 0, 4096, 0, 20000, 1);
+            voice.SetFreq(float_value);
+            serial.Printf("control: controller: %d, value: %d\n", c.controller, c.value);
+            control_queue.pop_front();
+        }
 
         counter += direction;
         if (counter == 4000000 || counter == 0) {
