@@ -61,7 +61,7 @@ namespace ol_daisy::io {
         }
 
         int Available() override {
-            // XXX: this is a bug waiting to happen
+            // XXX: this cast is a bug waiting to happen
             return int(uart_.Readable());
         }
 

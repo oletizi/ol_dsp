@@ -4,14 +4,15 @@
 #include "gtest/gtest.h"
 #include "gmock/gmock.h"
 #include "iolib/ol_iolib.h"
+#include "synthlib/ol_synthlib.h"
 
 using namespace ol::synth;
-
-class MockPatchLoaderCallback : public ol::io::PatchLoader::PatchLoaderCallback {
-public:
-    MOCK_METHOD(InitStatus, LoadSample,
-                (ol::synth::Voice::Config c, uint8_t channel, uint8_t note, std::string sample_path), (override));
-};
+//
+//class MockPatchLoaderCallback : public ol::io::PatchLoader::PatchLoaderCallback {
+//public:
+//    MOCK_METHOD(InitStatus, LoadSample,
+//                (ol::synth::Voice::Config c, uint8_t channel, uint8_t note, std::string sample_path), (override));
+//};
 
 TEST(PatchLoader, LoadSample) {
 //    auto callback = new MockPatchLoaderCallback();

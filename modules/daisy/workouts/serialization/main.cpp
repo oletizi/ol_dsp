@@ -7,6 +7,7 @@
 #endif
 
 #include <cstdio>
+#include <deque>
 #include "daisy.h"
 #include "daisy_seed.h"
 #include "dev/oled_ssd130x.h"
@@ -21,9 +22,19 @@
 #define DISPLAY_UPDATE_FREQUENCY 250
 using namespace daisy;
 
+
 static DaisySeed hw;
 using MyOledDisplay = OledDisplay<SSD130x4WireSpi128x64Driver>;
 MyOledDisplay display;
+
+std::deque<ol::ctl::Control> control_queue;
+
+class MyControlListener : public ol::io::ControlListener {
+public:
+    void HandleControl(ol::ctl::Control control) override {
+        control_queue.push_back(control);
+    }
+};
 
 //Example from: https://forum.electro-smith.com/t/daisy-seed-pinout-usart-1-rx-pin-37-or-pin-15/1175/10
 ////Init TX PB4 UART7_TX / AF11 for the Nextion screen - SPI1 MISO Pin n°10
@@ -45,6 +56,7 @@ UartHandler::Config usart_a;
 UartHandler a_handler;
 ol_daisy::io::DaisySerial serial(a_handler);
 ol::io::SimpleSerializer serializer(serial);
+MyControlListener control_listener;
 UartHandler::Result a_init_result = UartHandler::Result::ERR;
 
 
@@ -56,13 +68,17 @@ int main() {
     hw.Configure();
     hw.Init();
 
+    serializer.AddControlListener(control_listener);
+
 //    a_tx.baudrate = 115200;
 
     const dsy_gpio_pin &a_rx_pin = DaisySeed::GetPin(14);
     const dsy_gpio_pin &a_tx_pin = DaisySeed::GetPin(13);
 
 
-    usart_a.baudrate = 9600;
+//    usart_a.baudrate = 9600;
+//    usart_a.baudrate = 57600;
+    usart_a.baudrate = 115200;
     usart_a.periph = UartHandler::Config::Peripheral::USART_1;
     usart_a.stopbits = UartHandler::Config::StopBits::BITS_1;
     usart_a.parity = UartHandler::Config::Parity::NONE;
@@ -81,7 +97,7 @@ int main() {
         /** And Initialize */
         display.Init(disp_cfg);
     }
-    uint8_t counter = 0;
+    uint64_t counter = 0;
     char strbuff[STRING_BUF_SIZE];
     uint8_t outbuf[OUT_BUF_SIZE];
     uint8_t inbuf[IN_BUF_SIZE];
@@ -94,13 +110,20 @@ int main() {
             a_handler.FlushRx();
             a_handler.StartRx();
         }
-        serial.Printf("Hello from daisy! Counter: %d\n", counter);
-        ol::ctl::Control ctl{CC_FILTER_CUTOFF, 0};
+//        serial.Printf("Hello from daisy! Counter: %d\n", counter);
+        //ol::ctl::Control ctl{CC_FILTER_CUTOFF, 0};
         serializer.Process();
-
+        // while (serial.Available()) {
+        //     serial.Printf("Daisy found: %d\n", serial.Read());
+        // }
+         while (!control_queue.empty()) {
+             auto &c = control_queue.front();
+             serial.Printf("control: controller: %d, value: %d\n", c.controller, c.value);
+             control_queue.pop_front();
+         }
 
         counter += direction;
-        if (counter % 100 == 0) {
+        if (counter == 4000000 || counter == 0) {
             direction *= -1;
         }
 //        for (bytes_read = 0; bytes_read< IN_BUF_SIZE && a_handler.Readable() > 0; bytes_read++) {
@@ -110,7 +133,7 @@ int main() {
 //            bytes_read = a_handler.PollReceive(inbuf, sizeof(inbuf), 10);
 //            serial.Write(inbuf, bytes_read);
 //        }
-        System::Delay(1000);
+        // System::Delay(1000);
 
     }
 

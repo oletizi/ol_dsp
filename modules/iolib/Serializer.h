@@ -18,6 +18,8 @@ namespace ol::io {
 
     class Serializer {
     public:
+        virtual void SerializeControl(ol::ctl::Control, std::vector<uint8_t>&) = 0;
+
         virtual void WriteControl(ol::ctl::Control) = 0;
     };
 
@@ -53,6 +55,7 @@ namespace ol::io {
             controller_buffer_.reserve(sizeof(int64_t));
             value_buffer_.reserve(sizeof(int64_t));
         }
+
         void Reset() {
             parsing_ = false;
             parsed_bytes_ = 0;
@@ -68,7 +71,10 @@ namespace ol::io {
             while (serial_.Available()) {
                 auto byte_read = uint8_t(serial_.Read());
 
-                if (!parsing_ && byte_read == START_BYTE) { start_bytes_++; continue;}
+                if (!parsing_ && byte_read == START_BYTE) {
+                    start_bytes_++;
+                    continue;
+                }
                 // we're parsing if we've seen the start bytes and we've still got bytes to parse OR we don't know the
                 // message size yet.
                 parsing_ = start_bytes_ == START_BYTE_COUNT && (parsed_bytes_ < message_size_ || message_size_ == 0);
@@ -102,25 +108,30 @@ namespace ol::io {
             }
         }
 
-        void WriteControl(ol::ctl::Control control) override {
+        void SerializeControl(ol::ctl::Control control, std::vector<uint8_t> &buffer) override {
             // XXX: I'm sure there's a more efficient/elegant way to do this.
             auto controller_data = int64_to_bytes(control.controller);
             auto value_data = int64_to_bytes(control.value);
 
-            std::vector<uint8_t> serialized;
-            serialized.reserve(sizeof(uint8_t) * START_BYTE_COUNT + controller_data.size() + value_data.size());
+//            std::vector<uint8_t> serialized;
+            buffer.reserve(sizeof(uint8_t) * START_BYTE_COUNT + controller_data.size() + value_data.size());
 
             // write the start bytes...
             for (int i = 0; i < START_BYTE_COUNT; i++) {
-                serialized.push_back(START_BYTE);
+                buffer.push_back(START_BYTE);
             }
 
             // write the message size (including message size field)...
             auto message_size = sizeof(int64_t) + controller_data.size() + value_data.size();
             auto message_size_data = int64_to_bytes(int64_t(message_size));
-            serialized.insert(serialized.end(), message_size_data.begin(), message_size_data.end());
-            serialized.insert(serialized.end(), controller_data.begin(), controller_data.end());
-            serialized.insert(serialized.end(), value_data.begin(), value_data.end());
+            buffer.insert(buffer.end(), message_size_data.begin(), message_size_data.end());
+            buffer.insert(buffer.end(), controller_data.begin(), controller_data.end());
+            buffer.insert(buffer.end(), value_data.begin(), value_data.end());
+        }
+
+        void WriteControl(ol::ctl::Control control) override {
+            std::vector<uint8_t> serialized;
+            SerializeControl(control, serialized);
             serial_.Write(serialized, serialized.size());
         }
 
