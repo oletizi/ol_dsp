@@ -117,63 +117,48 @@ namespace ol::synth {
             switch (controller) {
                 case CC_CTL_VOLUME:
                     amp_env_amount = value;
-                    PRINTF("  volume: %f\n", amp_env_amount);
                     break;
                 case CC_CTL_PORTAMENTO:
                     portamento_htime = ol::core::scale(value, 0, 1, 0, 1, 4);
-                    PRINTF("  port: %f\n", portamento_htime);
                     break;
                 case CC_FILTER_CUTOFF:
                     filter_cutoff = ol::core::scale(value, 0, 1, 0, 20000, 2.5);
-                    PRINTF("  Cutoff: %d\n", int(filter_cutoff));
                     break;
                 case CC_FILTER_RESONANCE:
                     filter_resonance = value;
-                    PRINTF("  q: %f\n", filter_resonance);
                     break;
                 case CC_FILTER_DRIVE:
                     filter_drive = value;
-                    PRINTF("  drive: %f\n", filter_drive);
                     break;
                 case CC_ENV_FILT_AMT:
                     filter_env_amount = value;
-                    PRINTF("  filt env amt %f\n", filter_env_amount);
                     break;
                 case CC_ENV_FILT_A:
                     filter_attack = value;
-                    PRINTF("  filt a: %f\n", filter_attack);
                     break;
                 case CC_ENV_FILT_D:
                     filter_decay = ol::core::scale(value, 0, 1, 0, 1, 3);
-                    PRINTF("  filt d: %f\n", filter_decay);
                     break;
                 case CC_ENV_FILT_S:
                     filter_sustain = value;
-                    PRINTF("  filt s: %f\n", filter_sustain);
                     break;
                 case CC_ENV_FILT_R:
                     filter_release = value;
-                    PRINTF("  filt r: %f\n", filter_release);
                     break;
                 case CC_ENV_AMP_A:
                     amp_attack = value;
-                    PRINTF("  amp a: %f\n", amp_attack);
                     break;
                 case CC_ENV_AMP_D:
                     amp_decay = value;
-                    PRINTF("  amp d: %f\n", amp_decay);
                     break;
                 case CC_ENV_AMP_S:
                     amp_sustain = value;
-                    PRINTF("  amp s: %f\n", amp_sustain);
                     break;
                 case CC_ENV_AMP_R:
                     amp_release = value;
-                    PRINTF("  amp r: %f\n", amp_release);
                     break;
                 case CC_OSC_1_VOLUME:
                     osc_1_mix = value;
-                    PRINTF("  osc 1 mix: %f\n", osc_1_mix);
                     break;
                 default:
                     update = false;

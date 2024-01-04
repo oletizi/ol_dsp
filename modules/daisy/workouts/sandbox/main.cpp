@@ -49,7 +49,7 @@ SynthVoice<1> sv4;
 
 //std::vector<Voice *> voices = {&sv1, &sv2, &sv3, &sv4};
 std::vector<Voice *> voices = {&sv1, &sv2, &sv3, &sv4};
-Polyvoice<1> poly(voices);
+Polyvoice<1> voice(voices);
 
 class ControlListener : public VoiceControlListener {
 private:
@@ -109,7 +109,7 @@ void audio_callback(daisy::AudioHandle::InterleavingInputBuffer in,
         t_sample frame_buffer[CHANNEL_COUNT]{};
         t_sample voices_out = 0;
 
-        poly.Process(frame_buffer);
+        voice.Process(frame_buffer);
         for (auto &f : frame_buffer) {
             f = frame_buffer[0];
         }
@@ -156,28 +156,28 @@ int main() {
     hw.SetAudioBlockSize(AUDIO_BLOCK_SIZE);
     auto sample_rate = hw.AudioSampleRate();
 
-    poly.Init(sample_rate);
+    voice.Init(sample_rate);
     delay.Init(sample_rate);
     reverb.Init(sample_rate);
     filter.Init(sample_rate);
     rms.Init(sample_rate, 128);
 
 
-    poly.UpdateMidiControl(CC_CTL_PORTAMENTO, 0);
-    poly.UpdateMidiControl(CC_FILTER_CUTOFF, 0);
-    poly.UpdateMidiControl(CC_FILTER_RESONANCE, 0);
-    poly.UpdateMidiControl(CC_ENV_FILT_A, 0);
-    poly.UpdateMidiControl(CC_ENV_FILT_D, 60);
-    poly.UpdateMidiControl(CC_ENV_FILT_S, 0);
-    poly.UpdateMidiControl(CC_ENV_FILT_R, 15);
-    poly.UpdateMidiControl(CC_ENV_FILT_AMT, 100);
+    voice.UpdateMidiControl(CC_CTL_PORTAMENTO, 0);
+    voice.UpdateMidiControl(CC_FILTER_CUTOFF, 0);
+    voice.UpdateMidiControl(CC_FILTER_RESONANCE, 0);
+    voice.UpdateMidiControl(CC_ENV_FILT_A, 0);
+    voice.UpdateMidiControl(CC_ENV_FILT_D, 60);
+    voice.UpdateMidiControl(CC_ENV_FILT_S, 0);
+    voice.UpdateMidiControl(CC_ENV_FILT_R, 15);
+    voice.UpdateMidiControl(CC_ENV_FILT_AMT, 100);
 
-    poly.UpdateMidiControl(CC_ENV_AMP_A, 0);
-    poly.UpdateMidiControl(CC_ENV_AMP_D, 127);
-    poly.UpdateMidiControl(CC_ENV_AMP_S, 127);
-    poly.UpdateMidiControl(CC_ENV_AMP_R, 25);
-    poly.UpdateMidiControl(CC_OSC_1_VOLUME, 127);
-    poly.UpdateMidiControl(CC_CTL_VOLUME, 100);
+    voice.UpdateMidiControl(CC_ENV_AMP_A, 0);
+    voice.UpdateMidiControl(CC_ENV_AMP_D, 127);
+    voice.UpdateMidiControl(CC_ENV_AMP_S, 127);
+    voice.UpdateMidiControl(CC_ENV_AMP_R, 25);
+    voice.UpdateMidiControl(CC_OSC_1_VOLUME, 127);
+    voice.UpdateMidiControl(CC_CTL_VOLUME, 100);
 
     // Delay defaults
     delay.UpdateMidiControl(CC_DELAY_BALANCE, 32);
@@ -220,12 +220,12 @@ int main() {
             switch (e.type) {
                 case NoteOff:
                     note_on = false;
-                    poly.NoteOff(e.AsNoteOff().note, e.AsNoteOff().velocity);
+                    voice.NoteOff(e.AsNoteOff().note, e.AsNoteOff().velocity);
                     break;
                 case NoteOn:
                     note_on = true;
                     note_value = e.AsNoteOn().note;
-                    poly.NoteOn(note_value, e.AsNoteOn().velocity);
+                    voice.NoteOn(note_value, e.AsNoteOn().velocity);
                     break;
                 case ControlChange:
                 default:

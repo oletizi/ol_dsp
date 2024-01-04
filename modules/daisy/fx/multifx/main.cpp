@@ -75,7 +75,7 @@ t_sample led2_blue = 0;
 //
 //Voice *voices[VOICE_COUNT] = {v1, v2, v3, v4, v5};
 //auto poly = Polyvoice<CHANNEL_COUNT, VOICE_COUNT>(voices);
-auto poly = Polyvoice<CHANNEL_COUNT, VOICE_COUNT>();
+auto voice = Polyvoice<CHANNEL_COUNT, VOICE_COUNT>();
 
 //auto delay_filter1 = FilterFx<CHANNEL_COUNT>();
 //daisysp::DelayLine<t_sample, MAX_DELAY> DSY_SDRAM_BSS delay_line1;
@@ -109,7 +109,7 @@ static void callback(AudioHandle::InterleavingInputBuffer in,
                      size_t size) {
     for (size_t i = 0; i < size; i += 2) {
         //auto frame_out = {out[i], out[i+1]};
-        poly.Process(process_buffer);
+        voice.Process(process_buffer);
         fxrack.Process(process_buffer, &out[i]);
 
         //fxrack.Process(process_buffer, out[i]);
@@ -172,14 +172,14 @@ static void handleMidiMessage(MidiEvent m) {
     if (m.type == daisy::NoteOn) {
         auto n = m.AsNoteOn();
         if (m.channel == SYNTH_CHANNEL) {
-            poly.GateOn(n.note, n.velocity);
+            voice.GateOn(n.note, n.velocity);
         }
         signalLed(LedSignal::NoteOn);
     }
     if (m.type == daisy::NoteOff) {
         NoteOffEvent n = m.AsNoteOff();
         if (m.channel == SYNTH_CHANNEL) {
-            poly.GateOff(n.note, n.velocity);
+            voice.GateOff(n.note, n.velocity);
         }
         signalLed(LedSignal::NoteOff);
     }
@@ -190,7 +190,7 @@ static void handleMidiMessage(MidiEvent m) {
             fxrack.UpdateMidiControl(p.control_number, p.value);
         }
         if (m.channel == SYNTH_CHANNEL) {
-            poly.UpdateMidiControl(m.channel, p.control_number, p.value);
+            voice.UpdateMidiControl(m.channel, p.control_number, p.value);
         }
         signalLed(LedSignal::Control);
     }
@@ -305,7 +305,7 @@ int main() {
 
 
     // Config and init synth voices
-    poly.Init(sample_rate);
+    voice.Init(sample_rate);
     fxrack.Init(sample_rate);
 
     initPages();
