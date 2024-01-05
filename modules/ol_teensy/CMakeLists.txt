@@ -12,9 +12,7 @@ set(ARDUINO_INCLUDES ${TEENSY_ROOT}/cores/teensy4
         ${ARDUINO_LIBS}/Adafruit_GFX_Library
         ${ARDUINO_LIBS}/Adafruit_SSD1306)
 
-add_library(ol_teensy STATIC ol_teensy.h
-        io/TeensySerial.cpp
-        io/TeensySerial.h)
+add_library(ol_teensy STATIC ol_teensy.h io/TeensySerial.h)
 set_target_properties(ol_teensy PROPERTIES LINKER_LANGUAGE CXX)
 target_link_libraries(ol_teensy ol_corelib)
 target_compile_definitions(ol_teensy PUBLIC TEENSY_LOCAL)

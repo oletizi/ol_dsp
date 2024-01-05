@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <deque>
 #include <MIDI.h>
+#include <TimeLib.h>
 
 #ifdef TEENSY_LOCAL
 
@@ -23,7 +24,7 @@
 
 using namespace ol::ctl;
 
-int led = 13;
+int led = LED_BUILTIN;
 int counter = 0;
 uint8_t buf[BUF_SIZE]{};
 uint8_t inbuf[BUF_SIZE]{};
@@ -32,6 +33,69 @@ ol_teensy::io::TeensySerial teensy_serial;
 ol::io::SimpleSerializer serializer(teensy_serial);
 
 MIDI_CREATE_INSTANCE(HardwareSerial, Serial2, MIDI);
+
+IntervalTimer control_timer;
+Control control{};
+
+
+void write_control(const Control &c) {
+
+    std::vector<uint8_t> serialized;
+    serializer.SerializeControl(c, serialized);
+    uint8_t data[serialized.size()];
+    for (int i = 0; i < sizeof(data); i++) {
+        data[i] = serialized[i];
+    }
+    Serial1.write(data, sizeof(data));
+}
+
+void send_control(int channel, int value) {
+    uint8_t controller = 0;
+    switch (channel) {
+        case A0:
+            controller = CC_FILTER_CUTOFF;
+            break;
+        case A1:
+            controller = CC_FILTER_RESONANCE;
+            break;
+        case A2:
+            controller = CC_ENV_FILT_AMT;
+            break;
+        case A3:
+            controller = CC_ENV_FILT_D;
+            break;
+        default:
+            break;
+    }
+    if (controller > 0) {
+        //const Control c = {controller, value};
+        control.controller = controller;
+        control.value = value;
+        write_control(control);
+    }
+}
+
+void control_handler() {
+
+    //Serial.println("Control Handler!");
+    auto channel = A0;
+    auto value = analogRead(channel);
+    send_control(channel, value);
+    send_control(A1, analogRead(A1));
+    send_control(A2, analogRead(A2));
+    send_control(A3, analogRead(A3));
+//    Serial.printf("A0: %d\n", analogRead(A0));
+//    Serial.printf("A1: %d\n", analogRead(A1));
+//    Serial.printf("A2: %d\n", analogRead(A2));
+//    Serial.printf("A3: %d\n", analogRead(A3));
+//    Serial.printf("A4: %d\n", analogRead(A4));
+//    Serial.printf("A5: %d\n", analogRead(A5));
+//    Serial.printf("A6: %d\n", analogRead(A6));
+//    Serial.printf("A7: %d\n", analogRead(A7));
+//    Serial.printf("A8: %d\n", analogRead(A8));
+//    Serial.printf("A9: %d\n", analogRead(A9));
+};
+
 
 void doSetup() {
     analogReadResolution(13);
@@ -50,6 +114,9 @@ void doSetup() {
     Serial.println("This line will definitely appear in the serial monitor");
     Serial.println("Starting midi...");
     MIDI.begin(MIDI_CHANNEL_OMNI);
+
+    control_timer.priority(128);
+    control_timer.begin(control_handler, 1000 * 1000);
 }
 
 ol::ctl::Control ctl{CC_FILTER_CUTOFF, 1};
@@ -62,10 +129,12 @@ void doLoop() {
         bool write_controls = true;
         switch (MIDI.getType()) {
             case midi::NoteOn:
+                digitalWrite(led, HIGH);
                 pitch.value = MIDI.getData1();
                 gate.value = 1;
                 break;
             case midi::NoteOff:
+                digitalWrite(led, LOW);
                 pitch.value = MIDI.getData1();
                 gate.value = 0;
                 break;
@@ -74,15 +143,17 @@ void doLoop() {
                 break;
         }
         if (write_controls) {
-            std::vector<uint8_t> serialized;
-            serializer.SerializeControl(pitch, serialized);
-            serializer.SerializeControl(gate, serialized);
-            uint8_t data[serialized.size()];
-            for (int i=0; i<sizeof(data); i++) {
-                data[i] = serialized[i];
-            }
-            Serial.println("Writing midi data as control data...");
-            Serial1.write(data, sizeof(data));
+            write_control(pitch);
+            write_control(gate);
+//            std::vector<uint8_t> serialized;
+//            serializer.SerializeControl(pitch, serialized);
+//            serializer.SerializeControl(gate, serialized);
+//            uint8_t data[serialized.size()];
+//            for (int i = 0; i < sizeof(data); i++) {
+//                data[i] = serialized[i];
+//            }
+//            Serial1.write(data, sizeof(data));
+
         }
     }
 
@@ -103,6 +174,7 @@ void doLoop() {
     counter++;
 //    if (counter == 5000000) {
     if (counter == 50000) {
+
         counter = 0;
     }
 }
