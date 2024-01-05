@@ -108,8 +108,8 @@ int main() {
 
 
 //    usart_a.baudrate = 9600;
-    usart_a.baudrate = 57600;
-//    usart_a.baudrate = 115200;
+    // usart_a.baudrate = 57600;
+   usart_a.baudrate = 115200;
     usart_a.periph = UartHandler::Config::Peripheral::USART_1;
     usart_a.pin_config.rx = a_rx_pin;//{DSY_GPIOB, 7};
     usart_a.pin_config.tx = a_tx_pin;//{DSY_GPIOB, 6};
