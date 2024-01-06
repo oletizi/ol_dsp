@@ -60,8 +60,16 @@ Control filter_env_amt{CC_ENV_FILT_AMT, 0};
 Control filter_decay{CC_ENV_FILT_D, 0};
 
 uint64_t control_tx_count = 0;
-
+auto tx_checkpoint = millis();
+auto tx_rate = 0.f;
 void write_control(const Control &c) {
+    auto now = millis();
+    auto delta = now - tx_checkpoint;
+    if (delta > 100) {
+        tx_checkpoint = now;
+        tx_rate = float(control_tx_count) / float(delta); // XXX: divide by zero waiting to happen
+        control_tx_count = 0;
+    }
     std::vector<uint8_t> serialized;
     serializer.SerializeControl(c, serialized);
     uint8_t data[serialized.size()];
@@ -77,18 +85,21 @@ int sample_control(uint8_t pin) {
     return 4096 - analogRead(pin);
 }
 
+void update_control(Control &c, uint16_t new_value) {
+    auto delta = c.value - new_value;
+    delta = delta < 0 ? delta * -1 : delta; // XXX: workaround for bug in teensy library that mangles abs() and std::abs()
+    bool above_noise = delta > NOISE_FLOOR;
+    if (above_noise) {
+        c.value = new_value;
+        write_control(c);
+    }
+}
+
 void control_handler() {
-    filter_cutoff.value = sample_control(A0);
-    write_control(filter_cutoff);
-
-    filter_resonance.value = sample_control(A1);
-    write_control(filter_resonance);
-
-    filter_env_amt.value = sample_control(A2);
-    write_control(filter_env_amt);
-
-    filter_decay.value = sample_control(A3);
-    write_control(filter_decay);
+    update_control(filter_cutoff, sample_control(A0));
+    update_control(filter_resonance, sample_control(A1));
+    update_control(    filter_env_amt, sample_control(A2));
+    update_control(filter_decay, sample_control(A3));
 };
 
 void handleNoteOn(byte channel, byte note, byte velocity) {
@@ -118,7 +129,7 @@ void midi_handler() {
 }
 
 void d_cursor(int line_number, int column) {
-    display.setCursor(0, line_number * LINE_HEIGHT);
+    display.setCursor(column * COLUMN_WIDTH, line_number * LINE_HEIGHT);
 }
 
 void d_meter(int line_number, int column, const String &label, int value) {
@@ -142,11 +153,17 @@ void display_handler() {
     int line_number = 0;
     display.clearDisplay();
 
-    d_meter(line_number++, 0, "coff", filter_cutoff.value);
-    d_cursor(line_number, 1);
+    d_meter(line_number, 0, "coff", filter_cutoff.value);
+    d_cursor(line_number++, 1);
+    display.printf("%d", filter_cutoff.value);
 
-    d_meter(line_number++, 0, "res", filter_resonance.value);
-    d_meter(line_number++, 0, "env", filter_env_amt.value);
+    d_meter(line_number, 0, "res", filter_resonance.value);
+    d_cursor(line_number++, 1);
+    display.printf("txr %d", int(tx_rate * 1000));
+
+    d_meter(line_number, 0, "env", filter_env_amt.value);
+    d_cursor(line_number++, 1);
+    display.printf("tx %d", control_tx_count);
     d_meter(line_number++, 0, "dec", filter_decay.value);
 
     display.display();

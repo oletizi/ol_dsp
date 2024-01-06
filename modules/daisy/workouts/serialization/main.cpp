@@ -61,12 +61,13 @@ ol_daisy::io::DaisySerial serial(a_handler);
 ol::io::SimpleSerializer serializer(serial);
 MyControlListener control_listener;
 
-SynthVoice<1> v1;
-SynthVoice<1> v2;
-SynthVoice<1> v3;
-SynthVoice<1> v4;
-std::vector<Voice *> voices{&v1, &v2, &v3, &v4};
-Polyvoice<1> voice(voices);
+SynthVoice<1> voice;
+//SynthVoice<1> v1;
+//SynthVoice<1> v2;
+//SynthVoice<1> v3;
+//SynthVoice<1> v4;
+//std::vector<Voice *> voices{&v1, &v2, &v3, &v4};
+//Polyvoice<1> voice(voices);
 
 void audio_callback(daisy::AudioHandle::InterleavingInputBuffer in,
                     daisy::AudioHandle::InterleavingOutputBuffer out,
@@ -86,20 +87,20 @@ int main() {
     hw.Init();
 
 
-    voice.UpdateMidiControl(CC_CTL_PORTAMENTO, 0);
+    voice.UpdateMidiControl(CC_CTL_PORTAMENTO, 32);
     voice.UpdateMidiControl(CC_FILTER_CUTOFF, 0);
     voice.UpdateMidiControl(CC_FILTER_RESONANCE, 0);
     voice.UpdateMidiControl(CC_ENV_FILT_A, 0);
     voice.UpdateMidiControl(CC_ENV_FILT_D, 100);
     voice.UpdateMidiControl(CC_ENV_FILT_S, 0);
-    voice.UpdateMidiControl(CC_ENV_FILT_R, 15);
+    voice.UpdateMidiControl(CC_ENV_FILT_R, 24);
     voice.UpdateMidiControl(CC_ENV_FILT_AMT, 127);
 
     voice.UpdateMidiControl(CC_ENV_AMP_A, 0);
     voice.UpdateMidiControl(CC_ENV_AMP_D, 127);
     voice.UpdateMidiControl(CC_ENV_AMP_S, 127);
-    voice.UpdateMidiControl(CC_ENV_AMP_R, 25);
-    voice.UpdateMidiControl(CC_OSC_1_VOLUME, 127);
+    voice.UpdateMidiControl(CC_ENV_AMP_R, 100);
+    voice.UpdateMidiControl(CC_OSC_1_VOLUME, 24);
     voice.UpdateMidiControl(CC_CTL_VOLUME, 100);
 
 
