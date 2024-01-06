@@ -62,6 +62,7 @@ Control filter_decay{CC_ENV_FILT_D, 0};
 uint64_t control_tx_count = 0;
 auto tx_checkpoint = millis();
 auto tx_rate = 0.f;
+
 void write_control(const Control &c) {
     auto now = millis();
     auto delta = now - tx_checkpoint;
@@ -87,7 +88,8 @@ int sample_control(uint8_t pin) {
 
 void update_control(Control &c, uint16_t new_value) {
     auto delta = c.value - new_value;
-    delta = delta < 0 ? delta * -1 : delta; // XXX: workaround for bug in teensy library that mangles abs() and std::abs()
+    delta = delta < 0 ? delta * -1
+                      : delta; // XXX: workaround for bug in teensy library that mangles abs() and std::abs()
     bool above_noise = delta > NOISE_FLOOR;
     if (above_noise) {
         c.value = new_value;
@@ -98,7 +100,7 @@ void update_control(Control &c, uint16_t new_value) {
 void control_handler() {
     update_control(filter_cutoff, sample_control(A0));
     update_control(filter_resonance, sample_control(A1));
-    update_control(    filter_env_amt, sample_control(A2));
+    update_control(filter_env_amt, sample_control(A2));
     update_control(filter_decay, sample_control(A3));
 };
 
@@ -215,25 +217,10 @@ void doSetup() {
 ol::ctl::Control ctl{CC_FILTER_CUTOFF, 1};
 
 void doLoop() {
-//    for (int i = 0; i < Serial1.available() && bytes_read < BUF_SIZE; i++) {
-//        inbuf[i] = Serial1.read();
-//        bytes_read++;
-//        if (bytes_read == sizeof(inbuf)) {
-//            Serial.printf("Teensy: printing inbuf. Bytes read: %d\n", bytes_read);
-//            Serial.write(inbuf, sizeof(inbuf));
-//            for (int j = 0; j < bytes_read; j++) {
-//                Serial.print(inbuf[j]);
-//            }
-//            bytes_read = 0;
-//        }
-//    }
-    //input_handler();
     midi_handler();
-    if (counter % 12 == 0) { // NOTE: THIS VALUE IS TUNED TO HANDLE TRANSMITTING FOUR ADC VALUES VIA UART @115200 baud
-        control_handler();
-    }
+    control_handler();
     if (counter % 12 == 0) {
-        display_handler();
+        display_handler(); // TODO: make this a function of time, not cycles
     }
     delay(1);
     counter++;
