@@ -61,7 +61,12 @@ ol_daisy::io::DaisySerial serial(a_handler);
 ol::io::SimpleSerializer serializer(serial);
 MyControlListener control_listener;
 
-SynthVoice<1> voice;
+SynthVoice<1> v1;
+SynthVoice<1> v2;
+SynthVoice<1> v3;
+SynthVoice<1> v4;
+std::vector<Voice *> voices{&v1, &v2, &v3, &v4};
+Polyvoice<1> voice(voices);
 
 void audio_callback(daisy::AudioHandle::InterleavingInputBuffer in,
                     daisy::AudioHandle::InterleavingOutputBuffer out,
@@ -71,7 +76,6 @@ void audio_callback(daisy::AudioHandle::InterleavingInputBuffer in,
         voice.Process(&voice_out);
         out[i] = voice_out;
         out[i + 1] = voice_out;
-
     }
 }
 
@@ -109,7 +113,7 @@ int main() {
 
 //    usart_a.baudrate = 9600;
     // usart_a.baudrate = 57600;
-   usart_a.baudrate = 115200;
+    usart_a.baudrate = 115200;
     usart_a.periph = UartHandler::Config::Peripheral::USART_1;
     usart_a.pin_config.rx = a_rx_pin;//{DSY_GPIOB, 7};
     usart_a.pin_config.tx = a_tx_pin;//{DSY_GPIOB, 6};
@@ -126,9 +130,6 @@ int main() {
     voice.Init(sample_rate);
     voice.SetFrequency(440);
     hw.StartAudio(audio_callback);
-
-
-
 
 
     uint64_t counter = 0;

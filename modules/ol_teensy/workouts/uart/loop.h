@@ -9,6 +9,10 @@
 #include <deque>
 #include <MIDI.h>
 #include <TimeLib.h>
+#include <SPI.h>
+#include <Wire.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
 
 #ifdef TEENSY_LOCAL
 
@@ -21,6 +25,18 @@
 #endif
 
 #define BUF_SIZE 256
+#define NOISE_FLOOR 10
+#define SCREEN_WIDTH 128 // OLED display width, in pixels
+#define SCREEN_HEIGHT 64 // OLED display height, in pixels
+
+#define COLUMN_WIDTH 32
+#define METER_WIDTH 31
+#define METER_HEIGHT 15
+#define LINE_HEIGHT 16
+#define OLED_RESET     -1 // Reset pin # (or -1 if sharing Arduino reset pin)
+#define SCREEN_ADDRESS 0x3C ///< See datasheet for Address; 0x3D for 128x64, 0x3C for 128x32
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+
 
 using namespace ol::ctl;
 
@@ -34,9 +50,16 @@ ol::io::SimpleSerializer serializer(teensy_serial);
 
 MIDI_CREATE_INSTANCE(HardwareSerial, Serial2, MIDI);
 
-IntervalTimer input_timer;
-Control control{};
+IntervalTimer display_timer;
+uint64_t note_on_count = 0;
+uint64_t note_off_count = 0;
 
+Control filter_cutoff{CC_FILTER_CUTOFF, 0};
+Control filter_resonance{CC_FILTER_RESONANCE, 0};
+Control filter_env_amt{CC_ENV_FILT_AMT, 0};
+Control filter_decay{CC_ENV_FILT_D, 0};
+
+uint64_t control_tx_count = 0;
 
 void write_control(const Control &c) {
     std::vector<uint8_t> serialized;
@@ -46,73 +69,87 @@ void write_control(const Control &c) {
         data[i] = serialized[i];
     }
     Serial1.write(data, sizeof(data));
+    control_tx_count++;
 }
 
-void send_control(int channel, int value) {
-    uint8_t controller = 0;
-    switch (channel) {
-        case A0:
-            controller = CC_FILTER_CUTOFF;
-            break;
-        case A1:
-            controller = CC_FILTER_RESONANCE;
-            break;
-        case A2:
-            controller = CC_ENV_FILT_AMT;
-            break;
-        case A3:
-            controller = CC_ENV_FILT_D;
-            break;
-        default:
-            break;
-    }
-    if (controller > 0) {
-        //const Control c = {controller, value};
-        control.controller = controller;
-        control.value = value;
-        write_control(control);
-    }
+
+int sample_control(uint8_t pin) {
+    return 4096 - analogRead(pin);
 }
 
 void control_handler() {
-    send_control(A0, analogRead(A0));
-    send_control(A1, analogRead(A1));
-    send_control(A2, analogRead(A2));
-    send_control(A3, analogRead(A3));
+    filter_cutoff.value = sample_control(A0);
+    write_control(filter_cutoff);
+
+    filter_resonance.value = sample_control(A1);
+    write_control(filter_resonance);
+
+    filter_env_amt.value = sample_control(A2);
+    write_control(filter_env_amt);
+
+    filter_decay.value = sample_control(A3);
+    write_control(filter_decay);
 };
 
-void midi_handler() {
-    if (MIDI.read()) {
-        Control pitch{CC_VOICE_PITCH, 0};
-        Control gate{CC_VOICE_GATE, 0};
-
-        bool write_controls = true;
-        switch (MIDI.getType()) {
-            case midi::NoteOn:
-                digitalWrite(led, HIGH);
-                pitch.value = MIDI.getData1();
-                gate.value = 1;
-                break;
-            case midi::NoteOff:
-                digitalWrite(led, LOW);
-                pitch.value = MIDI.getData1();
-                gate.value = 0;
-                break;
-            default:
-                write_controls = false;
-                break;
-        }
-        if (write_controls) {
-            Serial.printf("Counter: %d; Note event!\n", counter);
-            write_control(pitch);
-            write_control(gate);
-        }
-    }
+void handleNoteOn(byte channel, byte note, byte velocity) {
+    digitalWrite(led, HIGH);
+    Control pitch{CC_VOICE_PITCH, note};
+    Control gate{CC_VOICE_GATE, velocity};
+    gate.value = velocity;
+    write_control(pitch);
+    write_control(gate);
+    note_on_count++;
+    Serial.printf("Note ON: pitch: %d, velocity: %d\n", pitch.value, velocity);
 }
 
-void input_handler() {
-    midi_handler();
-    control_handler();
+void handleNoteOff(byte channel, byte note, byte velocity) {
+    digitalWrite(led, LOW);
+    Control pitch{CC_VOICE_PITCH, note};
+    Control gate{CC_VOICE_GATE, velocity};
+    gate.value = velocity;
+    write_control(pitch);
+    write_control(gate);
+    note_off_count++;
+    Serial.printf("Note OFF: pitch: %d, velocity: %d\n", pitch.value, velocity);
+}
+
+void midi_handler() {
+    MIDI.read();
+}
+
+void d_cursor(int line_number, int column) {
+    display.setCursor(0, line_number * LINE_HEIGHT);
+}
+
+void d_meter(int line_number, int column, const String &label, int value) {
+    int x = column * COLUMN_WIDTH;
+    int y = line_number * LINE_HEIGHT;
+    int width = int(ol::core::scale(float(value), 0, 4096, 0, 32, 1));
+    int height = METER_HEIGHT;
+    display.fillRect(x, y, width, height, SSD1306_WHITE);
+    display.drawRect(x, y, METER_WIDTH, height, SSD1306_WHITE);
+    //display.setTextSize(1);
+    display.setTextColor(SSD1306_BLACK);
+
+    d_cursor(line_number, column);
+    display.print(label);
+
+    //display.setTextSize(2);
+    display.setTextColor(SSD1306_WHITE);
+}
+
+void display_handler() {
+    int line_number = 0;
+    display.clearDisplay();
+
+    d_meter(line_number++, 0, "coff", filter_cutoff.value);
+    d_cursor(line_number, 1);
+
+    d_meter(line_number++, 0, "res", filter_resonance.value);
+    d_meter(line_number++, 0, "env", filter_env_amt.value);
+    d_meter(line_number++, 0, "dec", filter_decay.value);
+
+    display.display();
 }
 
 void doSetup() {
@@ -131,10 +168,31 @@ void doSetup() {
     }
     Serial.println("This line will definitely appear in the serial monitor");
     Serial.println("Starting midi...");
+    MIDI.setHandleNoteOn(handleNoteOn);
+    MIDI.setHandleNoteOff(handleNoteOff);
     MIDI.begin(MIDI_CHANNEL_OMNI);
 
-//    input_timer.priority(128);
-//    input_timer.begin(input_handler, 1000 * 100);
+
+    // SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
+    Serial.println("Starting display...");
+    if (!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
+        Serial.println(F("SSD1306 allocation failed"));
+    } else {
+        Serial.println("Display started.");
+    }
+
+    Serial.println("Drawing splash screen...");
+    display.clearDisplay();
+    display.setTextSize(2);      // Normal 1:1 pixel scale
+    display.setTextColor(SSD1306_WHITE); // Draw white text
+    display.setCursor(0, 0);     // Start at top-left corner
+    display.cp437(true);         // Use full 256 char 'Code Page 437' font
+    display.write("Hello!");
+    Serial.println("Done drawing splash screen.");
+    display.display();
+
+//    display_timer.priority(128);
+//    display_timer.begin(display_handler, 1000 * 100);
 }
 
 ol::ctl::Control ctl{CC_FILTER_CUTOFF, 1};
@@ -156,6 +214,9 @@ void doLoop() {
     midi_handler();
     if (counter % 12 == 0) { // NOTE: THIS VALUE IS TUNED TO HANDLE TRANSMITTING FOUR ADC VALUES VIA UART @115200 baud
         control_handler();
+    }
+    if (counter % 12 == 0) {
+        display_handler();
     }
     delay(1);
     counter++;
