@@ -87,7 +87,7 @@ int main() {
     hw.Init();
 
 
-    voice.UpdateMidiControl(CC_CTL_PORTAMENTO, 32);
+    voice.UpdateMidiControl(CC_CTL_PORTAMENTO, 48);
     voice.UpdateMidiControl(CC_FILTER_CUTOFF, 0);
     voice.UpdateMidiControl(CC_FILTER_RESONANCE, 0);
     voice.UpdateMidiControl(CC_ENV_FILT_A, 0);
