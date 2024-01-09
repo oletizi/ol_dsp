@@ -43,3 +43,6 @@
 [submodule "libs/llhttp"]
 	path = libs/llhttp
 	url = git@github.com:oletizi/llhttp.git
+[submodule "test/FakeIt"]
+	path = test/FakeIt
+	url = git@github.com:oletizi/FakeIt.git

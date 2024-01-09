@@ -69,6 +69,12 @@ namespace ol::gui {
 
     class Layout : public Component {
     public:
+        Layout() = default;
+
+        explicit Layout(Rectangle viewport) {
+            setSize(viewport);
+        }
+
         void add(Component *child) {
             children_.push_back(child);
             const auto width = getWidth();
