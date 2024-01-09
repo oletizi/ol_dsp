@@ -2,24 +2,54 @@
 // Created by Orion Letizi on 1/8/24.
 //
 #include "juce_gui_basics/juce_gui_basics.h"
+#include "ol_corelib.h"
 #include "MainComponent.h"
 
+
 namespace ol::gui {
+
+    struct Point {
+        int x = 0;
+        int y = 0;
+    };
 
     class Graphics {
     public:
         virtual void drawRect(int x, int y, int width, int height, int line_width) = 0;
+        virtual void fillRect(int x, int y, int width, int height) = 0;
+    };
+
+    class OffsetGraphics : public Graphics {
+    public:
+        explicit OffsetGraphics(Graphics &g, Point offset) : g_(g), offset_(offset) {}
+
+        void drawRect(int x, int y, int width, int height, int line_width) override {
+            g_.drawRect(x + offset_.x, y + offset_.y, width, height, line_width);
+        }
+
+        void fillRect(int x, int y, int width, int height) override {
+            g_.fillRect(x + offset_.x, y + offset_.y, width, height);
+        }
+
+    private:
+        Point offset_;
+        Graphics &g_;
     };
 
     class JuceGraphics : public Graphics {
-    private:
-        juce::Graphics &g_;
     public:
         explicit JuceGraphics(juce::Graphics &g) : g_(g) {}
 
         void drawRect(int x, int y, int width, int height, int line_width) override {
             g_.drawRect(x, y, width, height, line_width);
         }
+
+        void fillRect(int x, int y, int width, int height) override {
+            g_.fillRect(x, y, width, height);
+        }
+
+    private:
+        juce::Graphics &g_;
     };
 
     class Component {
@@ -53,8 +83,12 @@ namespace ol::gui {
 
     public:
         void paint(Graphics &g) override {
+            Point offset{};
+            const auto height = getHeight() / int(children_.size());
             for (auto c: children_) {
-                c->paint(g);
+                OffsetGraphics og(g, offset);
+                c->paint(og);
+                offset.y += height;
             }
         }
 
@@ -64,9 +98,17 @@ namespace ol::gui {
 
     class Meter : public Component {
     public:
+        explicit Meter(float level = 0) : level_(level) {}
+
+        void setLevel(float level) { level_ = level; }
+
         void paint(Graphics &g) override {
             g.drawRect(0, 0, getWidth(), getHeight(), 1);
+            g.fillRect(0, 0, int(core::scale(level_, 0, 1, 0, float(getWidth()), 1)), getHeight());
         }
+
+    private:
+        float level_;
     };
 }
 
@@ -116,10 +158,12 @@ public:
                                                        DocumentWindow::allButtons) {
             setUsingNativeTitleBar(true);
             auto mainComponent = new MainComponent();
-            auto meter = new ol::gui::Meter();
+            auto meter1 = new ol::gui::Meter(0.6f);
+            auto meter2 = new ol::gui::Meter(0.25f);
             auto olLayout = new ol::gui::Layout();
             olLayout->setSize(128, 64); // XXX: Hack just to get this working
-            olLayout->add(meter);
+            olLayout->add(meter1);
+            olLayout->add(meter2);
 
             auto layout = new OlLayout(olLayout);
 
