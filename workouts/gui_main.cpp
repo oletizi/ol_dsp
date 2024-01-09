@@ -41,12 +41,19 @@ namespace ol::gui {
     };
 
     class Layout : public Component {
-        void add(Component *c) {
-            children_.push_back(c);
+    public:
+        void add(Component *child) {
+            children_.push_back(child);
+            const auto width = getWidth();
+            const auto height = getHeight() / int(children_.size());
+            for (auto c: children_) {
+                c->setSize(width, height);
+            }
         }
 
+    public:
         void paint(Graphics &g) override {
-            for (auto c : children_) {
+            for (auto c: children_) {
                 c->paint(g);
             }
         }
@@ -63,17 +70,21 @@ namespace ol::gui {
     };
 }
 
-class Meter : public juce::Component {
+class OlLayout : public juce::Component {
 public:
-    explicit Meter(ol::gui::Meter *meter) : meter_(meter) {}
+    explicit OlLayout(ol::gui::Layout *layout) : layout_(layout) {}
 
     void paint(juce::Graphics &g) override {
         ol::gui::JuceGraphics myG(g);
-        meter_->paint(myG);
+        layout_->paint(myG);
+    }
+
+    void resized() override {
+        layout_->setSize(getWidth(), getHeight());
     }
 
 private:
-    ol::gui::Meter *meter_;
+    ol::gui::Layout *layout_;
 };
 
 class MyApplication : public juce::JUCEApplication {
@@ -105,8 +116,14 @@ public:
                                                        DocumentWindow::allButtons) {
             setUsingNativeTitleBar(true);
             auto mainComponent = new MainComponent();
-            auto meter = new Meter(new ol::gui::Meter());
-            mainComponent->addAndMakeVisible(meter);
+            auto meter = new ol::gui::Meter();
+            auto olLayout = new ol::gui::Layout();
+            olLayout->setSize(128, 64); // XXX: Hack just to get this working
+            olLayout->add(meter);
+
+            auto layout = new OlLayout(olLayout);
+
+            mainComponent->addAndMakeVisible(layout);
             setContentOwned(mainComponent, true);
             centreWithSize(128, 64);
             setVisible(true);
