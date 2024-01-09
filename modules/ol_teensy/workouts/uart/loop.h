@@ -43,8 +43,8 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire2, OLED_RESET);
 
 using namespace ol::ctl;
 
-//int led = LED_BUILTIN;
-int led = -1;
+int led = LED_BUILTIN;
+
 int counter = 0;
 uint8_t buf[BUF_SIZE]{};
 uint8_t inbuf[BUF_SIZE]{};
@@ -158,28 +158,26 @@ void d_meter(int line_number, int column, const String &label, int value) {
     int height = METER_HEIGHT;
     display.fillRect(x, y, width, height, SSD1306_WHITE);
     display.drawRect(x, y, METER_WIDTH, height, SSD1306_WHITE);
-    //display.setTextSize(1);
     display.setTextColor(SSD1306_BLACK);
 
     d_cursor(line_number, column);
     display.print(label);
 
-    //display.setTextSize(2);
     display.setTextColor(SSD1306_WHITE);
 }
 
 void display_handler() {
-    Serial.printf("Display loop: counter: %d\n", counter);
-    Serial.printf("A0: %d\n", analogRead(A0));
-    Serial.printf("A1: %d\n", analogRead(A1));
-    Serial.printf("A2: %d\n", analogRead(A2));
-    Serial.printf("A3: %d\n", analogRead(A3));
-    Serial.printf("A4: %d\n", analogRead(A4));
-    Serial.printf("A5: %d\n", analogRead(A5));
-    Serial.printf("A6: %d\n", analogRead(A6));
-    Serial.printf("A7: %d\n", analogRead(A7));
-    Serial.printf("A8: %d\n", analogRead(A8));
-    Serial.printf("A9: %d\n", analogRead(A9));
+//    Serial.printf("Display loop: counter: %d\n", counter);
+//    Serial.printf("A0: %d\n", analogRead(A0));
+//    Serial.printf("A1: %d\n", analogRead(A1));
+//    Serial.printf("A2: %d\n", analogRead(A2));
+//    Serial.printf("A3: %d\n", analogRead(A3));
+//    Serial.printf("A4: %d\n", analogRead(A4));
+//    Serial.printf("A5: %d\n", analogRead(A5));
+//    Serial.printf("A6: %d\n", analogRead(A6));
+//    Serial.printf("A7: %d\n", analogRead(A7));
+//    Serial.printf("A8: %d\n", analogRead(A8));
+//    Serial.printf("A9: %d\n", analogRead(A9));
 
     int line_number = 0;
     int column_number = 0;
@@ -199,6 +197,15 @@ void display_handler() {
     d_meter(line_number++, column_number, "dec", filter_decay.value);
     d_meter(line_number++, column_number, "sus", filter_sustain.value);
     d_meter(line_number++, column_number, "rel", filter_release.value);
+
+    line_number = 0;
+    column_number++;
+    d_cursor(line_number, column_number);
+    display.printf("n+ %d", note_on_count);
+
+    line_number++;
+    d_cursor(line_number, column_number);
+    display.printf("n- %d", note_off_count);
 
 
     display.display();

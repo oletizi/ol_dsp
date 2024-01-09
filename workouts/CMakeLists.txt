@@ -12,6 +12,37 @@ target_include_directories(workout-buddy PUBLIC ../libs/rtmidi ../libs/miniaudio
 #target_link_libraries(http-workout llhttp_static)
 #target_include_directories(http-workout PUBLIC ${llhttp_SOURCE_DIR}/include)
 
+#add_executable(gui-workout gui_main.cpp)
+#target_link_libraries(gui-workout imgui)
+#qt_add_executable(gui-workout gui_main.cpp)
+#target_link_libraries(gui-workout PRIVATE Qt6::Core)
+
+juce_add_gui_app(gui-workout)
+target_sources(gui-workout
+        PRIVATE
+        gui_main.cpp
+        MainComponent.cpp
+)
+target_compile_definitions(gui-workout
+        PRIVATE
+        # JUCE_WEB_BROWSER and JUCE_USE_CURL would be on by default, but you might not need them.
+        JUCE_WEB_BROWSER=0  # If you remove this, add `NEEDS_WEB_BROWSER TRUE` to the `juce_add_console_app` call
+        JUCE_USE_CURL=0)
+target_link_libraries(gui-workout
+        PRIVATE
+        juce::juce_core
+        juce::juce_gui_basics
+        juce::juce_audio_devices
+        juce::juce_dsp
+        ol_corelib
+        ol_fxlib
+        ol_synthlib
+        DaisySP
+        juce::juce_recommended_config_flags
+        juce::juce_recommended_config_flags
+)
+
+
 add_executable(stmlib-workout stmlib_main.cpp)
 target_link_libraries(stmlib-workout rtmidi stmlib workout-buddy ol_corelib ol_fxlib ol_synthlib)
 
