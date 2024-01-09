@@ -3,7 +3,7 @@
 //
 #include "gtest/gtest.h"
 #include "gtest/fakeit.hpp"
-#include "guilib/guilib.h"
+#include "guilib/ol_guilib.h"
 
 using namespace ol::gui;
 using namespace fakeit;

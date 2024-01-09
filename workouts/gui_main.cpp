@@ -3,7 +3,7 @@
 //
 #include "juce_gui_basics/juce_gui_basics.h"
 #include "ol_corelib.h"
-#include "guilib/guilib.h"
+#include "guilib/ol_guilib.h"
 #include "MainComponent.h"
 
 

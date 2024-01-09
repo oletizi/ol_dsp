@@ -30,6 +30,6 @@ target_include_directories(ol_teensy PUBLIC
 )
 add_executable(ol_teensy_workouts_uart workouts/uart/loop.h
         workouts/dummy.cpp)
-target_link_libraries(ol_teensy_workouts_uart PUBLIC ol_teensy)
+target_link_libraries(ol_teensy_workouts_uart PUBLIC ol_teensy ol_guilib)
 target_include_directories(ol_teensy_workouts_uart PUBLIC . .. ${ARDUINO_INCLUDES})
 set_target_properties(ol_teensy_workouts_uart PROPERTIES LINKER_LANGUAGE CXX)

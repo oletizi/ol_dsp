@@ -2,8 +2,9 @@
 // Created by Orion Letizi on 1/9/24.
 //
 
-#ifndef OL_DSP_GUILIB_H
-#define OL_DSP_GUILIB_H
+#ifndef OL_DSP_OL_GUILIB_H
+#define OL_DSP_OL_GUILIB_H
+
 #include <vector>
 #include "corelib/ol_corelib.h"
 
@@ -23,6 +24,7 @@ namespace ol::gui {
     class Graphics {
     public:
         virtual void drawRect(int x, int y, int width, int height, int line_width) = 0;
+
         virtual void fillRect(int x, int y, int width, int height) = 0;
     };
 
@@ -42,7 +44,6 @@ namespace ol::gui {
         Point offset_;
         Graphics &g_;
     };
-
 
 
     class Component {
@@ -71,9 +72,11 @@ namespace ol::gui {
     public:
         Layout() = default;
 
-        explicit Layout(Rectangle viewport) {
-            setSize(viewport);
+        explicit Layout(int width, int height) {
+            setSize(width, height);
         }
+
+        explicit Layout(Rectangle viewport) : Layout(viewport.width, viewport.height) {}
 
         void add(Component *child) {
             children_.push_back(child);
@@ -101,9 +104,9 @@ namespace ol::gui {
 
     class Meter : public Component {
     public:
-        explicit Meter(float level = 0) : level_(level) {}
+        explicit Meter(t_sample level = 0) : level_(level) {}
 
-        void setLevel(float level) { level_ = level; }
+        void setLevel(t_sample level) { level_ = level; }
 
         void paint(Graphics &g) override {
             g.drawRect(0, 0, getWidth(), getHeight(), 1);
@@ -111,7 +114,7 @@ namespace ol::gui {
         }
 
     private:
-        float level_;
+        t_sample level_;
     };
 }
-#endif //OL_DSP_GUILIB_H
+#endif //OL_DSP_OL_GUILIB_H

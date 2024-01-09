@@ -24,7 +24,7 @@
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
-
+#include "guilib/ol_guilib.h"
 #define BUF_SIZE 256
 #define NOISE_FLOOR 10
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
@@ -42,19 +42,34 @@
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire2, OLED_RESET);
 
 using namespace ol::ctl;
+using namespace ol::gui;
+
+class AdafruitGraphics : public Graphics {
+public:
+    explicit AdafruitGraphics(Adafruit_SSD1306 &d) : display_(d){}
+    void drawRect(int x, int y, int width, int height, int line_width) override {
+        display_.drawRect(x, y, width, height, SSD1306_WHITE);
+    }
+
+    void fillRect(int x, int y, int width, int height) override {
+        display_.fillRect(x, y, width, height, SSD1306_WHITE);
+    }
+
+private:
+    Adafruit_SSD1306 &display_;
+};
 
 int led = LED_BUILTIN;
 
 int counter = 0;
 uint8_t buf[BUF_SIZE]{};
-uint8_t inbuf[BUF_SIZE]{};
 unsigned int bytes_read = 0;
 ol_teensy::io::TeensySerial teensy_serial;
 ol::io::SimpleSerializer serializer(teensy_serial);
 
 MIDI_CREATE_INSTANCE(HardwareSerial, Serial2, MIDI);
 
-IntervalTimer display_timer;
+
 uint64_t note_on_count = 0;
 uint64_t note_off_count = 0;
 
@@ -67,6 +82,18 @@ Control filter_attack{CC_ENV_FILT_A, 0};
 Control filter_decay{CC_ENV_FILT_D, 0};
 Control filter_sustain{CC_ENV_FILT_S, 0};
 Control filter_release{CC_ENV_FILT_R, 0};
+
+AdafruitGraphics g(display);
+Layout layout(128, 64);
+Meter m_filter_cutoff;
+Meter m_filter_resonance;
+Meter m_filter_env_amt;
+Meter m_filter_drive;
+
+Meter m_filter_attack;
+Meter m_filter_decay;
+Meter m_filter_sustain;
+Meter m_filter_release;
 
 
 auto display_checkpoint = millis();
@@ -179,35 +206,37 @@ void display_handler() {
 //    Serial.printf("A8: %d\n", analogRead(A8));
 //    Serial.printf("A9: %d\n", analogRead(A9));
 
-    int line_number = 0;
-    int column_number = 0;
+//    int line_number = 0;
+//    int column_number = 0;
+//    display.clearDisplay();
+//
+//    d_meter(line_number++, column_number, "cut", filter_cutoff.value);
+//
+//    d_meter(line_number++, column_number, "res", filter_resonance.value);
+//
+//    d_meter(line_number++, column_number, "env", filter_env_amt.value);
+//
+//    d_meter(line_number++, column_number, "drv", filter_drive.value);
+//
+//    line_number = 0;
+//    column_number++;
+//    d_meter(line_number++, column_number, "att", filter_attack.value);
+//    d_meter(line_number++, column_number, "dec", filter_decay.value);
+//    d_meter(line_number++, column_number, "sus", filter_sustain.value);
+//    d_meter(line_number++, column_number, "rel", filter_release.value);
+//
+//    line_number = 0;
+//    column_number++;
+//    d_cursor(line_number, column_number);
+//    display.printf("n+ %d", note_on_count);
+//
+//    line_number++;
+//    d_cursor(line_number, column_number);
+//    display.printf("n- %d", note_off_count);
+
     display.clearDisplay();
-
-    d_meter(line_number++, column_number, "cut", filter_cutoff.value);
-
-    d_meter(line_number++, column_number, "res", filter_resonance.value);
-
-    d_meter(line_number++, column_number, "env", filter_env_amt.value);
-
-    d_meter(line_number++, column_number, "drv", filter_drive.value);
-
-    line_number = 0;
-    column_number++;
-    d_meter(line_number++, column_number, "att", filter_attack.value);
-    d_meter(line_number++, column_number, "dec", filter_decay.value);
-    d_meter(line_number++, column_number, "sus", filter_sustain.value);
-    d_meter(line_number++, column_number, "rel", filter_release.value);
-
-    line_number = 0;
-    column_number++;
-    d_cursor(line_number, column_number);
-    display.printf("n+ %d", note_on_count);
-
-    line_number++;
-    d_cursor(line_number, column_number);
-    display.printf("n- %d", note_off_count);
-
-
+    m_filter_cutoff.setLevel(filter_cutoff.scaledValue());
+    layout.paint(g);
     display.display();
 }
 
@@ -261,6 +290,16 @@ void doSetup() {
     display.write("Hello!");
     display.display();
     Serial.println("Done drawing splash screen to display1.");
+
+    layout.add(&m_filter_cutoff);
+    layout.add(&m_filter_resonance);
+    layout.add(&m_filter_drive);
+    layout.add(&m_filter_env_amt);
+
+    layout.add(&m_filter_attack);
+    layout.add(&m_filter_decay);
+    layout.add(&m_filter_sustain);
+    layout.add(&m_filter_release);
 
 //    display_timer.priority(128);
 //    display_timer.begin(display_handler, 1000 * 100);
