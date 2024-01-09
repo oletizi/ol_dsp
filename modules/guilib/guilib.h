@@ -5,12 +5,19 @@
 #ifndef OL_DSP_GUILIB_H
 #define OL_DSP_GUILIB_H
 #include <vector>
+#include "corelib/ol_corelib.h"
 
 namespace ol::gui {
 
     struct Point {
         int x = 0;
         int y = 0;
+    };
+
+    struct Rectangle {
+        Point p{};
+        int width = 0;
+        int height = 0;
     };
 
     class Graphics {
@@ -44,6 +51,10 @@ namespace ol::gui {
             width_ = width;
             height_ = height;
         };
+
+        void setSize(Rectangle r) {
+            setSize(r.width, r.height);
+        }
 
         int getWidth() { return width_; }
 

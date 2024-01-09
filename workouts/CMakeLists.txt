@@ -8,15 +8,6 @@ add_library(workout-buddy workout_buddy.cpp)
 target_link_libraries(workout-buddy ol_corelib ol_fxlib ol_synthlib rtmidi)
 target_include_directories(workout-buddy PUBLIC ../libs/rtmidi ../libs/miniaudio)
 
-#add_executable(http-workout http_main.cpp)
-#target_link_libraries(http-workout llhttp_static)
-#target_include_directories(http-workout PUBLIC ${llhttp_SOURCE_DIR}/include)
-
-#add_executable(gui-workout gui_main.cpp)
-#target_link_libraries(gui-workout imgui)
-#qt_add_executable(gui-workout gui_main.cpp)
-#target_link_libraries(gui-workout PRIVATE Qt6::Core)
-
 juce_add_gui_app(gui-workout)
 target_sources(gui-workout
         PRIVATE
