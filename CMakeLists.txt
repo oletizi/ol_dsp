@@ -6,8 +6,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(JUCE_BUILD_EXTRAS OFF)
 set(JUCE_BUILD_EXAMPLES OFF)
 set(BUILD_LLHTTP OFF)
-set(BUILD_DAISY ON)
-set(BUILD_TEENSY ON)
+set(BUILD_DAISY OFF)
+set(BUILD_TEENSY OFF)
 
 add_subdirectory(libs/DaisySP)
 add_subdirectory(libs/dattorro-verb)
@@ -43,7 +43,7 @@ add_subdirectory(modules/guilib)
 add_subdirectory(modules/iolib)
 #add_subdirectory(modules/juce/plugin/workout)
 add_subdirectory(modules/synthlib)
-#add_subdirectory(workouts) // XXX: workouts is broken and I don't know why
+#add_subdirectory(workouts)
 add_subdirectory(test)
 
 

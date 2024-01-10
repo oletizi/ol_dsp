@@ -6,6 +6,7 @@
 #include "guilib/ol_guilib.h"
 #include "MainComponent.h"
 
+using namespace ol::gui;
 
 class JuceGraphics : public ol::gui::Graphics {
 public:
@@ -68,18 +69,47 @@ public:
                                                        DocumentWindow::allButtons) {
             setUsingNativeTitleBar(true);
             auto mainComponent = new MainComponent();
-            auto meter1 = new ol::gui::Meter(0.6f);
-            auto meter2 = new ol::gui::Meter(0.25f);
-            auto olLayout = new ol::gui::Layout();
-            olLayout->setSize(128, 64); // XXX: Hack just to get this working
-            olLayout->add(meter1);
-            olLayout->add(meter2);
+            int width = 128, height = 64;
 
-            auto layout = new OlLayout(olLayout);
+            auto column1 = new Layout();
+            auto column2 = new Layout();
+            auto column3 = new Layout();
+            auto columns = new Layout(Horizontal);
+
+            columns->add(column1);
+            columns->add(column2);
+            columns->add(column3);
+
+            auto meter1 = new Meter(0.6f);
+            auto meter2 = new Meter(0.25f);
+            auto meter3 = new Meter(0.5f);
+
+            auto meter4 = new Meter(0.9f);
+            auto meter5 = new Meter(0.8f);
+            auto meter6 = new Meter(0.1f);
+
+            auto meter7 = new Meter(0.3f);
+            auto meter8 = new Meter(1);
+
+
+            column1->add(meter1);
+            column1->add(meter2);
+            column1->add(meter3);
+
+            column2->add(meter4);
+            column2->add(meter5);
+            column2->add(meter6);
+
+            column3->add(meter7);
+            column3->add(meter8);
+
+            columns->setSize(width, height); // XXX: Hack just to get this working
+
+            auto layout = new OlLayout(columns);
 
             mainComponent->addAndMakeVisible(layout);
             setContentOwned(mainComponent, true);
-            centreWithSize(128, 64);
+            centreWithSize(width, height);
             setVisible(true);
         }
 

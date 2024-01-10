@@ -8,7 +8,7 @@
 
 #ifdef TEENSY_LOCAL
 
-#include "WireKinetis.h
+#include "WireKinetis.h"
 #include "usb_serial.h"
 #include "ol_teensy.h"
 
@@ -25,6 +25,7 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #include "guilib/ol_guilib.h"
+
 #define BUF_SIZE 256
 #define NOISE_FLOOR 10
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
@@ -46,7 +47,8 @@ using namespace ol::gui;
 
 class AdafruitGraphics : public Graphics {
 public:
-    explicit AdafruitGraphics(Adafruit_SSD1306 &d) : display_(d){}
+    explicit AdafruitGraphics(Adafruit_SSD1306 &d) : display_(d) {}
+
     void drawRect(int x, int y, int width, int height, int line_width) override {
         display_.drawRect(x, y, width, height, SSD1306_WHITE);
     }
@@ -83,18 +85,64 @@ Control filter_decay{CC_ENV_FILT_D, 0};
 Control filter_sustain{CC_ENV_FILT_S, 0};
 Control filter_release{CC_ENV_FILT_R, 0};
 
-AdafruitGraphics g(display);
-Layout layout(128, 64);
-Meter m_filter_cutoff;
-Meter m_filter_resonance;
-Meter m_filter_env_amt;
-Meter m_filter_drive;
+AdafruitGraphics graphics(display);
 
-Meter m_filter_attack;
-Meter m_filter_decay;
-Meter m_filter_sustain;
-Meter m_filter_release;
+class AppWindow : Component {
+public:
+    explicit AppWindow(Dimension viewport) {
+        layout_ = Layout(Horizontal);
+        layout_.setSize(viewport.width, viewport.height);
 
+        column1.add(&m_filter_cutoff);
+        column1.add(&m_filter_resonance);
+        column1.add(&m_filter_env_amt);
+        column1.add(&m_filter_drive);
+
+        column2.add(&m_filter_attack);
+        column2.add(&m_filter_decay);
+        column2.add(&m_filter_sustain);
+        column2.add(&m_filter_release);
+
+        layout_.add(&column1);
+        layout_.add(&column2);
+        layout_.add(&column3);
+
+    }
+
+    void update() {
+        m_filter_cutoff.setLevel(filter_cutoff.scaledValue());
+        m_filter_resonance.setLevel(filter_resonance.scaledValue());
+        m_filter_drive.setLevel(filter_drive.scaledValue());
+        m_filter_env_amt.setLevel(filter_env_amt.scaledValue());
+
+        m_filter_attack.setLevel(filter_attack.scaledValue());
+        m_filter_decay.setLevel(filter_decay.scaledValue());
+        m_filter_sustain.setLevel(filter_sustain.scaledValue());
+        m_filter_release.setLevel(filter_release.scaledValue());
+        paint(graphics);
+    }
+
+    void paint(Graphics &g) override {
+        layout_.paint(g);
+    }
+
+private:
+    Layout column1;
+    Layout column2;
+    Layout column3;
+    Layout layout_;
+    Meter m_filter_cutoff;
+    Meter m_filter_resonance;
+    Meter m_filter_env_amt;
+    Meter m_filter_drive;
+
+    Meter m_filter_attack;
+    Meter m_filter_decay;
+    Meter m_filter_sustain;
+    Meter m_filter_release;
+};
+
+AppWindow window(Dimension{SCREEN_WIDTH, SCREEN_HEIGHT});
 
 auto display_checkpoint = millis();
 
@@ -113,7 +161,7 @@ void write_control(const Control &c) {
     std::vector<uint8_t> serialized;
     serializer.SerializeControl(c, serialized);
     uint8_t data[serialized.size()];
-    for (int i = 0; i < sizeof(data); i++) {
+    for (size_t i = 0; i < sizeof(data); i++) {
         data[i] = serialized[i];
     }
     Serial1.write(data, sizeof(data));
@@ -194,49 +242,8 @@ void d_meter(int line_number, int column, const String &label, int value) {
 }
 
 void display_handler() {
-//    Serial.printf("Display loop: counter: %d\n", counter);
-//    Serial.printf("A0: %d\n", analogRead(A0));
-//    Serial.printf("A1: %d\n", analogRead(A1));
-//    Serial.printf("A2: %d\n", analogRead(A2));
-//    Serial.printf("A3: %d\n", analogRead(A3));
-//    Serial.printf("A4: %d\n", analogRead(A4));
-//    Serial.printf("A5: %d\n", analogRead(A5));
-//    Serial.printf("A6: %d\n", analogRead(A6));
-//    Serial.printf("A7: %d\n", analogRead(A7));
-//    Serial.printf("A8: %d\n", analogRead(A8));
-//    Serial.printf("A9: %d\n", analogRead(A9));
-
-//    int line_number = 0;
-//    int column_number = 0;
-//    display.clearDisplay();
-//
-//    d_meter(line_number++, column_number, "cut", filter_cutoff.value);
-//
-//    d_meter(line_number++, column_number, "res", filter_resonance.value);
-//
-//    d_meter(line_number++, column_number, "env", filter_env_amt.value);
-//
-//    d_meter(line_number++, column_number, "drv", filter_drive.value);
-//
-//    line_number = 0;
-//    column_number++;
-//    d_meter(line_number++, column_number, "att", filter_attack.value);
-//    d_meter(line_number++, column_number, "dec", filter_decay.value);
-//    d_meter(line_number++, column_number, "sus", filter_sustain.value);
-//    d_meter(line_number++, column_number, "rel", filter_release.value);
-//
-//    line_number = 0;
-//    column_number++;
-//    d_cursor(line_number, column_number);
-//    display.printf("n+ %d", note_on_count);
-//
-//    line_number++;
-//    d_cursor(line_number, column_number);
-//    display.printf("n- %d", note_off_count);
-
     display.clearDisplay();
-    m_filter_cutoff.setLevel(filter_cutoff.scaledValue());
-    layout.paint(g);
+    window.update();
     display.display();
 }
 
@@ -254,11 +261,7 @@ void doSetup() {
     pinMode(A7, INPUT_PULLDOWN);
     pinMode(A9, INPUT_PULLDOWN);
 
-
-    //Serial1.begin(9600);
-//    Serial1.begin(57600);
     Serial1.begin(115200);
-
 
     pinMode(led, HIGH);
     // put your setup code here, to run once:
@@ -283,26 +286,42 @@ void doSetup() {
 
     Serial.println("Drawing splash screen to display1...");
     display.clearDisplay();
-    display.setTextSize(2);      // Normal 1:1 pixel scale
-    display.setTextColor(SSD1306_WHITE); // Draw white text
-    display.setCursor(0, 0);     // Start at top-left corner
-    display.cp437(true);         // Use full 256 char 'Code Page 437' font
+    display.setTextSize(2);
+    display.setTextColor(SSD1306_WHITE);
+    display.setCursor(0, 0);
+    display.cp437(true);
     display.write("Hello!");
     display.display();
     Serial.println("Done drawing splash screen to display1.");
 
-    layout.add(&m_filter_cutoff);
-    layout.add(&m_filter_resonance);
-    layout.add(&m_filter_drive);
-    layout.add(&m_filter_env_amt);
+    Serial.println("Setting up control display...");
 
-    layout.add(&m_filter_attack);
-    layout.add(&m_filter_decay);
-    layout.add(&m_filter_sustain);
-    layout.add(&m_filter_release);
 
-//    display_timer.priority(128);
-//    display_timer.begin(display_handler, 1000 * 100);
+//    Layout column1;
+//    Layout column2;
+//    Layout column3;
+//
+//    column1.add(&m_filter_cutoff);
+//    column1.add(&m_filter_resonance);
+//    column1.add(&m_filter_drive);
+//    column1.add(&m_filter_env_amt);
+//
+//    column2.add(&m_filter_attack);
+//    column2.add(&m_filter_decay);
+//    column2.add(&m_filter_sustain);
+//    column2.add(&m_filter_release);
+
+//    Layout columns(Horizontal);
+
+//    columns.add(&column1);
+//    columns.add(&column2);
+//    columns.add(&column3);
+
+//    layout.add(&columns);
+//    layout.add(&m_filter_cutoff);
+    display.display();
+    Serial.println("Done setting up control display.");
+
 }
 
 ol::ctl::Control ctl{CC_FILTER_CUTOFF, 1};

@@ -5,6 +5,13 @@
 #ifndef OL_DSP_OL_GUILIB_H
 #define OL_DSP_OL_GUILIB_H
 
+#define TEENSY_DEBUG
+
+#ifdef TEENSY_DEBUG
+#define DPRINTLN(X) Serial.println(X);
+#define DPRINTF(...) Serial.printf(__VA_ARGS__);
+#endif
+
 #include <vector>
 #include "corelib/ol_corelib.h"
 
@@ -15,10 +22,14 @@ namespace ol::gui {
         int y = 0;
     };
 
-    struct Rectangle {
-        Point p{};
+    struct Dimension {
         int width = 0;
         int height = 0;
+    };
+
+    struct Rectangle {
+        Point point{};
+        Dimension dimension{};
     };
 
     class Graphics {
@@ -30,7 +41,7 @@ namespace ol::gui {
 
     class OffsetGraphics : public Graphics {
     public:
-        explicit OffsetGraphics(Graphics &g, Point offset) : g_(g), offset_(offset) {}
+        OffsetGraphics(Graphics &g, Point offset) : g_(g), offset_(offset){}
 
         void drawRect(int x, int y, int width, int height, int line_width) override {
             g_.drawRect(x + offset_.x, y + offset_.y, width, height, line_width);
@@ -41,20 +52,20 @@ namespace ol::gui {
         }
 
     private:
-        Point offset_;
+        Point offset_{};
         Graphics &g_;
     };
 
 
     class Component {
     public:
-        void setSize(int width, int height) {
+        virtual void setSize(int width, int height) {
             width_ = width;
             height_ = height;
         };
 
-        void setSize(Rectangle r) {
-            setSize(r.width, r.height);
+        virtual void setSize(Dimension dimension) {
+            setSize(dimension.width, dimension.height);
         }
 
         int getWidth() { return width_; }
@@ -68,38 +79,65 @@ namespace ol::gui {
         int height_ = 0;
     };
 
+    enum LayoutDirection {
+        Horizontal,
+        Vertical
+    };
+
     class Layout : public Component {
     public:
-        Layout() = default;
+        Layout() : Layout(Vertical) {}
 
-        explicit Layout(int width, int height) {
-            setSize(width, height);
+        explicit Layout(LayoutDirection direction) : Layout(0, 0, direction) {}
+
+        explicit Layout(int width, int height, LayoutDirection direction = Vertical) : direction_(direction) {
+            Component::setSize(width, height);
         }
 
-        explicit Layout(Rectangle viewport) : Layout(viewport.width, viewport.height) {}
+        explicit Layout(Dimension viewport, LayoutDirection direction = Vertical) : Layout(viewport.width,
+                                                                                           viewport.height,
+                                                                                           direction) {}
+
+        void setSize(int width, int height) override {
+            Component::setSize(width, height);
+            updateSize();
+        }
 
         void add(Component *child) {
             children_.push_back(child);
-            const auto width = getWidth();
-            const auto height = getHeight() / int(children_.size());
-            for (auto c: children_) {
-                c->setSize(width, height);
-            }
         }
 
-    public:
         void paint(Graphics &g) override {
             Point offset{};
-            const auto height = getHeight() / int(children_.size());
+
+            Dimension child_size{};
+            childSize(child_size);
+            updateSize();
             for (auto c: children_) {
                 OffsetGraphics og(g, offset);
                 c->paint(og);
-                offset.y += height;
+                offset.x += direction_ == Horizontal ? child_size.width : 0;
+                offset.y += direction_ == Vertical ? child_size.height : 0;
             }
         }
 
     private:
+        Dimension &childSize(Dimension &dimension) {
+            dimension.width = direction_ == Vertical ? getWidth() : getWidth() / int(children_.size());
+            dimension.height = direction_ == Vertical ? getHeight() / int(children_.size()) : getHeight();
+            return dimension;
+        }
+
+        void updateSize() {
+            Dimension child_size{};
+            childSize(child_size);
+            for (auto c: children_) {
+                c->setSize(child_size);
+            }
+        }
+
         std::vector<Component *> children_;
+        LayoutDirection direction_;
     };
 
     class Meter : public Component {
