@@ -6,7 +6,7 @@ BUILD_DIR := $(shell cd ./build && pwd)
 OL_DSP_TMP := ${BUILD_DIR}/ol_dsp
 LIB_ZIP_FILE := ${BUILD_DIR}/ol_teensy.zip
 LIB_OL_DSP_FILE := ${BUILD_DIR}/ol_dsp.zip
-
+BUILD_FLAGS := "-DTEENSY_DEBUG"
 # Set CLEAN to --clean when changing build.usbtype build property
 # --clean was needed to get midi to work right. Probably not needed for every build.
 #CLEAN := --clean
@@ -35,7 +35,7 @@ lib: build-dir config
 	arduino-cli lib install --zip-path ${LIB_ZIP_FILE}
 
 build: lib
-	arduino-cli compile $(CLEAN) --fqbn teensy:avr:teensy41 --build-property build.usbtype=USB_MIDI_SERIAL .
+	arduino-cli compile $(CLEAN) --fqbn teensy:avr:teensy41 --build-property build.usbtype=USB_MIDI_SERIAL --build-property build.extra_flags="$(BUILD_FLAGS)" .
 
 upload:
 	arduino-cli upload -p $(PORT) --fqbn teensy:avr:teensy41 .

@@ -12,6 +12,14 @@
 #include <cmath>
 #include "corelib/cc_map.h"
 
+#ifdef TEENSY_DEBUG
+#define DPRINTLN(X) Serial.println(X);
+#define DPRINTF(...) Serial.printf(__VA_ARGS__);
+#else
+#define DPRINTLN(X)
+#define DPRINTF(...)
+#endif
+
 typedef float t_sample;
 
 namespace ol::core {

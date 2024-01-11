@@ -8,6 +8,9 @@ set(JUCE_BUILD_EXAMPLES OFF)
 set(BUILD_LLHTTP OFF)
 set(BUILD_DAISY OFF)
 set(BUILD_TEENSY OFF)
+set(BUILD_WORKOUTS OFF)
+
+add_definitions(-DTEENSY_DEBUG)
 
 add_subdirectory(libs/DaisySP)
 add_subdirectory(libs/dattorro-verb)
@@ -43,10 +46,11 @@ add_subdirectory(modules/guilib)
 add_subdirectory(modules/iolib)
 #add_subdirectory(modules/juce/plugin/workout)
 add_subdirectory(modules/synthlib)
-#add_subdirectory(workouts)
+
+if (${BUILD_WORKOUTS})
+    add_subdirectory(workouts)
+endif ()
 add_subdirectory(test)
-
-
 
 
 add_library(stmlib

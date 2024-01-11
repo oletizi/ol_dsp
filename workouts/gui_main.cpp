@@ -23,21 +23,26 @@ public:
 private:
     juce::Graphics &g_;
 };
-class OlLayout : public juce::Component {
+
+/**
+ * Bridge between juce components and ol::gui components
+ */
+class OlGuiContainer : public juce::Component {
 public:
-    explicit OlLayout(ol::gui::Layout *layout) : layout_(layout) {}
+    explicit OlGuiContainer(ol::gui::Component *child) : child_(child) {}
 
     void paint(juce::Graphics &g) override {
         JuceGraphics myG(g);
-        layout_->paint(myG);
+        child_->paint(myG);
     }
 
     void resized() override {
-        layout_->setSize(getWidth(), getHeight());
+        child_->setSize(getWidth(), getHeight());
+        child_->resized();
     }
 
 private:
-    ol::gui::Layout *layout_;
+    ol::gui::Component *child_;
 };
 
 class MyApplication : public juce::JUCEApplication {
@@ -69,45 +74,14 @@ public:
                                                        DocumentWindow::allButtons) {
             setUsingNativeTitleBar(true);
             auto mainComponent = new MainComponent();
+
             int width = 128, height = 64;
 
-            auto column1 = new Layout();
-            auto column2 = new Layout();
-            auto column3 = new Layout();
-            auto columns = new Layout(Horizontal);
 
-            columns->add(column1);
-            columns->add(column2);
-            columns->add(column3);
+            // XXX: Hack just to get this working
+            app_layout.setSize(width, height);
 
-            auto meter1 = new Meter(0.6f);
-            auto meter2 = new Meter(0.25f);
-            auto meter3 = new Meter(0.5f);
-
-            auto meter4 = new Meter(0.9f);
-            auto meter5 = new Meter(0.8f);
-            auto meter6 = new Meter(0.1f);
-
-            auto meter7 = new Meter(0.3f);
-            auto meter8 = new Meter(1);
-
-
-            column1->add(meter1);
-            column1->add(meter2);
-            column1->add(meter3);
-
-            column2->add(meter4);
-            column2->add(meter5);
-            column2->add(meter6);
-
-            column3->add(meter7);
-            column3->add(meter8);
-
-            columns->setSize(width, height); // XXX: Hack just to get this working
-
-            auto layout = new OlLayout(columns);
-
-            mainComponent->addAndMakeVisible(layout);
+            mainComponent->addAndMakeVisible(app_layout);
             setContentOwned(mainComponent, true);
             centreWithSize(width, height);
             setVisible(true);
@@ -118,6 +92,21 @@ public:
         }
 
     private:
+        SynthAppConfig app_config{
+                Dimension{128, 64},
+                Control{CC_FILTER_CUTOFF, 2500},
+                Control{CC_FILTER_RESONANCE, 3800},
+                Control{CC_ENV_FILT_AMT, 550},
+                Control{CC_FILTER_DRIVE, 80},
+
+                Control{CC_ENV_FILT_A, 4000},
+                Control{CC_ENV_FILT_D, 3000},
+                Control{CC_ENV_FILT_S, 2000},
+                Control{CC_ENV_FILT_R, 2500}
+        };
+
+        SynthApp app = SynthApp(app_config);
+        OlGuiContainer app_layout = OlGuiContainer(&app);
         JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainWindow)
     };
 

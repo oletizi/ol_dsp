@@ -5,7 +5,7 @@
 #ifndef OL_DSP_LOOP_H
 #define OL_DSP_LOOP_H
 
-
+#define TEENSY_DEBUG
 #ifdef TEENSY_LOCAL
 
 #include "WireKinetis.h"
@@ -75,74 +75,22 @@ MIDI_CREATE_INSTANCE(HardwareSerial, Serial2, MIDI);
 uint64_t note_on_count = 0;
 uint64_t note_off_count = 0;
 
-Control filter_cutoff{CC_FILTER_CUTOFF, 0};
-Control filter_resonance{CC_FILTER_RESONANCE, 0};
-Control filter_env_amt{CC_ENV_FILT_AMT, 0};
-Control filter_drive{CC_FILTER_DRIVE, 0};
-
-Control filter_attack{CC_ENV_FILT_A, 0};
-Control filter_decay{CC_ENV_FILT_D, 0};
-Control filter_sustain{CC_ENV_FILT_S, 0};
-Control filter_release{CC_ENV_FILT_R, 0};
 
 AdafruitGraphics graphics(display);
 
-class AppWindow : Component {
-public:
-    explicit AppWindow(Dimension viewport) {
-        layout_ = Layout(Horizontal);
-        layout_.setSize(viewport.width, viewport.height);
+SynthAppConfig app_config{
+        Dimension{SCREEN_WIDTH, SCREEN_HEIGHT},
+        Control{CC_FILTER_CUTOFF, 0},
+        Control{CC_FILTER_RESONANCE, 0},
+        Control{CC_ENV_FILT_AMT, 0},
+        Control{CC_FILTER_DRIVE, 0},
 
-        column1.add(&m_filter_cutoff);
-        column1.add(&m_filter_resonance);
-        column1.add(&m_filter_env_amt);
-        column1.add(&m_filter_drive);
-
-        column2.add(&m_filter_attack);
-        column2.add(&m_filter_decay);
-        column2.add(&m_filter_sustain);
-        column2.add(&m_filter_release);
-
-        layout_.add(&column1);
-        layout_.add(&column2);
-        layout_.add(&column3);
-
-    }
-
-    void update() {
-        m_filter_cutoff.setLevel(filter_cutoff.scaledValue());
-        m_filter_resonance.setLevel(filter_resonance.scaledValue());
-        m_filter_drive.setLevel(filter_drive.scaledValue());
-        m_filter_env_amt.setLevel(filter_env_amt.scaledValue());
-
-        m_filter_attack.setLevel(filter_attack.scaledValue());
-        m_filter_decay.setLevel(filter_decay.scaledValue());
-        m_filter_sustain.setLevel(filter_sustain.scaledValue());
-        m_filter_release.setLevel(filter_release.scaledValue());
-        paint(graphics);
-    }
-
-    void paint(Graphics &g) override {
-        layout_.paint(g);
-    }
-
-private:
-    Layout column1;
-    Layout column2;
-    Layout column3;
-    Layout layout_;
-    Meter m_filter_cutoff;
-    Meter m_filter_resonance;
-    Meter m_filter_env_amt;
-    Meter m_filter_drive;
-
-    Meter m_filter_attack;
-    Meter m_filter_decay;
-    Meter m_filter_sustain;
-    Meter m_filter_release;
+        Control{CC_ENV_FILT_A, 0},
+        Control{ CC_ENV_FILT_D, 0 },
+        Control{ CC_ENV_FILT_S, 0 },
+        Control { CC_ENV_FILT_R, 0 }
 };
-
-AppWindow window(Dimension{SCREEN_WIDTH, SCREEN_HEIGHT});
+SynthApp app(app_config);
 
 auto display_checkpoint = millis();
 
@@ -185,15 +133,15 @@ void update_control(Control &c, uint16_t new_value) {
 }
 
 void control_handler() {
-    update_control(filter_cutoff, sample_control(A0));
-    update_control(filter_resonance, sample_control(A1));
-    update_control(filter_env_amt, sample_control(A2));
-    update_control(filter_drive, sample_control(A3));
+    update_control(app_config.filter_cutoff, sample_control(A0));
+    update_control(app_config.filter_resonance, sample_control(A1));
+    update_control(app_config.filter_env_amt, sample_control(A2));
+    update_control(app_config.filter_drive, sample_control(A3));
 
-    update_control(filter_attack, sample_control(A4));
-    update_control(filter_decay, sample_control(A5));
-    update_control(filter_sustain, sample_control(A6));
-    update_control(filter_release, sample_control(A7));
+    update_control(app_config.filter_attack, sample_control(A4));
+    update_control(app_config.filter_decay, sample_control(A5));
+    update_control(app_config.filter_sustain, sample_control(A6));
+    update_control(app_config.filter_release, sample_control(A7));
 };
 
 void handleNoteOn(byte channel, byte note, byte velocity) {
@@ -204,7 +152,7 @@ void handleNoteOn(byte channel, byte note, byte velocity) {
     write_control(pitch);
     write_control(gate);
     note_on_count++;
-    Serial.printf("Note ON: pitch: %d, velocity: %d\n", pitch.value, velocity);
+    DPRINTF("Note ON: pitch: %d, velocity: %d\n", pitch.value, velocity);
 }
 
 void handleNoteOff(byte channel, byte note, byte velocity) {
@@ -215,7 +163,7 @@ void handleNoteOff(byte channel, byte note, byte velocity) {
     write_control(pitch);
     write_control(gate);
     note_off_count++;
-    Serial.printf("Note OFF: pitch: %d, velocity: %d\n", pitch.value, velocity);
+    DPRINTF("Note OFF: pitch: %d, velocity: %d\n", pitch.value, velocity);
 }
 
 void midi_handler() {
@@ -226,24 +174,10 @@ void d_cursor(int line_number, int column) {
     display.setCursor(column * COLUMN_WIDTH, line_number * LINE_HEIGHT);
 }
 
-void d_meter(int line_number, int column, const String &label, int value) {
-    int x = column * COLUMN_WIDTH + (column > 0 ? 2 : 0);
-    int y = line_number * LINE_HEIGHT;
-    int width = int(ol::core::scale(float(value), 0, 4096, 0, 32, 1));
-    int height = METER_HEIGHT;
-    display.fillRect(x, y, width, height, SSD1306_WHITE);
-    display.drawRect(x, y, METER_WIDTH, height, SSD1306_WHITE);
-    display.setTextColor(SSD1306_BLACK);
-
-    d_cursor(line_number, column);
-    display.print(label);
-
-    display.setTextColor(SSD1306_WHITE);
-}
 
 void display_handler() {
     display.clearDisplay();
-    window.update();
+    app.paint(graphics);
     display.display();
 }
 
@@ -264,27 +198,22 @@ void doSetup() {
     Serial1.begin(115200);
 
     pinMode(led, HIGH);
-    // put your setup code here, to run once:
-    Serial.println("This may be sent before your PC is able to receive");
-    while (!Serial) {
-        // wait for Arduino Serial Monitor to be ready
-    }
-    Serial.println("This line will definitely appear in the serial monitor");
-    Serial.println("Starting midi...");
+
+    DPRINTLN("Starting midi...");
     MIDI.setHandleNoteOn(handleNoteOn);
     MIDI.setHandleNoteOff(handleNoteOff);
     MIDI.begin(MIDI_CHANNEL_OMNI);
 
 
+    DPRINTLN("Starting display...");
     // SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
-    Serial.println("Starting display1...");
     if (!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
         Serial.println(F("display1 allocation failed"));
     } else {
-        Serial.println("Display started.");
+        DPRINTLN("Display started.");
     }
 
-    Serial.println("Drawing splash screen to display1...");
+    DPRINTLN("Drawing splash screen to display1...");
     display.clearDisplay();
     display.setTextSize(2);
     display.setTextColor(SSD1306_WHITE);
@@ -292,35 +221,11 @@ void doSetup() {
     display.cp437(true);
     display.write("Hello!");
     display.display();
-    Serial.println("Done drawing splash screen to display1.");
 
-    Serial.println("Setting up control display...");
-
-
-//    Layout column1;
-//    Layout column2;
-//    Layout column3;
-//
-//    column1.add(&m_filter_cutoff);
-//    column1.add(&m_filter_resonance);
-//    column1.add(&m_filter_drive);
-//    column1.add(&m_filter_env_amt);
-//
-//    column2.add(&m_filter_attack);
-//    column2.add(&m_filter_decay);
-//    column2.add(&m_filter_sustain);
-//    column2.add(&m_filter_release);
-
-//    Layout columns(Horizontal);
-
-//    columns.add(&column1);
-//    columns.add(&column2);
-//    columns.add(&column3);
-
-//    layout.add(&columns);
-//    layout.add(&m_filter_cutoff);
+    DPRINTLN("Done drawing splash screen to display1.");
+    DPRINTLN("Setting up control display...");
     display.display();
-    Serial.println("Done setting up control display.");
+    DPRINTLN("Done setting up control display.");
 
 }
 
