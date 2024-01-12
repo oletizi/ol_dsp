@@ -13,15 +13,15 @@ class JuceGraphics : public ol::gui::Graphics {
 public:
     explicit JuceGraphics(juce::Graphics &g) : g_(g) {}
 
-    void drawRect(int x, int y, int width, int height, int line_width) override {
+    void DrawRect(int x, int y, int width, int height, int line_width) override {
         g_.drawRect(x, y, width, height, line_width);
     }
 
-    void fillRect(int x, int y, int width, int height) override {
+    void FillRect(int x, int y, int width, int height) override {
         g_.fillRect(x, y, width, height);
     }
 
-    void drawLine(int startX, int startY, int endX, int endY, int line_width) const override {
+    void DrawLine(int startX, int startY, int endX, int endY, int line_width) const override {
         g_.drawLine(float(startX), float(startY), float(endX), float(endY), float(line_width));
     }
 
@@ -50,12 +50,12 @@ namespace ol::gui::ol_juce {
             auto y = bounds.getTopLeft().y;
 
             ol::gui::OffsetGraphics offsetGraphics(myG, ol::gui::Point{x, y});
-            child_->paint(offsetGraphics);
+            child_->Paint(offsetGraphics);
         }
 
         void resized() override {
-            child_->setSize(getWidth(), getHeight());
-            child_->resized();
+            child_->SetSize(getWidth(), getHeight());
+            child_->Resized();
         }
 
     private:

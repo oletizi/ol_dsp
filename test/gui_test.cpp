@@ -11,9 +11,9 @@ TEST(guilib, basics) {
     Dimension viewport{128, 64};
 
     Layout layout;
-    layout.setSize(viewport.width, viewport.height);
-    EXPECT_EQ(layout.getWidth(), viewport.width);
-    EXPECT_EQ(layout.getHeight(), viewport.height);
+    layout.SetSize(viewport.width, viewport.height);
+    EXPECT_EQ(layout.GetWidth(), viewport.width);
+    EXPECT_EQ(layout.GetHeight(), viewport.height);
 }
 
 

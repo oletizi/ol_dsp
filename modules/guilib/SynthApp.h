@@ -30,29 +30,29 @@ namespace ol::gui {
         AdsrView(Control &attack, Control &decay, Control &sustain, Control &release) :
                 attack_(attack), decay_(decay), sustain(sustain), release(release) {}
 
-        void resized() override {
+        void Resized() override {
 
         }
 
-        void paint(Graphics &g) override {
-            auto segment_width = getWidth() / 4;
+        void Paint(Graphics &g) override {
+            auto segment_width = GetWidth() / 4;
             auto attack_endX = segment_width * attack_.scaledValue();
             auto decay_endX = (segment_width * decay_.scaledValue()) + attack_endX;
-            auto sustainY = getHeight() - (getHeight() * sustain.scaledValue());
+            auto sustainY = GetHeight() - (GetHeight() * sustain.scaledValue());
             auto sustain_endX = segment_width * 3;
             auto release_endX = sustain_endX + (segment_width * release.scaledValue());
 
             // attack
-            g.drawLine(0, getHeight(), attack_endX, 0, 1);
+            g.DrawLine(0, GetHeight(), attack_endX, 0, 1);
 
             // decay
-            g.drawLine(attack_endX, 0, decay_endX, sustainY, 1);
+            g.DrawLine(attack_endX, 0, decay_endX, sustainY, 1);
 
             // sustain
-            g.drawLine(decay_endX, sustainY, sustain_endX, sustainY, 1);
+            g.DrawLine(decay_endX, sustainY, sustain_endX, sustainY, 1);
 
             // release
-            g.drawLine(sustain_endX, sustainY, release_endX, getHeight(), 1);
+            g.DrawLine(sustain_endX, sustainY, release_endX, GetHeight(), 1);
         }
 
     private:
@@ -65,16 +65,16 @@ namespace ol::gui {
     class AdsrScreen : public Component {
     public:
         explicit AdsrScreen(AdsrView &adsr_view) {
-            layout_.add(&adsr_view);
+            layout_.Add(&adsr_view);
         }
 
-        void resized() override {
-            layout_.setSize(getWidth(), getHeight());
-            layout_.resized();
+        void Resized() override {
+            layout_.SetSize(GetWidth(), GetHeight());
+            layout_.Resized();
         }
 
-        void paint(Graphics &g) override {
-            layout_.paint(g);
+        void Paint(Graphics &g) override {
+            layout_.Paint(g);
         }
 
     private:
@@ -92,29 +92,29 @@ namespace ol::gui {
                   m_filter_decay(ControlMeter(config.filter_decay)),
                   m_filter_sustain(ControlMeter(config.filter_sustain)),
                   m_filter_release(ControlMeter(config.filter_release)) {
-            column1.add(&m_filter_cutoff);
-            column1.add(&m_filter_resonance);
-            column1.add(&m_filter_env_amt);
-            column1.add(&m_filter_drive);
+            column1.Add(&m_filter_cutoff);
+            column1.Add(&m_filter_resonance);
+            column1.Add(&m_filter_env_amt);
+            column1.Add(&m_filter_drive);
 
-            column2.add(&m_filter_attack);
-            column2.add(&m_filter_decay);
-            column2.add(&m_filter_sustain);
-            column2.add(&m_filter_release);
+            column2.Add(&m_filter_attack);
+            column2.Add(&m_filter_decay);
+            column2.Add(&m_filter_sustain);
+            column2.Add(&m_filter_release);
 
             layout_.setDirection(Horizontal);
-            layout_.add(&column1);
-            layout_.add(&column2);
-            layout_.add(&column3);
+            layout_.Add(&column1);
+            layout_.Add(&column2);
+            layout_.Add(&column3);
         }
 
-        void paint(Graphics &g) override {
-            layout_.paint(g);
+        void Paint(Graphics &g) override {
+            layout_.Paint(g);
         }
 
-        void resized() override {
-            layout_.setSize(getWidth(), getHeight());
-            layout_.resized();
+        void Resized() override {
+            layout_.SetSize(GetWidth(), GetHeight());
+            layout_.Resized();
         }
 
     private:
@@ -150,17 +150,17 @@ namespace ol::gui {
             adsr_screen_ = new AdsrScreen(*adsr_view_);
 
             layout_ = Layout(Horizontal);
-            layout_.setSize(config.viewport.width, config.viewport.height);
+            layout_.SetSize(config.viewport.width, config.viewport.height);
 //            layout_.add(&meter_screen_);
-            layout_.add(adsr_screen_);
+            layout_.Add(adsr_screen_);
         }
 
-        void paint(Graphics &g) override {
-            layout_.paint(g);
+        void Paint(Graphics &g) override {
+            layout_.Paint(g);
         }
 
-        void resized() override {
-            layout_.resized();
+        void Resized() override {
+            layout_.Resized();
         }
 
     private:
