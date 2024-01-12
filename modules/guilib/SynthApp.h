@@ -28,7 +28,7 @@ namespace ol::gui {
     public:
 
         AdsrView(Control &attack, Control &decay, Control &sustain, Control &release) :
-                attack_(attack), decay_(decay), sustain(sustain), release(release) {}
+                attack_(attack), decay_(decay), sustain_(sustain), release_(release) {}
 
         void Resized() override {
 
@@ -38,9 +38,9 @@ namespace ol::gui {
             auto segment_width = GetWidth() / 4;
             auto attack_endX = segment_width * attack_.scaledValue();
             auto decay_endX = (segment_width * decay_.scaledValue()) + attack_endX;
-            auto sustainY = GetHeight() - (GetHeight() * sustain.scaledValue());
+            auto sustainY = GetHeight() - (GetHeight() * sustain_.scaledValue());
             auto sustain_endX = segment_width * 3;
-            auto release_endX = sustain_endX + (segment_width * release.scaledValue());
+            auto release_endX = sustain_endX + (segment_width * release_.scaledValue());
 
             // attack
             g.DrawLine(0, GetHeight(), attack_endX, 0, 1);
@@ -58,8 +58,8 @@ namespace ol::gui {
     private:
         Control &attack_;
         Control &decay_;
-        Control &sustain;
-        Control &release;
+        Control &sustain_;
+        Control &release_;
     };
 
     class AdsrScreen : public Component {
@@ -84,28 +84,28 @@ namespace ol::gui {
     class MeterScreen : public Component {
     public:
         explicit MeterScreen(SynthAppConfig &config)
-                : m_filter_cutoff(ControlMeter(config.filter_cutoff)),
-                  m_filter_resonance(ControlMeter(config.filter_resonance)),
-                  m_filter_env_amt(ControlMeter(config.filter_env_amt)),
-                  m_filter_drive(ControlMeter(config.filter_drive)),
-                  m_filter_attack(ControlMeter(config.filter_attack)),
-                  m_filter_decay(ControlMeter(config.filter_decay)),
-                  m_filter_sustain(ControlMeter(config.filter_sustain)),
-                  m_filter_release(ControlMeter(config.filter_release)) {
-            column1.Add(&m_filter_cutoff);
-            column1.Add(&m_filter_resonance);
-            column1.Add(&m_filter_env_amt);
-            column1.Add(&m_filter_drive);
+                : m_filter_cutoff_(ControlMeter(config.filter_cutoff)),
+                  m_filter_resonance_(ControlMeter(config.filter_resonance)),
+                  m_filter_env_amt_(ControlMeter(config.filter_env_amt)),
+                  m_filter_drive_(ControlMeter(config.filter_drive)),
+                  m_filter_attack_(ControlMeter(config.filter_attack)),
+                  m_filter_decay_(ControlMeter(config.filter_decay)),
+                  m_filter_sustain_(ControlMeter(config.filter_sustain)),
+                  m_filter_release_(ControlMeter(config.filter_release)) {
+            column1_.Add(&m_filter_cutoff_);
+            column1_.Add(&m_filter_resonance_);
+            column1_.Add(&m_filter_env_amt_);
+            column1_.Add(&m_filter_drive_);
 
-            column2.Add(&m_filter_attack);
-            column2.Add(&m_filter_decay);
-            column2.Add(&m_filter_sustain);
-            column2.Add(&m_filter_release);
+            column2_.Add(&m_filter_attack_);
+            column2_.Add(&m_filter_decay_);
+            column2_.Add(&m_filter_sustain_);
+            column2_.Add(&m_filter_release_);
 
             layout_.setDirection(Horizontal);
-            layout_.Add(&column1);
-            layout_.Add(&column2);
-            layout_.Add(&column3);
+            layout_.Add(&column1_);
+            layout_.Add(&column2_);
+            layout_.Add(&column3_);
         }
 
         void Paint(Graphics &g) override {
@@ -118,27 +118,27 @@ namespace ol::gui {
         }
 
     private:
-        ControlMeter m_filter_cutoff;
-        ControlMeter m_filter_resonance;
-        ControlMeter m_filter_env_amt;
-        ControlMeter m_filter_drive;
-        ControlMeter m_filter_attack;
-        ControlMeter m_filter_decay;
-        ControlMeter m_filter_sustain;
-        ControlMeter m_filter_release;
+        ControlMeter m_filter_cutoff_;
+        ControlMeter m_filter_resonance_;
+        ControlMeter m_filter_env_amt_;
+        ControlMeter m_filter_drive_;
+        ControlMeter m_filter_attack_;
+        ControlMeter m_filter_decay_;
+        ControlMeter m_filter_sustain_;
+        ControlMeter m_filter_release_;
         std::vector<ControlMeter *> meters_{
-                &m_filter_cutoff,
-                &m_filter_resonance,
-                &m_filter_drive,
-                &m_filter_env_amt,
-                &m_filter_attack,
-                &m_filter_decay,
-                &m_filter_sustain,
-                &m_filter_release
+                &m_filter_cutoff_,
+                &m_filter_resonance_,
+                &m_filter_drive_,
+                &m_filter_env_amt_,
+                &m_filter_attack_,
+                &m_filter_decay_,
+                &m_filter_sustain_,
+                &m_filter_release_
         };
-        Layout column1;
-        Layout column2;
-        Layout column3;
+        Layout column1_;
+        Layout column2_;
+        Layout column3_;
         Layout layout_;
     };
 
