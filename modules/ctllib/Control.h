@@ -11,8 +11,12 @@ namespace ol::ctl {
     struct Control {
         int64_t controller;
         int64_t value;
-        t_sample scaledValue() {
+        [[nodiscard]] t_sample scaledValue() const {
             return ol::core::scale(t_sample(value), 0, 4096, 0, 1, 1);
+        }
+
+        void setScaledValue(t_sample v) {
+            value = int64_t(ol::core::scale(v, 0, 1, 0, 4096, 1));
         }
     };
 }

@@ -44,6 +44,7 @@ namespace ol::gui {
             column2.add(&m_filter_decay);
             column2.add(&m_filter_sustain);
             column2.add(&m_filter_release);
+
             layout_.setDirection(Horizontal);
             layout_.add(&column1);
             layout_.add(&column2);
@@ -68,6 +69,16 @@ namespace ol::gui {
         ControlMeter m_filter_decay;
         ControlMeter m_filter_sustain;
         ControlMeter m_filter_release;
+        std::vector<ControlMeter *> meters_{
+                &m_filter_cutoff,
+                &m_filter_resonance,
+                &m_filter_drive,
+                &m_filter_env_amt,
+                &m_filter_attack,
+                &m_filter_decay,
+                &m_filter_sustain,
+                &m_filter_release
+        };
         Layout column1;
         Layout column2;
         Layout column3;

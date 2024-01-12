@@ -8,13 +8,16 @@ set(JUCE_BUILD_EXAMPLES OFF)
 set(BUILD_LLHTTP OFF)
 set(BUILD_DAISY OFF)
 set(BUILD_TEENSY OFF)
-set(BUILD_WORKOUTS OFF)
+set(BUILD_WORKOUTS ON)
 
 add_definitions(-DTEENSY_DEBUG)
+
+include(cmake/CPM.cmake)
 
 add_subdirectory(libs/DaisySP)
 add_subdirectory(libs/dattorro-verb)
 add_subdirectory(libs/JUCE)
+CPMAddPackage("gh:ImJimmi/JIVE@1.0.4")
 
 if (${BUILD_LLHTTP})
     include(FetchContent)
