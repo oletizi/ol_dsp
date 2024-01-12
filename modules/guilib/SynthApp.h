@@ -24,6 +24,63 @@ namespace ol::gui {
         Control filter_release;
     };
 
+    class AdsrView : public Component {
+    public:
+
+        AdsrView(Control &attack, Control &decay, Control &sustain, Control &release) :
+                attack_(attack), decay_(decay), sustain(sustain), release(release) {}
+
+        void resized() override {
+
+        }
+
+        void paint(Graphics &g) override {
+            auto segment_width = getWidth() / 4;
+            auto attack_endX = segment_width * attack_.scaledValue();
+            auto decay_endX = (segment_width * decay_.scaledValue()) + attack_endX;
+            auto sustainY = getHeight() - (getHeight() * sustain.scaledValue());
+            auto sustain_endX = segment_width * 3;
+            auto release_endX = sustain_endX + (segment_width * release.scaledValue());
+
+            // attack
+            g.drawLine(0, getHeight(), attack_endX, 0, 1);
+
+            // decay
+            g.drawLine(attack_endX, 0, decay_endX, sustainY, 1);
+
+            // sustain
+            g.drawLine(decay_endX, sustainY, sustain_endX, sustainY, 1);
+
+            // release
+            g.drawLine(sustain_endX, sustainY, release_endX, getHeight(), 1);
+        }
+
+    private:
+        Control &attack_;
+        Control &decay_;
+        Control &sustain;
+        Control &release;
+    };
+
+    class AdsrScreen : public Component {
+    public:
+        explicit AdsrScreen(AdsrView &adsr_view) {
+            layout_.add(&adsr_view);
+        }
+
+        void resized() override {
+            layout_.setSize(getWidth(), getHeight());
+            layout_.resized();
+        }
+
+        void paint(Graphics &g) override {
+            layout_.paint(g);
+        }
+
+    private:
+        Layout layout_;
+    };
+
     class MeterScreen : public Component {
     public:
         explicit MeterScreen(SynthAppConfig &config)
@@ -88,9 +145,14 @@ namespace ol::gui {
     class SynthApp : public Component {
     public:
         explicit SynthApp(SynthAppConfig &config) : meter_screen_(MeterScreen(config)) {
+            adsr_view_ = new AdsrView(config.filter_attack, config.filter_decay, config.filter_sustain,
+                                      config.filter_release);
+            adsr_screen_ = new AdsrScreen(*adsr_view_);
+
             layout_ = Layout(Horizontal);
             layout_.setSize(config.viewport.width, config.viewport.height);
-            layout_.add(&meter_screen_);
+//            layout_.add(&meter_screen_);
+            layout_.add(adsr_screen_);
         }
 
         void paint(Graphics &g) override {
@@ -102,8 +164,10 @@ namespace ol::gui {
         }
 
     private:
-        Layout layout_;
+        AdsrView *adsr_view_;
+        AdsrScreen *adsr_screen_;
         MeterScreen meter_screen_;
+        Layout layout_;
 
     };
 }

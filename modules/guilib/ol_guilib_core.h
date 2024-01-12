@@ -28,6 +28,8 @@ namespace ol::gui {
 
     class Graphics {
     public:
+        virtual void drawLine(int startX, int startY, int endX, int endY, int line_width) const = 0;
+
         virtual void drawRect(int x, int y, int width, int height, int line_width) = 0;
 
         void drawRect(Rectangle rect) {
@@ -51,6 +53,10 @@ namespace ol::gui {
 
         void fillRect(int x, int y, int width, int height) override {
             g_.fillRect(x + offset_.x, y + offset_.y, width, height);
+        }
+
+        void drawLine(int startX, int startY, int endX, int endY, int line_width) const override {
+            g_.drawLine(startX + offset_.x, startY + offset_.y, endX + offset_.x, endY + offset_.y, line_width);
         }
 
     private:
@@ -101,6 +107,7 @@ namespace ol::gui {
         explicit Layout(Dimension viewport, LayoutDirection direction = Vertical) : Layout(viewport.width,
                                                                                            viewport.height,
                                                                                            direction) {}
+
         void add(Component *child) {
             children_.push_back(child);
         }
@@ -116,8 +123,10 @@ namespace ol::gui {
         }
 
         void resized() override {
-            child_size.width = direction_ == Vertical ? getWidth() : getWidth() / int(children_.empty() ? 1 : children_.size());
-            child_size.height = direction_ == Vertical ? getHeight() / int(children_.empty() ? 1 : children_.size()) : getHeight();
+            child_size.width =
+                    direction_ == Vertical ? getWidth() : getWidth() / int(children_.empty() ? 1 : children_.size());
+            child_size.height =
+                    direction_ == Vertical ? getHeight() / int(children_.empty() ? 1 : children_.size()) : getHeight();
             for (auto c: children_) {
                 c->setSize(child_size);
                 c->resized();
@@ -181,6 +190,7 @@ namespace ol::gui {
             meter_.setSize(getWidth(), getHeight());
             meter_.resized();
         }
+
     private:
         ol::ctl::Control &control_;
         Meter meter_;

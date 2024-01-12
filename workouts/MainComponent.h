@@ -21,6 +21,10 @@ public:
         g_.fillRect(x, y, width, height);
     }
 
+    void drawLine(int startX, int startY, int endX, int endY, int line_width) const override {
+        g_.drawLine(float(startX), float(startY), float(endX), float(endY), float(line_width));
+    }
+
 private:
     juce::Graphics &g_;
 };
@@ -75,27 +79,6 @@ namespace ol::gui::ol_juce {
     private:
         ol::ctl::Control &control_;
         OlGuiContainer &container_;
-    };
-
-
-    class LabeledComponent : public juce::Component {
-    public:
-        LabeledComponent(juce::Component &component, const juce::String &label_text) : component_(component) {
-            label_.setText(label_text, juce::NotificationType::dontSendNotification);
-        }
-
-        void resized() override {
-            auto bounds = getLocalBounds();
-            auto label_height = bounds.getHeight() * 0.25;
-            auto component_height = bounds.getHeight() * 0.75;
-            component_.setBounds(bounds.getX(), bounds.getY(), bounds.getWidth(), int(component_height));
-            label_.setBounds(bounds.getX(), bounds.getY() + int(component_height), bounds.getWidth(),
-                             int(label_height));
-        }
-
-    private:
-        juce::Component &component_;
-        juce::Label label_;
     };
 
     class MainComponent : public juce::Component {
