@@ -22,18 +22,19 @@ target_compile_definitions(gui-workout
 )
 target_link_libraries(gui-workout
         PRIVATE
+        DaisySP
         juce::juce_core
         juce::juce_gui_basics
         juce::juce_audio_devices
         juce::juce_dsp
-        jive::jive_layouts
-        jive::jive_style_sheets
+        juce::juce_recommended_config_flags
+        juce::juce_recommended_config_flags
+#        jive::jive_layouts
+#        jive::jive_style_sheets
         ol_corelib
         ol_fxlib
         ol_synthlib
-        DaisySP
-        juce::juce_recommended_config_flags
-        juce::juce_recommended_config_flags
+        ol_guilib
 )
 
 

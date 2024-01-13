@@ -5,6 +5,7 @@
 #ifndef OL_DSP_SYNTHAPP_H
 #define OL_DSP_SYNTHAPP_H
 
+#include "spline.h"
 #include "guilib/ol_guilib_core.h"
 #include "ctllib/ol_ctllib.h"
 
@@ -60,6 +61,58 @@ namespace ol::gui {
         Control &release_;
     };
 
+    /**
+     * XXX: This is an interesting idea, but currently a mess
+     */
+    class FilterSplineView : public Component {
+    public:
+        FilterSplineView(Control &cutoff, Control &resonance, Control &env_amt, Control &drive)
+                : cutoff_(cutoff), resonance_(resonance), env_amt_(env_amt), drive_(drive) {}
+
+        void Resized() override {}
+
+        void Paint(Graphics &g) override {
+            double startX = 0;
+            double startY = GetHeight() - (GetHeight() * 0.66);
+            double cutoffX = ol::core::scale(cutoff_.scaledValue(), 0, 1, 0, t_sample(GetWidth()), 1);
+            double endX = cutoffX + (double(GetWidth()) / 4);
+            double endY = GetHeight();
+            auto resonance = resonance_.scaledValue();
+            std::vector<double> X{0, cutoffX - (double(GetWidth()) / 2), cutoffX, endX};
+            std::vector<double> Y{startY, startY, startY - (resonance * 50), endY};
+            tk::spline s(X, Y);
+            for (int x = int(cutoffX - double(GetWidth()) / 2); x < GetWidth(); x++) {
+                auto y = s(x);
+                y = y > GetHeight() ? GetHeight() : y;
+                g.WritePixel(x, int(y), ol::gui::Color::White);
+            }
+        }
+
+//        void Paint(Graphics &g) override {
+//            double startX = 0;
+//            double startY = GetHeight() - (GetHeight() * 0.66); //GetHeight();
+//
+//            double cutoffX = ol::core::scale(cutoff_.scaledValue(), 0, 1, 0, t_sample(GetWidth()), 1);
+//
+//            double endX = cutoffX + (double(GetWidth()) / 8);
+//            double endY = GetHeight();
+//            double y = 0;
+//            auto resonance = resonance_.scaledValue();
+//            for (int x = 0 - int(20 / resonance); x < endX && y <= GetHeight(); x++) {
+//                y = (double(x * x) / (resonance * 64)) + startY - (resonance * 8);
+//                y = y > GetHeight() ? GetHeight() : y;
+//                y = y < 0 ? 0 : y;
+//                g.WritePixel(int(cutoffX) + x + int(resonance * 20), int(y), ol::gui::Color::White);
+//            }
+//        }
+
+    private:
+        Control &cutoff_;
+        Control &resonance_;
+        Control &env_amt_;
+        Control &drive_;
+    };
+
     class FilterView : public Component {
     public:
         FilterView(Control &cutoff, Control &resonance, Control &env_amt, Control &drive)
@@ -69,15 +122,19 @@ namespace ol::gui {
 
         void Paint(Graphics &g) override {
             auto startX = 0;
-            auto startY = GetHeight() - (GetHeight() * 0.75); //GetHeight();
+            auto startY = GetHeight() - (GetHeight() * 0.5); //GetHeight();
 
             auto cutoffX = ol::core::scale(cutoff_.scaledValue(), 0, 1, 0, GetWidth(), 1);
+            auto preCutoffX = cutoffX - GetWidth() / 10;
+            auto cutoffY = startY - ol::core::scale(resonance_.scaledValue(), 0, 1, 0, GetHeight() / 4, 1);
 
-            auto endX = cutoffX + (GetWidth() / 12);
+
+            auto endX = cutoffX + (GetWidth() / 8);
             auto endY = GetHeight();
 
-            g.DrawLine(startX, startY, cutoffX, startY, 1);
-            g.DrawLine(cutoffX, startY, endX, endY, 1);
+            g.DrawLine(startX, startY, preCutoffX, startY, 1);
+            g.DrawLine(preCutoffX, startY, cutoffX, cutoffY, 1);
+            g.DrawLine(cutoffX, cutoffY, endX, endY, 1);
         }
 
     private:

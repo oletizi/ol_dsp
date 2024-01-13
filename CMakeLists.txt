@@ -17,7 +17,7 @@ include(cmake/CPM.cmake)
 add_subdirectory(libs/DaisySP)
 add_subdirectory(libs/dattorro-verb)
 add_subdirectory(libs/JUCE)
-CPMAddPackage("gh:ImJimmi/JIVE@1.0.4")
+#CPMAddPackage("gh:ImJimmi/JIVE@1.0.4")
 
 if (${BUILD_LLHTTP})
     include(FetchContent)
@@ -55,6 +55,9 @@ if (${BUILD_WORKOUTS})
 endif ()
 add_subdirectory(test)
 
+add_library(spline INTERFACE libs/spline/spline.h)
+set_target_properties(spline PROPERTIES LINKER_LANGUAGE CXX)
+target_include_directories(spline INTERFACE libs/spline)
 
 add_library(stmlib
         libs/stmlib/stmlib/stmlib.h

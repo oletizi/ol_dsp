@@ -25,6 +25,10 @@ public:
         g_.drawLine(float(startX), float(startY), float(endX), float(endY), float(line_width));
     }
 
+    void WritePixel(int x, int y, ol::gui::Color c) override {
+        g_.fillRect(x, y, 2, 1);
+    }
+
 private:
     juce::Graphics &g_;
 };

@@ -11,6 +11,11 @@
 
 namespace ol::gui {
 
+    enum Color {
+        Black,
+        White
+    };
+
     struct Point {
         int x = 0;
         int y = 0;
@@ -41,6 +46,8 @@ namespace ol::gui {
         void FillRect(Rectangle rect) {
             FillRect(rect.point.x, rect.point.y, rect.dimension.width, rect.dimension.height);
         }
+
+        virtual void WritePixel(int x, int y, Color c) = 0;
     };
 
     class OffsetGraphics : public Graphics {
@@ -57,6 +64,10 @@ namespace ol::gui {
 
         void DrawLine(int startX, int startY, int endX, int endY, int line_width) const override {
             g_.DrawLine(startX + offset_.x, startY + offset_.y, endX + offset_.x, endY + offset_.y, line_width);
+        }
+
+        void WritePixel(int x, int y, Color c) override {
+            g_.WritePixel(x + offset_.x, y + offset_.y, c);
         }
 
     private:
