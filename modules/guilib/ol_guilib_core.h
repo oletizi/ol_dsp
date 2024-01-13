@@ -49,7 +49,7 @@ namespace ol::gui {
 
         virtual void WritePixel(int x, int y, Color c) = 0;
 
-        virtual void Print(std::string &text, Rectangle area) = 0;
+        virtual void Print(std::string text, Rectangle area) = 0;
     };
 
     class OffsetGraphics : public Graphics {
@@ -72,7 +72,7 @@ namespace ol::gui {
             g_.WritePixel(x + offset_.x, y + offset_.y, c);
         }
 
-        void Print(std::string &text, const Rectangle area) override {
+        void Print(const std::string text, const Rectangle area) override {
             Rectangle offset_area{
                     Point{
                             area.point.x + offset_.x,
@@ -135,7 +135,7 @@ namespace ol::gui {
 
     class Text : public Component {
     public:
-        explicit Text(Font &font, std::string &text) : font_(font), text_(text) {}
+        explicit Text(Font &font, std::string text) : font_(font), text_(text) {}
 
         void Resized() override {
             area_.dimension.width = GetWidth();
@@ -146,7 +146,7 @@ namespace ol::gui {
             g.Print(text_, area_);
         }
 
-        void SetText(const std::string &text) {
+        void SetText(std::string text) {
             text_ = text;
         }
 
@@ -160,7 +160,7 @@ namespace ol::gui {
 
     private:
         Font &font_;
-        std::string &text_;
+        std::string text_;
         Rectangle area_{Point{0, 0}, Dimension{0, 0}};
     };
 

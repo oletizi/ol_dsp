@@ -29,7 +29,7 @@ public:
         g_.fillRect(x, y, 2, 1);
     }
 
-    void Print(std::string &text, ol::gui::Rectangle area) override {
+    void Print(std::string text, ol::gui::Rectangle area) override {
         g_.drawText(juce::String(text),
                     juce::Rectangle<int>(area.point.x, area.point.y, area.dimension.width, area.dimension.height),
                     juce::Justification::left);

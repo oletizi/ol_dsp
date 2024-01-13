@@ -6,6 +6,7 @@
 #define OL_DSP_SYNTHAPP_H
 
 #include <string>
+#include <utility>
 #include "spline.h"
 #include "guilib/ol_guilib_core.h"
 #include "ctllib/ol_ctllib.h"
@@ -141,11 +142,12 @@ namespace ol::gui {
         Control &drive_;
     };
 
-    class FilterScreen : public Component {
+    class AppScreen : public Component {
+
     public:
-        explicit FilterScreen(FilterView &filter_view, AdsrView &adsr_view) {
-            layout_.Add(&filter_view);
-//            layout_.Add(&adsr_view);
+        AppScreen(Component *component, std::string title_text) {
+            SetTitle(std::move(title_text));
+            layout_.Add(component);
             layout_.Add(&title_);
         }
 
@@ -158,10 +160,15 @@ namespace ol::gui {
             layout_.Paint(g);
         }
 
+        void SetTitle(std::string title) {
+            title_.SetText(std::move(title));
+        }
+
+
     private:
-        Font font_ = Font(16);
-        Text title_ = Text(font_, (std::string &) "Filter");
         Layout layout_;
+        Text title_ = Text(font_, "");
+        Font font_ = Font(16);
     };
 
     class MeterScreen : public Component {
@@ -232,7 +239,13 @@ namespace ol::gui {
                                           config.filter_drive);
             adsr_view_ = new AdsrView(config.filter_attack, config.filter_decay, config.filter_sustain,
                                       config.filter_release, config.filter_env_amt);
-            filter_screen_ = new FilterScreen(*filter_view_, *adsr_view_);
+            auto screen_layout = new Layout();
+            screen_layout->Add(filter_view_);
+            screen_layout->Add(adsr_view_);
+            filter_screen_ = new AppScreen(screen_layout, "Filter");
+            filter_adsr_screen_ = filter_screen_;
+//            filter_screen_ = new AppScreen(*filter_view_, "Filter");
+//            filter_adsr_screen_ = new AppScreen(*adsr_view_, "Filter Env");
 
             layout_ = Layout(Horizontal);
             layout_.SetSize(config.viewport.width, config.viewport.height);
@@ -251,16 +264,39 @@ namespace ol::gui {
 
         void ControlChange(Control &control) {
             //if (control.)
+
             switch (control.controller) {
                 case CC_FILTER_CUTOFF:
+                    filter_screen_->SetTitle("Filter: Cutoff");
+                    setScreen(filter_screen_);
+                    break;
                 case CC_FILTER_RESONANCE:
-                case CC_ENV_FILT_AMT:
+                    filter_screen_->SetTitle("Filter: Resonance");
+                    setScreen(filter_screen_);
+                    break;
                 case CC_FILTER_DRIVE:
+                    filter_screen_->SetTitle("Filter: Drive");
+                    setScreen(filter_screen_);
+                    break;
+                case CC_ENV_FILT_AMT:
+                    filter_adsr_screen_->SetTitle("Filt Env: Amt");
+                    setScreen(filter_adsr_screen_);
+                    break;
                 case CC_ENV_FILT_A:
+                    filter_adsr_screen_->SetTitle("Filt Env: Attack");
+                    setScreen(filter_adsr_screen_);
+                    break;
                 case CC_ENV_FILT_D:
+                    filter_adsr_screen_->SetTitle("Filt Env: Decay");
+                    setScreen(filter_adsr_screen_);
+                    break;
                 case CC_ENV_FILT_S:
+                    filter_adsr_screen_->SetTitle("Filt Env: Sustain");
+                    setScreen(filter_adsr_screen_);
+                    break;
                 case CC_ENV_FILT_R:
-                    showFilterScreen();
+                    filter_adsr_screen_->SetTitle("Filt Env: Rel");
+                    setScreen(filter_adsr_screen_);
                     break;
                 default:
                     break;
@@ -268,11 +304,6 @@ namespace ol::gui {
         }
 
     private:
-
-        void showFilterScreen() {
-            setScreen(filter_screen_);
-        }
-
         void setScreen(Component *c) {
             layout_.Clear();
             layout_.Add(c);
@@ -281,10 +312,12 @@ namespace ol::gui {
         SynthAppConfig &config_;
         FilterView *filter_view_;
         AdsrView *adsr_view_;
-        FilterScreen *filter_screen_;
+        AppScreen *filter_screen_;
+        AppScreen *filter_adsr_screen_;
         Layout layout_;
 
     };
+
 }
 
 #endif //OL_DSP_SYNTHAPP_H
