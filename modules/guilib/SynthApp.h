@@ -28,30 +28,35 @@ namespace ol::gui {
     class AdsrView : public Component {
     public:
 
-        AdsrView(Control &attack, Control &decay, Control &sustain, Control &release) :
-                attack_(attack), decay_(decay), sustain_(sustain), release_(release) {}
+        AdsrView(Control &attack, Control &decay, Control &sustain, Control &release, Control &amount) :
+                attack_(attack), decay_(decay), sustain_(sustain), release_(release), amount_(amount) {}
 
         void Resized() override {}
 
         void Paint(Graphics &g) override {
-            auto segment_width = GetWidth() / 4;
+            auto amount = amount_.scaledValue();
+            auto height = GetHeight();
+            auto segment_width = double(GetWidth()) / 4;
             auto attack_endX = segment_width * attack_.scaledValue();
             auto decay_endX = (segment_width * decay_.scaledValue()) + attack_endX;
-            auto sustainY = GetHeight() - (GetHeight() * sustain_.scaledValue());
+
+          auto decayY = height - (height * amount);
+
+            auto sustainY = height - (amount * (double(height) - (double(height) * (1 - sustain_.scaledValue()))));
             auto sustain_endX = segment_width * 3;
             auto release_endX = sustain_endX + (segment_width * release_.scaledValue());
 
             // attack
-            g.DrawLine(0, GetHeight(), attack_endX, 0, 1);
+            g.DrawLine(0, height, int(attack_endX), decayY, 1);
 
             // decay
-            g.DrawLine(attack_endX, 0, decay_endX, sustainY, 1);
+            g.DrawLine(int(attack_endX), decayY, int(decay_endX), int(sustainY), 1);
 
             // sustain
-            g.DrawLine(decay_endX, sustainY, sustain_endX, sustainY, 1);
+            g.DrawLine(int(decay_endX), int(sustainY), int(sustain_endX), int(sustainY), 1);
 
             // release
-            g.DrawLine(sustain_endX, sustainY, release_endX, GetHeight(), 1);
+            g.DrawLine(int(sustain_endX), int(sustainY), int(release_endX), height, 1);
         }
 
     private:
@@ -59,6 +64,7 @@ namespace ol::gui {
         Control &decay_;
         Control &sustain_;
         Control &release_;
+        Control &amount_;
     };
 
     /**
@@ -87,24 +93,6 @@ namespace ol::gui {
                 g.WritePixel(x, int(y), ol::gui::Color::White);
             }
         }
-
-//        void Paint(Graphics &g) override {
-//            double startX = 0;
-//            double startY = GetHeight() - (GetHeight() * 0.66); //GetHeight();
-//
-//            double cutoffX = ol::core::scale(cutoff_.scaledValue(), 0, 1, 0, t_sample(GetWidth()), 1);
-//
-//            double endX = cutoffX + (double(GetWidth()) / 8);
-//            double endY = GetHeight();
-//            double y = 0;
-//            auto resonance = resonance_.scaledValue();
-//            for (int x = 0 - int(20 / resonance); x < endX && y <= GetHeight(); x++) {
-//                y = (double(x * x) / (resonance * 64)) + startY - (resonance * 8);
-//                y = y > GetHeight() ? GetHeight() : y;
-//                y = y < 0 ? 0 : y;
-//                g.WritePixel(int(cutoffX) + x + int(resonance * 20), int(y), ol::gui::Color::White);
-//            }
-//        }
 
     private:
         Control &cutoff_;
@@ -231,7 +219,7 @@ namespace ol::gui {
             filter_view_ = new FilterView(config.filter_cutoff, config.filter_resonance, config.filter_env_amt,
                                           config.filter_drive);
             adsr_view_ = new AdsrView(config.filter_attack, config.filter_decay, config.filter_sustain,
-                                      config.filter_release);
+                                      config.filter_release, config.filter_env_amt);
             filter_screen_ = new FilterScreen(*filter_view_, *adsr_view_);
 
             layout_ = Layout(Horizontal);
