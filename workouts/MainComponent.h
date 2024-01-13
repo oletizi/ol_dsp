@@ -145,8 +145,8 @@ namespace ol::gui::ol_juce {
         std::vector<juce::Slider *> sliders{
                 &s_filter_cutoff,
                 &s_filter_resonance,
-                &s_filter_env_amt,
                 &s_filter_drive,
+                &s_filter_env_amt,
                 &s_filter_attack,
                 &s_filter_decay,
                 &s_filter_sustain,

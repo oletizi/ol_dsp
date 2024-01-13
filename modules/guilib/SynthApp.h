@@ -40,7 +40,7 @@ namespace ol::gui {
             auto attack_endX = segment_width * attack_.scaledValue();
             auto decay_endX = (segment_width * decay_.scaledValue()) + attack_endX;
 
-          auto decayY = height - (height * amount);
+            auto decayY = height - (height * amount);
 
             auto sustainY = height - (amount * (double(height) - (double(height) * (1 - sustain_.scaledValue()))));
             auto sustain_endX = segment_width * 3;
@@ -123,6 +123,14 @@ namespace ol::gui {
             g.DrawLine(startX, startY, preCutoffX, startY, 1);
             g.DrawLine(preCutoffX, startY, cutoffX, cutoffY, 1);
             g.DrawLine(cutoffX, cutoffY, endX, endY, 1);
+
+            double drive_scale = 10;
+            for (int i = 0; i < int((drive_.scaledValue() * drive_scale)); i++) {
+                g.DrawLine(preCutoffX, startY, cutoffX, cutoffY - i, 1);
+                g.DrawLine(cutoffX, cutoffY - i, endX, endY, 1);
+            }
+
+
         }
 
     private:
@@ -224,7 +232,6 @@ namespace ol::gui {
 
             layout_ = Layout(Horizontal);
             layout_.SetSize(config.viewport.width, config.viewport.height);
-//            layout_.add(&meter_screen_);
             layout_.Add(filter_screen_);
         }
 
