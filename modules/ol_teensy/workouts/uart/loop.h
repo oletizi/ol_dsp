@@ -8,6 +8,7 @@
 #define TEENSY_DEBUG
 #ifdef TEENSY_LOCAL
 
+#include <string>
 #include "WireKinetis.h"
 #include "usb_serial.h"
 #include "ol_teensy.h"
@@ -57,8 +58,14 @@ public:
         display_.fillRect(x, y, width, height, SSD1306_WHITE);
     }
 
+    void print(const std::string &text)  override {
+        const String s(text.c_str());
+        display_.print(s);
+    }
+
 private:
     Adafruit_SSD1306 &display_;
+    char cbuf[256]{};
 };
 
 int led = LED_BUILTIN;
@@ -86,9 +93,9 @@ SynthAppConfig app_config{
         Control{CC_FILTER_DRIVE, 0},
 
         Control{CC_ENV_FILT_A, 0},
-        Control{ CC_ENV_FILT_D, 0 },
-        Control{ CC_ENV_FILT_S, 0 },
-        Control { CC_ENV_FILT_R, 0 }
+        Control{CC_ENV_FILT_D, 0},
+        Control{CC_ENV_FILT_S, 0},
+        Control{CC_ENV_FILT_R, 0}
 };
 SynthApp app(app_config);
 

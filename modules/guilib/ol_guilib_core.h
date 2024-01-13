@@ -48,6 +48,8 @@ namespace ol::gui {
         }
 
         virtual void WritePixel(int x, int y, Color c) = 0;
+
+        virtual void Print(std::string &text, Rectangle area) = 0;
     };
 
     class OffsetGraphics : public Graphics {
@@ -70,6 +72,17 @@ namespace ol::gui {
             g_.WritePixel(x + offset_.x, y + offset_.y, c);
         }
 
+        void Print(std::string &text, const Rectangle area) override {
+            Rectangle offset_area{
+                    Point{
+                            area.point.x + offset_.x,
+                            area.point.y + offset_.y
+                    },
+                    area.dimension
+            };
+            g_.Print(text, offset_area);
+        }
+
     private:
         Point offset_{};
         Graphics &g_;
@@ -87,9 +100,13 @@ namespace ol::gui {
             SetSize(dimension.width, dimension.height);
         }
 
-        [[nodiscard]] int GetWidth() const { return width_; }
+        [[nodiscard]] virtual int GetWidth() const { return width_; }
 
-        [[nodiscard]] int GetHeight() const { return height_; }
+        [[nodiscard]] virtual int GetHeight() const { return height_; }
+
+        [[nodiscard]] virtual int GetFixedWidth() const { return 0; }
+
+        [[nodiscard]] virtual int GetFixedHeight() const { return 0; }
 
         virtual void Resized() = 0;
 
@@ -98,6 +115,53 @@ namespace ol::gui {
     private:
         int width_ = 0;
         int height_ = 0;
+    };
+
+
+    class Font {
+
+    public:
+        explicit Font(const int size) : size_(size) {}
+
+        [[nodiscard]] int GetSize() const { return size_; }
+
+        [[nodiscard]] int GetLineHeight() const {
+            return size_;
+        }
+
+    private:
+        int size_;
+    };
+
+    class Text : public Component {
+    public:
+        explicit Text(Font &font, std::string &text) : font_(font), text_(text) {}
+
+        void Resized() override {
+            area_.dimension.width = GetWidth();
+            area_.dimension.height = GetHeight();
+        }
+
+        void Paint(Graphics &g) override {
+            g.Print(text_, area_);
+        }
+
+        void SetText(const std::string &text) {
+            text_ = text;
+        }
+
+        [[nodiscard]] int GetHeight() const override {
+            return GetFixedHeight();
+        }
+
+        [[nodiscard]] int GetFixedHeight() const override {
+            return font_.GetLineHeight();
+        }
+
+    private:
+        Font &font_;
+        std::string &text_;
+        Rectangle area_{Point{0, 0}, Dimension{0, 0}};
     };
 
     enum LayoutDirection {
@@ -129,16 +193,28 @@ namespace ol::gui {
             for (auto c: children_) {
                 OffsetGraphics og(g, offset);
                 c->Paint(og);
-                offset.x += direction_ == Horizontal ? child_size.width : 0;
-                offset.y += direction_ == Vertical ? child_size.height : 0;
+//                auto width = c->GetFixedWidth() ?  c->GetFixedWidth() : child_size.width;
+//                auto height = c->GetFixedHeight() ? c->GetFixedHeight() : child_size.height;
+                offset.x += direction_ == Horizontal ? c->GetWidth() : 0;
+                offset.y += direction_ == Vertical ? c->GetHeight() : 0;
             }
         }
 
         void Resized() override {
+            auto fixed_width = 0;
+            auto fixed_height = 0;
+            auto fixed_count = 0;
+            for (auto c: children_) {
+                fixed_width += c->GetFixedWidth();
+                fixed_height += c->GetFixedHeight();
+                fixed_count += c->GetFixedWidth() || c->GetFixedHeight() ? 1 : 0;
+            }
             child_size.width =
-                    direction_ == Vertical ? GetWidth() : GetWidth() / int(children_.empty() ? 1 : children_.size());
+                    direction_ == Vertical ? GetWidth() : (GetWidth() - fixed_width) /
+                                                          int(children_.empty() ? 1 : children_.size() - fixed_count);
             child_size.height =
-                    direction_ == Vertical ? GetHeight() / int(children_.empty() ? 1 : children_.size()) : GetHeight();
+                    direction_ == Vertical ? (GetHeight() - fixed_height) /
+                                             int(children_.empty() ? 1 : children_.size() - fixed_count) : GetHeight();
             for (auto c: children_) {
                 c->SetSize(child_size);
                 c->Resized();

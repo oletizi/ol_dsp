@@ -5,6 +5,7 @@
 #ifndef OL_DSP_SYNTHAPP_H
 #define OL_DSP_SYNTHAPP_H
 
+#include <string>
 #include "spline.h"
 #include "guilib/ol_guilib_core.h"
 #include "ctllib/ol_ctllib.h"
@@ -144,7 +145,8 @@ namespace ol::gui {
     public:
         explicit FilterScreen(FilterView &filter_view, AdsrView &adsr_view) {
             layout_.Add(&filter_view);
-            layout_.Add(&adsr_view);
+//            layout_.Add(&adsr_view);
+            layout_.Add(&title_);
         }
 
         void Resized() override {
@@ -157,6 +159,8 @@ namespace ol::gui {
         }
 
     private:
+        Font font_ = Font(16);
+        Text title_ = Text(font_, (std::string &) "Filter");
         Layout layout_;
     };
 
@@ -223,7 +227,7 @@ namespace ol::gui {
 
     class SynthApp : public Component {
     public:
-        explicit SynthApp(SynthAppConfig &config) {
+        explicit SynthApp(SynthAppConfig &config) : config_(config) {
             filter_view_ = new FilterView(config.filter_cutoff, config.filter_resonance, config.filter_env_amt,
                                           config.filter_drive);
             adsr_view_ = new AdsrView(config.filter_attack, config.filter_decay, config.filter_sustain,
@@ -236,6 +240,7 @@ namespace ol::gui {
         }
 
         void Paint(Graphics &g) override {
+            g.DrawRect(Rectangle{0, 0, config_.viewport});
             layout_.Paint(g);
         }
 
@@ -273,7 +278,7 @@ namespace ol::gui {
             layout_.Add(c);
         }
 
-
+        SynthAppConfig &config_;
         FilterView *filter_view_;
         AdsrView *adsr_view_;
         FilterScreen *filter_screen_;

@@ -29,6 +29,12 @@ public:
         g_.fillRect(x, y, 2, 1);
     }
 
+    void Print(std::string &text, ol::gui::Rectangle area) override {
+        g_.drawText(juce::String(text),
+                    juce::Rectangle<int>(area.point.x, area.point.y, area.dimension.width, area.dimension.height),
+                    juce::Justification::left);
+    }
+
 private:
     juce::Graphics &g_;
 };
@@ -87,6 +93,11 @@ namespace ol::gui::ol_juce {
         OlGuiContainer &container_;
     };
 
+    struct LabelComponent {
+        juce::Component &component;
+        juce::Label &label;
+    };
+
     class MainComponent : public juce::Component {
     public:
         MainComponent() {
@@ -121,18 +132,22 @@ namespace ol::gui::ol_juce {
             screen_container_.setSize(SCREEN_WIDTH, SCREEN_HEIGHT);
             screen_container_.setBounds(bounds.getCentreX() - (SCREEN_WIDTH / 2), 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 
-            auto slider_width = bounds.getWidth() / int(sliders.size());
-            auto slider_height = bounds.getHeight() / 2;
-            for (int i = 0; i < sliders.size(); i++) {
-                auto slider = sliders[i];
-                slider->setBounds(i * slider_width, slider_height, slider_width, slider_height);
+//            auto slider_width = bounds.getWidth() / int(sliders.size());
+//            auto slider_height = bounds.getHeight() / 2;
+//            for (int i = 0; i < sliders.size(); i++) {
+//                auto slider = sliders[i];
+//                slider->setBounds(i * slider_width, slider_height, slider_width, slider_height);
+//            }
+            juce::FlexBox fb;
+            fb.justifyContent = juce::FlexBox::JustifyContent::center;
+            fb.alignContent = juce::FlexBox::AlignContent::center;
+            for (auto s: sliders) {
+                fb.items.add(juce::FlexItem(*s).withMinWidth(60).withMinHeight(60));
             }
-
+            fb.performLayout(getLocalBounds());
         }
 
     private:
-        //==============================================================================
-        // Your private member variables go here...
         juce::Slider s_filter_cutoff;
         juce::Slider s_filter_resonance;
         juce::Slider s_filter_env_amt;
