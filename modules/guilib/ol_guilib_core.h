@@ -76,9 +76,9 @@ namespace ol::gui {
             SetSize(dimension.width, dimension.height);
         }
 
-        int GetWidth() { return width_; }
+        [[nodiscard]] int GetWidth() const { return width_; }
 
-        int GetHeight() { return height_; }
+        [[nodiscard]] int GetHeight() const { return height_; }
 
         virtual void Resized() = 0;
 
@@ -110,6 +110,7 @@ namespace ol::gui {
 
         void Add(Component *child) {
             children_.push_back(child);
+            Resized();
         }
 
         void Paint(Graphics &g) override {
@@ -133,8 +134,13 @@ namespace ol::gui {
             }
         }
 
-        void setDirection(LayoutDirection direction) {
+        void SetDirection(LayoutDirection direction) {
             direction_ = direction;
+        }
+
+        void Clear() {
+            children_.clear();
+            Resized();
         }
 
     private:

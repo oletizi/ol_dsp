@@ -102,7 +102,7 @@ namespace ol::gui {
             column2_.Add(&m_filter_sustain_);
             column2_.Add(&m_filter_release_);
 
-            layout_.setDirection(Horizontal);
+            layout_.SetDirection(Horizontal);
             layout_.Add(&column1_);
             layout_.Add(&column2_);
             layout_.Add(&column3_);
@@ -163,7 +163,43 @@ namespace ol::gui {
             layout_.Resized();
         }
 
+
+        void ControlChange(Control &control) {
+            //if (control.)
+            switch (control.controller) {
+                case CC_FILTER_CUTOFF:
+                case CC_FILTER_RESONANCE:
+                case CC_ENV_FILT_AMT:
+                case CC_FILTER_DRIVE:
+                    showFilterScreen();
+                    break;
+                case CC_ENV_FILT_A:
+                case CC_ENV_FILT_D:
+                case CC_ENV_FILT_S:
+                case CC_ENV_FILT_R:
+                    showFilterEnvelopeScreen();
+                    break;
+                default:
+                    break;
+            }
+        }
+
     private:
+
+        void showFilterScreen() {
+            setScreen(&meter_screen_);
+        }
+
+        void showFilterEnvelopeScreen() {
+            setScreen(adsr_screen_);
+        }
+
+        void setScreen(Component *c) {
+            layout_.Clear();
+            layout_.Add(c);
+        }
+
+
         AdsrView *adsr_view_;
         AdsrScreen *adsr_screen_;
         MeterScreen meter_screen_;

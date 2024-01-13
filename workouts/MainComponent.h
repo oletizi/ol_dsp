@@ -68,16 +68,18 @@ namespace ol::gui::ol_juce {
     class SliderListener : public juce::Slider::Listener {
 
     public:
-        explicit SliderListener(OlGuiContainer &container, ol::ctl::Control &control) : container_(container),
-                                                                                        control_(control) {}
+        explicit SliderListener(SynthApp &app, OlGuiContainer &container, ol::ctl::Control &control)
+                : app_(app), container_(container), control_(control) {}
 
         void sliderValueChanged(juce::Slider *slider) override {
             control_.setScaledValue(t_sample(slider->getValue()));
+            app_.ControlChange(control_);
             container_.repaint();
         }
 
     private:
         ol::ctl::Control &control_;
+        SynthApp &app_;
         OlGuiContainer &container_;
     };
 
@@ -92,15 +94,15 @@ namespace ol::gui::ol_juce {
                 addAndMakeVisible(s);
             }
 
-            s_filter_cutoff.addListener(new SliderListener(screen_container_, app_config.filter_cutoff));
-            s_filter_resonance.addListener(new SliderListener(screen_container_, app_config.filter_resonance));
-            s_filter_env_amt.addListener(new SliderListener(screen_container_, app_config.filter_env_amt));
-            s_filter_drive.addListener(new SliderListener(screen_container_, app_config.filter_drive));
+            s_filter_cutoff.addListener(new SliderListener(app_, screen_container_, app_config.filter_cutoff));
+            s_filter_resonance.addListener(new SliderListener(app_, screen_container_, app_config.filter_resonance));
+            s_filter_env_amt.addListener(new SliderListener(app_, screen_container_, app_config.filter_env_amt));
+            s_filter_drive.addListener(new SliderListener(app_, screen_container_, app_config.filter_drive));
 
-            s_filter_attack.addListener(new SliderListener(screen_container_, app_config.filter_attack));
-            s_filter_decay.addListener(new SliderListener(screen_container_, app_config.filter_decay));
-            s_filter_sustain.addListener(new SliderListener(screen_container_, app_config.filter_sustain));
-            s_filter_release.addListener(new SliderListener(screen_container_, app_config.filter_release));
+            s_filter_attack.addListener(new SliderListener(app_, screen_container_, app_config.filter_attack));
+            s_filter_decay.addListener(new SliderListener(app_, screen_container_, app_config.filter_decay));
+            s_filter_sustain.addListener(new SliderListener(app_, screen_container_, app_config.filter_sustain));
+            s_filter_release.addListener(new SliderListener(app_, screen_container_, app_config.filter_release));
         }
 
         ~MainComponent() override = default;
@@ -120,7 +122,6 @@ namespace ol::gui::ol_juce {
             for (int i = 0; i < sliders.size(); i++) {
                 auto slider = sliders[i];
                 slider->setBounds(i * slider_width, slider_height, slider_width, slider_height);
-//                slider->setTextBoxStyle(juce::Slider::TextBoxBelow, true, slider_width - 5, 20);
             }
 
         }
