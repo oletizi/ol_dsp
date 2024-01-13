@@ -30,9 +30,7 @@ namespace ol::gui {
         AdsrView(Control &attack, Control &decay, Control &sustain, Control &release) :
                 attack_(attack), decay_(decay), sustain_(sustain), release_(release) {}
 
-        void Resized() override {
-
-        }
+        void Resized() override {}
 
         void Paint(Graphics &g) override {
             auto segment_width = GetWidth() / 4;
@@ -62,9 +60,37 @@ namespace ol::gui {
         Control &release_;
     };
 
-    class AdsrScreen : public Component {
+    class FilterView : public Component {
     public:
-        explicit AdsrScreen(AdsrView &adsr_view) {
+        FilterView(Control &cutoff, Control &resonance, Control &env_amt, Control &drive)
+                : cutoff_(cutoff), resonance_(resonance), env_amt_(env_amt), drive_(drive) {}
+
+        void Resized() override {}
+
+        void Paint(Graphics &g) override {
+            auto startX = 0;
+            auto startY = GetHeight() - (GetHeight() * 0.75); //GetHeight();
+
+            auto cutoffX = ol::core::scale(cutoff_.scaledValue(), 0, 1, 0, GetWidth(), 1);
+
+            auto endX = cutoffX + (GetWidth() / 12);
+            auto endY = GetHeight();
+
+            g.DrawLine(startX, startY, cutoffX, startY, 1);
+            g.DrawLine(cutoffX, startY, endX, endY, 1);
+        }
+
+    private:
+        Control &cutoff_;
+        Control &resonance_;
+        Control &env_amt_;
+        Control &drive_;
+    };
+
+    class FilterScreen : public Component {
+    public:
+        explicit FilterScreen(FilterView &filter_view, AdsrView &adsr_view) {
+            layout_.Add(&filter_view);
             layout_.Add(&adsr_view);
         }
 
@@ -144,15 +170,17 @@ namespace ol::gui {
 
     class SynthApp : public Component {
     public:
-        explicit SynthApp(SynthAppConfig &config) : meter_screen_(MeterScreen(config)) {
+        explicit SynthApp(SynthAppConfig &config) {
+            filter_view_ = new FilterView(config.filter_cutoff, config.filter_resonance, config.filter_env_amt,
+                                          config.filter_drive);
             adsr_view_ = new AdsrView(config.filter_attack, config.filter_decay, config.filter_sustain,
                                       config.filter_release);
-            adsr_screen_ = new AdsrScreen(*adsr_view_);
+            filter_screen_ = new FilterScreen(*filter_view_, *adsr_view_);
 
             layout_ = Layout(Horizontal);
             layout_.SetSize(config.viewport.width, config.viewport.height);
 //            layout_.add(&meter_screen_);
-            layout_.Add(adsr_screen_);
+            layout_.Add(filter_screen_);
         }
 
         void Paint(Graphics &g) override {
@@ -171,13 +199,11 @@ namespace ol::gui {
                 case CC_FILTER_RESONANCE:
                 case CC_ENV_FILT_AMT:
                 case CC_FILTER_DRIVE:
-                    showFilterScreen();
-                    break;
                 case CC_ENV_FILT_A:
                 case CC_ENV_FILT_D:
                 case CC_ENV_FILT_S:
                 case CC_ENV_FILT_R:
-                    showFilterEnvelopeScreen();
+                    showFilterScreen();
                     break;
                 default:
                     break;
@@ -187,11 +213,7 @@ namespace ol::gui {
     private:
 
         void showFilterScreen() {
-            setScreen(&meter_screen_);
-        }
-
-        void showFilterEnvelopeScreen() {
-            setScreen(adsr_screen_);
+            setScreen(filter_screen_);
         }
 
         void setScreen(Component *c) {
@@ -200,9 +222,9 @@ namespace ol::gui {
         }
 
 
+        FilterView *filter_view_;
         AdsrView *adsr_view_;
-        AdsrScreen *adsr_screen_;
-        MeterScreen meter_screen_;
+        FilterScreen *filter_screen_;
         Layout layout_;
 
     };
