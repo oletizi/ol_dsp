@@ -38,10 +38,7 @@ public:
                                                        juce::Colours::lightgrey,
                                                        DocumentWindow::allButtons) {
             setUsingNativeTitleBar(true);
-//            auto mainComponent = new ol::gui::ol_juce::MainComponent();
             main_component_.setSize(500, 250);
-
-            // XXX: Hack just to get this working
 
             setContentOwned(&main_component_, true);
             centreWithSize(500, 250);

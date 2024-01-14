@@ -25,6 +25,11 @@ namespace ol::gui {
         Control filter_decay;
         Control filter_sustain;
         Control filter_release;
+
+        Control amp_attack;
+        Control amp_decay;
+        Control amp_sustain;
+        Control amp_release;
     };
 
     class AdsrView : public Component {
@@ -244,8 +249,6 @@ namespace ol::gui {
             screen_layout->Add(adsr_view_);
             filter_screen_ = new AppScreen(screen_layout, "Filter");
             filter_adsr_screen_ = filter_screen_;
-//            filter_screen_ = new AppScreen(*filter_view_, "Filter");
-//            filter_adsr_screen_ = new AppScreen(*adsr_view_, "Filter Env");
 
             layout_ = Layout(Horizontal);
             layout_.SetSize(config.viewport.width, config.viewport.height);

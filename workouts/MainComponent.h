@@ -102,7 +102,13 @@ namespace ol::gui::ol_juce {
     public:
         MainComponent() {
             addAndMakeVisible(screen_container_);
-            for (auto s: sliders) {
+            for (auto s: filter_sliders_) {
+                s->setSliderStyle(juce::Slider::RotaryVerticalDrag);
+                s->setRange(0, 1);
+                s->setTextBoxStyle(juce::Slider::NoTextBox, false, 20, 20);
+                addAndMakeVisible(s);
+            }
+            for (auto s: amp_sliders_) {
                 s->setSliderStyle(juce::Slider::RotaryVerticalDrag);
                 s->setRange(0, 1);
                 s->setTextBoxStyle(juce::Slider::NoTextBox, false, 20, 20);
@@ -118,6 +124,11 @@ namespace ol::gui::ol_juce {
             s_filter_decay.addListener(new SliderListener(app_, screen_container_, app_config.filter_decay));
             s_filter_sustain.addListener(new SliderListener(app_, screen_container_, app_config.filter_sustain));
             s_filter_release.addListener(new SliderListener(app_, screen_container_, app_config.filter_release));
+
+            s_amp_attack.addListener(new SliderListener(app_, screen_container_, app_config.amp_attack));
+            s_amp_decay.addListener(new SliderListener(app_, screen_container_, app_config.amp_decay));
+            s_amp_sustain.addListener(new SliderListener(app_, screen_container_, app_config.amp_sustain));
+            s_amp_release.addListener(new SliderListener(app_, screen_container_, app_config.amp_release));
         }
 
         ~MainComponent() override = default;
@@ -132,22 +143,34 @@ namespace ol::gui::ol_juce {
             screen_container_.setSize(SCREEN_WIDTH, SCREEN_HEIGHT);
             screen_container_.setBounds(bounds.getCentreX() - (SCREEN_WIDTH / 2), 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 
-//            auto slider_width = bounds.getWidth() / int(sliders.size());
-//            auto slider_height = bounds.getHeight() / 2;
-//            for (int i = 0; i < sliders.size(); i++) {
-//                auto slider = sliders[i];
-//                slider->setBounds(i * slider_width, slider_height, slider_width, slider_height);
-//            }
-            juce::FlexBox fb;
-            fb.justifyContent = juce::FlexBox::JustifyContent::center;
-            fb.alignContent = juce::FlexBox::AlignContent::center;
-            for (auto s: sliders) {
-                fb.items.add(juce::FlexItem(*s).withMinWidth(60).withMinHeight(60));
+            juce::FlexBox filter_box;
+            filter_box.justifyContent = juce::FlexBox::JustifyContent::center;
+            filter_box.alignContent = juce::FlexBox::AlignContent::center;
+            for (auto s: filter_sliders_) {
+                filter_box.items.add(juce::FlexItem(*s).withMinWidth(60).withMinHeight(60));
             }
-            fb.performLayout(getLocalBounds());
+
+            juce::FlexBox amp_box;
+            amp_box.justifyContent = juce::FlexBox::JustifyContent::center;
+            amp_box.alignContent = juce::FlexBox::AlignContent::center;
+            for (auto s: amp_sliders_) {
+                amp_box.items.add(juce::FlexItem(*s).withMinWidth(60).withMinHeight(60));
+            }
+
+            juce::FlexBox column;
+            column.flexDirection = juce::FlexBox::Direction::column;
+            column.alignItems = juce::FlexBox::AlignItems::center;
+//            column.alignContent = juce::FlexBox::AlignContent::flexEnd;
+//            column.justifyContent = juce::FlexBox::JustifyContent::center;
+            column.items.add(juce::FlexItem(screen_container_).withMinWidth(SCREEN_WIDTH).withMinHeight(SCREEN_HEIGHT));
+            column.items.add(juce::FlexItem(filter_box).withMinHeight(60));
+            column.items.add(juce::FlexItem(amp_box).withMinHeight(60));
+            column.performLayout(getLocalBounds());
         }
 
     private:
+
+        // Filter controls
         juce::Slider s_filter_cutoff;
         juce::Slider s_filter_resonance;
         juce::Slider s_filter_env_amt;
@@ -157,7 +180,7 @@ namespace ol::gui::ol_juce {
         juce::Slider s_filter_sustain;
         juce::Slider s_filter_release;
 
-        std::vector<juce::Slider *> sliders{
+        std::vector<juce::Slider *> filter_sliders_{
                 &s_filter_cutoff,
                 &s_filter_resonance,
                 &s_filter_drive,
@@ -166,6 +189,19 @@ namespace ol::gui::ol_juce {
                 &s_filter_decay,
                 &s_filter_sustain,
                 &s_filter_release
+        };
+
+        // Amp controls
+        juce::Slider s_amp_attack;
+        juce::Slider s_amp_decay;
+        juce::Slider s_amp_sustain;
+        juce::Slider s_amp_release;
+
+        std::vector<juce::Slider *> amp_sliders_{
+                &s_amp_attack,
+                &s_amp_decay,
+                &s_amp_sustain,
+                &s_amp_release
         };
 
         SynthAppConfig app_config{
@@ -178,8 +214,14 @@ namespace ol::gui::ol_juce {
                 Control{CC_ENV_FILT_A, 4000},
                 Control{CC_ENV_FILT_D, 3000},
                 Control{CC_ENV_FILT_S, 2000},
-                Control{CC_ENV_FILT_R, 2500}
+                Control{CC_ENV_FILT_R, 2500},
+
+                Control{CC_ENV_AMP_A, 0},
+                Control{CC_ENV_AMP_D, 0},
+                Control{CC_ENV_AMP_S, 1},
+                Control{CC_ENV_AMP_R, 0}
         };
+
         SynthApp app_ = SynthApp(app_config);
         OlGuiContainer screen_container_ = OlGuiContainer(&app_);
 
