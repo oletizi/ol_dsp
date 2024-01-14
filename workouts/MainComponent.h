@@ -4,11 +4,7 @@
 
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 64
-//==============================================================================
-/*
-    This component lives inside our window, and this is where you should put all
-    your controls and content.
-*/
+
 class JuceGraphics : public ol::gui::Graphics {
 public:
     explicit JuceGraphics(juce::Graphics &g) : g_(g) {}
@@ -38,11 +34,6 @@ public:
 private:
     juce::Graphics &g_;
 };
-
-/**
- * Bridge between juce components and ol::gui components
- */
-
 
 namespace ol::gui::ol_juce {
 
@@ -108,6 +99,7 @@ namespace ol::gui::ol_juce {
                 s->setTextBoxStyle(juce::Slider::NoTextBox, false, 20, 20);
                 addAndMakeVisible(s);
             }
+
             for (auto s: amp_sliders_) {
                 s->setSliderStyle(juce::Slider::RotaryVerticalDrag);
                 s->setRange(0, 1);
@@ -160,11 +152,10 @@ namespace ol::gui::ol_juce {
             juce::FlexBox column;
             column.flexDirection = juce::FlexBox::Direction::column;
             column.alignItems = juce::FlexBox::AlignItems::center;
-//            column.alignContent = juce::FlexBox::AlignContent::flexEnd;
-//            column.justifyContent = juce::FlexBox::JustifyContent::center;
+            column.justifyContent = juce::FlexBox::JustifyContent::center;
             column.items.add(juce::FlexItem(screen_container_).withMinWidth(SCREEN_WIDTH).withMinHeight(SCREEN_HEIGHT));
-            column.items.add(juce::FlexItem(filter_box).withMinHeight(60));
-            column.items.add(juce::FlexItem(amp_box).withMinHeight(60));
+            column.items.add(juce::FlexItem(filter_box).withMinHeight(80));
+            column.items.add(juce::FlexItem(amp_box).withMinHeight(80));
             column.performLayout(getLocalBounds());
         }
 
@@ -216,9 +207,10 @@ namespace ol::gui::ol_juce {
                 Control{CC_ENV_FILT_S, 2000},
                 Control{CC_ENV_FILT_R, 2500},
 
+                Control{CC_CTL_VOLUME, 4096},
                 Control{CC_ENV_AMP_A, 0},
                 Control{CC_ENV_AMP_D, 0},
-                Control{CC_ENV_AMP_S, 1},
+                Control{CC_ENV_AMP_S, 4096},
                 Control{CC_ENV_AMP_R, 0}
         };
 

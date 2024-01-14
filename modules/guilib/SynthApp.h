@@ -18,14 +18,15 @@ namespace ol::gui {
         Dimension viewport;
         Control filter_cutoff;
         Control filter_resonance;
-        Control filter_env_amt;
         Control filter_drive;
 
+        Control filter_env_amt;
         Control filter_attack;
         Control filter_decay;
         Control filter_sustain;
         Control filter_release;
 
+        Control amp_env_amt;
         Control amp_attack;
         Control amp_decay;
         Control amp_sustain;
@@ -242,13 +243,17 @@ namespace ol::gui {
         explicit SynthApp(SynthAppConfig &config) : config_(config) {
             filter_view_ = new FilterView(config.filter_cutoff, config.filter_resonance, config.filter_env_amt,
                                           config.filter_drive);
-            adsr_view_ = new AdsrView(config.filter_attack, config.filter_decay, config.filter_sustain,
-                                      config.filter_release, config.filter_env_amt);
+            filter_adsr_view_ = new AdsrView(config.filter_attack, config.filter_decay, config.filter_sustain,
+                                             config.filter_release, config.filter_env_amt);
             auto screen_layout = new Layout();
             screen_layout->Add(filter_view_);
-            screen_layout->Add(adsr_view_);
+            screen_layout->Add(filter_adsr_view_);
             filter_screen_ = new AppScreen(screen_layout, "Filter");
             filter_adsr_screen_ = filter_screen_;
+
+            amp_adsr_view_ = new AdsrView(config.amp_attack, config.amp_decay, config.amp_sustain, config.amp_release, config.amp_env_amt);
+            amp_screen_ = new AppScreen(amp_adsr_view_, "Amp");
+
 
             layout_ = Layout(Horizontal);
             layout_.SetSize(config.viewport.width, config.viewport.height);
@@ -282,24 +287,44 @@ namespace ol::gui {
                     setScreen(filter_screen_);
                     break;
                 case CC_ENV_FILT_AMT:
-                    filter_adsr_screen_->SetTitle("Filt Env: Amt");
+                    filter_adsr_screen_->SetTitle("Filter: Env Amt");
                     setScreen(filter_adsr_screen_);
                     break;
                 case CC_ENV_FILT_A:
-                    filter_adsr_screen_->SetTitle("Filt Env: Attack");
+                    filter_adsr_screen_->SetTitle("Filter: Attack");
                     setScreen(filter_adsr_screen_);
                     break;
                 case CC_ENV_FILT_D:
-                    filter_adsr_screen_->SetTitle("Filt Env: Decay");
+                    filter_adsr_screen_->SetTitle("Filter: Decay");
                     setScreen(filter_adsr_screen_);
                     break;
                 case CC_ENV_FILT_S:
-                    filter_adsr_screen_->SetTitle("Filt Env: Sustain");
+                    filter_adsr_screen_->SetTitle("Filter: Sustain");
                     setScreen(filter_adsr_screen_);
                     break;
                 case CC_ENV_FILT_R:
-                    filter_adsr_screen_->SetTitle("Filt Env: Rel");
+                    filter_adsr_screen_->SetTitle("Filter: Rel");
                     setScreen(filter_adsr_screen_);
+                    break;
+                case CC_CTL_VOLUME:
+                    amp_screen_->SetTitle("Amp: Vol");
+                    setScreen(amp_screen_);
+                    break;
+                case CC_ENV_AMP_A:
+                    amp_screen_->SetTitle("Amp: Attack");
+                    setScreen(amp_screen_);
+                    break;
+                case CC_ENV_AMP_D:
+                    amp_screen_->SetTitle("Amp: Decay");
+                    setScreen(amp_screen_);
+                    break;
+                case CC_ENV_AMP_S:
+                    amp_screen_->SetTitle("Amp: Sustain");
+                    setScreen(amp_screen_);
+                    break;
+                case CC_ENV_AMP_R:
+                    amp_screen_->SetTitle("Amp: Release");
+                    setScreen(amp_screen_);
                     break;
                 default:
                     break;
@@ -314,9 +339,11 @@ namespace ol::gui {
 
         SynthAppConfig &config_;
         FilterView *filter_view_;
-        AdsrView *adsr_view_;
+        AdsrView *filter_adsr_view_;
         AppScreen *filter_screen_;
         AppScreen *filter_adsr_screen_;
+        AdsrView *amp_adsr_view_;
+        AppScreen *amp_screen_;
         Layout layout_;
 
     };
