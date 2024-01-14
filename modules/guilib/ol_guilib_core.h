@@ -5,6 +5,7 @@
 #ifndef OL_DSP_OL_GUILIB_CORE_H
 #define OL_DSP_OL_GUILIB_CORE_H
 
+#include <string>
 #include <vector>
 #include "corelib/ol_corelib.h"
 #include "ctllib/ol_ctllib.h"

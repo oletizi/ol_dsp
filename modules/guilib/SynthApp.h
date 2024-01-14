@@ -54,7 +54,6 @@ namespace ol::gui {
             auto sustainY = height - (amount * (double(height) - (double(height) * (1 - sustain_.scaledValue()))));
             auto sustain_endX = segment_width * 3;
             auto release_endX = sustain_endX + (segment_width * release_.scaledValue());
-
             // attack
             g.DrawLine(0, height, int(attack_endX), decayY, 1);
 

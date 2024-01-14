@@ -6,7 +6,6 @@ BUILD_DIR := $(shell cd ./build && pwd)
 OL_DSP_TMP := ${BUILD_DIR}/ol_dsp
 LIB_ZIP_FILE := ${BUILD_DIR}/ol_teensy.zip
 LIB_OL_DSP_FILE := ${BUILD_DIR}/ol_dsp.zip
-BUILD_FLAGS := "-DTEENSY_DEBUG"
 # Set CLEAN to --clean when changing build.usbtype build property
 # --clean was needed to get midi to work right. Probably not needed for every build.
 #CLEAN := --clean
@@ -27,12 +26,26 @@ lib: build-dir config
 	if test -f ${LIB_OL_DSP_FILE}; then rm ${LIB_OL_DSP_FILE}; fi
 	if test -f ${LIB_ZIP_FILE}; then rm ${LIB_ZIP_FILE}; fi
 	rsync -av --exclude 'build' --exclude '.vscode' --exclude 'CMakeLists.txt' --exclude 'test' --exclude 'workouts' ${LIB_SRC_DIR}/. ${OL_DSP_TMP}/
+	cp ${LIB_SRC_DIR}/../libs/spline/spline.h ${OL_DSP_TMP}/
+#	rsync -av \
+#		--exclude 'build' \
+#		--exclude '.vscode' \
+#		--exclude 'CMakeLists.txt' \
+#		--exclude 'imgui' \
+#		--exclude 'JUCE' \
+#		--exclude 'libDaisy' \
+#		--exclude 'dui-ino' \
+#		--exclude 'miniaudio' \
+#		--exclude 'rtmidi' \
+#		--exclude 'sfizz' \
+#		--exclude 'stk' \
+#		${LIB_SRC_DIR}/../libs ${OL_DSP_TMP}/
 	#cp library.properties ${OL_DSP_TMP}/  && cp ../../ol_dsp.h ${OL_DSP_TMP}/
-	(cd ${BUILD_DIR} && zip -r ${LIB_OL_DSP_FILE} ./ol_dsp)
-	(cd ${LIB_SRC_DIR} && zip -x "*workouts*" -r ${LIB_ZIP_FILE}  ./ol_teensy)
-	#arduino-cli lib uninstall ol_teensy
-	arduino-cli lib install --zip-path ${LIB_OL_DSP_FILE}
-	arduino-cli lib install --zip-path ${LIB_ZIP_FILE}
+	(cd ${BUILD_DIR} && zip -r ${LIB_OL_DSP_FILE} ./ol_dsp) \
+	&& (cd ${LIB_SRC_DIR} && zip -x "*workouts*" -r ${LIB_ZIP_FILE}  ./ol_teensy) \
+    && arduino-cli lib uninstall ol_dsp ol_teensy\
+	&& arduino-cli lib install --zip-path ${LIB_OL_DSP_FILE} \
+	&& arduino-cli lib install --zip-path ${LIB_ZIP_FILE}
 
 build: lib
 	arduino-cli compile $(CLEAN) --fqbn teensy:avr:teensy41 --build-property build.usbtype=USB_MIDI_SERIAL --build-property build.extra_flags="$(BUILD_FLAGS)" .

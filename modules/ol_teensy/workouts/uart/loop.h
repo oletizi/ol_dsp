@@ -50,17 +50,25 @@ class AdafruitGraphics : public Graphics {
 public:
     explicit AdafruitGraphics(Adafruit_SSD1306 &d) : display_(d) {}
 
-    void drawRect(int x, int y, int width, int height, int line_width) override {
+    void DrawRect(int x, int y, int width, int height, int line_width) override {
         display_.drawRect(x, y, width, height, SSD1306_WHITE);
     }
 
-    void fillRect(int x, int y, int width, int height) override {
+    void FillRect(int x, int y, int width, int height) override {
         display_.fillRect(x, y, width, height, SSD1306_WHITE);
     }
 
-    void print(const std::string &text)  override {
-        const String s(text.c_str());
-        display_.print(s);
+    void Print(std::string text, Rectangle area) override {
+        display_.setCursor(area.point.x, area.point.y);
+        display_.print(text.c_str());
+    }
+
+    void DrawLine(int startX, int startY, int endX, int endY, int line_width) const override {
+        display_.drawLine(startX, startY, endX, endY, SSD1306_WHITE);
+    }
+
+    void WritePixel(int x, int y, Color c) override {
+        display_.drawPixel(x, y, c == Color::White ? SSD1306_WHITE : SSD1306_BLACK);
     }
 
 private:
@@ -85,18 +93,19 @@ uint64_t note_off_count = 0;
 
 AdafruitGraphics graphics(display);
 
-SynthAppConfig app_config{
-        Dimension{SCREEN_WIDTH, SCREEN_HEIGHT},
-        Control{CC_FILTER_CUTOFF, 0},
-        Control{CC_FILTER_RESONANCE, 0},
-        Control{CC_ENV_FILT_AMT, 0},
-        Control{CC_FILTER_DRIVE, 0},
-
-        Control{CC_ENV_FILT_A, 0},
-        Control{CC_ENV_FILT_D, 0},
-        Control{CC_ENV_FILT_S, 0},
-        Control{CC_ENV_FILT_R, 0}
-};
+//SynthAppConfig app_config{
+//        Dimension{SCREEN_WIDTH, SCREEN_HEIGHT},
+//        Control{CC_FILTER_CUTOFF, 0},
+//        Control{CC_FILTER_RESONANCE, 0},
+//        Control{CC_ENV_FILT_AMT, 0},
+//        Control{CC_FILTER_DRIVE, 0},
+//
+//        Control{CC_ENV_FILT_A, 0},
+//        Control{CC_ENV_FILT_D, 0},
+//        Control{CC_ENV_FILT_S, 0},
+//        Control{CC_ENV_FILT_R, 0}
+//};
+SynthAppConfig app_config{};
 SynthApp app(app_config);
 
 auto display_checkpoint = millis();
@@ -126,15 +135,19 @@ void write_control(const Control &c) {
 
 int sample_control(uint8_t pin) {
     return 4096 - analogRead(pin);
+//    return analogRead(pin);
 }
 
-void update_control(Control &c, uint16_t new_value) {
+void update_control(Control &c, int new_value) {
     auto delta = c.value - new_value;
     delta = delta < 0 ? delta * -1
                       : delta; // XXX: workaround for bug in teensy library that mangles abs() and std::abs()
     bool above_noise = delta > NOISE_FLOOR;
     if (above_noise) {
+        DPRINTF("Updating control %d: %d\n", c.controller, new_value);
         c.value = new_value;
+        app.ControlChange(c);
+        DPRINTF("Writing control: %d: %d\n", c.controller, c.value);
         write_control(c);
     }
 }
@@ -184,7 +197,7 @@ void d_cursor(int line_number, int column) {
 
 void display_handler() {
     display.clearDisplay();
-    app.paint(graphics);
+    app.Paint(graphics);
     display.display();
 }
 
@@ -222,7 +235,7 @@ void doSetup() {
 
     DPRINTLN("Drawing splash screen to display1...");
     display.clearDisplay();
-    display.setTextSize(2);
+    display.setTextSize(1);
     display.setTextColor(SSD1306_WHITE);
     display.setCursor(0, 0);
     display.cp437(true);
