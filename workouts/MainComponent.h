@@ -195,25 +195,7 @@ namespace ol::gui::ol_juce {
                 &s_amp_release
         };
 
-        SynthAppConfig app_config{
-                Dimension{128, 64},
-                Control{CC_FILTER_CUTOFF, 2500},
-                Control{CC_FILTER_RESONANCE, 3800},
-                Control{CC_ENV_FILT_AMT, 550},
-                Control{CC_FILTER_DRIVE, 80},
-
-                Control{CC_ENV_FILT_A, 4000},
-                Control{CC_ENV_FILT_D, 3000},
-                Control{CC_ENV_FILT_S, 2000},
-                Control{CC_ENV_FILT_R, 2500},
-
-                Control{CC_CTL_VOLUME, 4096},
-                Control{CC_ENV_AMP_A, 0},
-                Control{CC_ENV_AMP_D, 0},
-                Control{CC_ENV_AMP_S, 4096},
-                Control{CC_ENV_AMP_R, 0}
-        };
-
+        SynthAppConfig app_config{};
         SynthApp app_ = SynthApp(app_config);
         OlGuiContainer screen_container_ = OlGuiContainer(&app_);
 

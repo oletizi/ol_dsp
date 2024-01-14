@@ -15,22 +15,23 @@ namespace ol::gui {
     using namespace ol::ctl;
 
     struct SynthAppConfig {
-        Dimension viewport;
-        Control filter_cutoff;
-        Control filter_resonance;
-        Control filter_drive;
+        Dimension viewport{128, 64};
 
-        Control filter_env_amt;
-        Control filter_attack;
-        Control filter_decay;
-        Control filter_sustain;
-        Control filter_release;
+        Control filter_cutoff{CC_FILTER_CUTOFF, 2500};
+        Control filter_resonance{CC_FILTER_RESONANCE, 3800};
+        Control filter_drive{CC_FILTER_DRIVE, 80};
 
-        Control amp_env_amt;
-        Control amp_attack;
-        Control amp_decay;
-        Control amp_sustain;
-        Control amp_release;
+        Control filter_env_amt{CC_ENV_FILT_AMT, 550};
+        Control filter_attack{CC_ENV_FILT_A, 4000};
+        Control filter_decay{CC_ENV_FILT_D, 3000};
+        Control filter_sustain{CC_ENV_FILT_S, 2000};
+        Control filter_release{CC_ENV_FILT_R, 2500};
+
+        Control amp_env_amt{CC_CTL_VOLUME, 4096};
+        Control amp_attack{CC_ENV_AMP_A, 0};
+        Control amp_decay{CC_ENV_AMP_D, 0};
+        Control amp_sustain{CC_ENV_AMP_S, 4096};
+        Control amp_release{CC_ENV_AMP_R, 0};
     };
 
     class AdsrView : public Component {
@@ -251,7 +252,8 @@ namespace ol::gui {
             filter_screen_ = new AppScreen(screen_layout, "Filter");
             filter_adsr_screen_ = filter_screen_;
 
-            amp_adsr_view_ = new AdsrView(config.amp_attack, config.amp_decay, config.amp_sustain, config.amp_release, config.amp_env_amt);
+            amp_adsr_view_ = new AdsrView(config.amp_attack, config.amp_decay, config.amp_sustain, config.amp_release,
+                                          config.amp_env_amt);
             amp_screen_ = new AppScreen(amp_adsr_view_, "Amp");
 
 
