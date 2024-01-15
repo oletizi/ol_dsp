@@ -1,5 +1,9 @@
 add_subdirectory(io)
 
+add_executable(ol_daisy_synth app/synth/main.cpp)
+target_link_libraries(ol_daisy_synth daisy ol_corelib ol_daisy_io ol_ctllib)
+target_compile_definitions(ol_daisy_synth PRIVATE DAISY_NATIVE)
+
 add_executable(ol_daisy_workouts_serialization workouts/serialization/main.cpp)
 target_link_libraries(ol_daisy_workouts_serialization daisy ol_corelib ol_daisy_io ol_ctllib)
 target_compile_definitions(ol_daisy_workouts_serialization PRIVATE DAISY_NATIVE)
