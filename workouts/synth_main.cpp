@@ -13,7 +13,9 @@ int main() {
     //Voice *voices[VOICE_COUNT];
     SynthVoice<CHANNEL_COUNT> sv1;
     SynthVoice<CHANNEL_COUNT> sv2;
-    std::vector<Voice *> voices = {&sv1, &sv2};
+    SynthVoice<CHANNEL_COUNT> sv3;
+    SynthVoice<CHANNEL_COUNT> sv4;
+    std::vector<Voice *> voices = {&sv1, &sv2, &sv3, &sv4};
     Polyvoice<CHANNEL_COUNT> poly(voices);
 
 //    Voice *poly = new Polyvoice<CHANNEL_COUNT>(voices);

@@ -31,7 +31,7 @@ endif ()
 
 if (${BUILD_DAISY})
     add_subdirectory(libs/libDaisy)
-    add_subdirectory(modules/daisy)
+    add_subdirectory(modules/ol_daisy)
 endif ()
 
 if (${BUILD_TEENSY})
@@ -42,6 +42,7 @@ add_subdirectory(libs/rapidyaml)
 add_subdirectory(libs/rtmidi)
 add_subdirectory(libs/Soundpipe)
 
+add_subdirectory(modules/app)
 add_subdirectory(modules/corelib)
 add_subdirectory(modules/ctllib)
 add_subdirectory(modules/fxlib)

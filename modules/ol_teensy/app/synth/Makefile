@@ -26,7 +26,7 @@ lib: build-dir config
 	if test -f ${LIB_OL_DSP_FILE}; then rm ${LIB_OL_DSP_FILE}; fi
 	if test -f ${LIB_ZIP_FILE}; then rm ${LIB_ZIP_FILE}; fi
 	rsync -av --exclude 'build' --exclude '.vscode' --exclude 'CMakeLists.txt' --exclude 'test' --exclude 'workouts' ${LIB_SRC_DIR}/. ${OL_DSP_TMP}/
-	cp ${LIB_SRC_DIR}/../libs/spline/spline.h ${OL_DSP_TMP}/
+	mkdir ${OL_DSP_TMP}/spline && cp ${LIB_SRC_DIR}/../libs/spline/spline.h ${OL_DSP_TMP}/spline/
 #	rsync -av \
 #		--exclude 'build' \
 #		--exclude '.vscode' \

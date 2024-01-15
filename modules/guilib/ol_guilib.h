@@ -6,6 +6,6 @@
 #define OL_DSP_OL_GUILIB_H
 
 #include "guilib/ol_guilib_core.h"
-#include "guilib/SynthApp.h"
+#include "app/synth/SynthGui.h"
 
 #endif //OL_DSP_OL_GUILIB_H

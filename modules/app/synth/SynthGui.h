@@ -2,38 +2,20 @@
 // Created by Orion Letizi on 1/10/24.
 //
 
-#ifndef OL_DSP_SYNTHAPP_H
-#define OL_DSP_SYNTHAPP_H
+#ifndef OL_DSP_SYNTHGUI_H
+#define OL_DSP_SYNTHGUI_H
 
 #include <string>
 #include <utility>
-#include "spline.h"
+#include "spline/spline.h"
 #include "guilib/ol_guilib_core.h"
 #include "ctllib/ol_ctllib.h"
+#include "app/synth/SynthApp.h"
 
-namespace ol::gui {
+namespace ol::app::synth {
+
     using namespace ol::ctl;
-
-    struct SynthAppConfig {
-        Dimension viewport{128, 64};
-
-        Control filter_cutoff{CC_FILTER_CUTOFF, 2500};
-        Control filter_resonance{CC_FILTER_RESONANCE, 3800};
-        Control filter_drive{CC_FILTER_DRIVE, 80};
-
-        Control filter_env_amt{CC_ENV_FILT_AMT, 550};
-        Control filter_attack{CC_ENV_FILT_A, 4000};
-        Control filter_decay{CC_ENV_FILT_D, 3000};
-        Control filter_sustain{CC_ENV_FILT_S, 2000};
-        Control filter_release{CC_ENV_FILT_R, 2500};
-
-        Control amp_env_amt{CC_CTL_VOLUME, 4096};
-        Control amp_attack{CC_ENV_AMP_A, 0};
-        Control amp_decay{CC_ENV_AMP_D, 0};
-        Control amp_sustain{CC_ENV_AMP_S, 4096};
-        Control amp_release{CC_ENV_AMP_R, 0};
-    };
-
+    using namespace ol::gui;
     class AdsrView : public Component {
     public:
 
@@ -238,9 +220,9 @@ namespace ol::gui {
         Layout layout_;
     };
 
-    class SynthApp : public Component {
+    class SynthGui : public Component {
     public:
-        explicit SynthApp(SynthAppConfig &config) : config_(config) {
+        explicit SynthGui(SynthAppConfig &config) : config_(config) {
             filter_view_ = new FilterView(config.filter_cutoff, config.filter_resonance, config.filter_env_amt,
                                           config.filter_drive);
             filter_adsr_view_ = new AdsrView(config.filter_attack, config.filter_decay, config.filter_sustain,
@@ -351,4 +333,4 @@ namespace ol::gui {
 
 }
 
-#endif //OL_DSP_SYNTHAPP_H
+#endif //OL_DSP_SYNTHGUI_H

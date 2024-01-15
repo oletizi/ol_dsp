@@ -46,9 +46,7 @@ namespace ol::synth {
 
         void Process(t_sample *frame_out) override {
             t_sample frame_buffer[CHANNEL_COUNT]{};
-            for (int i = 0; i < CHANNEL_COUNT; i++) {
-                frame_buffer[i] = 0;
-            }
+
             sound_source_->SetFreq(portamento_->Process(freq_));
             sound_source_->Process(frame_buffer);
 

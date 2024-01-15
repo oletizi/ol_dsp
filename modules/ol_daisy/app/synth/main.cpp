@@ -12,7 +12,7 @@
 #include "daisy_seed.h"
 
 #include "corelib/ol_corelib.h"
-#include "daisy/io/io.h"
+#include "ol_daisy/io/io.h"
 
 
 #define STRING_BUF_SIZE 256
@@ -61,13 +61,13 @@ ol_daisy::io::DaisySerial serial(a_handler);
 ol::io::SimpleSerializer serializer(serial);
 MyControlListener control_listener;
 
-SynthVoice<1> voice;
-//SynthVoice<1> v1;
-//SynthVoice<1> v2;
-//SynthVoice<1> v3;
-//SynthVoice<1> v4;
-//std::vector<Voice *> voices{&v1, &v2, &v3, &v4};
-//Polyvoice<1> voice(voices);
+//SynthVoice<1> voice;
+SynthVoice<1> v1;
+SynthVoice<1> v2;
+SynthVoice<1> v3;
+SynthVoice<1> v4;
+std::vector<Voice *> voices{&v1, &v2, &v3, &v4};
+Polyvoice<1> voice(voices);
 
 void audio_callback(daisy::AudioHandle::InterleavingInputBuffer in,
                     daisy::AudioHandle::InterleavingOutputBuffer out,
@@ -100,8 +100,8 @@ int main() {
     voice.UpdateMidiControl(CC_ENV_AMP_D, 127);
     voice.UpdateMidiControl(CC_ENV_AMP_S, 127);
     voice.UpdateMidiControl(CC_ENV_AMP_R, 100);
-    voice.UpdateMidiControl(CC_OSC_1_VOLUME, 24);
-    voice.UpdateMidiControl(CC_CTL_VOLUME, 100);
+    voice.UpdateMidiControl(CC_OSC_1_VOLUME, 100);
+    voice.UpdateMidiControl(CC_CTL_VOLUME, 80);
 
 
     serializer.AddControlListener(control_listener);
@@ -145,8 +145,11 @@ int main() {
         while (!control_queue.empty()) {
             auto &c = control_queue.front();
             switch (c.controller) {
-                case CC_VOICE_GATE:
-                    c.value ? voice.GateOn() : voice.GateOff();
+                case CC_VOICE_GATE_ON:
+                    voice.NoteOn(uint8_t(c.value), 100);
+                    break;
+                case CC_VOICE_GATE_OFF:
+                    voice.NoteOff(uint8_t(c.value), 100);
                     break;
                 case CC_VOICE_PITCH:
                     voice.SetFrequency(daisysp::mtof(c.value));

@@ -1,5 +1,5 @@
 
-set(BUILD_WORKOUT_BUDDY OFF)
+set(BUILD_WORKOUT_BUDDY ON)
 
 ## Workout library
 if (${BUILD_WORKOUT_BUDDY})

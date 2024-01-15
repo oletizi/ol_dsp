@@ -47,7 +47,8 @@
 #define CC_CTL_MOD_WHEEL 1
 #define CC_CTL_PORTAMENTO 5
 #define CC_CTL_VOLUME 7
-#define CC_VOICE_GATE 70
+#define CC_VOICE_GATE_ON 70
+#define CC_VOICE_GATE_OFF 71
 #define CC_VOICE_PITCH 72
 #define CC_ENV_FILT_AMT 73
 #define CC_ENV_FILT_A 74

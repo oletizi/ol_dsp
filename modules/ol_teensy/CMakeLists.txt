@@ -29,7 +29,7 @@ target_include_directories(ol_teensy PUBLIC
         ${ARDUINO_LIBS}/Adafruit_SSD1306
 )
 
-add_executable( ol_teensy_synth app/synth/loop.h)
+add_executable( ol_teensy_synth app/synth/loop.h ol_teensy.h)
 target_link_libraries(ol_teensy_synth PUBLIC ol_teensy ol_guilib)
 target_include_directories(ol_teensy_synth PUBLIC . .. ${ARDUINO_INCLUDES})
 set_target_properties(ol_teensy_synth PROPERTIES LINKER_LANGUAGE CXX)

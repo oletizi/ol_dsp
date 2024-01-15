@@ -69,7 +69,7 @@ namespace ol::gui::ol_juce {
     class SliderListener : public juce::Slider::Listener {
 
     public:
-        explicit SliderListener(SynthApp &app, OlGuiContainer &container, ol::ctl::Control &control)
+        explicit SliderListener(SynthGui &app, OlGuiContainer &container, ol::ctl::Control &control)
                 : app_(app), container_(container), control_(control) {}
 
         void sliderValueChanged(juce::Slider *slider) override {
@@ -80,7 +80,7 @@ namespace ol::gui::ol_juce {
 
     private:
         ol::ctl::Control &control_;
-        SynthApp &app_;
+        SynthGui &app_;
         OlGuiContainer &container_;
     };
 
@@ -196,7 +196,7 @@ namespace ol::gui::ol_juce {
         };
 
         SynthAppConfig app_config{};
-        SynthApp app_ = SynthApp(app_config);
+        SynthGui app_ = SynthGui(app_config);
         OlGuiContainer screen_container_ = OlGuiContainer(&app_);
 
         JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainComponent)

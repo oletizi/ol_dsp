@@ -45,6 +45,7 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire2, OLED_RESET);
 
 using namespace ol::ctl;
 using namespace ol::gui;
+using namespace ol::app::synth;
 
 class AdafruitGraphics : public Graphics {
 public:
@@ -106,7 +107,7 @@ AdafruitGraphics graphics(display);
 //        Control{CC_ENV_FILT_R, 0}
 //};
 SynthAppConfig app_config{};
-SynthApp app(app_config);
+SynthGui app(app_config);
 
 auto display_checkpoint = millis();
 
@@ -167,8 +168,8 @@ void control_handler() {
 void handleNoteOn(byte channel, byte note, byte velocity) {
     digitalWrite(led, HIGH);
     Control pitch{CC_VOICE_PITCH, note};
-    Control gate{CC_VOICE_GATE, velocity};
-    gate.value = velocity;
+    Control gate{CC_VOICE_GATE_ON, note};
+//    gate.value = velocity;
     write_control(pitch);
     write_control(gate);
     note_on_count++;
@@ -178,8 +179,8 @@ void handleNoteOn(byte channel, byte note, byte velocity) {
 void handleNoteOff(byte channel, byte note, byte velocity) {
     digitalWrite(led, LOW);
     Control pitch{CC_VOICE_PITCH, note};
-    Control gate{CC_VOICE_GATE, velocity};
-    gate.value = velocity;
+    Control gate{CC_VOICE_GATE_OFF, note};
+    //gate.value = velocity;
     write_control(pitch);
     write_control(gate);
     note_off_count++;
