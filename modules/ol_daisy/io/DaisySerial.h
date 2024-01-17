@@ -35,16 +35,16 @@ namespace ol_daisy::io {
             Print(msg + "\n");
         }
 
-        int Write(const char *data, const size_t size) override {
+        int Write(const char *data, const int size) override {
             return Write(reinterpret_cast<const uint8_t *>(data), size);
         }
 
-        int Write(const uint8_t *data, const size_t size) override {
+        int Write(const uint8_t *data, const int size) override {
             int bytes_written = 0;
             int bytes_to_write = 0;
             while (bytes_written < size) {
                 bytes_to_write = 0;
-                for (int i = 0; i < sizeof(outbuf_) && bytes_written <= size; i++, bytes_written++, bytes_to_write++) {
+                for (uint16_t i = 0; i < sizeof(outbuf_) && bytes_written <= size; i++, bytes_written++, bytes_to_write++) {
                     outbuf_[i] = data[bytes_written];
                 }
                 uart_.PollTx(outbuf_, bytes_to_write);
@@ -52,21 +52,12 @@ namespace ol_daisy::io {
             return bytes_written;
         }
 
-        int Write(std::vector<uint8_t> data, size_t size) override {
+        int Write(std::vector<uint8_t> data, int size) override {
             uint8_t byte_buffer[size];
             for (int i=0; i<size; i++) {
                 byte_buffer[i] = data[i];
             }
             return Write(byte_buffer, size);
-        }
-
-        int Available() override {
-            // XXX: this cast is a bug waiting to happen
-            return int(uart_.Readable());
-        }
-
-        int Read() override {
-            return uart_.PopRx();
         }
 
     private:

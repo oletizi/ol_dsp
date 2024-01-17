@@ -10,12 +10,34 @@
 #include "spline/spline.h"
 #include "guilib/ol_guilib_core.h"
 #include "ctllib/ol_ctllib.h"
-#include "app/synth/SynthApp.h"
+//#include "app/synth/SynthEngine.h"
 
 namespace ol::app::synth {
 
     using namespace ol::ctl;
     using namespace ol::gui;
+
+
+    struct SynthGuiConfig {
+        ol::gui::Dimension viewport{128, 64};
+
+        Control filter_cutoff{CC_FILTER_CUTOFF, 2500};
+        Control filter_resonance{CC_FILTER_RESONANCE, 3800};
+        Control filter_drive{CC_FILTER_DRIVE, 80};
+
+        Control filter_env_amt{CC_ENV_FILT_AMT, 550};
+        Control filter_attack{CC_ENV_FILT_A, 4000};
+        Control filter_decay{CC_ENV_FILT_D, 3000};
+        Control filter_sustain{CC_ENV_FILT_S, 2000};
+        Control filter_release{CC_ENV_FILT_R, 2500};
+
+        Control amp_env_amt{CC_CTL_VOLUME, 4096};
+        Control amp_attack{CC_ENV_AMP_A, 0};
+        Control amp_decay{CC_ENV_AMP_D, 0};
+        Control amp_sustain{CC_ENV_AMP_S, 4096};
+        Control amp_release{CC_ENV_AMP_R, 0};
+    };
+
     class AdsrView : public Component {
     public:
 
@@ -55,40 +77,6 @@ namespace ol::app::synth {
         Control &sustain_;
         Control &release_;
         Control &amount_;
-    };
-
-    /**
-     * XXX: This is an interesting idea, but currently a mess
-     */
-    class FilterSplineView : public Component {
-    public:
-        FilterSplineView(Control &cutoff, Control &resonance, Control &env_amt, Control &drive)
-                : cutoff_(cutoff), resonance_(resonance), env_amt_(env_amt), drive_(drive) {}
-
-        void Resized() override {}
-
-        void Paint(Graphics &g) override {
-            double startX = 0;
-            double startY = GetHeight() - (GetHeight() * 0.66);
-            double cutoffX = ol::core::scale(cutoff_.scaledValue(), 0, 1, 0, t_sample(GetWidth()), 1);
-            double endX = cutoffX + (double(GetWidth()) / 4);
-            double endY = GetHeight();
-            auto resonance = resonance_.scaledValue();
-            std::vector<double> X{0, cutoffX - (double(GetWidth()) / 2), cutoffX, endX};
-            std::vector<double> Y{startY, startY, startY - (resonance * 50), endY};
-            tk::spline s(X, Y);
-            for (int x = int(cutoffX - double(GetWidth()) / 2); x < GetWidth(); x++) {
-                auto y = s(x);
-                y = y > GetHeight() ? GetHeight() : y;
-                g.WritePixel(x, int(y), ol::gui::Color::White);
-            }
-        }
-
-    private:
-        Control &cutoff_;
-        Control &resonance_;
-        Control &env_amt_;
-        Control &drive_;
     };
 
     class FilterView : public Component {
@@ -159,70 +147,9 @@ namespace ol::app::synth {
         Font font_ = Font(16);
     };
 
-    class MeterScreen : public Component {
-    public:
-        explicit MeterScreen(SynthAppConfig &config)
-                : m_filter_cutoff_(ControlMeter(config.filter_cutoff)),
-                  m_filter_resonance_(ControlMeter(config.filter_resonance)),
-                  m_filter_env_amt_(ControlMeter(config.filter_env_amt)),
-                  m_filter_drive_(ControlMeter(config.filter_drive)),
-                  m_filter_attack_(ControlMeter(config.filter_attack)),
-                  m_filter_decay_(ControlMeter(config.filter_decay)),
-                  m_filter_sustain_(ControlMeter(config.filter_sustain)),
-                  m_filter_release_(ControlMeter(config.filter_release)) {
-            column1_.Add(&m_filter_cutoff_);
-            column1_.Add(&m_filter_resonance_);
-            column1_.Add(&m_filter_env_amt_);
-            column1_.Add(&m_filter_drive_);
-
-            column2_.Add(&m_filter_attack_);
-            column2_.Add(&m_filter_decay_);
-            column2_.Add(&m_filter_sustain_);
-            column2_.Add(&m_filter_release_);
-
-            layout_.SetDirection(Horizontal);
-            layout_.Add(&column1_);
-            layout_.Add(&column2_);
-            layout_.Add(&column3_);
-        }
-
-        void Paint(Graphics &g) override {
-            layout_.Paint(g);
-        }
-
-        void Resized() override {
-            layout_.SetSize(GetWidth(), GetHeight());
-            layout_.Resized();
-        }
-
-    private:
-        ControlMeter m_filter_cutoff_;
-        ControlMeter m_filter_resonance_;
-        ControlMeter m_filter_env_amt_;
-        ControlMeter m_filter_drive_;
-        ControlMeter m_filter_attack_;
-        ControlMeter m_filter_decay_;
-        ControlMeter m_filter_sustain_;
-        ControlMeter m_filter_release_;
-        std::vector<ControlMeter *> meters_{
-                &m_filter_cutoff_,
-                &m_filter_resonance_,
-                &m_filter_drive_,
-                &m_filter_env_amt_,
-                &m_filter_attack_,
-                &m_filter_decay_,
-                &m_filter_sustain_,
-                &m_filter_release_
-        };
-        Layout column1_;
-        Layout column2_;
-        Layout column3_;
-        Layout layout_;
-    };
-
     class SynthGui : public Component {
     public:
-        explicit SynthGui(SynthAppConfig &config) : config_(config) {
+        explicit SynthGui(ol::app::synth::SynthGuiConfig &config) : config_(config) {
             filter_view_ = new FilterView(config.filter_cutoff, config.filter_resonance, config.filter_env_amt,
                                           config.filter_drive);
             filter_adsr_view_ = new AdsrView(config.filter_attack, config.filter_decay, config.filter_sustain,
@@ -320,7 +247,7 @@ namespace ol::app::synth {
             layout_.Add(c);
         }
 
-        SynthAppConfig &config_;
+        SynthGuiConfig &config_;
         FilterView *filter_view_;
         AdsrView *filter_adsr_view_;
         AppScreen *filter_screen_;

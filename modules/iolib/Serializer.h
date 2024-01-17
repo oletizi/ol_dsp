@@ -10,6 +10,9 @@
 #include "iolib/ol_iolib_core.h"
 #include "Serial.h"
 
+#define OL_SERIALIZER_START_BYTE 42
+#define OL_SERIALIZER_START_BYTE_COUNT 5
+
 namespace ol::io {
     class ControlListener {
     public:
@@ -18,7 +21,7 @@ namespace ol::io {
 
     class Serializer {
     public:
-        virtual void SerializeControl(ol::ctl::Control, std::vector<uint8_t>&) = 0;
+        virtual void SerializeControl(ol::ctl::Control, std::vector<uint8_t> &) = 0;
 
         virtual void WriteControl(ol::ctl::Control) = 0;
     };
@@ -32,8 +35,7 @@ namespace ol::io {
 
     class SimpleSerializer : public Serializer, public Deserializer {
     public:
-        static inline uint8_t const START_BYTE = 42;
-        static inline size_t const START_BYTE_COUNT = 5;
+        static int const START_BYTE_COUNT = 5;
     private:
         static const size_t MESSAGE_SIZE_OFFSET = 0;
         static const size_t CONTROLLER_OFFSET = MESSAGE_SIZE_OFFSET + sizeof(int64_t);
@@ -42,7 +44,7 @@ namespace ol::io {
         Serial &serial_;
         bool parsing_ = false;
         uint64_t parsed_bytes_ = 0;
-        int64_t message_size_ = 0;
+        uint64_t message_size_ = 0;
         size_t start_bytes_ = 0;
         std::vector<uint8_t> size_buffer_;
         std::vector<uint8_t> controller_buffer_;
@@ -67,17 +69,17 @@ namespace ol::io {
         }
 
         void Process() {
-            // XXX: This is pretty ugly. Maybe use protocol buffers?
-            while (serial_.Available()) {
-                auto byte_read = uint8_t(serial_.Read());
 
-                if (!parsing_ && byte_read == START_BYTE) {
+            while (false) { // XXX: Needs rewrite for new libDaisy UART API
+                auto byte_read = 0;//uint8_t(serial_.Read());
+
+                if (!parsing_ && byte_read == OL_SERIALIZER_START_BYTE) {
                     start_bytes_++;
                     continue;
                 }
                 // we're parsing if we've seen the start bytes and we've still got bytes to parse OR we don't know the
                 // message size yet.
-                parsing_ = start_bytes_ == START_BYTE_COUNT && (parsed_bytes_ < message_size_ || message_size_ == 0);
+                parsing_ = start_bytes_ == OL_SERIALIZER_START_BYTE_COUNT && (parsed_bytes_ < message_size_ || message_size_ == 0);
                 if (parsing_ && parsed_bytes_ < CONTROLLER_OFFSET) {
                     // we're parsing the message size
                     size_buffer_.push_back(byte_read);
@@ -114,11 +116,11 @@ namespace ol::io {
             auto value_data = int64_to_bytes(control.value);
 
 //            std::vector<uint8_t> serialized;
-            buffer.reserve(sizeof(uint8_t) * START_BYTE_COUNT + controller_data.size() + value_data.size());
+            buffer.reserve(sizeof(uint8_t) * OL_SERIALIZER_START_BYTE_COUNT + controller_data.size() + value_data.size());
 
             // write the start bytes...
-            for (int i = 0; i < START_BYTE_COUNT; i++) {
-                buffer.push_back(START_BYTE);
+            for (int i = 0; i < OL_SERIALIZER_START_BYTE_COUNT; i++) {
+                buffer.push_back(OL_SERIALIZER_START_BYTE);
             }
 
             // write the message size (including message size field)...

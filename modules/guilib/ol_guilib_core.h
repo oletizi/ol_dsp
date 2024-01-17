@@ -85,8 +85,8 @@ namespace ol::gui {
         }
 
     private:
-        Point offset_{};
         Graphics &g_;
+        Point offset_{};
     };
 
 

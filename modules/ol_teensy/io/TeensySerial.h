@@ -11,11 +11,11 @@
 namespace ol_teensy::io {
     class TeensySerial : public ol::io::Serial {
     public:
-        int Write(const char *data, size_t size) override { return 0; };
+        int Write(const char *data, int size) override { return 0; };
 
-        int Write(const uint8_t *data, size_t size) override { return 0; };
+        int Write(const uint8_t *data, int size) override { return 0; };
 
-        int Write(std::vector<uint8_t> data, size_t size) override { return 0; };
+        int Write(std::vector<uint8_t> data, int size) override { return 0; };
 
         int Available() override { return Serial1.available(); };
 

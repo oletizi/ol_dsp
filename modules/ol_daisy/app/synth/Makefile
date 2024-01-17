@@ -6,11 +6,12 @@ TARGET = ex_pod_Encoder
 #APP_TYPE = BOOT_SRAM
 PROJECT_DIR = ../../../..
 OL_DSP_DIR   = ${PROJECT_DIR}/modules
+SPLINE_DIR   = ${PROJECT_DIR}/libs/
 DATTORRO_DIR = ${PROJECT_DIR}/libs/dattorro-verb
 SOUNDPIPE_DIR = ${PROJECT_DIR}/libs/Soundpipe
 # Includes
 
-C_INCLUDES += -I${OL_DSP_DIR} -I${DATTORRO_DIR} -I${SOUNDPIPE_DIR}/h
+C_INCLUDES += -I${OL_DSP_DIR} -I${DATTORRO_DIR} -I${SOUNDPIPE_DIR}/h -I${SPLINE_DIR}
 # Sources
 CPP_SOURCES += main.cpp #\
 #	${OL_DSP_DIR}/corelib/ol_corelib.cpp \

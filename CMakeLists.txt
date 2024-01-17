@@ -58,7 +58,7 @@ add_subdirectory(test)
 
 add_library(spline INTERFACE libs/spline/spline.h)
 set_target_properties(spline PROPERTIES LINKER_LANGUAGE CXX)
-target_include_directories(spline INTERFACE libs/spline)
+target_include_directories(spline INTERFACE libs)
 
 add_library(stmlib
         libs/stmlib/stmlib/stmlib.h

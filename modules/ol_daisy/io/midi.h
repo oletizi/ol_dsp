@@ -1,37 +1,11 @@
-#ifdef DAISY_NATIVE
-//#include "daisy/daisy_dummy.h"
-//#include "hid/logger.h"
-#else
-
-
-#endif
-
-#include <memory>
-#include "daisy.h"
-#include "daisy_seed.h"
-#include "dev/oled_ssd130x.h"
-
-#define IN_BUF_SIZE 8
-#define DISPLAY_ON false
-#define DISPLAY_UPDATE_FREQUENCY 250
-using namespace daisy;
-
-static DaisySeed hw;
-
-//Example from: https://forum.electro-smith.com/t/daisy-seed-pinout-usart-1-rx-pin-37-or-pin-15/1175/10
-////Init TX PB4 UART7_TX / AF11 for the Nextion screen - SPI1 MISO Pin n°10
-//UartHandler::Config       Nextion_Tx;
-//Nextion_Tx.baudrate      = 115200;
-//Nextion_Tx.periph        = UartHandler::Config::Peripheral::UART_7;
-//Nextion_Tx.stopbits      = UartHandler::Config::StopBits::BITS_1;
-//Nextion_Tx.parity        = UartHandler::Config::Parity::NONE;
-//Nextion_Tx.mode          = UartHandler::Config::Mode::TX;
-//Nextion_Tx.wordlength    = UartHandler::Config::WordLength::BITS_8;
-//Nextion_Tx.pin_config.tx = {DSY_GPIOB, 4};
-//Nextion_Tx.pin_config.rx = {DSY_GPIOX,0};       // Always define the two pins TX and RX
+//
+// Created by Orion Letizi on 1/16/24.
 //
 
-namespace ol::midi {
+#ifndef OL_DSP_MIDI_H
+#define OL_DSP_MIDI_H
+#include "daisy.h"
+namespace ol_daisy::io {
     class MidiParser {
     public:
         MidiParser() {};
@@ -41,6 +15,9 @@ namespace ol::midi {
         inline void Init() { Reset(); }
 
         /**
+         *
+         * THIS IS COPIED DIRECTLY FROM libDaisy b/c I couldn't get it to link there, so this is a stopgap.
+         *
          * @brief Parse one MIDI byte. If the byte completes a parsed event,
          *        its value will be assigned to the dereferenced output pointer.
          *        Otherwise, status is preserved in anticipation of the next sequential
@@ -67,34 +44,34 @@ namespace ol::midi {
                         // Get MessageType, and Channel
                         incoming_message_.channel = byte & kChannelMask;
                         incoming_message_.type
-                                = static_cast<MidiMessageType>((byte & kMessageMask) >> 4);
+                                = static_cast<daisy::MidiMessageType>((byte & kMessageMask) >> 4);
                         if ((byte & 0xF8) == 0xF8)
-                            incoming_message_.type = SystemRealTime;
+                            incoming_message_.type = daisy::SystemRealTime;
 
                         // Validate, and move on.
-                        if (incoming_message_.type < MessageLast) {
+                        if (incoming_message_.type < daisy::MessageLast) {
                             pstate_ = ParserHasStatus;
 
-                            if (incoming_message_.type == SystemCommon) {
+                            if (incoming_message_.type == daisy::SystemCommon) {
                                 incoming_message_.channel = 0;
                                 incoming_message_.sc_type
-                                        = static_cast<SystemCommonType>(byte & 0x07);
+                                        = static_cast<daisy::SystemCommonType>(byte & 0x07);
                                 //sysex
-                                if (incoming_message_.sc_type == SystemExclusive) {
+                                if (incoming_message_.sc_type == daisy::SystemExclusive) {
                                     pstate_ = ParserSysEx;
                                     incoming_message_.sysex_message_len = 0;
                                 }
                                     //short circuit
-                                else if (incoming_message_.sc_type > SongSelect) {
+                                else if (incoming_message_.sc_type > daisy::SongSelect) {
                                     pstate_ = ParserEmpty;
                                     if (event_out != nullptr) {
                                         *event_out = incoming_message_;
                                     }
                                     did_parse = true;
                                 }
-                            } else if (incoming_message_.type == SystemRealTime) {
+                            } else if (incoming_message_.type == daisy::SystemRealTime) {
                                 incoming_message_.srt_type
-                                        = static_cast<SystemRealTimeType>(
+                                        = static_cast<daisy::SystemRealTimeType>(
                                         byte & kSystemRealTimeMask);
 
                                 //short circuit to start
@@ -114,10 +91,10 @@ namespace ol::midi {
                         incoming_message_.type = running_status_;
                         incoming_message_.data[0] = byte & kDataByteMask;
                         //check for single byte running status, really this only applies to channel pressure though
-                        if (running_status_ == ChannelPressure
-                            || running_status_ == ProgramChange
-                            || incoming_message_.sc_type == MTCQuarterFrame
-                            || incoming_message_.sc_type == SongSelect) {
+                        if (running_status_ == daisy::ChannelPressure
+                            || running_status_ == daisy::ProgramChange
+                            || incoming_message_.sc_type == daisy::MTCQuarterFrame
+                            || incoming_message_.sc_type == daisy::SongSelect) {
                             //Send the single byte update
                             pstate_ = ParserEmpty;
                             if (event_out != nullptr) {
@@ -132,10 +109,10 @@ namespace ol::midi {
                 case ParserHasStatus:
                     if ((byte & kStatusByteMask) == 0) {
                         incoming_message_.data[0] = byte & kDataByteMask;
-                        if (running_status_ == ChannelPressure
-                            || running_status_ == ProgramChange
-                            || incoming_message_.sc_type == MTCQuarterFrame
-                            || incoming_message_.sc_type == SongSelect) {
+                        if (running_status_ == daisy::ChannelPressure
+                            || running_status_ == daisy::ProgramChange
+                            || incoming_message_.sc_type == daisy::MTCQuarterFrame
+                            || incoming_message_.sc_type == daisy::SongSelect) {
                             //these are just one data byte, so we short circuit back to start
                             pstate_ = ParserEmpty;
                             if (event_out != nullptr) {
@@ -147,11 +124,11 @@ namespace ol::midi {
                         }
 
                         //ChannelModeMessages (reserved Control Changes)
-                        if (running_status_ == ControlChange
+                        if (running_status_ == daisy::ControlChange
                             && incoming_message_.data[0] > 119) {
-                            incoming_message_.type = ChannelMode;
-                            running_status_ = ChannelMode;
-                            incoming_message_.cm_type = static_cast<ChannelModeType>(
+                            incoming_message_.type = daisy::ChannelMode;
+                            running_status_ = daisy::ChannelMode;
+                            incoming_message_.cm_type = static_cast<daisy::ChannelModeType>(
                                     incoming_message_.data[0] - 120);
                         }
                     } else {
@@ -164,8 +141,8 @@ namespace ol::midi {
                         incoming_message_.data[1] = byte & kDataByteMask;
 
                         //velocity 0 NoteOns are NoteOffs
-                        if (running_status_ == NoteOn && incoming_message_.data[1] == 0) {
-                            incoming_message_.type = NoteOff;
+                        if (running_status_ == daisy::NoteOn && incoming_message_.data[1] == 0) {
+                            incoming_message_.type = daisy::NoteOff;
                         }
 
                         // At this point the message is valid, and we can complete this MidiEvent
@@ -209,7 +186,7 @@ namespace ol::midi {
          */
         void Reset() {
             pstate_ = ParserEmpty;
-            incoming_message_.type = MessageLast;
+            incoming_message_.type = daisy::MessageLast;
         }
 
     private:
@@ -221,8 +198,8 @@ namespace ol::midi {
         };
 
         ParserState pstate_;
-        MidiEvent incoming_message_;
-        MidiMessageType running_status_;
+        daisy::MidiEvent incoming_message_;
+        daisy::MidiMessageType running_status_;
 
         // Masks to check for message type, and byte content
         const uint8_t kStatusByteMask = 0x80;
@@ -233,64 +210,4 @@ namespace ol::midi {
     };
 }
 
-void handleMidi(MidiEvent event);
-
-int main() {
-
-    hw.Configure();
-    hw.Init();
-
-    daisy::MidiEvent midi_event{};
-    ol::midi::MidiParser midi_parser;
-    midi_parser.Init();
-
-
-    UartHandler::Config usart_midi_config;
-    UartHandler uart_midi_handler;
-    UartHandler::Result a_init_result = UartHandler::Result::ERR;
-
-    const dsy_gpio_pin &a_rx_pin = DaisySeed::GetPin(16);
-    const dsy_gpio_pin &a_tx_pin = DaisySeed::GetPin(28);
-    usart_midi_config.baudrate = 31250;//9600;
-    usart_midi_config.periph = UartHandler::Config::Peripheral::USART_2;
-    usart_midi_config.stopbits = UartHandler::Config::StopBits::BITS_1;
-    usart_midi_config.parity = UartHandler::Config::Parity::NONE;
-    usart_midi_config.mode = UartHandler::Config::Mode::RX;
-    usart_midi_config.wordlength = UartHandler::Config::WordLength::BITS_8;
-    usart_midi_config.pin_config.rx = a_rx_pin;
-    usart_midi_config.pin_config.tx = a_tx_pin;
-    a_init_result = uart_midi_handler.Init(usart_midi_config);
-
-    uint8_t counter = 0;
-    uint8_t inbuf[IN_BUF_SIZE]{};
-    int direction = 1;
-    int read_status = 0;
-    uint64_t read_byte_sum = 0;
-    while (true) {
-        read_status = 0;
-        read_status = uart_midi_handler.PollReceive(inbuf, 1, 10);
-        if (read_status == 0 && midi_parser.Parse(inbuf[0], &midi_event)) {
-            handleMidi(midi_event);
-        }
-        counter += direction;
-        if (counter % 100 == 0) {
-            direction *= -1;
-        }
-    }
-
-}
-
-void handleMidi(MidiEvent event) {
-    switch (event.type) {
-        case MidiMessageType::NoteOn: {
-            hw.SetLed(true);
-            break;
-        }
-        case MidiMessageType::NoteOff: {
-            hw.SetLed(false);
-            break;
-        }
-        default:
-            break;
-    }
-}
+#endif //OL_DSP_MIDI_H
