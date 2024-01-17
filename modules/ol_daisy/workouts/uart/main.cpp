@@ -1,17 +1,9 @@
-#ifdef DAISY_NATIVE
-//#include "daisy/daisy_dummy.h"
-//#include "hid/logger.h"
-#else
 
-
-#endif
-
-#include <memory>
-#include "daisy.h"
+//#include "daisy.h"
 #include "daisy_seed.h"
-#include "dev/oled_ssd130x.h"
 
 #define IN_BUF_SIZE 8
+#define USE_DAISY_MIDI true
 #define DISPLAY_ON false
 #define DISPLAY_UPDATE_FREQUENCY 250
 using namespace daisy;
@@ -239,16 +231,25 @@ int main() {
 
     hw.Configure();
     hw.Init();
-
+    MidiUartHandler midi;
+    MidiUartHandler::Config midi_config;
+    const dsy_gpio_pin &midi_rx_pin = DaisySeed::GetPin(16);
+    const dsy_gpio_pin &midi_tx_pin = DaisySeed::GetPin(28);
+    const auto periph = UartHandler::Config::Peripheral::USART_2;
+    midi_config.transport_config.rx = midi_rx_pin;
+    midi_config.transport_config.tx = midi_tx_pin;
+    midi_config.transport_config.periph = periph;
+    if (USE_DAISY_MIDI) {
+        midi.Init(midi_config);
+        midi.StartReceive();
+    }
     daisy::MidiEvent midi_event{};
     ol::midi::MidiParser midi_parser;
     midi_parser.Init();
 
-
     UartHandler::Config usart_midi_config;
     UartHandler uart_midi_handler;
-    UartHandler::Result a_init_result = UartHandler::Result::ERR;
-
+    UartHandler::Result uart_midi_handler_init_result = UartHandler::Result::ERR;
     const dsy_gpio_pin &a_rx_pin = DaisySeed::GetPin(16);
     const dsy_gpio_pin &a_tx_pin = DaisySeed::GetPin(28);
     usart_midi_config.baudrate = 31250;//9600;
@@ -259,18 +260,27 @@ int main() {
     usart_midi_config.wordlength = UartHandler::Config::WordLength::BITS_8;
     usart_midi_config.pin_config.rx = a_rx_pin;
     usart_midi_config.pin_config.tx = a_tx_pin;
-    a_init_result = uart_midi_handler.Init(usart_midi_config);
-
+    if (!USE_DAISY_MIDI) {
+        uart_midi_handler_init_result = uart_midi_handler.Init(usart_midi_config);
+    }
     uint8_t counter = 0;
     uint8_t inbuf[IN_BUF_SIZE]{};
     int direction = 1;
-    int read_status = 0;
+    UartHandler::Result read_status = UartHandler::Result::ERR;
     uint64_t read_byte_sum = 0;
+    hw.StartLog(true);
+    hw.PrintLine("Starting loop...");
     while (true) {
-        read_status = 0;
-        read_status = uart_midi_handler.PollReceive(inbuf, 1, 10);
-        if (read_status == 0 && midi_parser.Parse(inbuf[0], &midi_event)) {
-            handleMidi(midi_event);
+        if (USE_DAISY_MIDI) {
+            midi.Listen();
+            while (midi.HasEvents()) {
+                handleMidi(midi.PopEvent());
+            }
+        } else if (uart_midi_handler_init_result == UartHandler::Result::OK) {
+            read_status = uart_midi_handler.BlockingReceive(inbuf, 1, 10);
+            if (read_status == UartHandler::Result::OK && midi_parser.Parse(inbuf[0], &midi_event)) {
+                handleMidi(midi_event);
+            }
         }
         counter += direction;
         if (counter % 100 == 0) {
@@ -283,10 +293,12 @@ int main() {
 void handleMidi(MidiEvent event) {
     switch (event.type) {
         case MidiMessageType::NoteOn: {
+            hw.PrintLine("%d: Note ON!", System::GetNow());
             hw.SetLed(true);
             break;
         }
         case MidiMessageType::NoteOff: {
+            hw.PrintLine("%d: Note OFF!", System::GetNow());
             hw.SetLed(false);
             break;
         }

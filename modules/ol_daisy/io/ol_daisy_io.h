@@ -4,6 +4,5 @@
 
 #ifndef OL_DSP_OL_DAISY_IO_H
 #define OL_DSP_OL_DAISY_IO_H
-#include "io.h"
-#include "midi.h"
+#include "ol_daisy_io_core.h"
 #endif //OL_DSP_OL_DAISY_IO_H

@@ -2,8 +2,8 @@
 // Created by Orion Letizi on 11/28/23.
 //
 
-#ifndef OL_DSP_IO_H
-#define OL_DSP_IO_H
+#ifndef OL_DSP_OL_DAISY_IO_CORE_H
+#define OL_DSP_OL_DAISY_IO_CORE_H
 
 #include "GpioPool.h"
 #include "PolyvoiceControls.h"
@@ -20,4 +20,4 @@ namespace ol_daisy::io {
         void (*UpdateKnob2)(t_sample value);
     };
 }
-#endif //OL_DSP_IO_H
+#endif //OL_DSP_OL_DAISY_IO_CORE_H

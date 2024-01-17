@@ -92,29 +92,22 @@ int main() {
 
     hw.Configure();
     hw.Init();
-
-    daisy::MidiEvent midi_event{};
-    ol_daisy::io::MidiParser midi_parser;
-    midi_parser.Init();
-
     // MIDI IO
 
-    daisy::UartHandler::Config midi_uart_config;
-    daisy::UartHandler midi_uart_handler;
+    daisy::MidiUartHandler::Config midi_uart_config;
+    daisy::MidiUartHandler midi;
+    //    daisy::UartHandler midi_uart_handler;
     daisy::UartHandler::Result midi_uart_init_result = daisy::UartHandler::Result::ERR;
 
     const dsy_gpio_pin &midi_rx_pin = daisy::DaisySeed::GetPin(16);
     const dsy_gpio_pin &midi_tx_pin = daisy::DaisySeed::GetPin(28);
-    midi_uart_config.baudrate = 31250;//9600;
-    midi_uart_config.periph = daisy::UartHandler::Config::Peripheral::USART_2;
-    midi_uart_config.stopbits = daisy::UartHandler::Config::StopBits::BITS_1;
-    midi_uart_config.parity = daisy::UartHandler::Config::Parity::NONE;
-    midi_uart_config.mode = daisy::UartHandler::Config::Mode::RX;
-    midi_uart_config.wordlength = daisy::UartHandler::Config::WordLength::BITS_8;
-    midi_uart_config.pin_config.rx = midi_rx_pin;
-    midi_uart_config.pin_config.tx = midi_tx_pin;
-    midi_uart_init_result = midi_uart_handler.Init(midi_uart_config);
 
+    midi_uart_config.transport_config.periph = daisy::UartHandler::Config::Peripheral::USART_2;
+    midi_uart_config.transport_config.rx = midi_rx_pin;
+    midi_uart_config.transport_config.tx = midi_tx_pin;
+    midi.Init(midi_uart_config);
+
+    // Voice init
     voice.UpdateMidiControl(CC_CTL_PORTAMENTO, 48);
     voice.UpdateMidiControl(CC_FILTER_CUTOFF, 0);
     voice.UpdateMidiControl(CC_FILTER_RESONANCE, 0);
@@ -164,12 +157,14 @@ int main() {
     while (true) {
         uint8_t midi_byte = 0;
         int read_status = 0;
-        read_status = midi_uart_handler.PollReceive(&midi_byte, 1, 10);
-        if (read_status == 0 && midi_parser.Parse(midi_byte, &midi_event)) {
-            handleMidi(midi_event);
+        //read_status = midi_uart_handler.PollReceive(&midi_byte, 1, 10);
+        midi.Listen();
+        while (midi.HasEvents()) {
+            handleMidi(midi.PopEvent());
         }
+
         counter += direction;
-        if (counter == 4000000 || counter == 0) {
+        if (counter == 100 || counter == 0) {
             direction *= -1;
         }
     }
@@ -180,10 +175,20 @@ void handleMidi(daisy::MidiEvent event) {
     switch (event.type) {
         case daisy::MidiMessageType::NoteOn: {
             hw.SetLed(true);
+            auto note_on = event.AsNoteOn();
+            voice.NoteOn(note_on.note, note_on.velocity);
             break;
         }
         case daisy::MidiMessageType::NoteOff: {
             hw.SetLed(false);
+            auto note_off = event.AsNoteOff();
+            voice.NoteOff(note_off.note, note_off.velocity);
+            break;
+        }
+        case daisy::MidiMessageType::ControlChange: {
+            hw.SetLed(true);
+            auto control = event.AsControlChange();
+            voice.UpdateMidiControl(control.control_number, control.value);
             break;
         }
         default:
