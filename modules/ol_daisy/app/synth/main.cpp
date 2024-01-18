@@ -46,11 +46,10 @@ ol_daisy::io::DaisySerial serial(a_handler);
 ol::io::SimpleSerializer serializer(serial);
 MyControlListener control_listener;
 
-//SynthVoice<1> voice;
-ol::synth::SynthVoice v1;
-ol::synth::SynthVoice v2;
-ol::synth::SynthVoice v3;
-ol::synth::SynthVoice v4;
+ol::synth::SynthVoice v1(new ol::synth::OscillatorSoundSource(), new ol::synth::MoogFilter());
+ol::synth::SynthVoice v2(new ol::synth::OscillatorSoundSource(), new ol::synth::MoogFilter());
+ol::synth::SynthVoice v3(new ol::synth::OscillatorSoundSource(), new ol::synth::MoogFilter());
+ol::synth::SynthVoice v4(new ol::synth::OscillatorSoundSource(), new ol::synth::MoogFilter());
 std::vector<ol::synth::Voice *> voices{&v1, &v2, &v3, &v4};
 ol::synth::Polyvoice<1> voice(voices);
 

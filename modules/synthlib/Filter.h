@@ -29,6 +29,36 @@ namespace ol::synth {
         virtual void Peak(t_sample *frame_out) = 0;
     };
 
+    class MoogFilter : public Filter {
+    private:
+        daisysp::MoogLadder flt_;
+    public:
+        void Init(t_sample sample_rate) override { flt_.Init(sample_rate); }
+
+        void SetFreq(t_sample freq) override { flt_.SetFreq(freq); }
+
+        void SetRes(t_sample res) override { flt_.SetRes(res); }
+
+        void Low(t_sample *frame_out) override { *frame_out = flt_.Process(*frame_out); }
+
+        void SetDrive(t_sample drive) override {}
+
+        void Process(const t_sample *frame_in) override {}
+
+        void High(t_sample *frame_out) override {}
+
+        void Band(t_sample *frame_out) override {}
+
+        void Notch(t_sample *frame_out) override {}
+
+        void Peak(t_sample *frame_out) override {}
+
+    private:
+        daisysp::MoogLadder moog;
+    public:
+
+    };
+
     class SvfFilter : public Filter {
     private:
         daisysp::Svf svf;

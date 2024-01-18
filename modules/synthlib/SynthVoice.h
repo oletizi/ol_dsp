@@ -18,21 +18,16 @@ namespace ol::synth {
         t_sample frame_buffer = 0;
 
     public:
-        SynthVoice(SoundSource<1> *sound_source,
-                   Filter *filter,
-                   Adsr *filter_envelope,
-                   Adsr *amp_envelope,
-                   Portamento *portamento)
+        explicit SynthVoice(SoundSource<1> *sound_source = new OscillatorSoundSource(),
+                   Filter *filter = new SvfFilter(),
+                   Adsr *filter_envelope = new DaisyAdsr(),
+                   Adsr *amp_envelope = new DaisyAdsr(),
+                   Portamento *portamento = new DaisyPortamento())
                 : sound_source_(sound_source),
                   filter_(filter),
                   filter_envelope_(filter_envelope),
                   amp_envelope_(amp_envelope),
                   portamento_(portamento) {}
-
-        SynthVoice() : SynthVoice(new OscillatorSoundSource(),
-                                  new SvfFilter(),
-                                  new DaisyAdsr(), new DaisyAdsr(),
-                                  new DaisyPortamento()) {}
 
         void Init(t_sample sr) override {
             sample_rate = sr;
