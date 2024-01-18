@@ -26,8 +26,8 @@ CPP_SOURCES += main.cpp #\
 
 #OPT = -O3
 #OPT = -Os
-OPT =
-DEBUG = 1
+
+DEBUG = 0
 # Library Locations
 LIBDAISY_DIR = ${PROJECT_DIR}/libs/libDaisy
 DAISYSP_DIR = ${PROJECT_DIR}/libs/DaisySP

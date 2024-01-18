@@ -39,17 +39,17 @@ namespace ol::synth {
         }
 
         void Process(t_sample *frame_out) override {
-
+            t_sample amp = amp_envelope_->Process(Gate());
+            amp *= amp_env_amount;
             sound_source_->SetFreq(portamento_->Process(freq_));
             sound_source_->Process(frame_out);
 
             t_sample filter_frequency =
                     filter_cutoff + ((filter_envelope_->Process(Gate()) * 20000) * filter_env_amount);
-            t_sample amp = amp_envelope_->Process(Gate());
             filter_->SetFreq(filter_frequency);
             filter_->Process(frame_out);
             filter_->Low(frame_out);
-            frame_out[0] *= amp * amp_env_amount;
+            frame_out[0] *= amp;// * amp_env_amount;
         }
 
         void UpdateConfig(Config &config) override {
