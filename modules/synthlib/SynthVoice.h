@@ -15,7 +15,6 @@
 namespace ol::synth {
     class SynthVoice : public Voice {
     private:
-        t_sample frame_buffer = 0;
 
     public:
         explicit SynthVoice(SoundSource<1> *sound_source = new OscillatorSoundSource(),
