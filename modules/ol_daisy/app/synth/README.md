@@ -10,3 +10,5 @@
 | 6f154fe2452ff5303aa251275ae80de872a20084 | CPU: min: 73%; max: 74%; avg: 74% | Added delay to ol_daisy/app/synth              |
 | 2bfe815c2af9b02461cae248fe539c01553e2e36 | CPU: min: 86%; max: 87%; avg: 86% | Added reverb                                   |
 | 506f2f3802105c25fe3855d453a0aba032786de5 | CPU: min: 52%; max: 53%; avg: 52% | Turned off debug in Makefile                   |
+| f2942595d1791d94c484cfbc08f45f0d372f6b12 | CPU: min: 46%; max: 48%; avg: 47% | Added FilterFX at the end of the chain         |
+| Ibid.                                    | CPU: min: 45%; max: 52%; avg: 49% | With four voices playing                       |
