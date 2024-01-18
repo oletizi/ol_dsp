@@ -9,12 +9,11 @@
 #include "VoiceMap.h"
 
 namespace ol::synth {
-    template<int CHANNEL_COUNT>
     class Polyvoice : public Voice {
     private:
         std::vector<Voice *> &voices_;
         bool initialized = false;
-        t_sample frame_buffer;
+        t_sample frame_buffer = 0;
 
     public:
         explicit Polyvoice(std::vector<Voice *> &voices) : voices_(voices) {}
@@ -27,12 +26,9 @@ namespace ol::synth {
         }
 
         void Process(t_sample *frame_out) override {
-//            t_sample frame_buffer[CHANNEL_COUNT]{};
             for (auto voice: voices_) {
                 voice->Process(&frame_buffer);
-                for (int i = 0; i < CHANNEL_COUNT; i++) {
-                    frame_out[i] += frame_buffer;
-                }
+                 *frame_out += frame_buffer;
             }
         }
 

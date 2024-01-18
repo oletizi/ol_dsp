@@ -51,7 +51,7 @@ ol::synth::SynthVoice v2(new ol::synth::OscillatorSoundSource(), new ol::synth::
 ol::synth::SynthVoice v3(new ol::synth::OscillatorSoundSource(), new ol::synth::MoogFilter());
 ol::synth::SynthVoice v4(new ol::synth::OscillatorSoundSource(), new ol::synth::MoogFilter());
 std::vector<ol::synth::Voice *> voices{&v1, &v2, &v3, &v4};
-ol::synth::Polyvoice<1> voice(voices);
+ol::synth::Polyvoice voice(voices);
 
 // init delay
 daisysp::DelayLine<t_sample, MAX_DELAY_SAMPLES> DSY_SDRAM_BSS delay_line1;
