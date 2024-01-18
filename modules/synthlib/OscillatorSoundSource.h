@@ -9,8 +9,7 @@
 #include "synthlib/ol_synthlib.h"
 
 namespace ol::synth {
-    template<int CHANNEL_COUNT>
-    class OscillatorSoundSource : public SoundSource<CHANNEL_COUNT> {
+    class OscillatorSoundSource : public SoundSource<1> {
 
     private:
         daisysp::Oscillator osc_;
@@ -25,10 +24,7 @@ namespace ol::synth {
         }
 
         void Process(t_sample *frame) override {
-            t_sample out = osc_.Process();
-            for (int i = 0; i < CHANNEL_COUNT; i++) {
-                frame[i] = out;
-            }
+            frame[0] = osc_.Process();
         }
 
         inline void GateOn() override {};

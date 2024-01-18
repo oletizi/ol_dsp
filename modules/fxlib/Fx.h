@@ -76,7 +76,7 @@ namespace ol::fx {
         t_sample resonance = 0;
         t_sample drive = 0;
         FilterType type = LowPass;
-        ol::synth::SvfFilter<CHANNEL_COUNT> filter_;
+        ol::synth::SvfFilter filter_;
 
     public:
 

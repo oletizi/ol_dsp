@@ -13,12 +13,12 @@
 #define PRINTF printf
 
 namespace ol::synth {
-    template<int CHANNEL_COUNT>
     class SynthVoice : public Voice {
     private:
-        //t_sample frame_buffer[CHANNEL_COUNT]{};
+        t_sample frame_buffer = 0;
+
     public:
-        SynthVoice(SoundSource<CHANNEL_COUNT> *sound_source,
+        SynthVoice(SoundSource<1> *sound_source,
                    Filter *filter,
                    Adsr *filter_envelope,
                    Adsr *amp_envelope,
@@ -29,10 +29,10 @@ namespace ol::synth {
                   amp_envelope_(amp_envelope),
                   portamento_(portamento) {}
 
-        SynthVoice() : SynthVoice<CHANNEL_COUNT>(new OscillatorSoundSource<CHANNEL_COUNT>(),
-                                                 new SvfFilter<CHANNEL_COUNT>(),
-                                                 new DaisyAdsr(), new DaisyAdsr(),
-                                                 new DaisyPortamento()) {}
+        SynthVoice() : SynthVoice(new OscillatorSoundSource(),
+                                  new SvfFilter(),
+                                  new DaisyAdsr(), new DaisyAdsr(),
+                                  new DaisyPortamento()) {}
 
         void Init(t_sample sr) override {
             sample_rate = sr;
@@ -45,23 +45,17 @@ namespace ol::synth {
         }
 
         void Process(t_sample *frame_out) override {
-            t_sample frame_buffer[CHANNEL_COUNT]{};
 
             sound_source_->SetFreq(portamento_->Process(freq_));
-            sound_source_->Process(frame_buffer);
+            sound_source_->Process(frame_out);
 
             t_sample filter_frequency =
                     filter_cutoff + ((filter_envelope_->Process(Gate()) * 20000) * filter_env_amount);
             t_sample amp = amp_envelope_->Process(Gate());
             filter_->SetFreq(filter_frequency);
-            for (int i = 0; i < CHANNEL_COUNT; i++) {
-                frame_buffer[i] *= osc_1_mix;
-            }
-            filter_->Process(frame_buffer);
-            filter_->Low(frame_buffer);
-            for (int i = 0; i < CHANNEL_COUNT; i++) {
-                frame_out[i] = amp * amp_env_amount * frame_buffer[i];
-            }
+            filter_->Process(frame_out);
+            filter_->Low(frame_out);
+            frame_out[0] *= amp * amp_env_amount;
         }
 
         void UpdateConfig(Config &config) override {
@@ -282,7 +276,7 @@ namespace ol::synth {
         t_sample sample_rate = 0;
 
         // Oscillator, sample player, etc.
-        SoundSource<CHANNEL_COUNT> *sound_source_{};
+        SoundSource<1> *sound_source_{};
 
         // Oscillator/sound source params
         t_sample freq_ = 0;

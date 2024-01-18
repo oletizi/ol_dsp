@@ -47,11 +47,11 @@ ol::io::SimpleSerializer serializer(serial);
 MyControlListener control_listener;
 
 //SynthVoice<1> voice;
-ol::synth::SynthVoice<1> v1;
-ol::synth::SynthVoice<1> v2;
-ol::synth::SynthVoice<1> v3;
-ol::synth::SynthVoice<1> v4;
-std::vector<ol::synth::Voice *> voices{&v1, &v2, &v3};//, &v4};
+ol::synth::SynthVoice v1;
+ol::synth::SynthVoice v2;
+ol::synth::SynthVoice v3;
+ol::synth::SynthVoice v4;
+std::vector<ol::synth::Voice *> voices{&v1, &v2, &v3, &v4};
 ol::synth::Polyvoice<1> voice(voices);
 
 // init delay
@@ -67,24 +67,29 @@ ol::fx::ReverbFx<CHANNEL_COUNT> reverb_fx(daisy_verb);
 // init filter
 ol::fx::FilterFx<CHANNEL_COUNT> filter_fx;
 
+// CPU load meter
+daisy::CpuLoadMeter load_meter;
+
 void audio_callback(daisy::AudioHandle::InterleavingInputBuffer in,
                     daisy::AudioHandle::InterleavingOutputBuffer out,
                     size_t size) {
+    load_meter.OnBlockStart();
     for (size_t i = 0; i < size; i += 2) {
-        t_sample buf[CHANNEL_COUNT]{};
 
+        t_sample buf[CHANNEL_COUNT]{};
 
         voice.Process(buf);
 
-        delay_fx.Process(buf, buf);
+//        delay_fx.Process(buf, buf);
         buf[1] = buf[0];
-        // reverb_fx.Process(buf, buf);
+//        reverb_fx.Process(buf, buf);
         // filter_fx.Process(buf, buf);
 
         out[i] = buf[0];
         out[i + 1] = buf[0 + 1];
         // out[i+1] = frame_buffer[0+1];
     }
+    load_meter.OnBlockEnd();
 }
 
 
@@ -92,6 +97,7 @@ int main() {
 
     hw.Configure();
     hw.Init();
+    hw.StartLog(false);
     // MIDI IO
 
     daisy::MidiUartHandler::Config midi_uart_config;
@@ -149,11 +155,12 @@ int main() {
     delay_fx.Init(sample_rate);
     reverb_fx.Init(sample_rate);
     filter_fx.Init(sample_rate);
-
+    load_meter.Init(sample_rate, AUDIO_BLOCK_SIZE);
     hw.StartAudio(audio_callback);
 
     uint64_t counter = 0;
     int direction = 1;
+    auto checkpoint = daisy::System::GetNow();
     while (true) {
         uint8_t midi_byte = 0;
         int read_status = 0;
@@ -163,8 +170,17 @@ int main() {
             handleMidi(midi.PopEvent());
         }
 
+        auto now = daisy::System::GetNow();
+        if (now - checkpoint >= 1000) {
+            checkpoint = now;
+            auto min = load_meter.GetMinCpuLoad();
+            auto max = load_meter.GetMaxCpuLoad();
+            auto avg = load_meter.GetAvgCpuLoad();
+            hw.PrintLine("CPU: min: %d%%; max: %d%%; avg: %d%%", int(min * 100), int(max * 100), int(avg * 100));
+            load_meter.Reset();
+        }
         counter += direction;
-        if (counter == 100 || counter == 0) {
+        if (counter == 1000 || counter == 0) {
             direction *= -1;
         }
     }
