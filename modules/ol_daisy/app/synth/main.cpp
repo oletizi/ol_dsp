@@ -69,20 +69,23 @@ ol::fx::FilterFx<CHANNEL_COUNT> filter_fx;
 // CPU load meter
 daisy::CpuLoadMeter load_meter;
 t_sample mono = 0;
+t_sample stereo[]{0, 0};
 
 void audio_callback(daisy::AudioHandle::InterleavingInputBuffer in,
                     daisy::AudioHandle::InterleavingOutputBuffer out,
                     size_t size) {
     load_meter.OnBlockStart();
     for (size_t i = 0; i < size; i += 2) {
+//        stereo[0] = stereo[1] = mono = 0;
         mono = 0;
         voice.Process(&mono);
 
         delay_fx.Process(&mono, &mono);
-//        reverb_fx.Process(out, out);
+        stereo[0] = stereo[1] = mono;
+        reverb_fx.Process(stereo, stereo);
 //        filter_fx.Process(out, out);
-//        out[i+1] = out[i];
-        out[i + 1] = out[i] = mono;
+        out[i] = stereo[0];
+        out[i + 1] = stereo[1];
     }
     load_meter.OnBlockEnd();
 }
