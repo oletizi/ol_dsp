@@ -76,14 +76,13 @@ void audio_callback(daisy::AudioHandle::InterleavingInputBuffer in,
                     size_t size) {
     load_meter.OnBlockStart();
     for (size_t i = 0; i < size; i += 2) {
-//        stereo[0] = stereo[1] = mono = 0;
         mono = 0;
         voice.Process(&mono);
 
         delay_fx.Process(&mono, &mono);
         stereo[0] = stereo[1] = mono;
         reverb_fx.Process(stereo, stereo);
-//        filter_fx.Process(out, out);
+        filter_fx.Process(stereo, stereo);
         out[i] = stereo[0];
         out[i + 1] = stereo[1];
     }
