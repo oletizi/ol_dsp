@@ -202,6 +202,10 @@ void handleMidi(daisy::MidiEvent event) {
             hw.SetLed(true);
             auto control = event.AsControlChange();
             voice.UpdateMidiControl(control.control_number, control.value);
+            delay_fx.UpdateMidiControl(control.control_number, control.value);
+            reverb_fx.UpdateMidiControl(control.control_number, control.value);
+            filter_fx.UpdateMidiControl(control.control_number, control.value);
+            hw.PrintLine("CC: %d: %d", control.control_number, control.value);
             break;
         }
         default:
