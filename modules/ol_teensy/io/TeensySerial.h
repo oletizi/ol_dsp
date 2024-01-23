@@ -17,9 +17,9 @@ namespace ol_teensy::io {
 
         int Write(std::vector<uint8_t> data, int size) override { return 0; };
 
-        int Available() override { return Serial1.available(); };
-
-        int Read() override { return Serial1.read(); };
+//        int Available() override { return Serial1.available(); };
+//
+//        int Read() override { return Serial1.read(); };
 
     };
 }

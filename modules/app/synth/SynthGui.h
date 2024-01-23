@@ -171,14 +171,15 @@ namespace ol::app::synth {
         }
 
         void Paint(Graphics &g) override {
+            DPRINTLN("SynthGui: Paint()...");
             g.DrawRect(Rectangle{0, 0, config_.viewport});
             layout_.Paint(g);
+            DPRINTLN("SynthGui: Paint().");
         }
 
         void Resized() override {
             layout_.Resized();
         }
-
 
         void ControlChange(Control &control) {
             //if (control.)

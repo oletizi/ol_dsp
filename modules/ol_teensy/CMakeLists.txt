@@ -9,6 +9,7 @@ set(ARDUINO_INCLUDES ${TEENSY_ROOT}/cores/teensy4
         ${TEENSY_LIBS}/SerialFlash
         ${TEENSY_LIBS}/SPI
         ${TEENSY_LIBS}/Wire
+        ${TEENSY_LIBS}/ILI9341_t3
         ${ARDUINO_LIBS}/Adafruit_GFX_Library
         ${ARDUINO_LIBS}/Adafruit_SSD1306)
 
@@ -25,17 +26,22 @@ target_include_directories(ol_teensy PUBLIC
         ${TEENSY_LIBS}/SerialFlash
         ${TEENSY_LIBS}/SPI
         ${TEENSY_LIBS}/Wire
+        ${TEENSY_LIBS}/ILI9341_t3
         ${ARDUINO_LIBS}/Adafruit_GFX_Library
         ${ARDUINO_LIBS}/Adafruit_SSD1306
 )
 
-add_executable( ol_teensy_synth app/synth/loop.h ol_teensy.h)
+add_executable(ol_teensy_synth app/synth/loop.h ol_teensy.h)
 target_link_libraries(ol_teensy_synth PUBLIC ol_teensy ol_guilib)
 target_include_directories(ol_teensy_synth PUBLIC . .. ${ARDUINO_INCLUDES})
 set_target_properties(ol_teensy_synth PROPERTIES LINKER_LANGUAGE CXX)
 
-add_executable(ol_teensy_workouts_uart workouts/uart/loop.h
-        workouts/dummy.cpp)
+add_executable(ol_teensy_workouts_uart workouts/uart/loop.h workouts/dummy.cpp)
 target_link_libraries(ol_teensy_workouts_uart PUBLIC ol_teensy ol_guilib)
 target_include_directories(ol_teensy_workouts_uart PUBLIC . .. ${ARDUINO_INCLUDES})
 set_target_properties(ol_teensy_workouts_uart PROPERTIES LINKER_LANGUAGE CXX)
+
+add_executable(ol_teensy_workouts_tft workouts/tft/loop.h workouts/tft_dummy.cpp)
+target_link_libraries(ol_teensy_workouts_tft PUBLIC ol_teensy ol_guilib)
+target_include_directories(ol_teensy_workouts_tft PUBLIC . .. ${ARDUINO_INCLUDES})
+set_target_properties(ol_teensy_workouts_tft PROPERTIES LINKER_LANGUAGE CXX)
