@@ -80,3 +80,7 @@ add_library(stmlib
         libs/stmlib/stmlib/fft/shy_fft.h)
 target_include_directories(stmlib PUBLIC libs/stmlib)
 set_target_properties(stmlib PROPERTIES LINKER_LANGUAGE CXX)
+
+add_library(tgx libs/tgx/src/tgx.h)
+target_include_directories(tgx PUBLIC libs/tgx/src)
+set_target_properties(tgx PROPERTIES LINKER_LANGUAGE CXX)

@@ -10,6 +10,7 @@ set(ARDUINO_INCLUDES ${TEENSY_ROOT}/cores/teensy4
         ${TEENSY_LIBS}/SPI
         ${TEENSY_LIBS}/Wire
         ${TEENSY_LIBS}/ILI9341_t3
+        ${ARDUINO_LIBS}/ILI9341_T4/src/
         ${ARDUINO_LIBS}/Adafruit_GFX_Library
         ${ARDUINO_LIBS}/Adafruit_SSD1306)
 
@@ -42,6 +43,6 @@ target_include_directories(ol_teensy_workouts_uart PUBLIC . .. ${ARDUINO_INCLUDE
 set_target_properties(ol_teensy_workouts_uart PROPERTIES LINKER_LANGUAGE CXX)
 
 add_executable(ol_teensy_workouts_tft workouts/tft/loop.h workouts/tft_dummy.cpp)
-target_link_libraries(ol_teensy_workouts_tft PUBLIC ol_teensy ol_guilib)
+target_link_libraries(ol_teensy_workouts_tft PUBLIC tgx ol_teensy ol_guilib ol_lvgl)
 target_include_directories(ol_teensy_workouts_tft PUBLIC . .. ${ARDUINO_INCLUDES})
 set_target_properties(ol_teensy_workouts_tft PROPERTIES LINKER_LANGUAGE CXX)
