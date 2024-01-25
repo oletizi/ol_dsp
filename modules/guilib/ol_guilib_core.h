@@ -84,6 +84,7 @@ namespace ol::gui {
             g_.Print(text, offset_area);
         }
 
+
     private:
         Graphics &g_;
         Point offset_{};

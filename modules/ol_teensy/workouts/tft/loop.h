@@ -21,11 +21,13 @@
 #include "WireKinetis.h"
 #include "usb_serial.h"
 #include "ol_teensy.h"
+
 #define DMAMEM
 #else
 //#include "ol_dsp.h"
 //#include "ol_teensy.h"
 #endif
+
 #include "SPI.h"
 #include <ILI9341_T4.h>
 #include "tgx.h"
@@ -54,19 +56,67 @@ const int LY = TFT_VER_RES;
 
 
 //DMAMEM
-DMAMEM uint16_t fb_internal[240*320];  // the 'internal' frame buffer
-DMAMEM uint16_t fb[LX*LY];
+DMAMEM uint16_t fb_internal[240 * 320];  // the 'internal' frame buffer
+DMAMEM uint16_t fb[LX * LY];
 // main framebuffer we draw onto.
 ILI9341_T4::DiffBuffStatic<4096> diff1; // a first diff buffer with 4K memory (statically allocated)
 ILI9341_T4::DiffBuffStatic<4096> diff2; // and a second one.
 
 ILI9341_T4::ILI9341Driver tft(TFT_CS, SPI_DC, SPI_CLK, SPI_MOSI, SPI_MISO, TFT_RESET);
 tgx::Image<tgx::RGB565> im(fb, TFT_HOR_RES, TFT_VER_RES);
+const tgx::RGB565 ol_orange(31, 21, 0);
+const tgx::RGB565 ol_dark_gray(11, 22, 11);
+
+tgx::RGB565 fg_color = ol_orange;
+tgx::RGB565 bg_color = ol_dark_gray;
+
+ILI9341_t3_font_t font;
 //
 // TODO: Try these libs:
 //  * https://github.com/vindar/ILI9341_T4
 //  * https://github.com/KurtE/ILI9341_t3n
 //
+ol::app::synth::SynthGuiConfig config{};
+ol::app::synth::SynthGui gui(config);
+
+namespace ol::app::synth {
+    class TgxGraphics : public Graphics {
+    public:
+        explicit TgxGraphics(tgx::Image<tgx::RGB565> &canvas, const ILI9341_t3_font_t font, const tgx::RGB565 fg_color,
+                             const tgx::RGB565 bg_color)
+                : canvas_(canvas), font_(font), fg_color_(fg_color), bg_color_(bg_color) {}
+
+        void DrawLine(int startX, int startY, int endX, int endY, int line_width) const override {
+            canvas_.drawLine(startX, startY, endX, endY, fg_color_, 1);
+        }
+
+        void DrawRect(int x, int y, int width, int height, int line_width) override {
+            canvas_.drawRect(x, y, width, height, fg_color_, 1);
+        }
+
+        void FillRect(int x, int y, int width, int height) override {
+            canvas_.fillRect(x, y, width, height, fg_color_, 1);
+        }
+
+        void WritePixel(int x, int y, Color c) override {
+            canvas_.drawPixel(x, y, fg_color_);
+        }
+
+        void Print(std::string text, Rectangle area) override {
+            DPRINTF("font_.bits_height: %d, cap_heigth: %d, line_space: %d\n", font_.bits_height, font_.cap_height,
+                    font_.line_space);
+            tgx::iVec2 point(area.point.x, area.point.y + font_.line_space);
+            canvas_.drawText(text.c_str(), point, fg_color_, font_, true);
+        }
+
+
+    private:
+        tgx::Image<tgx::RGB565> &canvas_;
+        tgx::RGB565 bg_color_;
+        tgx::RGB565 fg_color_;
+        ILI9341_t3_font_t font_;
+    };
+}
 
 void doSetup() {
     Serial.begin(9600);
@@ -94,24 +144,29 @@ void doSetup() {
 
     Serial.println("Tft started.");
 
+    font = font_tgx_OpenSans_12;
     tft.setFramebuffer(fb_internal);     // register the internal framebuffer: this activates double buffering
     tft.setDiffBuffers(&diff1, &diff2);
     tft.setRotation(1);
     im.fillScreen(OL_BLACK);
+    gui.SetSize(128, 64);
+    gui.Resized();
 }
 
 int counter = 0;
 int direction = 1;
-tgx::RGB565 ol_orange(31, 21, 0);
-tgx::RGB565 ol_dark_gray(11,22,11);
+
 
 void doLoop() {
     im.fillScreen(ol_dark_gray);
-    im.drawRect(0, 0, tft.width(), tft.height() / 3, ol_orange);
-    im.fillRect(0, 0, counter, tft.height() / 3, ol_orange);
+
+    auto g = ol::app::synth::TgxGraphics(im, font, fg_color, bg_color);
+    gui.Paint(g);
     tft.overlayFPS(fb);                  // optional: draw the current FPS on the top right corner of the framebuffer
     tft.update(fb);
+    im.drawLine(96, 46, 115, 48, fg_color);
     counter += direction;
+    delay(1000);
     if (counter % TFT_HOR_RES == 0) {
         direction *= -1;
     }

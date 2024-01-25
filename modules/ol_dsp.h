@@ -5,6 +5,7 @@
 #ifndef OL_DSP_OL_DSP_H
 #define OL_DSP_OL_DSP_H
 #include "corelib/ol_corelib.h"
+#include "app/synth/SynthGui.h"
 #include "ctllib/ol_ctllib.h"
 #include "iolib/ol_iolib.h"
 #endif //OL_DSP_OL_DSP_H
