@@ -277,7 +277,7 @@ namespace ol::gui {
         explicit ControlMeter(ol::ctl::Control &control) : control_(control) {}
 
         void Paint(Graphics &g) override {
-            meter_.SetLevel(control_.scaledValue());
+            meter_.SetLevel(control_.GetFloatValue());
             meter_.Paint(g);
         }
 

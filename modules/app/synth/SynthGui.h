@@ -21,21 +21,21 @@ namespace ol::app::synth {
     struct SynthGuiConfig {
         ol::gui::Dimension viewport{128, 64};
 
-        Control filter_cutoff{CC_FILTER_CUTOFF, 2500};
-        Control filter_resonance{CC_FILTER_RESONANCE, 3800};
-        Control filter_drive{CC_FILTER_DRIVE, 80};
+        Control filter_cutoff = Control(CC_FILTER_CUTOFF, 0.5f);
+        Control filter_resonance = Control(CC_FILTER_RESONANCE, 0.3f);
+        Control filter_drive = Control(CC_FILTER_DRIVE, 0.1f);
 
-        Control filter_env_amt{CC_ENV_FILT_AMT, 550};
-        Control filter_attack{CC_ENV_FILT_A, 4000};
-        Control filter_decay{CC_ENV_FILT_D, 3000};
-        Control filter_sustain{CC_ENV_FILT_S, 2000};
-        Control filter_release{CC_ENV_FILT_R, 2500};
+        Control filter_env_amt = Control(CC_ENV_FILT_AMT, 0.25f);
+        Control filter_attack = Control(CC_ENV_FILT_A, 0.f);
+        Control filter_decay = Control(CC_ENV_FILT_D, 0.8f);
+        Control filter_sustain = Control(CC_ENV_FILT_S, 0.f);
+        Control filter_release = Control(CC_ENV_FILT_R, 0.2f);
 
-        Control amp_env_amt{CC_CTL_VOLUME, 4096};
-        Control amp_attack{CC_ENV_AMP_A, 0};
-        Control amp_decay{CC_ENV_AMP_D, 0};
-        Control amp_sustain{CC_ENV_AMP_S, 4096};
-        Control amp_release{CC_ENV_AMP_R, 0};
+        Control amp_env_amt = Control(CC_CTL_VOLUME, 1.f);
+        Control amp_attack = Control(CC_ENV_AMP_A, 0.f);
+        Control amp_decay = Control(CC_ENV_AMP_D, 0.f);
+        Control amp_sustain = Control(CC_ENV_AMP_S, 1.f);
+        Control amp_release = Control(CC_ENV_AMP_R, 0.f);
     };
 
     class AdsrView : public Component {
@@ -47,17 +47,17 @@ namespace ol::app::synth {
         void Resized() override {}
 
         void Paint(Graphics &g) override {
-            auto amount = amount_.scaledValue();
+            auto amount = amount_.GetFloatValue();
             auto height = GetHeight();
             auto segment_width = double(GetWidth()) / 4;
-            auto attack_endX = segment_width * attack_.scaledValue();
-            auto decay_endX = (segment_width * decay_.scaledValue()) + attack_endX;
+            auto attack_endX = segment_width * attack_.GetFloatValue();
+            auto decay_endX = (segment_width * decay_.GetFloatValue()) + attack_endX;
 
             auto decayY = height - (height * amount);
 
-            auto sustainY = height - (amount * (double(height) - (double(height) * (1 - sustain_.scaledValue()))));
+            auto sustainY = height - (amount * (double(height) - (double(height) * (1 - sustain_.GetFloatValue()))));
             auto sustain_endX = segment_width * 3;
-            auto release_endX = sustain_endX + (segment_width * release_.scaledValue());
+            auto release_endX = sustain_endX + (segment_width * release_.GetFloatValue());
             // attack
             g.DrawLine(0, height, int(attack_endX), decayY, 1);
 
@@ -90,9 +90,9 @@ namespace ol::app::synth {
             auto startX = 0;
             auto startY = GetHeight() - (GetHeight() * 0.5); //GetHeight();
 
-            auto cutoffX = ol::core::scale(cutoff_.scaledValue(), 0, 1, 0, GetWidth(), 1);
+            auto cutoffX = ol::core::scale(cutoff_.GetFloatValue(), 0, 1, 0, GetWidth(), 1);
             auto preCutoffX = cutoffX - GetWidth() / 10;
-            auto cutoffY = startY - ol::core::scale(resonance_.scaledValue(), 0, 1, 0, GetHeight() / 4, 1);
+            auto cutoffY = startY - ol::core::scale(resonance_.GetFloatValue(), 0, 1, 0, GetHeight() / 4, 1);
 
 
             auto endX = cutoffX + (GetWidth() / 8);
@@ -103,7 +103,7 @@ namespace ol::app::synth {
             g.DrawLine(cutoffX, cutoffY, endX, endY, 1);
 
             double drive_scale = 10;
-            for (int i = 0; i < int((drive_.scaledValue() * drive_scale)); i++) {
+            for (int i = 0; i < int((drive_.GetFloatValue() * drive_scale)); i++) {
                 g.DrawLine(preCutoffX, startY, cutoffX, cutoffY - i, 1);
                 g.DrawLine(cutoffX, cutoffY - i, endX, endY, 1);
             }
@@ -171,10 +171,10 @@ namespace ol::app::synth {
         }
 
         void Paint(Graphics &g) override {
-            DPRINTLN("SynthGui: Paint()...");
+//            DPRINTLN("SynthGui: Paint()...");
             g.DrawRect(Rectangle{0, 0, config_.viewport});
             layout_.Paint(g);
-            DPRINTLN("SynthGui: Paint().");
+//            DPRINTLN("SynthGui: Paint().");
         }
 
         void Resized() override {
@@ -182,9 +182,9 @@ namespace ol::app::synth {
         }
 
         void ControlChange(Control &control) {
-            //if (control.)
+            DPRINTF("SynthGui.ControlChanve: ctl: %d, val: %d\n", control.GetController(), control.GetAdcValue());
 
-            switch (control.controller) {
+            switch (control.GetController()) {
                 case CC_FILTER_CUTOFF:
                     filter_screen_->SetTitle("Filter: Cutoff");
                     setScreen(filter_screen_);

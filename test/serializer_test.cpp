@@ -18,11 +18,11 @@ private:
 public:
     explicit LoopbackSerial(uint8_t *buf, size_t buffer_size) : write_buf_(buf), buffer_size_(buffer_size) {}
 
-    int Write(const char *data, const size_t size) override {
+    int Write(const char *data, const int size) override {
         return 0;
     }
 
-    int Write(const uint8_t *data, const size_t size) override {
+    int Write(const uint8_t *data, const int size) override {
         int bytes_written = 0;
         for (int i = 0; i < size; i++, write_index_++) {
             if (write_index_ == buffer_size_) {
@@ -36,11 +36,11 @@ public:
     }
 
 
-    int Available() override {
+    int Available() {
         return write_index_ - read_index_;
     }
 
-    int Read() override {
+    int Read() {
         int rv = -1;
         if (Available() > 0 && read_index_ < write_index_) {
             rv = write_buf_[read_index_++];
@@ -51,7 +51,7 @@ public:
         return rv;
     }
 
-    int Write(const std::vector<uint8_t> data, const size_t size) override {
+    int Write(const std::vector<uint8_t> data, const int size) override {
 
         uint8_t byte_array[size];
         for (size_t i = 0; i < size; i++) {
@@ -130,7 +130,7 @@ public:
 TEST(Serializer, Basics) {
     const int WRITE_BUF_SIZE = 4096 * 4;
     uint8_t write_buf[WRITE_BUF_SIZE]{};
-    Control c1{1, 2};
+    Control c1 = Control(1, Control::ADC_TYPE(2));
     MockControlListener listener;
     LoopbackSerial loopback(write_buf, sizeof(write_buf));
 
@@ -146,8 +146,8 @@ TEST(Serializer, Basics) {
     simple_serializer.Process();
     EXPECT_EQ(listener.handled_controls.size(), 1);
     auto c_deserialized = listener.handled_controls[0];
-    EXPECT_EQ(c_deserialized.controller, c1.controller);
-    EXPECT_EQ(c_deserialized.value, c1.value);
+    EXPECT_EQ(c_deserialized.GetController(), c1.GetController());
+    EXPECT_EQ(c_deserialized.GetAdcValue(), c1.GetAdcValue());
 
     // reset the handler
     listener.handled_controls.clear();
@@ -167,8 +167,8 @@ TEST(Serializer, Basics) {
     EXPECT_LE(noise_control_count, 100);
     Control controls_written[noise_control_count];
     for (int i = 0; i < noise_control_count; i++) {
-        controls_written[i].controller = arc4random() % 1024;
-        controls_written[i].value = arc4random() % 1024;
+        controls_written[i].SetController(arc4random() % 1024);
+        controls_written[i].SetAdcValue(arc4random() % 1024);
         simple_serializer.WriteControl(controls_written[i]);
         simple_serializer.Process();
     }

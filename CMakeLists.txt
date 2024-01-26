@@ -6,11 +6,12 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(JUCE_BUILD_EXTRAS OFF)
 set(JUCE_BUILD_EXAMPLES OFF)
 set(BUILD_LLHTTP OFF)
-set(BUILD_DAISY ON)
-set(BUILD_TEENSY ON)
+set(BUILD_DAISY OFF)
+set(BUILD_TEENSY OFF)
 set(BUILD_WORKOUTS ON)
 
-add_definitions(-DTEENSY_DEBUG)
+#add_definitions(-DTEENSY_DEBUG)
+#add_definitions(-DTEENSY_LOCAL)
 
 include(cmake/CPM.cmake)
 
@@ -81,6 +82,8 @@ add_library(stmlib
 target_include_directories(stmlib PUBLIC libs/stmlib)
 set_target_properties(stmlib PROPERTIES LINKER_LANGUAGE CXX)
 
+if (${BUILD_TEENSY})
 add_library(tgx libs/tgx/src/tgx.h)
 target_include_directories(tgx PUBLIC libs/tgx/src)
 set_target_properties(tgx PROPERTIES LINKER_LANGUAGE CXX)
+endif()

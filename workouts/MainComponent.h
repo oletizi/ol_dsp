@@ -73,7 +73,7 @@ namespace ol::gui::ol_juce {
                 : app_(app), container_(container), control_(control) {}
 
         void sliderValueChanged(juce::Slider *slider) override {
-            control_.setScaledValue(t_sample(slider->getValue()));
+            control_.setFloatValue(t_sample(slider->getValue()));
             app_.ControlChange(control_);
             container_.repaint();
         }

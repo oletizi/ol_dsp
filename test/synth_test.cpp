@@ -100,7 +100,7 @@ using ::testing::AtLeast;
 using ::testing::Exactly;
 using ::testing::Return;
 TEST(Synth, VoiceDefaultConstructor) {
-    Voice *v = new SynthVoice<1>();
+    Voice *v = new SynthVoice();
     t_sample sample_rate = 48000;
     v->Init(sample_rate);
     EXPECT_EQ(v->Playing(), 0);
@@ -154,7 +154,7 @@ TEST(Synth, Voice) {
     MockAdsr filter_envelope;
     MockAdsr amp_envelope;
     MockPortamento portamento;
-    SynthVoice<1> v(&source, &filter, &filter_envelope, &amp_envelope, &portamento);
+    SynthVoice v(&source, &filter, &filter_envelope, &amp_envelope, &portamento);
 
     Voice::Config config = {};
 
@@ -211,7 +211,7 @@ TEST(Synth, Polyvoice) {
     MockVoice v2;
     //    Voice *mock_voices[] = {&v1, &v2};
     std::vector<Voice *> voices = {&v1, &v2};
-    auto p = Polyvoice<1>(voices);
+    auto p = Polyvoice(voices);
 
     EXPECT_CALL(v1, NoteOn(10, 1)).Times(AtLeast(1));
     EXPECT_CALL(v1, Playing())

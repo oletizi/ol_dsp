@@ -79,7 +79,8 @@ namespace ol::io {
                 }
                 // we're parsing if we've seen the start bytes and we've still got bytes to parse OR we don't know the
                 // message size yet.
-                parsing_ = start_bytes_ == OL_SERIALIZER_START_BYTE_COUNT && (parsed_bytes_ < message_size_ || message_size_ == 0);
+                parsing_ = start_bytes_ == OL_SERIALIZER_START_BYTE_COUNT &&
+                           (parsed_bytes_ < message_size_ || message_size_ == 0);
                 if (parsing_ && parsed_bytes_ < CONTROLLER_OFFSET) {
                     // we're parsing the message size
                     size_buffer_.push_back(byte_read);
@@ -98,10 +99,10 @@ namespace ol::io {
                 }
                 if (parsed_bytes_ == message_size_) {
                     // we're done. notify listeners and reset
-                    ctl::Control c{
-                            bytes_to_int64(controller_buffer_),
-                            bytes_to_int64(value_buffer_)
-                    };
+                    ctl::Control c = ctl::Control(
+                            ctl::Control::CONTROLLER_TYPE(bytes_to_int64(controller_buffer_)),
+                            ctl::Control::ADC_TYPE(bytes_to_int64(value_buffer_))
+                    );
                     for (auto &l: control_listeners_) {
                         l->HandleControl(c);
                     }
@@ -112,11 +113,12 @@ namespace ol::io {
 
         void SerializeControl(ol::ctl::Control control, std::vector<uint8_t> &buffer) override {
             // XXX: I'm sure there's a more efficient/elegant way to do this.
-            auto controller_data = int64_to_bytes(control.controller);
-            auto value_data = int64_to_bytes(control.value);
+            auto controller_data = int64_to_bytes(control.GetController());
+            auto value_data = int64_to_bytes(control.GetAdcValue());
 
 //            std::vector<uint8_t> serialized;
-            buffer.reserve(sizeof(uint8_t) * OL_SERIALIZER_START_BYTE_COUNT + controller_data.size() + value_data.size());
+            buffer.reserve(
+                    sizeof(uint8_t) * OL_SERIALIZER_START_BYTE_COUNT + controller_data.size() + value_data.size());
 
             // write the start bytes...
             for (int i = 0; i < OL_SERIALIZER_START_BYTE_COUNT; i++) {

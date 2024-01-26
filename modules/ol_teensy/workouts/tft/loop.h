@@ -18,8 +18,9 @@
 #ifdef TEENSY_LOCAL
 
 #include <string>
-#include "WireKinetis.h"
-#include "usb_serial.h"
+#include "Arduino.h"
+//#include "WireKinetis.h"
+//#include "usb_serial.h"
 #include "ol_teensy.h"
 
 #define DMAMEM
@@ -67,8 +68,8 @@ tgx::Image<tgx::RGB565> im(fb, TFT_HOR_RES, TFT_VER_RES);
 const tgx::RGB565 ol_orange(31, 21, 0);
 const tgx::RGB565 ol_dark_gray(11, 22, 11);
 
-tgx::RGB565 fg_color = ol_orange;
-tgx::RGB565 bg_color = ol_dark_gray;
+tgx::RGB565 fg_color = tgx::RGB565_Black;//ol_orange;
+tgx::RGB565 bg_color = tgx::RGB565_White;//ol_dark_gray;
 
 ILI9341_t3_font_t font;
 //
@@ -103,8 +104,8 @@ namespace ol::app::synth {
         }
 
         void Print(std::string text, Rectangle area) override {
-            DPRINTF("font_.bits_height: %d, cap_heigth: %d, line_space: %d\n", font_.bits_height, font_.cap_height,
-                    font_.line_space);
+//            DPRINTF("font_.bits_height: %d, cap_heigth: %d, line_space: %d\n", font_.bits_height, font_.cap_height,
+//                    font_.line_space);
             tgx::iVec2 point(area.point.x, area.point.y + font_.line_space);
             canvas_.drawText(text.c_str(), point, fg_color_, font_, true);
         }
@@ -118,7 +119,17 @@ namespace ol::app::synth {
     };
 }
 
+void handleMidiCC(uint8_t channel, uint8_t cc, byte value) {
+    Serial.printf("CC: chan: %d, ctl: %d, val: %d\n", channel, cc, value);
+    auto control = ol::ctl::Control(cc, value);
+    DPRINTF("handleMidiCC: Controller: controller: %d; value: %d\n", control.GetController(), control.GetMidiValue());
+    gui.ControlChange(control);
+}
+
 void doSetup() {
+
+    usbMIDI.setHandleControlChange(handleMidiCC);
+
     Serial.begin(9600);
     Serial.println("Setting up tft...");
 
@@ -148,7 +159,7 @@ void doSetup() {
     tft.setFramebuffer(fb_internal);     // register the internal framebuffer: this activates double buffering
     tft.setDiffBuffers(&diff1, &diff2);
     tft.setRotation(1);
-    im.fillScreen(OL_BLACK);
+    im.fillScreen(bg_color);
     gui.SetSize(128, 64);
     gui.Resized();
 }
@@ -158,7 +169,8 @@ int direction = 1;
 
 
 void doLoop() {
-    im.fillScreen(ol_dark_gray);
+    usbMIDI.read();
+    im.fillScreen(bg_color);
 
     auto g = ol::app::synth::TgxGraphics(im, font, fg_color, bg_color);
     gui.Paint(g);
@@ -166,7 +178,6 @@ void doLoop() {
     tft.update(fb);
     im.drawLine(96, 46, 115, 48, fg_color);
     counter += direction;
-    delay(1000);
     if (counter % TFT_HOR_RES == 0) {
         direction *= -1;
     }

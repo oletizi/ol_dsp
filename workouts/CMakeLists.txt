@@ -1,5 +1,5 @@
 
-set(BUILD_WORKOUT_BUDDY ON)
+set(BUILD_WORKOUT_BUDDY OFF)
 
 ## Workout library
 if (${BUILD_WORKOUT_BUDDY})
@@ -8,34 +8,35 @@ if (${BUILD_WORKOUT_BUDDY})
     target_include_directories(workout-buddy PUBLIC ../libs/rtmidi ../libs/miniaudio)
 endif ()
 
-juce_add_gui_app(gui-workout)
-target_sources(gui-workout
-        PRIVATE
-        gui_main.cpp
-)
-target_compile_definitions(gui-workout
-        PRIVATE
-        # JUCE_WEB_BROWSER and JUCE_USE_CURL would be on by default, but you might not need them.
-        JUCE_WEB_BROWSER=0  # If you remove this, add `NEEDS_WEB_BROWSER TRUE` to the `juce_add_console_app` call
-        JUCE_USE_CURL=0
-        JIVE_GUI_ITEMS_HAVE_STYLE_SHEETS=1
-)
-target_link_libraries(gui-workout
-        PRIVATE
-        DaisySP
-        juce::juce_core
-        juce::juce_gui_basics
-        juce::juce_audio_devices
-        juce::juce_dsp
-        juce::juce_recommended_config_flags
-        juce::juce_recommended_config_flags
-#        jive::jive_layouts
-#        jive::jive_style_sheets
-        ol_corelib
-        ol_fxlib
-        ol_synthlib
-        ol_guilib
-)
+
+#juce_add_gui_app(gui-workout)
+#target_sources(gui-workout
+#        PRIVATE
+#        gui_main.cpp
+#)
+#target_compile_definitions(gui-workout
+#        PRIVATE
+#        # JUCE_WEB_BROWSER and JUCE_USE_CURL would be on by default, but you might not need them.
+#        JUCE_WEB_BROWSER=0  # If you remove this, add `NEEDS_WEB_BROWSER TRUE` to the `juce_add_console_app` call
+#        JUCE_USE_CURL=0
+#        JIVE_GUI_ITEMS_HAVE_STYLE_SHEETS=1
+#)
+#target_link_libraries(gui-workout
+#        PRIVATE
+#        DaisySP
+#        juce::juce_core
+#        juce::juce_gui_basics
+#        juce::juce_audio_devices
+#        juce::juce_dsp
+#        juce::juce_recommended_config_flags
+#        juce::juce_recommended_config_flags
+##        jive::jive_layouts
+##        jive::jive_style_sheets
+#        ol_corelib
+#        ol_fxlib
+#        ol_synthlib
+#        ol_guilib
+#)
 
 
 if (${BUILD_WORKOUT_BUDDY})
@@ -78,61 +79,61 @@ if (${BUILD_WORKOUT_BUDDY})
 endif ()
 
 ## Reverb Workout
-juce_add_console_app(reverb-workout
-        PRODUCT_NAME "Reverb Workout"
-)
-
-target_sources(reverb-workout
-        PRIVATE
-        reverb_main.cpp
-        SynthAudioCallback.h
-)
-target_include_directories(reverb-workout PUBLIC .)
-target_compile_definitions(reverb-workout
-        PRIVATE
-        # JUCE_WEB_BROWSER and JUCE_USE_CURL would be on by default, but you might not need them.
-        JUCE_WEB_BROWSER=0  # If you remove this, add `NEEDS_WEB_BROWSER TRUE` to the `juce_add_console_app` call
-        JUCE_USE_CURL=0)
-target_link_libraries(reverb-workout
-        PRIVATE
-        juce::juce_core
-        juce::juce_audio_devices
-        juce::juce_dsp
-        ol_corelib
-        ol_fxlib
-        ol_synthlib
-        DaisySP
-        juce::juce_recommended_config_flags
-        juce::juce_recommended_config_flags
-)
-
-juce_add_console_app(convolution-workout
-        PRODUCT_NAME "Convolution Workout"
-)
-
-target_sources(convolution-workout
-        PRIVATE
-        convolution_main.cpp
-        SynthAudioCallback.h
-)
-target_include_directories(convolution-workout PUBLIC .)
-target_compile_definitions(convolution-workout
-        PRIVATE
-        # JUCE_WEB_BROWSER and JUCE_USE_CURL would be on by default, but you might not need them.
-        JUCE_WEB_BROWSER=0  # If you remove this, add `NEEDS_WEB_BROWSER TRUE` to the `juce_add_console_app` call
-        JUCE_USE_CURL=0)
-target_link_libraries(convolution-workout
-        PRIVATE
-        juce::juce_core
-        juce::juce_audio_devices
-        juce::juce_dsp
-        ol_corelib
-        ol_fxlib
-        ol_synthlib
-        DaisySP
-        juce::juce_recommended_config_flags
-        juce::juce_recommended_config_flags
-)
+#juce_add_console_app(reverb-workout
+#        PRODUCT_NAME "Reverb Workout"
+#)
+#
+#target_sources(reverb-workout
+#        PRIVATE
+#        reverb_main.cpp
+#        SynthAudioCallback.h
+#)
+#target_include_directories(reverb-workout PUBLIC .)
+#target_compile_definitions(reverb-workout
+#        PRIVATE
+#        # JUCE_WEB_BROWSER and JUCE_USE_CURL would be on by default, but you might not need them.
+#        JUCE_WEB_BROWSER=0  # If you remove this, add `NEEDS_WEB_BROWSER TRUE` to the `juce_add_console_app` call
+#        JUCE_USE_CURL=0)
+#target_link_libraries(reverb-workout
+#        PRIVATE
+#        juce::juce_core
+#        juce::juce_audio_devices
+#        juce::juce_dsp
+#        ol_corelib
+#        ol_fxlib
+#        ol_synthlib
+#        DaisySP
+#        juce::juce_recommended_config_flags
+#        juce::juce_recommended_config_flags
+#)
+#
+#juce_add_console_app(convolution-workout
+#        PRODUCT_NAME "Convolution Workout"
+#)
+#
+#target_sources(convolution-workout
+#        PRIVATE
+#        convolution_main.cpp
+#        SynthAudioCallback.h
+#)
+#target_include_directories(convolution-workout PUBLIC .)
+#target_compile_definitions(convolution-workout
+#        PRIVATE
+#        # JUCE_WEB_BROWSER and JUCE_USE_CURL would be on by default, but you might not need them.
+#        JUCE_WEB_BROWSER=0  # If you remove this, add `NEEDS_WEB_BROWSER TRUE` to the `juce_add_console_app` call
+#        JUCE_USE_CURL=0)
+#target_link_libraries(convolution-workout
+#        PRIVATE
+#        juce::juce_core
+#        juce::juce_audio_devices
+#        juce::juce_dsp
+#        ol_corelib
+#        ol_fxlib
+#        ol_synthlib
+#        DaisySP
+#        juce::juce_recommended_config_flags
+#        juce::juce_recommended_config_flags
+#)
 
 if (${BUILD_WORKOUT_BUDDY})
     juce_add_console_app(synth-workout
