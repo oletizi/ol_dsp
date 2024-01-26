@@ -35,6 +35,7 @@
 #include <font_tgx_OpenSans.h>
 
 #include "ol_dsp.h"
+#include "app/synth/SynthConfig.h"
 //#include "ILI9341Driver.h"
 
 #define SPI_WRITE_SPEED 30000000
@@ -77,8 +78,9 @@ ILI9341_t3_font_t font;
 //  * https://github.com/vindar/ILI9341_T4
 //  * https://github.com/KurtE/ILI9341_t3n
 //
-ol::app::synth::SynthGuiConfig config{};
+ol::app::synth::SynthConfig config{};
 ol::app::synth::SynthGui gui(config);
+ol::app::synth::SynthApp app(config, gui);
 
 namespace ol::app::synth {
     class TgxGraphics : public Graphics {
@@ -120,10 +122,10 @@ namespace ol::app::synth {
 }
 
 void handleMidiCC(uint8_t channel, uint8_t cc, byte value) {
-    Serial.printf("CC: chan: %d, ctl: %d, val: %d\n", channel, cc, value);
-    auto control = ol::ctl::Control(cc, value);
-    DPRINTF("handleMidiCC: Controller: controller: %d; value: %d\n", control.GetController(), control.GetMidiValue());
-    gui.ControlChange(control);
+    DPRINTF("CC: chan: %d, ctl: %d, val: %d\n", channel, cc, value);
+    auto c = ol::ctl::Control(cc, value);
+    DPRINTF("handleMidiCC: Controller: controller: %d; value: %d\n", c.GetController(), c.GetMidiValue());
+    app.UpdateControl(c);
 }
 
 void doSetup() {

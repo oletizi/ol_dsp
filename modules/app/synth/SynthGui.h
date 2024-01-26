@@ -10,33 +10,14 @@
 #include "spline/spline.h"
 #include "guilib/ol_guilib_core.h"
 #include "ctllib/ol_ctllib.h"
+#include "SynthConfig.h"
+#include "SynthApp.h"
 //#include "app/synth/SynthEngine.h"
 
 namespace ol::app::synth {
 
     using namespace ol::ctl;
     using namespace ol::gui;
-
-
-    struct SynthGuiConfig {
-        ol::gui::Dimension viewport{128, 64};
-
-        Control filter_cutoff = Control(CC_FILTER_CUTOFF, 0.5f);
-        Control filter_resonance = Control(CC_FILTER_RESONANCE, 0.3f);
-        Control filter_drive = Control(CC_FILTER_DRIVE, 0.1f);
-
-        Control filter_env_amt = Control(CC_ENV_FILT_AMT, 0.25f);
-        Control filter_attack = Control(CC_ENV_FILT_A, 0.f);
-        Control filter_decay = Control(CC_ENV_FILT_D, 0.8f);
-        Control filter_sustain = Control(CC_ENV_FILT_S, 0.f);
-        Control filter_release = Control(CC_ENV_FILT_R, 0.2f);
-
-        Control amp_env_amt = Control(CC_CTL_VOLUME, 1.f);
-        Control amp_attack = Control(CC_ENV_AMP_A, 0.f);
-        Control amp_decay = Control(CC_ENV_AMP_D, 0.f);
-        Control amp_sustain = Control(CC_ENV_AMP_S, 1.f);
-        Control amp_release = Control(CC_ENV_AMP_R, 0.f);
-    };
 
     class AdsrView : public Component {
     public:
@@ -147,9 +128,9 @@ namespace ol::app::synth {
         Font font_ = Font(16);
     };
 
-    class SynthGui : public Component {
+    class SynthGui : public Component, public ControlListener {
     public:
-        explicit SynthGui(ol::app::synth::SynthGuiConfig &config) : config_(config) {
+        explicit SynthGui(SynthConfig &config) : config_(config) {
             filter_view_ = new FilterView(config.filter_cutoff, config.filter_resonance, config.filter_env_amt,
                                           config.filter_drive);
             filter_adsr_view_ = new AdsrView(config.filter_attack, config.filter_decay, config.filter_sustain,
@@ -171,75 +152,81 @@ namespace ol::app::synth {
         }
 
         void Paint(Graphics &g) override {
-//            DPRINTLN("SynthGui: Paint()...");
             g.DrawRect(Rectangle{0, 0, config_.viewport});
             layout_.Paint(g);
-//            DPRINTLN("SynthGui: Paint().");
         }
 
         void Resized() override {
             layout_.Resized();
         }
 
-        void ControlChange(Control &control) {
-            DPRINTF("SynthGui.ControlChanve: ctl: %d, val: %d\n", control.GetController(), control.GetAdcValue());
+        //
+        // ControlListener interface
+        //
 
-            switch (control.GetController()) {
-                case CC_FILTER_CUTOFF:
-                    filter_screen_->SetTitle("Filter: Cutoff");
-                    setScreen(filter_screen_);
-                    break;
-                case CC_FILTER_RESONANCE:
-                    filter_screen_->SetTitle("Filter: Resonance");
-                    setScreen(filter_screen_);
-                    break;
-                case CC_FILTER_DRIVE:
-                    filter_screen_->SetTitle("Filter: Drive");
-                    setScreen(filter_screen_);
-                    break;
-                case CC_ENV_FILT_AMT:
-                    filter_adsr_screen_->SetTitle("Filter: Env Amt");
-                    setScreen(filter_adsr_screen_);
-                    break;
-                case CC_ENV_FILT_A:
-                    filter_adsr_screen_->SetTitle("Filter: Attack");
-                    setScreen(filter_adsr_screen_);
-                    break;
-                case CC_ENV_FILT_D:
-                    filter_adsr_screen_->SetTitle("Filter: Decay");
-                    setScreen(filter_adsr_screen_);
-                    break;
-                case CC_ENV_FILT_S:
-                    filter_adsr_screen_->SetTitle("Filter: Sustain");
-                    setScreen(filter_adsr_screen_);
-                    break;
-                case CC_ENV_FILT_R:
-                    filter_adsr_screen_->SetTitle("Filter: Rel");
-                    setScreen(filter_adsr_screen_);
-                    break;
-                case CC_CTL_VOLUME:
-                    amp_screen_->SetTitle("Amp: Vol");
-                    setScreen(amp_screen_);
-                    break;
-                case CC_ENV_AMP_A:
-                    amp_screen_->SetTitle("Amp: Attack");
-                    setScreen(amp_screen_);
-                    break;
-                case CC_ENV_AMP_D:
-                    amp_screen_->SetTitle("Amp: Decay");
-                    setScreen(amp_screen_);
-                    break;
-                case CC_ENV_AMP_S:
-                    amp_screen_->SetTitle("Amp: Sustain");
-                    setScreen(amp_screen_);
-                    break;
-                case CC_ENV_AMP_R:
-                    amp_screen_->SetTitle("Amp: Release");
-                    setScreen(amp_screen_);
-                    break;
-                default:
-                    break;
-            }
+        void UpdateFilterCutoff(Control control) override {
+            filter_screen_->SetTitle("Filter: Cutoff");
+            setScreen(filter_screen_);
+        }
+
+        void UpdateFilterResonance(Control control) override {
+            filter_screen_->SetTitle("Filter: Resonance");
+            setScreen(filter_screen_);
+        }
+
+        void UpdateFilterDrive(Control control) override {
+            filter_screen_->SetTitle("Filter: Drive");
+            setScreen(filter_screen_);
+        }
+
+        void UpdateFilterEnvAmount(Control control) override {
+            filter_adsr_screen_->SetTitle("Filter: Env Amt");
+            setScreen(filter_adsr_screen_);
+        }
+
+        void UpdateFilterAttack(Control control) override {
+            filter_adsr_screen_->SetTitle("Filter: Attack");
+            setScreen(filter_adsr_screen_);
+        }
+
+        void UpdateFilterDecay(Control control) override {
+            filter_adsr_screen_->SetTitle("Filter: Decay");
+            setScreen(filter_adsr_screen_);
+        }
+
+        void UpdateFilterSustain(Control control) override {
+            filter_adsr_screen_->SetTitle("Filter: Sustain");
+            setScreen(filter_adsr_screen_);
+        }
+
+        void UpdateFilterRelease(Control control) override {
+            filter_adsr_screen_->SetTitle("Filter: Rel");
+            setScreen(filter_adsr_screen_);
+        }
+
+        void UpdateAmpVolume(Control control) override {
+            amp_screen_->SetTitle("Amp: Vol");
+            setScreen(amp_screen_);
+        }
+
+        void UpdateAmpAttack(Control control) override {
+            amp_screen_->SetTitle("Amp: Attack");
+            setScreen(amp_screen_);
+        }
+
+        void UpdateAmpDecay(Control control) override {
+            amp_screen_->SetTitle("Amp: Decay");
+            setScreen(amp_screen_);
+        }
+
+        void UpdateAmpSustain(Control control) override {
+            amp_screen_->SetTitle("Amp: Sustain");
+            setScreen(amp_screen_);
+        }
+
+        void UpdateAmpRelease(Control control) override {
+            amp_screen_->SetTitle("Amp: Release");
+            setScreen(amp_screen_);
         }
 
     private:
@@ -248,7 +235,7 @@ namespace ol::app::synth {
             layout_.Add(c);
         }
 
-        SynthGuiConfig &config_;
+        SynthConfig &config_;
         FilterView *filter_view_;
         AdsrView *filter_adsr_view_;
         AppScreen *filter_screen_;

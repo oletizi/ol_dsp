@@ -41,9 +41,12 @@ namespace ol::ctl {
                   float_value_(ADC_TO_FLOAT(adc_value)),
                   adc_value_(adc_value) {}
 
-
-        void SetController(CONTROLLER_TYPE c) {
-            controller_ = c;
+        void Update(Control c) {
+            if (c.controller_ == controller_) {
+                adc_value_ = c.adc_value_;
+                float_value_ = c.float_value_;
+                midi_value_ = c.midi_value_;
+            }
         }
 
         [[nodiscard]] CONTROLLER_TYPE GetController() const {
