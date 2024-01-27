@@ -128,7 +128,7 @@ namespace ol::app::synth {
 
     class MenuItem : public Component {
     public:
-        explicit MenuItem(std::string text, bool active) : text_(std::move(text)), active_(active) {}
+        explicit MenuItem(Text *text, bool active) : text_(text), active_(active) {}
 
         void Resized() override {
             area_.dimension.width = GetWidth();
@@ -136,7 +136,7 @@ namespace ol::app::synth {
         }
 
         void Paint(Graphics &g) override {
-            g.Print(text_, area_);
+            text_->Paint(g);
         }
 
         void SetActive(bool active) {
@@ -144,7 +144,7 @@ namespace ol::app::synth {
         }
 
     private:
-        std::string text_;
+        Text *text_;
         bool active_;
         Rectangle area_ = Rectangle{
                 Point{0, 0},
@@ -259,17 +259,18 @@ namespace ol::app::synth {
 
     private:
         SynthConfig &config_;
+        Font font_ = Font(16);
         FilterView *filter_view_ = new FilterView(config_.filter_cutoff, config_.filter_resonance,
                                                   config_.filter_env_amt,
                                                   config_.filter_drive);
         AdsrView *filter_adsr_view_ = new AdsrView(config_.filter_attack, config_.filter_decay, config_.filter_sustain,
                                                    config_.filter_release, config_.filter_env_amt);
         std::vector<MenuItem *> menu_items_ = {
-                new MenuItem("Main", true),
-                new MenuItem("Filter", false),
-                new MenuItem("Amp", false),
-                new MenuItem("Fx", false),
-                new MenuItem("Mod", false)
+                new MenuItem(new Text(font_, "Main"), true),
+                new MenuItem(new Text(font_, "Filter"), false),
+                new MenuItem(new Text(font_, "Amp"), false),
+                new MenuItem(new Text(font_, "Fx"), false),
+                new MenuItem(new Text(font_, "Mod"), false)
         };
         MainMenu *main_menu_ = new MainMenu(menu_items_);
 
