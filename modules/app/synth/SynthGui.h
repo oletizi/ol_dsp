@@ -162,6 +162,11 @@ namespace ol::app::synth {
             }
         }
 
+        void Resized() override {
+            SetFixedHeight(16 + GetOffsetVertical());
+            Box::Resized();
+        }
+
 //        void Resized() override {
 //            layout_.SetSize(GetWidth(), GetHeight());
 //            layout_.Resized();
@@ -182,7 +187,7 @@ namespace ol::app::synth {
         explicit SynthMediumGui(SynthConfig &config) : config_(config) {
             // XXX: Make this a function of the font.
             main_menu_->SetMarginTop(10)->SetMarginBottom(10);
-            main_menu_->SetFixedHeight(16 + main_menu_->GetOffsetVertical());
+//            main_menu_->SetFixedHeight(16 + main_menu_->GetOffsetVertical());
             main_menu_->SetMarginLeft(10)->SetMarginRight(10);
             layout_.SetVertical();
             auto filter_view_box = new Box(filter_view_);
