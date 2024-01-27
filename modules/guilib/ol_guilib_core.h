@@ -106,9 +106,13 @@ namespace ol::gui {
 
         [[nodiscard]] virtual int GetHeight() const { return height_; }
 
-        [[nodiscard]] virtual int GetFixedWidth() const { return 0; }
+        [[nodiscard]] virtual int GetFixedWidth() const { return fixed_width_; }
 
-        [[nodiscard]] virtual int GetFixedHeight() const { return 0; }
+        virtual void SetFixedWidth(int w) { fixed_width_ = w; }
+
+        [[nodiscard]] virtual int GetFixedHeight() const { return fixed_height_; }
+
+        virtual void SetFixedHeight(int h) { fixed_height_ = h; }
 
         virtual void Resized() = 0;
 
@@ -117,8 +121,133 @@ namespace ol::gui {
     private:
         int width_ = 0;
         int height_ = 0;
+        int fixed_width_ = 0;
+        int fixed_height_ = 0;
     };
 
+    class Box : public Component {
+
+    public:
+        explicit Box(Component *child) : child_(child) {}
+
+        void Resized() override {
+            offset_left_ = margin_left_ + padding_bottom_;
+            offset_top_ = margin_top_ + padding_top_;
+            offset_right_ = margin_right_ + padding_right_;
+            offset_bottom_ = margin_bottom_ + padding_bottom_;
+            child_->SetSize(GetWidth() - (offset_left_ + offset_right_), GetHeight() - (offset_top_ + offset_bottom_));
+            child_->Resized();
+        }
+
+        void Paint(Graphics &g) override {
+            auto og = OffsetGraphics(g, Point{offset_left_, offset_top_});
+            child_->Paint(og);
+        }
+
+        [[nodiscard]] int GetOffsetLeft() const { return offset_left_; }
+
+        [[nodiscard]] int GetOffsetTop() const { return offset_top_; }
+
+        [[nodiscard]] int GetOffsetRight() const { return offset_right_; }
+
+        [[nodiscard]] int GetOffsetBottom() const { return offset_bottom_; }
+
+        [[nodiscard]] int GetMarginLeft() const { return margin_left_; }
+
+        [[nodiscard]] int GetOffsetVertical() const {
+            return GetOffsetTop() + GetOffsetBottom();
+        }
+        [[nodiscard]] int GetOffsetHorizontal() const {
+            return GetOffsetLeft() + GetOffsetRight();
+        }
+
+        Box * SetMargin(int m) {
+            return SetMarginLeft(m)->SetMarginTop(m)->SetMarginRight(m)->SetMarginBottom(m);
+        }
+
+        Box *SetMarginLeft(int m) {
+            margin_left_ = m;
+            Resized();
+            return this;
+        }
+
+        [[nodiscard]] int GetMarginTop() const { return margin_top_; }
+
+        Box *SetMarginTop(int m) {
+            margin_top_ = m;
+            Resized();
+            return this;
+        }
+
+        [[nodiscard]] int GetMarginRight() const { return margin_right_; }
+
+        Box *SetMarginRight(int m) {
+            margin_right_ = m;
+            Resized();
+            return this;
+        }
+
+        [[nodiscard]] int GetMarginBottom() const { return margin_bottom_; }
+
+        Box *SetMarginBottom(int m) {
+            margin_bottom_ = m;
+            Resized();
+            return this;
+        }
+
+        Box * SetPadding(int p) {
+            return SetPaddingLeft(p)->SetPaddingTop(p)->SetPaddingRight(p)->SetPaddingBottom(p);
+        }
+
+        [[nodiscard]] int GetPaddingLeft() const { return padding_left_; }
+
+        Box *SetPaddingLeft(int p) {
+            padding_left_ = p;
+            Resized();
+            return this;
+        }
+
+        [[nodiscard]] int GetPaddingTop() const { return padding_top_; }
+
+        Box *SetPaddingTop(int p) {
+            padding_top_ = p;
+            Resized();
+            return this;
+        }
+
+        [[nodiscard]] int GetPaddingRight() const { return padding_right_; }
+
+        Box *SetPaddingRight(int p) {
+            padding_right_ = p;
+            Resized();
+            return this;
+        }
+
+        [[nodiscard]] int GetPaddingBottom() const { return padding_bottom_; }
+
+        Box *SetPaddingBottom(int p) {
+            padding_bottom_ = p;
+            Resized();
+            return this;
+        }
+
+    private:
+        int margin_left_ = 0;
+        int margin_top_ = 0;
+        int margin_right_ = 0;
+        int margin_bottom_ = 0;
+
+        int padding_left_ = 0;
+        int padding_top_ = 0;
+        int padding_right_ = 0;
+        int padding_bottom_ = 0;
+
+        int offset_left_ = 0;
+        int offset_top_ = 0;
+        int offset_right_ = 0;
+        int offset_bottom_ = 0;
+        Component *child_;
+    };
 
     class Font {
 
@@ -223,6 +352,7 @@ namespace ol::gui {
                 c->Resized();
             }
         }
+
         void SetVertical() {
             direction_ = LayoutDirection::Vertical;
         }

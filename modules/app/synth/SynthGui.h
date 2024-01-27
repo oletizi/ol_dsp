@@ -152,9 +152,9 @@ namespace ol::app::synth {
         };
     };
 
-    class MainMenu : public Component {
+    class MainMenu : public Box {
     public:
-        MainMenu(std::vector<MenuItem *> menu_items) {
+        explicit MainMenu(const std::vector<MenuItem *> &menu_items) : Box(&layout_) {
             layout_.SetHorizontal();
             for (auto m: menu_items) {
                 menu_items_.push_back(m);
@@ -162,18 +162,15 @@ namespace ol::app::synth {
             }
         }
 
-        [[nodiscard]] int GetFixedHeight() const override {
-            return 16;
-        }
+//        void Resized() override {
+//            layout_.SetSize(GetWidth(), GetHeight());
+//            layout_.Resized();
+//        }
+//
+//        void Paint(Graphics &g) override {
+//            layout_.Paint(g);
+//        }
 
-        void Resized() override {
-            layout_.SetSize(GetWidth(), GetHeight());
-            layout_.Resized();
-        }
-
-        void Paint(Graphics &g) override {
-            layout_.Paint(g);
-        }
 
     private:
         std::vector<MenuItem *> menu_items_{};
@@ -183,13 +180,23 @@ namespace ol::app::synth {
     class SynthMediumGui : public Component, public ControlListener {
     public:
         explicit SynthMediumGui(SynthConfig &config) : config_(config) {
+            // XXX: Make this a function of the font.
+            main_menu_->SetMarginTop(10)->SetMarginBottom(10);
+            main_menu_->SetFixedHeight(16 + main_menu_->GetOffsetVertical());
+            main_menu_->SetMarginLeft(10)->SetMarginRight(10);
             layout_.SetVertical();
-            layout_.Add(filter_view_);
-            layout_.Add(filter_adsr_view_);
+            auto filter_view_box = new Box(filter_view_);
+            filter_view_box->SetMargin(10);
+            layout_.Add(filter_view_box);
+
+            auto filter_adsr_view_box_ = new Box(filter_adsr_view_);
+            filter_adsr_view_box_->SetMargin(10);
+            layout_.Add(filter_adsr_view_box_);
             layout_.Add(main_menu_);
         }
 
         void Resized() override {
+            DPRINTF("gui resized: menu fixed height: %d", main_menu_->GetFixedHeight());
             layout_.SetSize(GetWidth(), GetHeight());
             layout_.Resized();
         }
