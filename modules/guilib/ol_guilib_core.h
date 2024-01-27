@@ -102,9 +102,9 @@ namespace ol::gui {
             SetSize(dimension.width, dimension.height);
         }
 
-        [[nodiscard]] virtual int GetWidth() const { return width_; }
+        [[nodiscard]] virtual int GetWidth() const { return GetFixedWidth() > 0 ? GetFixedWidth() : width_; }
 
-        [[nodiscard]] virtual int GetHeight() const { return height_; }
+        [[nodiscard]] virtual int GetHeight() const { return GetFixedHeight() > 0 ? GetFixedHeight() : height_; }
 
         [[nodiscard]] virtual int GetFixedWidth() const { return fixed_width_; }
 
