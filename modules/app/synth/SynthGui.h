@@ -130,10 +130,7 @@ namespace ol::app::synth {
     public:
         explicit MenuItem(Text *text, bool active) : text_(text), active_(active) {}
 
-        void Resized() override {
-            area_.dimension.width = GetWidth();
-            area_.dimension.height = GetHeight();
-        }
+        void Resized() override {}
 
         void Paint(Graphics &g) override {
             text_->Paint(g);
@@ -146,10 +143,6 @@ namespace ol::app::synth {
     private:
         Text *text_;
         bool active_;
-        Rectangle area_ = Rectangle{
-                Point{0, 0},
-                Dimension{100, 16}
-        };
     };
 
     class MainMenu : public Box {
