@@ -183,7 +183,7 @@ void doLoop() {
     if (counter % TFT_HOR_RES == 0) {
         direction *= -1;
     }
-    delay(1000);
+//    delay(1000);
 }
 
 #endif //OL_DSP_TFT_LOOP_H

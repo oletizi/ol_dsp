@@ -120,7 +120,6 @@ namespace ol::app::synth {
             title_.SetText(std::move(title));
         }
 
-
     private:
         Layout layout_;
         Text title_ = Text(font_, "");
@@ -163,6 +162,10 @@ namespace ol::app::synth {
             }
         }
 
+        [[nodiscard]] int GetFixedHeight() const override {
+            return 16;
+        }
+
         void Resized() override {
             layout_.SetSize(GetWidth(), GetHeight());
             layout_.Resized();
@@ -181,6 +184,8 @@ namespace ol::app::synth {
     public:
         explicit SynthMediumGui(SynthConfig &config) : config_(config) {
             layout_.SetVertical();
+            layout_.Add(filter_view_);
+            layout_.Add(filter_adsr_view_);
             layout_.Add(main_menu_);
         }
 
@@ -247,6 +252,11 @@ namespace ol::app::synth {
 
     private:
         SynthConfig &config_;
+        FilterView *filter_view_ = new FilterView(config_.filter_cutoff, config_.filter_resonance,
+                                                  config_.filter_env_amt,
+                                                  config_.filter_drive);
+        AdsrView *filter_adsr_view_ = new AdsrView(config_.filter_attack, config_.filter_decay, config_.filter_sustain,
+                                                   config_.filter_release, config_.filter_env_amt);
         std::vector<MenuItem *> menu_items_ = {
                 new MenuItem("Main", true),
                 new MenuItem("Filter", false),
@@ -255,6 +265,7 @@ namespace ol::app::synth {
                 new MenuItem("Mod", false)
         };
         MainMenu *main_menu_ = new MainMenu(menu_items_);
+
         Layout layout_ = Layout();
     };
 
