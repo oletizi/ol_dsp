@@ -12,7 +12,6 @@
 #include "ctllib/ol_ctllib.h"
 #include "SynthConfig.h"
 #include "SynthApp.h"
-//#include "app/synth/SynthEngine.h"
 
 namespace ol::app::synth {
 
@@ -128,9 +127,140 @@ namespace ol::app::synth {
         Font font_ = Font(16);
     };
 
-    class SynthGui : public Component, public ControlListener {
+    class MenuItem : public Component {
     public:
-        explicit SynthGui(SynthConfig &config) : config_(config) {
+        explicit MenuItem(std::string text, bool active) : text_(std::move(text)), active_(active) {}
+
+        void Resized() override {
+            area_.dimension.width = GetWidth();
+            area_.dimension.height = GetHeight();
+        }
+
+        void Paint(Graphics &g) override {
+            g.Print(text_, area_);
+        }
+
+        void SetActive(bool active) {
+            active_ = active;
+        }
+
+    private:
+        std::string text_;
+        bool active_;
+        Rectangle area_ = Rectangle{
+                Point{0, 0},
+                Dimension{100, 16}
+        };
+    };
+
+    class MainMenu : public Component {
+    public:
+        MainMenu(std::vector<MenuItem *> menu_items) {
+            layout_.SetHorizontal();
+            for (auto m: menu_items) {
+                menu_items_.push_back(m);
+                layout_.Add(m);
+            }
+        }
+
+        void Resized() override {
+            layout_.SetSize(GetWidth(), GetHeight());
+            layout_.Resized();
+        }
+
+        void Paint(Graphics &g) override {
+            layout_.Paint(g);
+        }
+
+    private:
+        std::vector<MenuItem *> menu_items_{};
+        Layout layout_ = Layout();
+    };
+
+    class SynthMediumGui : public Component, public ControlListener {
+    public:
+        explicit SynthMediumGui(SynthConfig &config) : config_(config) {
+            layout_.SetVertical();
+            layout_.Add(main_menu_);
+        }
+
+        void Resized() override {
+            layout_.SetSize(GetWidth(), GetHeight());
+            layout_.Resized();
+        }
+
+        void Paint(Graphics &g) override {
+            layout_.Paint(g);
+        }
+
+        void UpdateFilterCutoff(Control control) override {
+
+        }
+
+        void UpdateFilterResonance(Control control) override {
+
+        }
+
+        void UpdateFilterDrive(Control control) override {
+
+        }
+
+        void UpdateFilterEnvAmount(Control control) override {
+
+        }
+
+        void UpdateFilterAttack(Control control) override {
+
+        }
+
+        void UpdateFilterDecay(Control control) override {
+
+        }
+
+        void UpdateFilterSustain(Control control) override {
+
+        }
+
+        void UpdateFilterRelease(Control control) override {
+
+        }
+
+        void UpdateAmpVolume(Control control) override {
+
+        }
+
+        void UpdateAmpAttack(Control control) override {
+
+        }
+
+        void UpdateAmpDecay(Control control) override {
+
+        }
+
+        void UpdateAmpSustain(Control control) override {
+
+        }
+
+        void UpdateAmpRelease(Control control) override {
+
+        }
+
+    private:
+        SynthConfig &config_;
+        std::vector<MenuItem *> menu_items_ = {
+                new MenuItem("Main", true),
+                new MenuItem("Filter", false),
+                new MenuItem("Amp", false),
+                new MenuItem("Fx", false),
+                new MenuItem("Mod", false)
+        };
+        MainMenu *main_menu_ = new MainMenu(menu_items_);
+        Layout layout_ = Layout();
+    };
+
+    class SynthTinyGui : public Component, public ControlListener {
+    public:
+        explicit SynthTinyGui(SynthConfig &config) : config_(config) {
             filter_view_ = new FilterView(config.filter_cutoff, config.filter_resonance, config.filter_env_amt,
                                           config.filter_drive);
             filter_adsr_view_ = new AdsrView(config.filter_attack, config.filter_decay, config.filter_sustain,

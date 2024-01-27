@@ -107,7 +107,7 @@ AdafruitGraphics graphics(display);
 //        Control{CC_ENV_FILT_R, 0}
 //};
 SynthConfig app_config{};
-SynthGui app(app_config);
+SynthTinyGui app(app_config);
 
 auto display_checkpoint = millis();
 

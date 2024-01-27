@@ -42,7 +42,7 @@
 #define SPI_READ_SPEED   6500000
 #define SPI_MOSI        11
 #define SPI_MISO        12
-#define SPI_MISO       255
+//#define SPI_MISO       255
 #define SPI_CLK         13
 #define SPI_DC           9
 #define TFT_CS          10
@@ -79,7 +79,7 @@ ILI9341_t3_font_t font;
 //  * https://github.com/KurtE/ILI9341_t3n
 //
 ol::app::synth::SynthConfig config{};
-ol::app::synth::SynthGui gui(config);
+ol::app::synth::SynthMediumGui gui(config);
 ol::app::synth::SynthApp app(config, gui);
 
 namespace ol::app::synth {
@@ -115,8 +115,8 @@ namespace ol::app::synth {
 
     private:
         tgx::Image<tgx::RGB565> &canvas_;
-        tgx::RGB565 bg_color_;
         tgx::RGB565 fg_color_;
+        tgx::RGB565 bg_color_;
         ILI9341_t3_font_t font_;
     };
 }
@@ -162,7 +162,7 @@ void doSetup() {
     tft.setDiffBuffers(&diff1, &diff2);
     tft.setRotation(1);
     im.fillScreen(bg_color);
-    gui.SetSize(128, 64);
+    gui.SetSize(LX, LY);
     gui.Resized();
 }
 
@@ -183,6 +183,7 @@ void doLoop() {
     if (counter % TFT_HOR_RES == 0) {
         direction *= -1;
     }
+    delay(1000);
 }
 
 #endif //OL_DSP_TFT_LOOP_H

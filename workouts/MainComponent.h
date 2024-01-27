@@ -69,18 +69,19 @@ namespace ol::gui::ol_juce {
     class SliderListener : public juce::Slider::Listener {
 
     public:
-        explicit SliderListener(SynthGui &app, OlGuiContainer &container, ol::ctl::Control &control)
-                : app_(app), container_(container), control_(control) {}
+        explicit SliderListener(ol::app::synth::SynthApp &app, ol::app::synth::SynthTinyGui &synth_gui, OlGuiContainer &container, ol::ctl::Control &control)
+                : app_(app), gui_(synth_gui), container_(container), control_(control) {}
 
         void sliderValueChanged(juce::Slider *slider) override {
-            control_.setFloatValue(t_sample(slider->getValue()));
-            app_.ControlChange(control_);
+            control_.SetFloatValue(t_sample(slider->getValue()));
+            app_.UpdateControl(control_);
             container_.repaint();
         }
 
     private:
         ol::ctl::Control &control_;
-        SynthGui &app_;
+        app::synth::SynthApp &app_;
+        app::synth::SynthTinyGui &gui_;
         OlGuiContainer &container_;
     };
 

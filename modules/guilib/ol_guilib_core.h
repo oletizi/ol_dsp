@@ -217,14 +217,18 @@ namespace ol::gui {
             child_size.height =
                     direction_ == Vertical ? (GetHeight() - fixed_height) /
                                              int(children_.empty() ? 1 : children_.size() - fixed_count) : GetHeight();
+            DPRINTF("layout child size: %d, %d\n", child_size.width, child_size.height);
             for (auto c: children_) {
                 c->SetSize(child_size);
                 c->Resized();
             }
         }
+        void SetVertical() {
+            direction_ = LayoutDirection::Vertical;
+        }
 
-        void SetDirection(LayoutDirection direction) {
-            direction_ = direction;
+        void SetHorizontal() {
+            direction_ = LayoutDirection::Horizontal;
         }
 
         void Clear() {
