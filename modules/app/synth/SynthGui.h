@@ -126,20 +126,22 @@ namespace ol::app::synth {
         Font font_ = Font(16);
     };
 
-    class MenuItem : public Component {
+    class MenuItem : public Box {
     public:
-        explicit MenuItem(Text *text, bool active) : text_(text), active_(active) {
+        explicit MenuItem(Text *text, bool active) : text_(text), active_(active), Box(text) {
+
         }
 
-        void Resized() override {
-        }
+//        void Resized() override {
+//        }
 
-        void Paint(Graphics &g) override {
-            text_->Paint(g);
-        }
+//        void Paint(Graphics &g) override {
+//            text_->Paint(g);
+//        }
 
         void SetActive(bool active) {
             active_ = active;
+            SetBorder(Border{0, 0, 0, active_ ? 1 : 0});
         }
 
         [[nodiscard]] bool IsActive() const {
@@ -156,14 +158,9 @@ namespace ol::app::synth {
         explicit MainMenu(const std::vector<MenuItem *> &menu_items) : Box(&layout_) {
             layout_.SetHorizontal();
             for (auto m: menu_items) {
-                auto box = new Box(m);
-                box->SetMarginLeft(10)->SetMarginRight(16);
-                if (m->IsActive()) {
-                    box->SetBorder(Border {0, 0, 0, 1});
-                }
+                m->SetMarginLeft(10)->SetMarginRight(16);
                 menu_items_.push_back(m);
-                item_boxes_.push_back(box);
-                layout_.Add(box);
+                layout_.Add(m);
             }
         }
 
@@ -174,16 +171,20 @@ namespace ol::app::synth {
         }
 
 
+        void SetActive(int element_id) {
+            for (int i = 0; i < menu_items_.size(); i++) {
+                menu_items_[i]->SetActive(i == element_id);
+            }
+        }
+
     private:
         std::vector<MenuItem *> menu_items_{};
-        std::vector<Box *> item_boxes_{};
         Layout layout_ = Layout();
     };
 
     class SynthMediumGui : public Component, public ControlListener {
     public:
         explicit SynthMediumGui(SynthConfig &config) : config_(config) {
-            //main_menu_->SetMargin(0);
             layout_.SetVertical();
             auto filter_view_box = new Box(filter_view_);
             filter_view_box->SetMargin(10)->SetPadding(5)->SetBorder(Border{1, 1, 1, 1});
@@ -195,6 +196,7 @@ namespace ol::app::synth {
 
 
             layout_.Add(main_menu_);
+            main_menu_->SetActive(0);
         }
 
         void Resized() override {
@@ -261,22 +263,27 @@ namespace ol::app::synth {
 
         void SelectMainScreen() {
             fprintf(stderr, "Main screen!\n");
+            main_menu_->SetActive(0);
         }
 
         void SelectFilterScreen() {
             fprintf(stderr, "Filter screen!\n");
+            main_menu_->SetActive(1);
         }
 
         void SelectAmpScreen() {
             fprintf(stderr, "Amp screen!\n");
+            main_menu_->SetActive(2);
         }
 
         void SelectFxScreen() {
             fprintf(stderr, "Fx screen!\n");
+            main_menu_->SetActive(3);
         }
 
         void SelectModScreen() {
             fprintf(stderr, "Mod screen!\n");
+            main_menu_->SetActive(4);
         }
 
     private:
