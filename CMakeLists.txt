@@ -17,6 +17,13 @@ include(cmake/CPM.cmake)
 
 add_subdirectory(libs/DaisySP)
 add_subdirectory(libs/dattorro-verb)
+
+FetchContent_Declare(SFML
+        GIT_REPOSITORY https://github.com/SFML/SFML.git
+        GIT_TAG 2.6.x)
+FetchContent_MakeAvailable(SFML)
+
+
 add_subdirectory(libs/JUCE)
 #CPMAddPackage("gh:ImJimmi/JIVE@1.0.4")
 
@@ -40,7 +47,7 @@ if (${BUILD_TEENSY})
 endif ()
 
 add_subdirectory(libs/rapidyaml)
-add_subdirectory(libs/rtmidi)
+#add_subdirectory(libs/rtmidi)
 add_subdirectory(libs/Soundpipe)
 
 add_subdirectory(modules/app)

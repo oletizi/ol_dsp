@@ -128,9 +128,11 @@ namespace ol::app::synth {
 
     class MenuItem : public Component {
     public:
-        explicit MenuItem(Text *text, bool active) : text_(text), active_(active) {}
+        explicit MenuItem(Text *text, bool active) : text_(text), active_(active) {
+        }
 
-        void Resized() override {}
+        void Resized() override {
+        }
 
         void Paint(Graphics &g) override {
             text_->Paint(g);
