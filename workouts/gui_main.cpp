@@ -62,18 +62,48 @@ namespace ol::gui {
     };
 }
 
+class BasicApp {
+public:
+
+    BasicApp(ol::app::synth::SynthApp &app, ol::app::synth::SynthMediumGui &gui) : app_(app), gui_(gui) {}
+
+    BasicApp *handleKeyPressed(sf::Event &event) {
+        switch (event.key.code) {
+            case sf::Keyboard::Key::A:
+                gui_.SelectMainScreen();
+                break;
+            case sf::Keyboard::Key::S:
+                gui_.SelectFilterScreen();
+                break;
+            case sf::Keyboard::Key::D:
+                gui_.SelectAmpScreen();
+                break;
+            case sf::Keyboard::Key::F:
+                gui_.SelectFxScreen();
+                break;
+            case sf::Keyboard::Key::G:
+                gui_.SelectModScreen();
+                break;
+            default:
+                break;
+
+        }
+        return this;
+    }
+
+private:
+    ol::app::synth::SynthApp &app_;
+    ol::app::synth::SynthMediumGui &gui_;
+};
+
+
 int main() {
     // create the window
     const int width = 320;
     const int height = 240;
     sf::RenderWindow window(sf::VideoMode(width + 10, height + 10), "My window");
     sf::Font font = sf::Font();
-//    auto font_path = "/System/Library/Fonts/HelveticaNeue.ttc";
-//    auto font_path = "/Users/orion/Library/Fonts/Inconsolata Nerd Font Complete.otf";
-//    auto font_path = "/Users/orion/Library/Fonts/ArchitectRegular-D0XR.ttf";
     auto font_path = "/Users/orion/Library/Fonts/Architect Bold.ttf";
-//    auto font_path = "/Users/orion/Library/Fonts/Woolkarth-Bold Bold.ttf";
-//    auto font_path = "/Users/orion/Library/Fonts/Flux Architect Regular.ttf";
     if (!font.loadFromFile(font_path)) {
         return 3;
     }
@@ -82,6 +112,10 @@ int main() {
 
     ol::app::synth::SynthConfig config{};
     ol::app::synth::SynthMediumGui gui(config);
+    ol::app::synth::SynthApp app(config, gui);
+
+    BasicApp basic_app(app, gui);
+
     ol::gui::Box box(&gui);
     box.SetMargin(5);
     box.SetSize(width, height);
@@ -92,8 +126,16 @@ int main() {
         sf::Event event;
         while (window.pollEvent(event)) {
             // "close requested" event: we close the window
+
             if (event.type == sf::Event::Closed)
                 window.close();
+
+            if (event.type == sf::Event::MouseButtonPressed) {
+                fprintf(stderr, "Mouse! %d, %d\n", event.mouseButton.x, event.mouseButton.y);
+            }
+            if (event.type == sf::Event::KeyPressed) {
+                basic_app.handleKeyPressed(event);
+            }
         }
 
         // clear the window with black color

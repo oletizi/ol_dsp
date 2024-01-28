@@ -259,6 +259,26 @@ namespace ol::app::synth {
 
         }
 
+        void SelectMainScreen() {
+            fprintf(stderr, "Main screen!\n");
+        }
+
+        void SelectFilterScreen() {
+            fprintf(stderr, "Filter screen!\n");
+        }
+
+        void SelectAmpScreen() {
+            fprintf(stderr, "Amp screen!\n");
+        }
+
+        void SelectFxScreen() {
+            fprintf(stderr, "Fx screen!\n");
+        }
+
+        void SelectModScreen() {
+            fprintf(stderr, "Mod screen!\n");
+        }
+
     private:
         SynthConfig &config_;
         Font font_ = Font(16);
