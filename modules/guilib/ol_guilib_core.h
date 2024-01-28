@@ -48,7 +48,7 @@ namespace ol::gui {
             FillRect(rect.point.x, rect.point.y, rect.dimension.width, rect.dimension.height);
         }
 
-        virtual void WritePixel(int x, int y, Color c) = 0;
+        virtual void DrawPixel(int x, int y) = 0;
 
         virtual void Print(std::string text, Rectangle area) = 0;
     };
@@ -69,8 +69,8 @@ namespace ol::gui {
             g_.DrawLine(startX + offset_.x, startY + offset_.y, endX + offset_.x, endY + offset_.y, line_width);
         }
 
-        void WritePixel(int x, int y, Color c) override {
-            g_.WritePixel(x + offset_.x, y + offset_.y, c);
+        void DrawPixel(int x, int y) override {
+            g_.DrawPixel(x + offset_.x, y + offset_.y);
         }
 
         void Print(const std::string text, const Rectangle area) override {

@@ -9,7 +9,7 @@ if (${BUILD_WORKOUT_BUDDY})
 endif ()
 
 add_executable(gui-workout gui_main.cpp)
-target_link_libraries(gui-workout sfml-graphics)
+target_link_libraries(gui-workout sfml-graphics ol_corelib ol_guilib)
 target_include_directories(gui-workout PUBLIC .)
 
 
