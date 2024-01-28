@@ -157,8 +157,7 @@ namespace ol::app::synth {
             layout_.SetHorizontal();
             for (auto m: menu_items) {
                 auto box = new Box(m);
-                box->SetMarginLeft(10);
-//                box->SetPaddingLeft(5)->SetPaddingTop(5);
+                box->SetMarginLeft(10)->SetMarginRight(16);
                 if (m->IsActive()) {
                     box->SetBorder(Border {0, 0, 0, 1});
                 }
@@ -269,11 +268,11 @@ namespace ol::app::synth {
         AdsrView *filter_adsr_view_ = new AdsrView(config_.filter_attack, config_.filter_decay, config_.filter_sustain,
                                                    config_.filter_release, config_.filter_env_amt);
         std::vector<MenuItem *> menu_items_ = {
-                new MenuItem(new Text(font_, "Main"), true),
-                new MenuItem(new Text(font_, "Filter"), false),
-                new MenuItem(new Text(font_, "Amp"), false),
-                new MenuItem(new Text(font_, "Fx"), false),
-                new MenuItem(new Text(font_, "Mod"), false)
+                new MenuItem(new Text(font_, "MAIN"), true),
+                new MenuItem(new Text(font_, "FILTER"), false),
+                new MenuItem(new Text(font_, "AMP"), false),
+                new MenuItem(new Text(font_, "FX"), false),
+                new MenuItem(new Text(font_, "MOD"), false)
         };
         MainMenu *main_menu_ = new MainMenu(menu_items_);
 

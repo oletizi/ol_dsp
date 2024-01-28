@@ -69,15 +69,16 @@ int main() {
     sf::RenderWindow window(sf::VideoMode(width + 10, height + 10), "My window");
     sf::Font font = sf::Font();
 //    auto font_path = "/System/Library/Fonts/HelveticaNeue.ttc";
-    auto font_path = "/Users/orion/Library/Fonts/Inconsolata Nerd Font Complete.otf";
+//    auto font_path = "/Users/orion/Library/Fonts/Inconsolata Nerd Font Complete.otf";
 //    auto font_path = "/Users/orion/Library/Fonts/ArchitectRegular-D0XR.ttf";
+    auto font_path = "/Users/orion/Library/Fonts/Architect Bold.ttf";
 //    auto font_path = "/Users/orion/Library/Fonts/Woolkarth-Bold Bold.ttf";
 //    auto font_path = "/Users/orion/Library/Fonts/Flux Architect Regular.ttf";
     if (!font.loadFromFile(font_path)) {
         return 3;
     }
     font.setSmooth(true);
-    auto g = ol::gui::SfmlGraphics(window, font, 16);
+    auto g = ol::gui::SfmlGraphics(window, font, 14);
 
     ol::app::synth::SynthConfig config{};
     ol::app::synth::SynthMediumGui gui(config);
