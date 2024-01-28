@@ -125,6 +125,13 @@ namespace ol::gui {
         int fixed_height_ = 0;
     };
 
+    struct Border {
+        int width_left = 0;
+        int width_top = 0;
+        int width_right = 0;
+        int width_bottom = 0;
+    };
+
     class Box : public Component {
 
     public:
@@ -141,7 +148,26 @@ namespace ol::gui {
 
         void Paint(Graphics &g) override {
             auto og = OffsetGraphics(g, Point{offset_left_, offset_top_});
+            if (border_.width_left > 0) {
+                g.DrawLine(margin_left_, margin_top_, margin_left_, GetHeight() - margin_bottom_, border_.width_left);
+            }
+            if (border_.width_top > 0) {
+                g.DrawLine(margin_left_, margin_top_, GetWidth() - margin_right_, margin_top_, border_.width_top);
+            }
+            if (border_.width_right > 0) {
+                g.DrawLine(GetWidth() - margin_right_, margin_top_, GetWidth() - margin_right_,
+                           GetHeight() - margin_bottom_, border_.width_right);
+            }
+            if (border_.width_bottom > 0) {
+                g.DrawLine(margin_left_, GetHeight() - margin_bottom_, GetWidth() - margin_right_, GetHeight() - margin_bottom_,
+                           border_.width_bottom);
+            }
             child_->Paint(og);
+        }
+
+        Box *SetBorder(Border border) {
+            border_ = border;
+            return this;
         }
 
         [[nodiscard]] int GetOffsetLeft() const { return offset_left_; }
@@ -157,11 +183,12 @@ namespace ol::gui {
         [[nodiscard]] int GetOffsetVertical() const {
             return GetOffsetTop() + GetOffsetBottom();
         }
+
         [[nodiscard]] int GetOffsetHorizontal() const {
             return GetOffsetLeft() + GetOffsetRight();
         }
 
-        Box * SetMargin(int m) {
+        Box *SetMargin(int m) {
             return SetMarginLeft(m)->SetMarginTop(m)->SetMarginRight(m)->SetMarginBottom(m);
         }
 
@@ -195,7 +222,7 @@ namespace ol::gui {
             return this;
         }
 
-        Box * SetPadding(int p) {
+        Box *SetPadding(int p) {
             return SetPaddingLeft(p)->SetPaddingTop(p)->SetPaddingRight(p)->SetPaddingBottom(p);
         }
 
@@ -246,6 +273,8 @@ namespace ol::gui {
         int offset_top_ = 0;
         int offset_right_ = 0;
         int offset_bottom_ = 0;
+
+        Border border_{};
         Component *child_;
     };
 

@@ -181,7 +181,8 @@ namespace ol::app::synth {
     public:
         explicit SynthMediumGui(SynthConfig &config) : config_(config) {
             // XXX: Make this a function of the font.
-            main_menu_->SetMarginTop(10)->SetMarginBottom(10);
+            main_menu_->SetMargin(5)->SetPadding(5);
+            main_menu_->SetBorder(Border{1, 1, 1, 1});
 //            main_menu_->SetFixedHeight(16 + main_menu_->GetOffsetVertical());
             main_menu_->SetMarginLeft(10)->SetMarginRight(10);
             layout_.SetVertical();

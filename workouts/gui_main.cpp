@@ -5,7 +5,8 @@ namespace ol::gui {
     class SfmlGraphics : public Graphics {
     public:
 
-        SfmlGraphics(sf::RenderWindow &window, sf::Font &font, int font_size) : window_(window), font_(font), font_size_(font_size) {}
+        SfmlGraphics(sf::RenderWindow &window, sf::Font &font, int font_size) : window_(window), font_(font),
+                                                                                font_size_(font_size) {}
 
         void DrawLine(int startX, int startY, int endX, int endY, int line_width) const override {
             sf::VertexArray line(sf::Lines, 2);
@@ -54,7 +55,7 @@ namespace ol::gui {
         }
 
     private:
-        sf::Color color_ = sf::Color::White;
+        sf::Color color_ = sf::Color::Black;
         sf::RenderWindow &window_;
         sf::Font &font_;
         int font_size_;
@@ -63,11 +64,15 @@ namespace ol::gui {
 
 int main() {
     // create the window
-    sf::RenderWindow window(sf::VideoMode(800, 600), "My window");
+    const int width = 320;
+    const int height = 240;
+    sf::RenderWindow window(sf::VideoMode(width + 10, height + 10), "My window");
     sf::Font font = sf::Font();
 //    auto font_path = "/System/Library/Fonts/HelveticaNeue.ttc";
-    // auto font_path = "/Users/orion/Library/Fonts/Woolkarth-Bold Bold.ttf";
-    auto font_path = "/Users/orion/Library/Fonts/Flux Architect Regular.ttf";
+    auto font_path = "/Users/orion/Library/Fonts/Inconsolata Nerd Font Complete.otf";
+//    auto font_path = "/Users/orion/Library/Fonts/ArchitectRegular-D0XR.ttf";
+//    auto font_path = "/Users/orion/Library/Fonts/Woolkarth-Bold Bold.ttf";
+//    auto font_path = "/Users/orion/Library/Fonts/Flux Architect Regular.ttf";
     if (!font.loadFromFile(font_path)) {
         return 3;
     }
@@ -76,8 +81,10 @@ int main() {
 
     ol::app::synth::SynthConfig config{};
     ol::app::synth::SynthMediumGui gui(config);
-    gui.SetSize(320, 240);
-    gui.Resized();
+    ol::gui::Box box(&gui);
+    box.SetMargin(10);
+    box.SetSize(width, height);
+    box.Resized();
     // run the program as long as the window is open
     while (window.isOpen()) {
         // check all the window's events that were triggered since the last iteration of the loop
@@ -89,17 +96,12 @@ int main() {
         }
 
         // clear the window with black color
-        window.clear(sf::Color::Black);
+        window.clear(sf::Color::White);
 
         // draw everything here...
         // window.draw(...);
 
-//        g.DrawLine(0, 0, 100, 100, 1);
-//        g.DrawRect(16, 16, 100, 50, 1);
-//        g.FillRect(16, 84, 100, 50);
-//        g.DrawPixel(150, 150);
-//        g.Print("Hello!", ol::gui::Rectangle{ol::gui::Point{130, 138}, ol::gui::Dimension{100, 100}});
-        gui.Paint(g);
+        box.Paint(g);
         // end the current frame
         window.display();
     }
