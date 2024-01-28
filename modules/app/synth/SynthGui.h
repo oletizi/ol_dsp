@@ -142,6 +142,10 @@ namespace ol::app::synth {
             active_ = active;
         }
 
+        [[nodiscard]] bool IsActive() const {
+            return active_;
+        }
+
     private:
         Text *text_;
         bool active_;
@@ -152,47 +156,45 @@ namespace ol::app::synth {
         explicit MainMenu(const std::vector<MenuItem *> &menu_items) : Box(&layout_) {
             layout_.SetHorizontal();
             for (auto m: menu_items) {
+                auto box = new Box(m);
+                box->SetMarginLeft(10);
+//                box->SetPaddingLeft(5)->SetPaddingTop(5);
+                if (m->IsActive()) {
+                    box->SetBorder(Border {0, 0, 0, 1});
+                }
                 menu_items_.push_back(m);
-                layout_.Add(m);
+                item_boxes_.push_back(box);
+                layout_.Add(box);
             }
         }
 
         void Resized() override {
-            SetFixedHeight(16 + GetOffsetVertical());
+            SetFixedHeight(24 + GetOffsetVertical());
+
             Box::Resized();
         }
-
-//        void Resized() override {
-//            layout_.SetSize(GetWidth(), GetHeight());
-//            layout_.Resized();
-//        }
-//
-//        void Paint(Graphics &g) override {
-//            layout_.Paint(g);
-//        }
 
 
     private:
         std::vector<MenuItem *> menu_items_{};
+        std::vector<Box *> item_boxes_{};
         Layout layout_ = Layout();
     };
 
     class SynthMediumGui : public Component, public ControlListener {
     public:
         explicit SynthMediumGui(SynthConfig &config) : config_(config) {
-            // XXX: Make this a function of the font.
-            main_menu_->SetMargin(5)->SetPadding(5);
-            main_menu_->SetBorder(Border{1, 1, 1, 1});
-//            main_menu_->SetFixedHeight(16 + main_menu_->GetOffsetVertical());
-            main_menu_->SetMarginLeft(10)->SetMarginRight(10);
+            //main_menu_->SetMargin(0);
             layout_.SetVertical();
             auto filter_view_box = new Box(filter_view_);
-            filter_view_box->SetMargin(10);
+            filter_view_box->SetMargin(10)->SetPadding(5)->SetBorder(Border{1, 1, 1, 1});
             layout_.Add(filter_view_box);
 
             auto filter_adsr_view_box_ = new Box(filter_adsr_view_);
-            filter_adsr_view_box_->SetMargin(10);
+            filter_adsr_view_box_->SetMargin(10)->SetPadding(5)->SetBorder(Border{1, 1, 1, 1});
             layout_.Add(filter_adsr_view_box_);
+
+
             layout_.Add(main_menu_);
         }
 

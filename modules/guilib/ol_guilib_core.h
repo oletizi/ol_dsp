@@ -138,7 +138,7 @@ namespace ol::gui {
         explicit Box(Component *child) : child_(child) {}
 
         void Resized() override {
-            offset_left_ = margin_left_ + padding_bottom_;
+            offset_left_ = margin_left_ + padding_left_;
             offset_top_ = margin_top_ + padding_top_;
             offset_right_ = margin_right_ + padding_right_;
             offset_bottom_ = margin_bottom_ + padding_bottom_;

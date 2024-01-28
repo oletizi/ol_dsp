@@ -82,7 +82,7 @@ int main() {
     ol::app::synth::SynthConfig config{};
     ol::app::synth::SynthMediumGui gui(config);
     ol::gui::Box box(&gui);
-    box.SetMargin(10);
+    box.SetMargin(5);
     box.SetSize(width, height);
     box.Resized();
     // run the program as long as the window is open
