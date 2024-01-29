@@ -13,11 +13,11 @@
 #include "corelib/cc_map.h"
 
 #ifdef TEENSY_DEBUG
-#define DPRINTLN(X) Serial.println(X);
+#define DPRINTLN(X)  Serial.println(X);
 #define DPRINTF(...) Serial.printf(__VA_ARGS__);
 #else
-#define DPRINTLN(X)
-#define DPRINTF(...)
+#define DPRINTLN(X)  fprintf(stderr, X);
+#define DPRINTF(...) fprintf(stderr, __VA_ARGS__);
 #endif
 
 typedef float t_sample;

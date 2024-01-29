@@ -27,16 +27,12 @@ namespace ol::gui {
             plotRect(rect, x, y, width, height);
         }
 
-        void plotRect(sf::VertexArray &rect, float x, float y, float width, float height) {
-            rect[0].position = sf::Vector2f(float(x), float(y));
-            rect[1].position = sf::Vector2f(float(x + width), float(y));
-            rect[2].position = sf::Vector2f(float(x + width), float(y + height));
-            rect[3].position = sf::Vector2f(float(x), float(y + height));
-            rect[4].position = sf::Vector2f(float(x), float(y));
-            for (int i = 0; i < 4; i++) {
-                rect[i].color = color_;
-            }
-            window_.draw(rect);
+        void DrawCircle(int x, int y, int radius) override {
+            sf::CircleShape circ(radius);
+            circ.setPosition(x, y);
+            circ.setOutlineColor(color_);
+            circ.setOutlineThickness(1);
+            window_.draw(circ);
         }
 
         void DrawPixel(int x, int y) override {
@@ -49,12 +45,24 @@ namespace ol::gui {
         void Print(std::string text, Rectangle area) override {
             sf::Text t(text, font_, font_size_);
             t.setFillColor(color_);
-//            t.setOutlineColor(color_);
             t.setPosition(area.point.x, area.point.y);
             window_.draw(t);
         }
 
     private:
+
+        void plotRect(sf::VertexArray &rect, float x, float y, float width, float height) {
+            rect[0].position = sf::Vector2f(float(x), float(y));
+            rect[1].position = sf::Vector2f(float(x + width), float(y));
+            rect[2].position = sf::Vector2f(float(x + width), float(y + height));
+            rect[3].position = sf::Vector2f(float(x), float(y + height));
+            rect[4].position = sf::Vector2f(float(x), float(y));
+            for (int i = 0; i < 4; i++) {
+                rect[i].color = color_;
+            }
+            window_.draw(rect);
+        }
+
         sf::Color color_ = sf::Color::Black;
         sf::RenderWindow &window_;
         sf::Font &font_;
@@ -143,6 +151,13 @@ int main() {
 
         // draw everything here...
         // window.draw(...);
+
+//        sf::CircleShape circ(50);
+//        circ.setPosition(75, 75);
+//        //circ.setFillColor(sf::Color::Blue);
+//        circ.setOutlineColor(sf::Color::Blue);
+//        circ.setOutlineThickness(1);
+//        window.draw(circ);
 
         box.Paint(g);
         // end the current frame

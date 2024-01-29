@@ -18,6 +18,73 @@ namespace ol::app::synth {
     using namespace ol::ctl;
     using namespace ol::gui;
 
+    class DialFace : public Component {
+    public:
+        explicit DialFace(Control &c) : control_(c) {}
+
+        void Resized() override {
+
+        }
+
+        void Paint(Graphics &g) override {
+            g.DrawCircle(0, 0, GetHeight() / 2);
+        }
+
+    private:
+        Control &control_;
+    };
+
+    class Dial : public Component {
+    public:
+        Dial(Text *label, Control &c) : control_(c), label_(label) {
+            layout_.SetVertical();
+            layout_.Add(&face_);
+            layout_.Add(label_);
+        }
+
+        void Resized() override {
+            layout_.SetSize(GetWidth(), GetHeight());
+            layout_.Resized();
+        }
+
+        void Paint(Graphics &g) override {
+            layout_.Paint(g);
+        }
+
+    private:
+        Control &control_;
+        Text *label_;
+        Layout layout_ = Layout();
+        Box box = Box(&layout_);
+        DialFace face_ = DialFace(control_);
+    };
+
+    class MainScreenA : public Component {
+    public:
+        explicit MainScreenA(Font &font, Control &waveform) : font_(font), waveform_control(waveform) {
+            waveform_dial_->SetFixedWidth(50);
+            waveform_dial_->SetFixedHeight(50);
+            layout_.SetHorizontal();
+            layout_.Add(waveform_dial_);
+        }
+
+        void Resized() override {
+            DPRINTF("Main screen resize: w: %d, h: %d\n", GetWidth(), GetHeight());
+            layout_.SetSize(GetWidth(), GetHeight());
+            layout_.Resized();
+        }
+
+        void Paint(Graphics &g) override {
+            layout_.Paint(g);
+        }
+
+    private:
+        Font &font_;
+        Control &waveform_control;
+        Layout layout_ = Layout();
+        Dial *waveform_dial_ = new Dial(new Text(font_, "wave"), waveform_control);
+    };
+
     class AdsrView : public Component {
     public:
 
@@ -132,13 +199,6 @@ namespace ol::app::synth {
 
         }
 
-//        void Resized() override {
-//        }
-
-//        void Paint(Graphics &g) override {
-//            text_->Paint(g);
-//        }
-
         void SetActive(bool active) {
             active_ = active;
             SetBorder(Border{0, 0, 0, active_ ? 1 : 0});
@@ -212,7 +272,7 @@ namespace ol::app::synth {
 
             // Main screens
             auto main_layoutA = new Layout();
-            main_layoutA->Add(new Text(font_, "Main screen 1"));
+            main_layoutA->Add(new MainScreenA(font_, config_.osc_1_waveform));
             main_screens_.Add(main_layoutA);
 
             auto main_layoutB = new Layout();

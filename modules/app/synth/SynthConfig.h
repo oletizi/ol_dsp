@@ -13,6 +13,9 @@ namespace ol::app::synth {
     struct SynthConfig {
 
         ol::gui::Dimension viewport{128, 64};
+
+        Control osc_1_waveform = Control(CC_OSC_1_WAVEFORM, 0.f);
+
         Control filter_cutoff = Control(CC_FILTER_CUTOFF, 0.5f);
         Control filter_resonance = Control(CC_FILTER_RESONANCE, 0.3f);
         Control filter_drive = Control(CC_FILTER_DRIVE, 0.1f);

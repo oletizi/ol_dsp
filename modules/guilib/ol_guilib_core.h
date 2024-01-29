@@ -48,6 +48,8 @@ namespace ol::gui {
             FillRect(rect.point.x, rect.point.y, rect.dimension.width, rect.dimension.height);
         }
 
+        virtual void DrawCircle(int x, int y, int radius) = 0;
+
         virtual void DrawPixel(int x, int y) = 0;
 
         virtual void Print(std::string text, Rectangle area) = 0;
@@ -63,6 +65,10 @@ namespace ol::gui {
 
         void FillRect(int x, int y, int width, int height) override {
             g_.FillRect(x + offset_.x, y + offset_.y, width, height);
+        }
+
+        void DrawCircle(int x, int y, int radius) override {
+            g_.DrawCircle(x + offset_.x, y + offset_.y, radius);
         }
 
         void DrawLine(int startX, int startY, int endX, int endY, int line_width) const override {
