@@ -159,7 +159,8 @@ namespace ol::gui {
                            GetHeight() - margin_bottom_, border_.width_right);
             }
             if (border_.width_bottom > 0) {
-                g.DrawLine(margin_left_, GetHeight() - margin_bottom_, GetWidth() - margin_right_, GetHeight() - margin_bottom_,
+                g.DrawLine(margin_left_, GetHeight() - margin_bottom_, GetWidth() - margin_right_,
+                           GetHeight() - margin_bottom_,
                            border_.width_bottom);
             }
             child_->Paint(og);
@@ -344,8 +345,10 @@ namespace ol::gui {
                                                                                            direction) {}
 
         void Add(Component *child) {
-            children_.push_back(child);
-            Resized();
+            if (child != nullptr) {
+                children_.push_back(child);
+                Resized();
+            }
         }
 
         void Paint(Graphics &g) override {

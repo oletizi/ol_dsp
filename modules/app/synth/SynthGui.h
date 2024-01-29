@@ -182,31 +182,110 @@ namespace ol::app::synth {
         Layout layout_ = Layout();
     };
 
+    class Carousel {
+    public:
+        Component *Next() {
+            Component *rv = nullptr;
+            if (screens_.size() > 0) {
+                index++;
+                if (index >= screens_.size()) {
+                    index = 0;
+                }
+                rv = screens_[index];
+            }
+            return rv;
+        }
+
+        Carousel *Add(Component *c) {
+            screens_.push_back(c);
+            return this;
+        }
+
+    private:
+        std::vector<Component *> screens_{};
+        int index = 0;
+    };
+
     class SynthMediumGui : public Component, public ControlListener {
     public:
         explicit SynthMediumGui(SynthConfig &config) : config_(config) {
-            layout_.SetVertical();
+
+            // Main screens
+            auto main_layoutA = new Layout();
+            main_layoutA->Add(new Text(font_, "Main screen 1"));
+            main_screens_.Add(main_layoutA);
+
+            auto main_layoutB = new Layout();
+            main_layoutB->Add(new Text(font_, "Main screen 2"));
+            main_screens_.Add(main_layoutB);
+
+            auto main_layoutC = new Layout();
+            main_layoutC->Add(new Text(font_, "Main screen 3"));
+            main_screens_.Add(main_layoutC);
+
+            // Filter screens
+            auto filter_layoutA = new Layout();
+            filter_layoutA->SetVertical();
+
             auto filter_view_box = new Box(filter_view_);
             filter_view_box->SetMargin(10)->SetPadding(5)->SetBorder(Border{1, 1, 1, 1});
-            layout_.Add(filter_view_box);
+            filter_layoutA->Add(filter_view_box);
 
             auto filter_adsr_view_box_ = new Box(filter_adsr_view_);
             filter_adsr_view_box_->SetMargin(10)->SetPadding(5)->SetBorder(Border{1, 1, 1, 1});
-            layout_.Add(filter_adsr_view_box_);
+            filter_layoutA->Add(filter_adsr_view_box_);
+            filter_screens_.Add(filter_layoutA);
 
+            auto filter_layoutB = new Layout();
+            filter_layoutB->Add(new Text(font_, "Filter screen 2"));
+            filter_screens_.Add(filter_layoutB);
 
-            layout_.Add(main_menu_);
+            // Amp screens
+            auto amp_layoutA = new Layout();
+            amp_layoutA->Add(new Text(font_, "Amp screen 1"));
+            amp_screens_.Add(amp_layoutA);
+
+            auto amp_layoutB = new Layout();
+            amp_layoutB->Add(new Text(font_, "Amp screen 2"));
+            amp_screens_.Add(amp_layoutB);
+
+            // Fx screens
+            auto fx_layoutA = new Layout();
+            fx_layoutA->Add(new Text(font_, "Fx screen 1"));
+            fx_screens_.Add(fx_layoutA);
+
+            auto fx_layoutB = new Layout();
+            fx_layoutB->Add(new Text(font_, "Fx screen 2"));
+            fx_screens_.Add(fx_layoutB);
+
+            // Mod screens
+            auto mod_layoutA = new Layout();
+            mod_layoutA->Add(new Text(font_, "Mod screen 1"));
+            mod_screens_.Add(mod_layoutA);
+
+            auto mod_layoutB = new Layout();
+            mod_layoutB->Add(new Text(font_, "Mod screen 2"));
+            mod_screens_.Add(mod_layoutB);
+
+            // screens go in the screen layout. Set the initial screen layout to the first main screen.
+            screen_layout_.Add(main_layoutA);
+
+            // app layout is the screen layout + the menu
+            app_layout_.SetVertical();
+            app_layout_.Add(&screen_layout_);
+            app_layout_.Add(main_menu_);
+
             main_menu_->SetActive(0);
         }
 
         void Resized() override {
             DPRINTF("gui resized: menu fixed height: %d", main_menu_->GetFixedHeight());
-            layout_.SetSize(GetWidth(), GetHeight());
-            layout_.Resized();
+            app_layout_.SetSize(GetWidth(), GetHeight());
+            app_layout_.Resized();
         }
 
         void Paint(Graphics &g) override {
-            layout_.Paint(g);
+            app_layout_.Paint(g);
         }
 
         void UpdateFilterCutoff(Control control) override {
@@ -263,26 +342,36 @@ namespace ol::app::synth {
 
         void SelectMainScreen() {
             fprintf(stderr, "Main screen!\n");
+            screen_layout_.Clear();
+            screen_layout_.Add(main_screens_.Next());
             main_menu_->SetActive(0);
         }
 
         void SelectFilterScreen() {
             fprintf(stderr, "Filter screen!\n");
+            screen_layout_.Clear();
+            screen_layout_.Add(filter_screens_.Next());
             main_menu_->SetActive(1);
         }
 
         void SelectAmpScreen() {
             fprintf(stderr, "Amp screen!\n");
+            screen_layout_.Clear();
+            screen_layout_.Add(amp_screens_.Next());
             main_menu_->SetActive(2);
         }
 
         void SelectFxScreen() {
             fprintf(stderr, "Fx screen!\n");
+            screen_layout_.Clear();
+            screen_layout_.Add(fx_screens_.Next());
             main_menu_->SetActive(3);
         }
 
         void SelectModScreen() {
             fprintf(stderr, "Mod screen!\n");
+            screen_layout_.Clear();
+            screen_layout_.Add(mod_screens_.Next());
             main_menu_->SetActive(4);
         }
 
@@ -294,6 +383,13 @@ namespace ol::app::synth {
                                                   config_.filter_drive);
         AdsrView *filter_adsr_view_ = new AdsrView(config_.filter_attack, config_.filter_decay, config_.filter_sustain,
                                                    config_.filter_release, config_.filter_env_amt);
+
+        Carousel main_screens_{};
+        Carousel filter_screens_{};
+        Carousel amp_screens_{};
+        Carousel fx_screens_{};
+        Carousel mod_screens_{};
+
         std::vector<MenuItem *> menu_items_ = {
                 new MenuItem(new Text(font_, "MAIN"), true),
                 new MenuItem(new Text(font_, "FILTER"), false),
@@ -303,7 +399,9 @@ namespace ol::app::synth {
         };
         MainMenu *main_menu_ = new MainMenu(menu_items_);
 
-        Layout layout_ = Layout();
+        Layout screen_layout_ = Layout();
+        Layout app_layout_ = Layout();
+
     };
 
     class SynthTinyGui : public Component, public ControlListener {
