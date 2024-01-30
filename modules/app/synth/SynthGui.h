@@ -108,8 +108,8 @@ namespace ol::app::synth {
 
     class MainScreenA : public Component {
     public:
-        explicit MainScreenA(Font &font, Control &waveform, Control &level) : font_(font), waveform_control_(waveform),
-                                                                              level_control_(level) {
+        explicit MainScreenA(TextFactory &text_factory, Control &waveform, Control &level)
+                : text_factory_(text_factory), waveform_control_(waveform), level_control_(level) {
             Dimension widget_size{50, 50};
             waveform_dial_->SetFixedSize(widget_size);
             level_fader_->SetFixedSize(widget_size);
@@ -129,12 +129,12 @@ namespace ol::app::synth {
         }
 
     private:
-        Font &font_;
+        TextFactory &text_factory_;
         Control &waveform_control_;
         Control &level_control_;
         Layout layout_ = Layout();
-        Dial *waveform_dial_ = new Dial(new Text(font_, "wave"), waveform_control_);
-        Fader *level_fader_ = new Fader(new Text(font_, "level"), level_control_);
+        Dial *waveform_dial_ = new Dial(text_factory_.NewText("wave"), waveform_control_);
+        Fader *level_fader_ = new Fader(text_factory_.NewText("level"), level_control_);
     };
 
     class AdsrView : public Component {
@@ -320,11 +320,12 @@ namespace ol::app::synth {
 
     class SynthMediumGui : public Component, public ControlListener {
     public:
-        explicit SynthMediumGui(SynthConfig &config) : config_(config) {
+        explicit SynthMediumGui(SynthConfig &config, TextFactory &text_factory) : config_(config),
+                                                                                  text_factory_(text_factory) {
 
             // Main screens
             auto main_layoutA = new Layout();
-            main_layoutA->Add(new MainScreenA(font_, config_.osc_1_waveform, config_.osc_1_level));
+            main_layoutA->Add(new MainScreenA(text_factory, config_.osc_1_waveform, config_.osc_1_level));
             main_screens_.Add(main_layoutA);
 
             auto main_layoutB = new Layout();
@@ -514,6 +515,7 @@ namespace ol::app::synth {
         Layout screen_layout_ = Layout();
         Layout app_layout_ = Layout();
 
+        TextFactory &text_factory_;
     };
 
     class SynthTinyGui : public Component, public ControlListener {
@@ -632,7 +634,6 @@ namespace ol::app::synth {
         AdsrView *amp_adsr_view_;
         AppScreen *amp_screen_;
         Layout layout_;
-
     };
 
 }

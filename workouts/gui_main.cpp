@@ -2,6 +2,48 @@
 #include "guilib/ol_guilib.h"
 
 namespace ol::gui {
+
+    class SfmlText : public Text {
+    public:
+        SfmlText(sf::Font &native_font, Font &gui_font, int font_size, std::string text_string)
+                : Text(gui_font, text_string),
+                  native_font_(native_font),
+                  font_size_(font_size),
+                  text_string_(text_string) {}
+
+        int GetFixedHeight() const override {
+            return int(native_text_.getLocalBounds().height);
+        }
+
+        int GetFixedWidth() const override {
+            return int(native_text_.getLocalBounds().width);
+        }
+
+    private:
+        sf::Font &native_font_;
+        int font_size_;
+        std::string text_string_;
+        sf::Text native_text_ = sf::Text(text_string_, native_font_, font_size_);
+    };
+
+    class SfmlTextFactory : public TextFactory {
+    public:
+
+        SfmlTextFactory(sf::Font &font, int font_size) : native_font_(font), font_size_(font_size) {}
+
+        Text *NewText(std::string text_string) override {
+            auto rv = new SfmlText(native_font_, gui_font_, font_size_, text_string);
+            created_.push_back(rv);
+            return rv;
+        }
+
+    private:
+        sf::Font &native_font_;
+        std::vector<Text *> created_{};
+        int font_size_;
+        Font gui_font_ = Font(font_size_);
+    };
+
     class SfmlGraphics : public Graphics {
     public:
 
@@ -118,8 +160,9 @@ int main() {
     font.setSmooth(true);
     auto g = ol::gui::SfmlGraphics(window, font, 14);
 
+    ol::gui::SfmlTextFactory text_factory(font, 14);
     ol::app::synth::SynthConfig config{};
-    ol::app::synth::SynthMediumGui gui(config);
+    ol::app::synth::SynthMediumGui gui(config, text_factory);
     ol::app::synth::SynthApp app(config, gui);
 
     BasicApp basic_app(app, gui);

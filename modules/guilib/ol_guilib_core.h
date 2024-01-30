@@ -324,7 +324,7 @@ namespace ol::gui {
             g.Print(text_, area_);
         }
 
-        void SetText(std::string text) {
+        virtual void SetText(std::string text) {
             text_ = text;
         }
 
@@ -340,6 +340,12 @@ namespace ol::gui {
         Font &font_;
         std::string text_;
         Rectangle area_{Point{0, 0}, Dimension{0, 0}};
+    };
+
+
+    class TextFactory {
+    public:
+      virtual Text * NewText(std::string string) = 0;
     };
 
     struct LayoutProperties {
