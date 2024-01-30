@@ -534,7 +534,8 @@ namespace ol::app::synth {
             amp_screen_ = new AppScreen(amp_adsr_view_, "Amp");
 
 
-            layout_ = Layout(Horizontal);
+            layout_ = Layout();
+            layout_.SetHorizontal();
             layout_.SetSize(config.viewport.width, config.viewport.height);
             layout_.Add(filter_screen_);
         }

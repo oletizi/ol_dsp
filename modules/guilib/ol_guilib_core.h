@@ -112,7 +112,7 @@ namespace ol::gui {
 
         [[nodiscard]] virtual int GetHeight() const { return GetFixedHeight() > 0 ? GetFixedHeight() : height_; }
 
-        virtual Component * SetFixedSize(Dimension dimension) {
+        virtual Component *SetFixedSize(Dimension dimension) {
             SetFixedWidth(dimension.width)->SetFixedHeight(dimension.height);
             return this;
         }
@@ -342,24 +342,37 @@ namespace ol::gui {
         Rectangle area_{Point{0, 0}, Dimension{0, 0}};
     };
 
-    enum LayoutDirection {
-        Horizontal,
-        Vertical
+    struct LayoutProperties {
+        enum Direction {
+            HORIZONTAL, VERTICAL
+        };
+        enum Halign {
+            LEFT, CENTER, RIGHT
+        };
+        enum Valign {
+            TOP, MIDDLE, BOTTOM
+        };
+
+        Direction direction = Direction::HORIZONTAL;
+        Halign halign = Halign::LEFT;
+        Valign valign = Valign::TOP;
+
     };
 
     class Layout : public Component {
     public:
-        Layout() : Layout(Vertical) {}
 
-        explicit Layout(LayoutDirection direction) : Layout(0, 0, direction) {}
+        explicit Layout(LayoutProperties properties = LayoutProperties{}) : Layout(0, 0, properties) {}
 
-        explicit Layout(int width, int height, LayoutDirection direction = Vertical) : direction_(direction) {
+        explicit Layout(Dimension viewport, LayoutProperties properties = LayoutProperties{}) : Layout(viewport.width,
+                                                                                           viewport.height,
+                                                                                           properties) {}
+
+        explicit Layout(int width, int height, LayoutProperties properties = LayoutProperties{}) : properties_(
+                properties) {
             Component::SetSize(width, height);
         }
 
-        explicit Layout(Dimension viewport, LayoutDirection direction = Vertical) : Layout(viewport.width,
-                                                                                           viewport.height,
-                                                                                           direction) {}
 
         void Add(Component *child) {
             if (child != nullptr) {
@@ -375,8 +388,8 @@ namespace ol::gui {
                 c->Paint(og);
 //                auto width = c->GetFixedWidth() ?  c->GetFixedWidth() : child_size.width;
 //                auto height = c->GetFixedHeight() ? c->GetFixedHeight() : child_size.height;
-                offset.x += direction_ == Horizontal ? c->GetWidth() : 0;
-                offset.y += direction_ == Vertical ? c->GetHeight() : 0;
+                offset.x += properties_.direction == LayoutProperties::HORIZONTAL ? c->GetWidth() : 0;
+                offset.y += properties_.direction == LayoutProperties::VERTICAL ? c->GetHeight() : 0;
             }
         }
 
@@ -390,11 +403,15 @@ namespace ol::gui {
                 fixed_count += c->GetFixedWidth() || c->GetFixedHeight() ? 1 : 0;
             }
             child_size.width =
-                    direction_ == Vertical ? GetWidth() : (GetWidth() - fixed_width) /
-                                                          int(children_.empty() ? 1 : children_.size() - fixed_count);
+                    properties_.direction == LayoutProperties::VERTICAL ? GetWidth() : (GetWidth() - fixed_width) /
+                                                                                       int(children_.empty() ? 1 :
+                                                                                           children_.size() -
+                                                                                           fixed_count);
             child_size.height =
-                    direction_ == Vertical ? (GetHeight() - fixed_height) /
-                                             int(children_.empty() ? 1 : children_.size() - fixed_count) : GetHeight();
+                    properties_.direction == LayoutProperties::VERTICAL ? (GetHeight() - fixed_height) /
+                                                                          int(children_.empty() ? 1 : children_.size() -
+                                                                                                      fixed_count)
+                                                                        : GetHeight();
             DPRINTF("layout child size: %d, %d\n", child_size.width, child_size.height);
             for (auto c: children_) {
                 c->SetSize(child_size);
@@ -402,13 +419,26 @@ namespace ol::gui {
             }
         }
 
-        void SetVertical() {
-            direction_ = LayoutDirection::Vertical;
+        Layout *SetVertical() {
+            properties_.direction = LayoutProperties::VERTICAL;
+            return this;
         }
 
-        void SetHorizontal() {
-            direction_ = LayoutDirection::Horizontal;
+        Layout *SetHorizontal() {
+            properties_.direction = LayoutProperties::HORIZONTAL;
+            return this;
         }
+
+        Layout *SetHalign(LayoutProperties::Halign h) {
+            properties_.halign = h;
+            return this;
+        }
+
+        Layout *SetValign(LayoutProperties::Valign v) {
+            properties_.valign = v;
+            return this;
+        }
+
 
         void Clear() {
             children_.clear();
@@ -418,7 +448,7 @@ namespace ol::gui {
     private:
         Dimension child_size{};
         std::vector<Component *> children_;
-        LayoutDirection direction_;
+        LayoutProperties properties_;
     };
 
     class Meter : public Component {
