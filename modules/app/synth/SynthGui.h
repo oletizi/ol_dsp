@@ -18,6 +18,53 @@ namespace ol::app::synth {
     using namespace ol::ctl;
     using namespace ol::gui;
 
+    class FaderFace : public Component {
+    public:
+        explicit FaderFace(Control &control) : control_(control) {}
+
+        void Resized() override {
+
+        }
+
+        void Paint(Graphics &g) override {
+            int fader_mid = GetHeight() - (control_.GetFloatValue() * GetHeight());
+            int fader_height = (GetHeight() / 17) * 4;
+            int fader_width = (GetWidth() / 9) * 4;
+            int fader_margin = GetWidth() - fader_width;
+            g.DrawLine(GetWidth() / 2, 0, GetWidth() / 2, GetHeight(), 1);
+            g.FillRect(fader_margin / 2, fader_mid - (fader_height / 2), fader_width, fader_height);
+        }
+
+    private:
+        Control &control_;
+    };
+
+    class Fader : public Component {
+    public:
+
+        Fader(Text *label, Control &control) : control_(control), label_(label) {
+            layout_.SetVertical();
+            layout_.Add(&face_);
+            layout_.Add(label_);
+        }
+
+        void Resized() override {
+            box_.SetSize(GetWidth(), GetHeight());
+            box_.Resized();
+        }
+
+        void Paint(Graphics &g) override {
+            box_.Paint(g);
+        }
+
+    private:
+        Control &control_;
+        Text *label_;
+        Layout layout_ = Layout();
+        Box box_ = Box(&layout_);
+        FaderFace face_ = FaderFace(control_);
+    };
+
     class DialFace : public Component {
     public:
         explicit DialFace(Control &c) : control_(c) {}
@@ -61,11 +108,14 @@ namespace ol::app::synth {
 
     class MainScreenA : public Component {
     public:
-        explicit MainScreenA(Font &font, Control &waveform) : font_(font), waveform_control(waveform) {
-            waveform_dial_->SetFixedWidth(50);
-            waveform_dial_->SetFixedHeight(50);
+        explicit MainScreenA(Font &font, Control &waveform, Control &level) : font_(font), waveform_control_(waveform),
+                                                                              level_control_(level) {
+            Dimension widget_size{50, 50};
+            waveform_dial_->SetFixedSize(widget_size);
+            level_fader_->SetFixedSize(widget_size);
             layout_.SetHorizontal();
             layout_.Add(waveform_dial_);
+            layout_.Add(level_fader_);
         }
 
         void Resized() override {
@@ -80,9 +130,11 @@ namespace ol::app::synth {
 
     private:
         Font &font_;
-        Control &waveform_control;
+        Control &waveform_control_;
+        Control &level_control_;
         Layout layout_ = Layout();
-        Dial *waveform_dial_ = new Dial(new Text(font_, "wave"), waveform_control);
+        Dial *waveform_dial_ = new Dial(new Text(font_, "wave"), waveform_control_);
+        Fader *level_fader_ = new Fader(new Text(font_, "level"), level_control_);
     };
 
     class AdsrView : public Component {
@@ -272,7 +324,7 @@ namespace ol::app::synth {
 
             // Main screens
             auto main_layoutA = new Layout();
-            main_layoutA->Add(new MainScreenA(font_, config_.osc_1_waveform));
+            main_layoutA->Add(new MainScreenA(font_, config_.osc_1_waveform, config_.osc_1_level));
             main_screens_.Add(main_layoutA);
 
             auto main_layoutB = new Layout();

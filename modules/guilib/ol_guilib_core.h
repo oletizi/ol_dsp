@@ -112,13 +112,24 @@ namespace ol::gui {
 
         [[nodiscard]] virtual int GetHeight() const { return GetFixedHeight() > 0 ? GetFixedHeight() : height_; }
 
+        virtual Component * SetFixedSize(Dimension dimension) {
+            SetFixedWidth(dimension.width)->SetFixedHeight(dimension.height);
+            return this;
+        }
+
         [[nodiscard]] virtual int GetFixedWidth() const { return fixed_width_; }
 
-        virtual void SetFixedWidth(int w) { fixed_width_ = w; }
+        virtual Component *SetFixedWidth(int w) {
+            fixed_width_ = w;
+            return this;
+        }
 
         [[nodiscard]] virtual int GetFixedHeight() const { return fixed_height_; }
 
-        virtual void SetFixedHeight(int h) { fixed_height_ = h; }
+        virtual Component *SetFixedHeight(int h) {
+            fixed_height_ = h;
+            return this;
+        }
 
         virtual void Resized() = 0;
 

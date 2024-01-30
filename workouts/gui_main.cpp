@@ -152,14 +152,17 @@ int main() {
         // draw everything here...
         // window.draw(...);
 
-//        sf::CircleShape circ(50);
-//        circ.setPosition(75, 75);
-//        //circ.setFillColor(sf::Color::Blue);
-//        circ.setOutlineColor(sf::Color::Blue);
-//        circ.setOutlineThickness(1);
-//        window.draw(circ);
-
         box.Paint(g);
+
+        ol::ctl::Control fader_control;
+        fader_control.SetFloatValue(0.25f);
+//        ol::app::synth::FaderFace fader_face(fader_control);
+//        fader_face.SetSize(30, 30);
+//        fader_face.Paint(g);
+//        auto fader_font = ol::gui::Font(16);
+//        auto fader_text = new ol::gui::Text(fader_font, "label");
+//        ol::app::synth::Fader fader(fader_text, fader_control);
+//        fader.Paint(g);
         // end the current frame
         window.display();
     }
