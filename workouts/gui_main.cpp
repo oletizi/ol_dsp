@@ -5,11 +5,21 @@ namespace ol::gui {
 
     class SfmlText : public Text {
     public:
-        SfmlText(sf::Font &native_font, Font &gui_font, int font_size, std::string text_string)
+        SfmlText(sf::Font &native_font, Font &gui_font, int font_size, const std::string &text_string)
                 : Text(gui_font, text_string),
                   native_font_(native_font),
                   font_size_(font_size),
                   text_string_(text_string) {}
+
+
+        void SetSize(int x, int y) override {
+            Component::SetSize(x, y);
+        }
+
+        void Resized() override {
+            Text::Resized();
+            DPRINTF("  SfmlText resized: %d, %d\n", GetWidth(), GetHeight());
+        }
 
         int GetFixedHeight() const override {
             return int(native_text_.getLocalBounds().height);
@@ -162,6 +172,7 @@ int main() {
 
     ol::gui::SfmlTextFactory text_factory(font, 14);
     ol::app::synth::SynthConfig config{};
+/*
     ol::app::synth::SynthMediumGui gui(config, text_factory);
     ol::app::synth::SynthApp app(config, gui);
 
@@ -171,13 +182,27 @@ int main() {
     box.SetMargin(5);
     box.SetSize(width, height);
     box.Resized();
+*/
+    ol::ctl::Control control1(1, 0.5f);
+    ol::ctl::Control control2(1, 0.25f);
+    ol::app::synth::Fader fader1(text_factory.NewText("Hello"), control1);
+    fader1.SetFixedSize(ol::gui::Dimension{30, 45});
+    ol::app::synth::Fader fader2(text_factory.NewText("Beautiful"), control2);
+
+    ol::gui::Layout layout{};
+    //layout.SetHorizontal();
+    layout.SetVertical();
+    layout.SetHalign(ol::gui::LayoutProperties::CENTER);
+//    layout.Add(&fader1);
+    layout.Add(&fader2);
+    layout.SetSize(width, height);
+    layout.Resized();
     // run the program as long as the window is open
     while (window.isOpen()) {
         // check all the window's events that were triggered since the last iteration of the loop
-        sf::Event event;
+        sf::Event event{};
         while (window.pollEvent(event)) {
             // "close requested" event: we close the window
-
             if (event.type == sf::Event::Closed)
                 window.close();
 
@@ -185,27 +210,18 @@ int main() {
                 fprintf(stderr, "Mouse! %d, %d\n", event.mouseButton.x, event.mouseButton.y);
             }
             if (event.type == sf::Event::KeyPressed) {
-                basic_app.handleKeyPressed(event);
+//                basic_app.handleKeyPressed(event);
             }
         }
 
-        // clear the window with black color
+        // clear the window with background color
         window.clear(sf::Color::White);
-
+        layout.Paint(g);
         // draw everything here...
         // window.draw(...);
 
-        box.Paint(g);
+//        box.Paint(g);
 
-        ol::ctl::Control fader_control;
-        fader_control.SetFloatValue(0.25f);
-//        ol::app::synth::FaderFace fader_face(fader_control);
-//        fader_face.SetSize(30, 30);
-//        fader_face.Paint(g);
-//        auto fader_font = ol::gui::Font(16);
-//        auto fader_text = new ol::gui::Text(fader_font, "label");
-//        ol::app::synth::Fader fader(fader_text, fader_control);
-//        fader.Paint(g);
         // end the current frame
         window.display();
     }

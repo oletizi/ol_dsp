@@ -5,6 +5,7 @@
 #ifndef OL_DSP_SYNTHGUI_H
 #define OL_DSP_SYNTHGUI_H
 
+#include <algorithm>
 #include <string>
 #include <utility>
 #include "spline/spline.h"
@@ -23,19 +24,37 @@ namespace ol::app::synth {
         explicit FaderFace(Control &control) : control_(control) {}
 
         void Resized() override {
+            double width = GetFixedWidth() ? GetFixedWidth() : GetWidth();
+            double height = GetFixedHeight() ? GetFixedHeight() : GetHeight();
+            double fader_rect_mid = height - (control_.GetFloatValue() * height);
+            double fader_rect_height = (height / 17) * 4;
+            double fader_rect_width = (width / 9) * 4;
 
+            double fader_margin_ = width - fader_rect_width;
+            fader_rect_.point.x = int(fader_margin_ / 2);
+            fader_rect_.point.y = int(fader_rect_mid - (fader_rect_height / 2));
+            fader_rect_.dimension.width = int(fader_rect_width);
+            fader_rect_.dimension.height = int(fader_rect_height);
+
+            canvas_size_.width = int(width);
+            canvas_size_.height = int(height);
+            fader_vertical_.point.x = canvas_size_.width / 2;
+            fader_vertical_.point.y = 0;
+            fader_vertical_.dimension.width = fader_vertical_.point.x;
+            fader_vertical_.dimension.height = canvas_size_.height;
+            DPRINTF("Fader face resized: w: %d, h: %d\n", canvas_size_.width, canvas_size_.height);
         }
 
         void Paint(Graphics &g) override {
-            int fader_mid = GetHeight() - (control_.GetFloatValue() * GetHeight());
-            int fader_height = (GetHeight() / 17) * 4;
-            int fader_width = (GetWidth() / 9) * 4;
-            int fader_margin = GetWidth() - fader_width;
-            g.DrawLine(GetWidth() / 2, 0, GetWidth() / 2, GetHeight(), 1);
-            g.FillRect(fader_margin / 2, fader_mid - (fader_height / 2), fader_width, fader_height);
+            g.DrawLine(fader_vertical_.point.x, fader_vertical_.point.y, fader_vertical_.dimension.width,
+                       fader_vertical_.dimension.height, fader_vertical_.dimension.width);
+            g.FillRect(fader_rect_.point.x, fader_rect_.point.y, fader_rect_.dimension.width, fader_rect_.dimension.height);
         }
 
     private:
+        Dimension canvas_size_{};
+        Rectangle fader_vertical_{};
+        Rectangle fader_rect_{};
         Control &control_;
     };
 
@@ -44,6 +63,7 @@ namespace ol::app::synth {
 
         Fader(Text *label, Control &control) : control_(control), label_(label) {
             layout_.SetVertical();
+            layout_.SetHalign(LayoutProperties::CENTER);
             layout_.Add(&face_);
             layout_.Add(label_);
         }
@@ -74,7 +94,14 @@ namespace ol::app::synth {
         }
 
         void Paint(Graphics &g) override {
-            g.DrawCircle(0, 0, GetHeight() / 2);
+            int radius = 0;
+            if (GetFixedWidth() > 0) {
+                radius = GetFixedWidth() / 2;
+            } else {
+                radius = GetWidth() / 2;
+            }
+
+            g.DrawCircle(0, 0, radius);
         }
 
     private:
@@ -84,9 +111,10 @@ namespace ol::app::synth {
     class Dial : public Component {
     public:
         Dial(Text *label, Control &c) : control_(c), label_(label) {
-            layout_.SetVertical();
-            layout_.Add(&face_);
-            layout_.Add(label_);
+            layout_.SetVertical()
+                    ->SetHalign(gui::LayoutProperties::CENTER)
+                    ->Add(&face_)
+                    ->Add(label_);
         }
 
         void Resized() override {

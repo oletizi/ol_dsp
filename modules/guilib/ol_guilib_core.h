@@ -108,9 +108,9 @@ namespace ol::gui {
             SetSize(dimension.width, dimension.height);
         }
 
-        [[nodiscard]] virtual int GetWidth() const { return GetFixedWidth() > 0 ? GetFixedWidth() : width_; }
+        [[nodiscard]] virtual int GetWidth() const { return width_; }
 
-        [[nodiscard]] virtual int GetHeight() const { return GetFixedHeight() > 0 ? GetFixedHeight() : height_; }
+        [[nodiscard]] virtual int GetHeight() const { return height_; }
 
         virtual Component *SetFixedSize(Dimension dimension) {
             SetFixedWidth(dimension.width)->SetFixedHeight(dimension.height);
@@ -345,7 +345,7 @@ namespace ol::gui {
 
     class TextFactory {
     public:
-      virtual Text * NewText(std::string string) = 0;
+        virtual Text *NewText(std::string string) = 0;
     };
 
     struct LayoutProperties {
@@ -371,8 +371,8 @@ namespace ol::gui {
         explicit Layout(LayoutProperties properties = LayoutProperties{}) : Layout(0, 0, properties) {}
 
         explicit Layout(Dimension viewport, LayoutProperties properties = LayoutProperties{}) : Layout(viewport.width,
-                                                                                           viewport.height,
-                                                                                           properties) {}
+                                                                                                       viewport.height,
+                                                                                                       properties) {}
 
         explicit Layout(int width, int height, LayoutProperties properties = LayoutProperties{}) : properties_(
                 properties) {
@@ -380,49 +380,99 @@ namespace ol::gui {
         }
 
 
-        void Add(Component *child) {
+        Layout *Add(Component *child) {
             if (child != nullptr) {
                 children_.push_back(child);
                 Resized();
             }
+            return this;
         }
 
         void Paint(Graphics &g) override {
             Point offset{};
             for (auto c: children_) {
-                OffsetGraphics og(g, offset);
+                Point align_offset{offset.x, offset.y};
+                // XXX: figure out how to do this in Resized() so we don't have to calculate it on every paint
+                if (c->GetFixedWidth() > 0 && properties_.direction == LayoutProperties::VERTICAL &&
+                    properties_.halign == LayoutProperties::CENTER) {
+                    // if this component has a fixed width in a vertical layout AND it's centered, need to calculate the left offset
+                    align_offset.x += (c->GetWidth() - c->GetFixedWidth()) / 2;
+                }
+                OffsetGraphics og(g, align_offset);
                 c->Paint(og);
-//                auto width = c->GetFixedWidth() ?  c->GetFixedWidth() : child_size.width;
-//                auto height = c->GetFixedHeight() ? c->GetFixedHeight() : child_size.height;
                 offset.x += properties_.direction == LayoutProperties::HORIZONTAL ? c->GetWidth() : 0;
                 offset.y += properties_.direction == LayoutProperties::VERTICAL ? c->GetHeight() : 0;
             }
         }
 
-        void Resized() override {
-            auto fixed_width = 0;
-            auto fixed_height = 0;
-            auto fixed_count = 0;
+        void resizedVertical() {
+            int fixed_width = 0;
+            int fixed_height = 0;
+            int fixed_count = 0;
+            int dynamic_count = 0;
             for (auto c: children_) {
-                fixed_width += c->GetFixedWidth();
+                fixed_width = std::max(fixed_width, c->GetFixedWidth());
                 fixed_height += c->GetFixedHeight();
-                fixed_count += c->GetFixedWidth() || c->GetFixedHeight() ? 1 : 0;
+                if (c->GetFixedHeight()) { fixed_count++; } else { dynamic_count++; }
             }
-            child_size.width =
-                    properties_.direction == LayoutProperties::VERTICAL ? GetWidth() : (GetWidth() - fixed_width) /
-                                                                                       int(children_.empty() ? 1 :
-                                                                                           children_.size() -
-                                                                                           fixed_count);
-            child_size.height =
-                    properties_.direction == LayoutProperties::VERTICAL ? (GetHeight() - fixed_height) /
-                                                                          int(children_.empty() ? 1 : children_.size() -
-                                                                                                      fixed_count)
-                                                                        : GetHeight();
-            DPRINTF("layout child size: %d, %d\n", child_size.width, child_size.height);
+            dynamic_size.width = std::max(fixed_width, GetWidth()); // ???: OK to set width to max fixed? Set my width?
+            dynamic_size.height = (GetHeight() - fixed_height) / (dynamic_count > 0 ? dynamic_count : 1);
+            DPRINTF("layout resized: dynamic w: %d, h: %d\n", dynamic_size.width, dynamic_size.height);
+            DPRINTF("  fixed width  : %d\n", fixed_width);
+            DPRINTF("  fixed height : %d\n", fixed_height);
+            DPRINTF("  fixed_count  : %d\n", fixed_count);
+            DPRINTF("  dynamic_count: %d\n", dynamic_count);
             for (auto c: children_) {
-                c->SetSize(child_size);
+                c->SetSize(dynamic_size);
                 c->Resized();
             }
+        }
+
+        void resizedHorizontal() {}
+
+        void Resized() override {
+            if (properties_.direction == LayoutProperties::VERTICAL) {
+                resizedVertical();
+            } else {
+                resizedHorizontal();
+            }
+//            auto fixed_width = 0;
+//            auto fixed_height = 0;
+//            auto fixed_count = 0;
+//            for (auto c: children_) {
+//                if (properties_.direction == LayoutProperties::VERTICAL) {
+//                    fixed_width = std::max(fixed_width, c->GetFixedWidth());
+//                    fixed_height += c->GetFixedHeight();
+//                } else {
+//                    fixed_width += c->GetFixedWidth();
+//                    fixed_height = std::max(fixed_height, c->GetFixedHeight());
+//                }
+//                fixed_count += c->GetFixedWidth() || c->GetFixedHeight() ? 1 : 0;
+//            }
+//            auto dynamic_count = children_.size() - fixed_count;
+//            if (dynamic_count > 0) {
+//                // if there are dynamically sized components, divide remaining area by the number of dynamically sized components
+//
+//            } else {
+//                //
+//            }
+//
+//            dynamic_size.width =
+//                    properties_.direction == LayoutProperties::VERTICAL ? std::max(GetWidth(), fixed_width) :
+//                    (GetWidth() - fixed_width) / int(children_.empty() ? 1 : children_.size() - fixed_count);
+//            dynamic_size.height =
+//                    properties_.direction == LayoutProperties::VERTICAL ?
+//                    (GetHeight() - fixed_height) / int(children_.empty() ? 1 : children_.size() - fixed_count)
+//                                                                        : std::max(GetHeight(), fixed_height);
+//            DPRINTF("Layout size        : %d, %d\n", GetWidth(), GetHeight());
+//            DPRINTF("  fixed            : %d, %d\n", fixed_width, fixed_height);
+//            DPRINTF("  layout child size: %d, %d\n", dynamic_size.width, dynamic_size.height);
+//            for (auto c: children_) {
+//                Point offset{};
+//                c->SetSize(c->GetFixedWidth() ? c->GetFixedWidth() : dynamic_size.width,
+//                           c->GetFixedHeight() ? c->GetFixedHeight() : dynamic_size.height);
+//                c->Resized();
+//            }
         }
 
         Layout *SetVertical() {
@@ -452,7 +502,7 @@ namespace ol::gui {
         }
 
     private:
-        Dimension child_size{};
+        Dimension dynamic_size{};
         std::vector<Component *> children_;
         LayoutProperties properties_;
     };
