@@ -16,7 +16,8 @@
 #define DPRINTLN(X)  Serial.println(X);
 #define DPRINTF(...) Serial.printf(__VA_ARGS__);
 #else
-#define DPRINTLN(X)  fprintf(stderr, X);
+#include <iostream>
+#define DPRINTLN(X)  fprintf(stderr, X); fprintf(stderr, "\n");
 #define DPRINTF(...) fprintf(stderr, __VA_ARGS__);
 #endif
 

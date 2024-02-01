@@ -154,6 +154,14 @@ namespace ol::gui {
     public:
         explicit Box(Component *child) : child_(child) {}
 
+        [[nodiscard]] int GetFixedWidth() const override {
+            return child_->GetFixedWidth() ? child_->GetFixedWidth() + offset_right_ + offset_left_ : 0;
+        }
+
+        [[nodiscard]] int GetFixedHeight() const override {
+            return child_->GetFixedHeight() ? child_->GetFixedHeight() + offset_top_ + offset_bottom_ : 0;
+        }
+
         void Resized() override {
             offset_left_ = margin_left_ + padding_left_;
             offset_top_ = margin_top_ + padding_top_;
@@ -276,6 +284,14 @@ namespace ol::gui {
             return this;
         }
 
+        void SetOutsideOffset(Point offset) {
+            outside_offset_ = offset;
+        }
+
+        Point GetOutsideOffset() const {
+            return outside_offset_;
+        }
+
     private:
         int margin_left_ = 0;
         int margin_top_ = 0;
@@ -294,6 +310,7 @@ namespace ol::gui {
 
         Border border_{};
         Component *child_;
+        Point outside_offset_{};
     };
 
     class Font {
@@ -383,25 +400,16 @@ namespace ol::gui {
         Layout *Add(Component *child) {
             if (child != nullptr) {
                 children_.push_back(child);
+                boxes_.push_back(new Box(child));
                 Resized();
             }
             return this;
         }
 
         void Paint(Graphics &g) override {
-            Point offset{};
-            for (auto c: children_) {
-                Point align_offset{offset.x, offset.y};
-                // XXX: figure out how to do this in Resized() so we don't have to calculate it on every paint
-                if (c->GetFixedWidth() > 0 && properties_.direction == LayoutProperties::VERTICAL &&
-                    properties_.halign == LayoutProperties::CENTER) {
-                    // if this component has a fixed width in a vertical layout AND it's centered, need to calculate the left offset
-                    align_offset.x += (c->GetWidth() - c->GetFixedWidth()) / 2;
-                }
-                OffsetGraphics og(g, align_offset);
-                c->Paint(og);
-                offset.x += properties_.direction == LayoutProperties::HORIZONTAL ? c->GetWidth() : 0;
-                offset.y += properties_.direction == LayoutProperties::VERTICAL ? c->GetHeight() : 0;
+            for (auto b: boxes_) {
+                OffsetGraphics og(g, b->GetOutsideOffset());
+                b->Paint(og);
             }
         }
 
@@ -422,9 +430,25 @@ namespace ol::gui {
             DPRINTF("  fixed height : %d\n", fixed_height);
             DPRINTF("  fixed_count  : %d\n", fixed_count);
             DPRINTF("  dynamic_count: %d\n", dynamic_count);
-            for (auto c: children_) {
-                c->SetSize(dynamic_size);
-                c->Resized();
+            Point offset{};
+            for (auto b: boxes_) {
+                // calculate horizontal offset based on halign
+                int box_width = b->GetFixedWidth() ? b->GetFixedWidth() : GetWidth();
+
+                if (properties_.halign == LayoutProperties::CENTER) {
+                    // center halign, set the X offset to half the difference between the horizontal size of the container
+                    // and the horizontal size of the component.
+                    offset.x = (GetWidth() - box_width) / 2;
+                } else if (properties_.halign == LayoutProperties::RIGHT) {
+                    // right halign, set the X offset to the entire difference betweent the horizontal size of the container
+                    // and the horizontal size of the component.
+                    offset.x = GetWidth() - box_width;
+                }
+                b->SetOutsideOffset(offset);
+                b->SetSize(dynamic_size);
+                b->Resized();
+                // set vertical offset for the next component in the column
+                offset.y += b->GetFixedHeight() ? b->GetFixedHeight() : dynamic_size.height;
             }
         }
 
@@ -495,7 +519,6 @@ namespace ol::gui {
             return this;
         }
 
-
         void Clear() {
             children_.clear();
             Resized();
@@ -504,6 +527,7 @@ namespace ol::gui {
     private:
         Dimension dynamic_size{};
         std::vector<Component *> children_;
+        std::vector<Box *> boxes_;
         LayoutProperties properties_;
     };
 
