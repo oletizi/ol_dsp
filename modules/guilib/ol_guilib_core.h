@@ -421,9 +421,9 @@ namespace ol::gui {
         }
 
         void resizedVertical() {
-            auto spacing_sum = int(properties_.spacing * (children_.size() * (children_.empty() ? (children_.size() - 1) : 0)));
+
             int fixed_width = 0;
-            int fixed_height_sum = spacing_sum;
+            int fixed_height_sum = 0;
             int fixed_count = 0;
             int dynamic_count = 0;
             for (auto c: children_) {
@@ -431,11 +431,17 @@ namespace ol::gui {
                 fixed_height_sum += c->GetFixedHeight();
                 if (c->GetFixedHeight()) { fixed_count++; } else { dynamic_count++; }
             }
+            int fixed_height_spacing_sum = int(
+                    properties_.spacing * (fixed_count * (fixed_count > 0 ? fixed_count - 1 : 0)));
+            fixed_height_sum += fixed_height_spacing_sum;
+
+            int dynamic_height_spacing_sum = properties_.spacing * (dynamic_count * (dynamic_count > 0 ? dynamic_count -1 : 0));
             Dimension dynamic_size{
                     std::max(fixed_width, GetWidth()),
-                    (GetHeight() - fixed_height_sum) / (dynamic_count > 0 ? dynamic_count : 1)
+                    (GetHeight() - fixed_height_sum - dynamic_height_spacing_sum) / (dynamic_count > 0 ? dynamic_count : 1)
             };
             DPRINTF("layout resized     : dynamic w: %d, h: %d\n", dynamic_size.width, dynamic_size.height);
+            DPRINTF("  spacing sum      : %d\n", fixed_height_spacing_sum);
             DPRINTF("  fixed width      : %d\n", fixed_width);
             DPRINTF("  fixed height sum : %d\n", fixed_height_sum);
             DPRINTF("  fixed_count      : %d\n", fixed_count);
@@ -459,7 +465,7 @@ namespace ol::gui {
                 b->SetSize(dynamic_size);
                 b->Resized();
                 // set vertical offset for the next component in the column
-                offset.y += properties_.spacing + (  b->GetFixedHeight() ? b->GetFixedHeight() : dynamic_size.height);
+                offset.y += properties_.spacing + (b->GetFixedHeight() ? b->GetFixedHeight() : dynamic_size.height);
             }
         }
 
@@ -494,6 +500,7 @@ namespace ol::gui {
         }
 
         Layout *SetSpacing(int spacing) {
+            DPRINTF("SetSpacing: %d\n", spacing);
             properties_.spacing = spacing;
             Resized();
         }

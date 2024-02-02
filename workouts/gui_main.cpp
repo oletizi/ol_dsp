@@ -201,6 +201,7 @@ int main() {
     layout.Add(&fader_fixed_2);
     layout.Add(&fader_dynamic_1);
     layout.Add(&fader_dynamic_2);
+
     DPRINTLN("");
     DPRINTLN("========= SETTING LAYOUT SIZE =========");
     DPRINTLN("");
