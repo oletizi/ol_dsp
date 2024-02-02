@@ -194,15 +194,17 @@ int main() {
 
     ol::gui::Layout layout{};
     //layout.SetHorizontal();
-    layout.SetVertical();
-    layout.SetHalign(ol::gui::LayoutProperties::CENTER);
+    layout.SetHalign(ol::gui::LayoutProperties::LEFT);
+    layout.SetSpacing(25);
+
     layout.Add(&fader_fixed_1);
     layout.Add(&fader_fixed_2);
-//    layout.Add(&fader_dynamic_1);
-//    layout.Add(&fader_dynamic_2);
+    layout.Add(&fader_dynamic_1);
+    layout.Add(&fader_dynamic_2);
     DPRINTLN("");
     DPRINTLN("========= SETTING LAYOUT SIZE =========");
     DPRINTLN("");
+    layout.SetVertical();
     layout.SetSize(width, height);
     layout.Resized();
     // run the program as long as the window is open
