@@ -50,7 +50,7 @@ int main() {
 
     ol::gui::SfmlTextFactory text_factory(font, 14);
     ol::app::synth::SynthConfig config{};
-/*
+
     ol::app::synth::SynthMediumGui gui(config, text_factory);
     ol::app::synth::SynthApp app(config, gui);
 
@@ -60,34 +60,6 @@ int main() {
     box.SetMargin(5);
     box.SetSize(width, height);
     box.Resized();
-*/
-    ol::ctl::Control control1(1, 0.5f);
-    ol::ctl::Control control2(1, 0.25f);
-    ol::app::synth::Fader fader_fixed_1(text_factory.NewText("Fixed 1"), control1);
-    fader_fixed_1.SetFixedSize(ol::gui::Dimension{30, 45});
-    ol::app::synth::Fader fader_fixed_2(text_factory.NewText("Fixed 2 with extra stuff"), control2);
-    fader_fixed_2.SetFixedSize(ol::gui::Dimension{30, 45});
-    ol::app::synth::Fader fader_dynamic_1(text_factory.NewText("Dynamic 1"), control1);
-    ol::app::synth::Fader fader_dynamic_2(text_factory.NewText("Dynamic 2"), control2);
-
-    ol::gui::Layout layout{};
-    layout.SetVertical();
-//    layout.SetHorizontal();
-    layout.SetHalign(ol::gui::LayoutProperties::CENTER);
-//    layout.SetHalign(ol::gui::LayoutProperties::RIGHT);
-//    layout.SetValign(ol::gui::LayoutProperties::MIDDLE);
-    layout.SetValign(ol::gui::LayoutProperties::BOTTOM);
-    layout.SetSpacing(10);
-
-    layout.Add(&fader_fixed_1);
-    layout.Add(&fader_fixed_2);
-    layout.Add(&fader_dynamic_1);
-    layout.Add(&fader_dynamic_2);
-
-    DPRINTLN("");
-    DPRINTLN("========= SETTING LAYOUT SIZE =========");
-    DPRINTLN("");
-    layout.SetSize(width, height);
 
     // run the program as long as the window is open
     while (window.isOpen()) {
@@ -102,19 +74,12 @@ int main() {
                 fprintf(stderr, "Mouse! %d, %d\n", event.mouseButton.x, event.mouseButton.y);
             }
             if (event.type == sf::Event::KeyPressed) {
-//                basic_app.handleKeyPressed(event);
+                basic_app.handleKeyPressed(event);
             }
         }
 
-        // clear the window with background color
         window.clear(sf::Color::White);
-        layout.Paint(g);
-        // draw everything here...
-        // window.draw(...);
-
-//        box.Paint(g);
-
-        // end the current frame
+        box.Paint(g);
         window.display();
     }
 
