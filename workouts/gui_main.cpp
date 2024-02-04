@@ -3,6 +3,19 @@
 
 namespace ol::gui {
 
+    class Circle : public Component {
+    public:
+        void Resized() override {
+            radius_ = std::min(GetWidth(), GetHeight()) / 2;
+        }
+
+        void Paint(Graphics &g) override {
+            g.DrawCircle(0, 0, radius_);
+        }
+    private:
+        int radius_ = 0;
+    };
+
     class SfmlText : public Text {
     public:
         SfmlText(sf::Font &native_font, Font &gui_font, int font_size, const std::string &text_string)
@@ -156,7 +169,7 @@ int main() {
     // create the window
     const int width = 320;
     const int height = 240;
-    sf::RenderWindow window(sf::VideoMode(width + 10, height + 10), "My window");
+    sf::RenderWindow window(sf::VideoMode(width, height), "My window");
     sf::Font font = sf::Font();
     auto font_path = "/Users/orion/Library/Fonts/Architect Bold.ttf";
     if (!font.loadFromFile(font_path)) {
@@ -191,10 +204,14 @@ int main() {
     //layout.SetHorizontal();
     layout.SetHalign(ol::gui::LayoutProperties::CENTER);
     layout.SetSpacing(10);
+    ol::gui::Circle circle{};
+    ol::gui::Box box(&circle);
+    box.SetBorder(ol::gui::Border{1,1,1, 1});
+    layout.Add(&box);
 
-    layout.Add(&fader_fixed_1);
-    layout.Add(&fader_fixed_2);
-    layout.Add(&fader_dynamic_1);
+//    layout.Add(&fader_fixed_1);
+//    layout.Add(&fader_fixed_2);
+//    layout.Add(&fader_dynamic_1);
 //    layout.Add(&fader_dynamic_2);
 
     DPRINTLN("");

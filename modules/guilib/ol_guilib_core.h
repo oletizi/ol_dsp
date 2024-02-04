@@ -169,6 +169,9 @@ namespace ol::gui {
             offset_top_ = margin_top_ + padding_top_;
             offset_right_ = margin_right_ + padding_right_;
             offset_bottom_ = margin_bottom_ + padding_bottom_;
+            DPRINTF("Box resized: w: %d, h: %d\n", GetWidth(), GetHeight());
+            DPRINTF("  offset : %d, t: %d, r: %d, b:%d\n", offset_left_,
+                    offset_top_, offset_right_, offset_bottom_);
             child_->SetSize(GetWidth() - (offset_left_ + offset_right_), GetHeight() - (offset_top_ + offset_bottom_));
         }
 
@@ -423,12 +426,10 @@ namespace ol::gui {
         }
 
         void resizedVertical() {
-//            int fixed_width = 0;
             int fixed_height_sum = 0;
             int fixed_count = 0;
             int dynamic_count = 0;
             for (auto c: children_) {
-//                fixed_width = std::max(fixed_width, c->GetFixedWidth());
                 fixed_height_sum += c->GetFixedHeight();
                 if (c->GetFixedHeight()) { fixed_count++; } else { dynamic_count++; }
             }
@@ -439,14 +440,11 @@ namespace ol::gui {
             int dynamic_height_spacing_sum =
                     properties_.spacing * (dynamic_count * (dynamic_count > 0 ? dynamic_count - 1 : 0));
             Dimension dynamic_size{
-//                    std::max(fixed_width, GetWidth()),
                     GetWidth(),
-                    (GetHeight() - fixed_height_sum - dynamic_height_spacing_sum) /
-                    (dynamic_count > 0 ? dynamic_count : 1)
+                    (GetHeight() - fixed_height_sum - dynamic_height_spacing_sum) / (dynamic_count > 0 ? dynamic_count : 1)
             };
             DPRINTF("layout resized     : w: %d, h: %d\n", GetWidth(), GetHeight());
             DPRINTF("  spacing sum      : %d\n", fixed_height_spacing_sum);
-//            DPRINTF("  fixed width      : %d\n", fixed_width);
             DPRINTF("  fixed height sum : %d\n", fixed_height_sum);
             DPRINTF("  fixed_count      : %d\n", fixed_count);
             DPRINTF("  dynamic width    : %d\n", dynamic_size.width);

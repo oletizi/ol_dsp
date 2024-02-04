@@ -42,11 +42,6 @@ namespace ol::app::synth {
             fader_vertical_.point.y = 0;
             fader_vertical_.dimension.width = fader_vertical_.point.x;
             fader_vertical_.dimension.height = canvas_size_.height;
-            DPRINTF("Fader face resized: w: %d, h: %d\n", canvas_size_.width, canvas_size_.height);
-            DPRINTF("  vertical: x1: %d, y1: %d, x2: %d, y2: %d\n",
-                    fader_vertical_.point.x, fader_vertical_.point.y,
-                    fader_vertical_.dimension.width, fader_vertical_.dimension.height);
-            DPRINTF("-------\n");
         }
 
         void Paint(Graphics &g) override {
