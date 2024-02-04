@@ -1,42 +1,9 @@
+//
+// Created by Orion Letizi on 2/4/24.
+//
 #include "SfmlHelpers.h"
 
-class BasicApp {
-public:
-
-    BasicApp(ol::app::synth::SynthApp &app, ol::app::synth::SynthMediumGui &gui) : app_(app), gui_(gui) {}
-
-    BasicApp *handleKeyPressed(sf::Event &event) {
-        switch (event.key.code) {
-            case sf::Keyboard::Key::A:
-                gui_.SelectMainScreen();
-                break;
-            case sf::Keyboard::Key::S:
-                gui_.SelectFilterScreen();
-                break;
-            case sf::Keyboard::Key::D:
-                gui_.SelectAmpScreen();
-                break;
-            case sf::Keyboard::Key::F:
-                gui_.SelectFxScreen();
-                break;
-            case sf::Keyboard::Key::G:
-                gui_.SelectModScreen();
-                break;
-            default:
-                break;
-
-        }
-        return this;
-    }
-
-private:
-    ol::app::synth::SynthApp &app_;
-    ol::app::synth::SynthMediumGui &gui_;
-};
-
-
 int main() {
-    // create the window
     const int width = 320;
     const int height = 240;
     sf::RenderWindow window(sf::VideoMode(width, height), "My window");
@@ -46,21 +13,10 @@ int main() {
         return 3;
     }
     font.setSmooth(true);
+
     auto g = ol::gui::SfmlGraphics(window, font, 14);
-
     ol::gui::SfmlTextFactory text_factory(font, 14);
-    ol::app::synth::SynthConfig config{};
-/*
-    ol::app::synth::SynthMediumGui gui(config, text_factory);
-    ol::app::synth::SynthApp app(config, gui);
 
-    BasicApp basic_app(app, gui);
-
-    ol::gui::Box box(&gui);
-    box.SetMargin(5);
-    box.SetSize(width, height);
-    box.Resized();
-*/
     ol::ctl::Control control1(1, 0.5f);
     ol::ctl::Control control2(1, 0.25f);
     ol::app::synth::Fader fader_fixed_1(text_factory.NewText("Fixed 1"), control1);
@@ -76,7 +32,7 @@ int main() {
     layout.SetHalign(ol::gui::LayoutProperties::CENTER);
 //    layout.SetHalign(ol::gui::LayoutProperties::RIGHT);
 //    layout.SetValign(ol::gui::LayoutProperties::MIDDLE);
-    layout.SetValign(ol::gui::LayoutProperties::BOTTOM);
+    layout.SetValign(ol::gui::LayoutProperties::MIDDLE);
     layout.SetSpacing(10);
 
     layout.Add(&fader_fixed_1);
@@ -84,11 +40,7 @@ int main() {
     layout.Add(&fader_dynamic_1);
     layout.Add(&fader_dynamic_2);
 
-    DPRINTLN("");
-    DPRINTLN("========= SETTING LAYOUT SIZE =========");
-    DPRINTLN("");
     layout.SetSize(width, height);
-
     // run the program as long as the window is open
     while (window.isOpen()) {
         // check all the window's events that were triggered since the last iteration of the loop
@@ -102,21 +54,14 @@ int main() {
                 fprintf(stderr, "Mouse! %d, %d\n", event.mouseButton.x, event.mouseButton.y);
             }
             if (event.type == sf::Event::KeyPressed) {
-//                basic_app.handleKeyPressed(event);
+                fprintf(stderr, "Key! %d", event.key.code);
             }
         }
-
-        // clear the window with background color
         window.clear(sf::Color::White);
         layout.Paint(g);
-        // draw everything here...
-        // window.draw(...);
-
-//        box.Paint(g);
-
-        // end the current frame
         window.display();
     }
 
     return 0;
+
 }

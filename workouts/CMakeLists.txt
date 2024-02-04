@@ -8,10 +8,15 @@ if (${BUILD_WORKOUT_BUDDY})
     target_include_directories(workout-buddy PUBLIC ../libs/rtmidi ../libs/miniaudio)
 endif ()
 
-add_executable(gui-workout gui_main.cpp)
+add_executable(gui-workout gui_main.cpp
+        SfmlHelpers.h)
 target_link_libraries(gui-workout sfml-graphics ol_corelib ol_guilib)
 target_include_directories(gui-workout PUBLIC .)
 
+add_executable(gui-test-workout gui_test_main.cpp
+        SfmlHelpers.h)
+target_link_libraries(gui-test-workout sfml-graphics ol_corelib ol_guilib)
+target_include_directories(gui-test-workout PUBLIC .)
 
 #juce_add_gui_app(gui-workout)
 #target_sources(gui-workout
