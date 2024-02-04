@@ -12,6 +12,7 @@ namespace ol::gui {
         void Paint(Graphics &g) override {
             g.DrawCircle(0, 0, radius_);
         }
+
     private:
         int radius_ = 0;
     };
@@ -201,23 +202,22 @@ int main() {
     ol::app::synth::Fader fader_dynamic_2(text_factory.NewText("Dynamic 2"), control2);
 
     ol::gui::Layout layout{};
-    //layout.SetHorizontal();
+    layout.SetVertical();
+//    layout.SetHorizontal();
     layout.SetHalign(ol::gui::LayoutProperties::CENTER);
+//    layout.SetHalign(ol::gui::LayoutProperties::RIGHT);
+//    layout.SetValign(ol::gui::LayoutProperties::MIDDLE);
+    layout.SetValign(ol::gui::LayoutProperties::BOTTOM);
     layout.SetSpacing(10);
-    ol::gui::Circle circle{};
-    ol::gui::Box box(&circle);
-    box.SetBorder(ol::gui::Border{1,1,1, 1});
-    layout.Add(&box);
 
-//    layout.Add(&fader_fixed_1);
-//    layout.Add(&fader_fixed_2);
-//    layout.Add(&fader_dynamic_1);
-//    layout.Add(&fader_dynamic_2);
+    layout.Add(&fader_fixed_1);
+    layout.Add(&fader_fixed_2);
+    layout.Add(&fader_dynamic_1);
+    layout.Add(&fader_dynamic_2);
 
     DPRINTLN("");
     DPRINTLN("========= SETTING LAYOUT SIZE =========");
     DPRINTLN("");
-    layout.SetVertical();
     layout.SetSize(width, height);
     layout.Resized();
     // run the program as long as the window is open

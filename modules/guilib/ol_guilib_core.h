@@ -425,60 +425,54 @@ namespace ol::gui {
             }
         }
 
-        void resizedVertical() {
-            int fixed_height_sum = 0;
-            int fixed_count = 0;
-            int dynamic_count = 0;
-            for (auto c: children_) {
-                fixed_height_sum += c->GetFixedHeight();
-                if (c->GetFixedHeight()) { fixed_count++; } else { dynamic_count++; }
-            }
-            int fixed_height_spacing_sum = int(
-                    properties_.spacing * (fixed_count * (fixed_count > 0 ? fixed_count - 1 : 0)));
-            fixed_height_sum += fixed_height_spacing_sum;
-
-            int dynamic_height_spacing_sum =
-                    properties_.spacing * (dynamic_count * (dynamic_count > 0 ? dynamic_count - 1 : 0));
-            Dimension dynamic_size{
-                    GetWidth(),
-                    (GetHeight() - fixed_height_sum - dynamic_height_spacing_sum) / (dynamic_count > 0 ? dynamic_count : 1)
-            };
-            DPRINTF("layout resized     : w: %d, h: %d\n", GetWidth(), GetHeight());
-            DPRINTF("  spacing sum      : %d\n", fixed_height_spacing_sum);
-            DPRINTF("  fixed height sum : %d\n", fixed_height_sum);
-            DPRINTF("  fixed_count      : %d\n", fixed_count);
-            DPRINTF("  dynamic width    : %d\n", dynamic_size.width);
-            DPRINTF("  dynamic_height   : %d\n", dynamic_size.height);
-            DPRINTF("  dynamic_count    : %d\n", dynamic_count);
-            Point offset{};
-            for (auto b: boxes_) {
-                // calculate horizontal offset based on halign
-                int box_width = b->GetFixedWidth() ? b->GetFixedWidth() : GetWidth();
-
-                if (properties_.halign == LayoutProperties::CENTER) {
-                    // center halign, set the X offset to half the difference between the horizontal size of the container
-                    // and the horizontal size of the component.
-                    offset.x = (GetWidth() - box_width) / 2;
-                } else if (properties_.halign == LayoutProperties::RIGHT) {
-                    // right halign, set the X offset to the entire difference betweent the horizontal size of the container
-                    // and the horizontal size of the component.
-                    offset.x = GetWidth() - box_width;
-                }
-                DPRINTF("  layout item offset: x: %d, y: %d\n", offset.x, offset.y);
-                b->SetOutsideOffset(offset);
-                b->SetSize(dynamic_size);
-                // set vertical offset for the next component in the column
-                offset.y += properties_.spacing + (b->GetFixedHeight() ? b->GetFixedHeight() : dynamic_size.height);
-            }
-        }
-
-        void resizedHorizontal() {}
 
         void Resized() override {
-            if (properties_.direction == LayoutProperties::VERTICAL) {
-                resizedVertical();
-            } else {
-                resizedHorizontal();
+            bool vert = properties_.direction == LayoutProperties::VERTICAL;
+            int fixedLengthSum = 0;
+            int fixedCount = 0;
+            int dynamicCount = 0;
+            for (auto c: children_) {
+                fixedLengthSum += vert ? c->GetFixedHeight() : c->GetFixedWidth();
+                if ((vert ? c->GetFixedHeight() : c->GetFixedWidth())) { fixedCount++; } else { dynamicCount++; }
+            }
+            int fixedSpacingSum = int(
+                    properties_.spacing * (fixedCount * (fixedCount > 0 ? fixedCount - 1 : 0)));
+            fixedLengthSum += fixedSpacingSum;
+
+            int dynamicSpacingSpacingSum =
+                    properties_.spacing * (dynamicCount * (dynamicCount > 0 ? dynamicCount - 1 : 0));
+            Dimension dynamicSize{
+                    vert ? GetWidth() : (GetWidth() - fixedLengthSum - dynamicSpacingSpacingSum) /
+                                        (dynamicCount > 0 ? dynamicCount : 1),
+                    vert ? (GetHeight() - fixedLengthSum - dynamicSpacingSpacingSum) /
+                           (dynamicCount > 0 ? dynamicCount : 1) : GetHeight()
+            };
+            Point offset{};
+            for (auto b: boxes_) {
+                // calculate  offset based on alignment
+                int boxWidth = b->GetFixedWidth() ? b->GetFixedWidth() : GetWidth();
+                int boxHeight = b->GetFixedHeight() ? b->GetFixedHeight() : GetHeight();
+                if (vert && properties_.halign == LayoutProperties::CENTER) {
+                    // center halign, set the X offset to half the difference between the horizontal size of the container
+                    // and the horizontal size of the component.
+                    offset.x = (GetWidth() - boxWidth) / 2;
+                } else if (vert && properties_.halign == LayoutProperties::RIGHT) {
+                    // right halign, set the X offset to the entire difference betweent the horizontal size of the container
+                    // and the horizontal size of the component.
+                    offset.x = GetWidth() - boxWidth;
+                } else if ((!vert) && properties_.valign == LayoutProperties::MIDDLE) {
+                    offset.y = (GetHeight() - boxHeight) / 2;
+                } else if ((!vert) && properties_.valign == LayoutProperties::BOTTOM) {
+                    offset.y = GetHeight() - boxHeight;
+                }
+                b->SetOutsideOffset(offset);
+                b->SetSize(dynamicSize);
+                // set vertical offset for the next component in the column
+                if (vert) {
+                    offset.y += properties_.spacing + (b->GetFixedHeight() ? b->GetFixedHeight() : dynamicSize.height);
+                } else {
+                    offset.x += properties_.spacing + (b->GetFixedWidth() ? b->GetFixedWidth() : dynamicSize.width);
+                }
             }
         }
 
