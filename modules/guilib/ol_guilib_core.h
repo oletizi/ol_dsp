@@ -6,6 +6,7 @@
 #define OL_DSP_OL_GUILIB_CORE_H
 
 #include <string>
+#include <utility>
 #include <vector>
 #include "corelib/ol_corelib.h"
 #include "ctllib/ol_ctllib.h"
@@ -169,7 +170,6 @@ namespace ol::gui {
             offset_right_ = margin_right_ + padding_right_;
             offset_bottom_ = margin_bottom_ + padding_bottom_;
             child_->SetSize(GetWidth() - (offset_left_ + offset_right_), GetHeight() - (offset_top_ + offset_bottom_));
-            child_->Resized();
         }
 
         void Paint(Graphics &g) override {
@@ -331,7 +331,9 @@ namespace ol::gui {
 
     class Text : public Component {
     public:
-        explicit Text(Font &font, std::string text) : font_(font), text_(text) {}
+        explicit Text(Font &font, std::string text) : font_(font), text_(std::move(text)) {
+            Component::SetFixedHeight(font.GetLineHeight());
+        }
 
         void Resized() override {
             area_.dimension.width = GetWidth();
@@ -343,16 +345,16 @@ namespace ol::gui {
         }
 
         virtual void SetText(std::string text) {
-            text_ = text;
+            text_ = std::move(text);
         }
-
-        [[nodiscard]] int GetHeight() const override {
-            return GetFixedHeight();
-        }
-
-        [[nodiscard]] int GetFixedHeight() const override {
-            return font_.GetLineHeight();
-        }
+//
+//        [[nodiscard]] int GetHeight() const override {
+//            return GetFixedHeight();
+//        }
+//
+//        [[nodiscard]] int GetFixedHeight() const override {
+//            return font_.GetLineHeight();
+//        }
 
     private:
         Font &font_;
@@ -421,13 +423,12 @@ namespace ol::gui {
         }
 
         void resizedVertical() {
-
-            int fixed_width = 0;
+//            int fixed_width = 0;
             int fixed_height_sum = 0;
             int fixed_count = 0;
             int dynamic_count = 0;
             for (auto c: children_) {
-                fixed_width = std::max(fixed_width, c->GetFixedWidth());
+//                fixed_width = std::max(fixed_width, c->GetFixedWidth());
                 fixed_height_sum += c->GetFixedHeight();
                 if (c->GetFixedHeight()) { fixed_count++; } else { dynamic_count++; }
             }
@@ -435,16 +436,21 @@ namespace ol::gui {
                     properties_.spacing * (fixed_count * (fixed_count > 0 ? fixed_count - 1 : 0)));
             fixed_height_sum += fixed_height_spacing_sum;
 
-            int dynamic_height_spacing_sum = properties_.spacing * (dynamic_count * (dynamic_count > 0 ? dynamic_count -1 : 0));
+            int dynamic_height_spacing_sum =
+                    properties_.spacing * (dynamic_count * (dynamic_count > 0 ? dynamic_count - 1 : 0));
             Dimension dynamic_size{
-                    std::max(fixed_width, GetWidth()),
-                    (GetHeight() - fixed_height_sum - dynamic_height_spacing_sum) / (dynamic_count > 0 ? dynamic_count : 1)
+//                    std::max(fixed_width, GetWidth()),
+                    GetWidth(),
+                    (GetHeight() - fixed_height_sum - dynamic_height_spacing_sum) /
+                    (dynamic_count > 0 ? dynamic_count : 1)
             };
-            DPRINTF("layout resized     : dynamic w: %d, h: %d\n", dynamic_size.width, dynamic_size.height);
+            DPRINTF("layout resized     : w: %d, h: %d\n", GetWidth(), GetHeight());
             DPRINTF("  spacing sum      : %d\n", fixed_height_spacing_sum);
-            DPRINTF("  fixed width      : %d\n", fixed_width);
+//            DPRINTF("  fixed width      : %d\n", fixed_width);
             DPRINTF("  fixed height sum : %d\n", fixed_height_sum);
             DPRINTF("  fixed_count      : %d\n", fixed_count);
+            DPRINTF("  dynamic width    : %d\n", dynamic_size.width);
+            DPRINTF("  dynamic_height   : %d\n", dynamic_size.height);
             DPRINTF("  dynamic_count    : %d\n", dynamic_count);
             Point offset{};
             for (auto b: boxes_) {
@@ -460,10 +466,9 @@ namespace ol::gui {
                     // and the horizontal size of the component.
                     offset.x = GetWidth() - box_width;
                 }
-                DPRINTF("  offset: x: %d, y: %d\n", offset.x, offset.y);
+                DPRINTF("  layout item offset: x: %d, y: %d\n", offset.x, offset.y);
                 b->SetOutsideOffset(offset);
                 b->SetSize(dynamic_size);
-                b->Resized();
                 // set vertical offset for the next component in the column
                 offset.y += properties_.spacing + (b->GetFixedHeight() ? b->GetFixedHeight() : dynamic_size.height);
             }

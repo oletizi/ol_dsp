@@ -11,11 +11,6 @@ namespace ol::gui {
                   font_size_(font_size),
                   text_string_(text_string) {}
 
-
-        void SetSize(int x, int y) override {
-            Component::SetSize(x, y);
-        }
-
         void Resized() override {
             Text::Resized();
             DPRINTF("  SfmlText resized: %d, %d\n", GetWidth(), GetHeight());
@@ -187,20 +182,20 @@ int main() {
     ol::ctl::Control control2(1, 0.25f);
     ol::app::synth::Fader fader_fixed_1(text_factory.NewText("Fixed 1"), control1);
     fader_fixed_1.SetFixedSize(ol::gui::Dimension{30, 45});
-    ol::app::synth::Fader fader_fixed_2(text_factory.NewText("Fixed 2"), control2);
+    ol::app::synth::Fader fader_fixed_2(text_factory.NewText("Fixed 2 with extra stuff"), control2);
     fader_fixed_2.SetFixedSize(ol::gui::Dimension{30, 45});
     ol::app::synth::Fader fader_dynamic_1(text_factory.NewText("Dynamic 1"), control1);
     ol::app::synth::Fader fader_dynamic_2(text_factory.NewText("Dynamic 2"), control2);
 
     ol::gui::Layout layout{};
     //layout.SetHorizontal();
-    layout.SetHalign(ol::gui::LayoutProperties::LEFT);
-    layout.SetSpacing(25);
+    layout.SetHalign(ol::gui::LayoutProperties::CENTER);
+    layout.SetSpacing(10);
 
     layout.Add(&fader_fixed_1);
     layout.Add(&fader_fixed_2);
     layout.Add(&fader_dynamic_1);
-    layout.Add(&fader_dynamic_2);
+//    layout.Add(&fader_dynamic_2);
 
     DPRINTLN("");
     DPRINTLN("========= SETTING LAYOUT SIZE =========");

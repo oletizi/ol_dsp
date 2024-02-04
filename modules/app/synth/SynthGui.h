@@ -46,6 +46,7 @@ namespace ol::app::synth {
             DPRINTF("  vertical: x1: %d, y1: %d, x2: %d, y2: %d\n",
                     fader_vertical_.point.x, fader_vertical_.point.y,
                     fader_vertical_.dimension.width, fader_vertical_.dimension.height);
+            DPRINTF("-------\n");
         }
 
         void Paint(Graphics &g) override {
@@ -69,12 +70,12 @@ namespace ol::app::synth {
             layout_.SetHalign(LayoutProperties::CENTER);
             layout_.Add(&face_);
             layout_.Add(label_);
+            box_.SetBorder(Border{1, 1, 1, 1});
         }
 
         void Resized() override {
+            DPRINTF("Fader resized: w:%d, h:%d, fixed w: %d, fixed h:%d\n", GetWidth(), GetHeight(), GetFixedWidth(), GetFixedHeight());
             box_.SetSize(GetFixedWidth() ? GetFixedWidth() : GetWidth(), GetFixedHeight() ? GetFixedHeight() : GetHeight());
-            box_.Resized();
-            DPRINTF("Fader resized: %d, %d\n", GetWidth(), GetHeight());
         }
 
         void Paint(Graphics &g) override {
@@ -285,7 +286,6 @@ namespace ol::app::synth {
 
         void SetActive(bool active) {
             active_ = active;
-            SetBorder(Border{0, 0, 0, active_ ? 1 : 0});
         }
 
         [[nodiscard]] bool IsActive() const {
