@@ -29,12 +29,11 @@ int main() {
     dial_fixed_1.SetFixedSize(ol::gui::Dimension{30, 45});
 
     ol::gui::Layout layout{};
-    layout.SetVertical();
-//    layout.SetHorizontal();
+//    layout.SetVertical();
+    layout.SetHorizontal();
     layout.SetHalign(ol::gui::LayoutProperties::CENTER);
 //    layout.SetHalign(ol::gui::LayoutProperties::RIGHT);
-//    layout.SetValign(ol::gui::LayoutProperties::MIDDLE);
-//    layout.SetValign(ol::gui::LayoutProperties::MIDDLE);
+    layout.SetValign(ol::gui::LayoutProperties::MIDDLE);
     layout.SetSpacing(10);
 
 //    layout.Add(&fader_fixed_1);
@@ -57,7 +56,7 @@ int main() {
                 fprintf(stderr, "Mouse! %d, %d\n", event.mouseButton.x, event.mouseButton.y);
             }
             if (event.type == sf::Event::KeyPressed) {
-                fprintf(stderr, "Key! %d", event.key.code);
+                fprintf(stderr, "Key! %d\n", event.key.code);
             }
         }
         window.clear(sf::Color::White);

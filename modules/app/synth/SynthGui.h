@@ -92,8 +92,6 @@ namespace ol::app::synth {
 
         void Resized() override {
             radius_ = GetFixedWidth() ? GetFixedWidth() / 2 : GetWidth() / 2;
-            DPRINTF("DialFace resized: w: %d, h: %d, fixed w: %d, h: %d, radius: %d\n", GetWidth(), GetHeight(),
-                    GetFixedWidth(), GetFixedHeight(), radius_);
         }
 
         void Paint(Graphics &g) override {
@@ -101,7 +99,7 @@ namespace ol::app::synth {
         }
 
     private:
-        int radius_;
+        int radius_ = 0;
         Control &control_;
     };
 
@@ -115,10 +113,8 @@ namespace ol::app::synth {
         }
 
         void Resized() override {
-            DPRINTF("Dial resized: w: %d, h: %d; fixed w: %d, h: %d\n", GetWidth(), GetHeight(), GetFixedWidth(),
-                    GetFixedHeight());
-            box_.SetFixedSize(Dimension{GetFixedWidth(), GetFixedHeight()});
-            box_.SetSize(Dimension{GetWidth(), GetHeight()});
+            layout_.SetFixedSize(Dimension{GetFixedWidth(), GetFixedHeight()});
+            layout_.SetSize(Dimension{GetWidth(), GetHeight()});
         }
 
         void Paint(Graphics &g) override {

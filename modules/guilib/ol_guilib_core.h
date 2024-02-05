@@ -115,24 +115,22 @@ namespace ol::gui {
         [[nodiscard]] virtual int GetHeight() const { return height_; }
 
         virtual Component *SetFixedSize(Dimension dimension) {
-            SetFixedWidth(dimension.width)->SetFixedHeight(dimension.height);
+            fixed_width_ = dimension.width;
+            fixed_height_ = dimension.height;
+            Resized();
             return this;
         }
 
         [[nodiscard]] virtual int GetFixedWidth() const { return fixed_width_; }
 
         virtual Component *SetFixedWidth(int w) {
-            fixed_width_ = w;
-            Resized();
-            return this;
+            return SetFixedSize(Dimension{w, GetFixedHeight()});
         }
 
         [[nodiscard]] virtual int GetFixedHeight() const { return fixed_height_; }
 
         virtual Component *SetFixedHeight(int h) {
-            fixed_height_ = h;
-            Resized();
-            return this;
+            return SetFixedSize(Dimension{GetFixedWidth(), h});
         }
 
         virtual void Resized() = 0;
@@ -187,10 +185,10 @@ namespace ol::gui {
                     GetFixedHeight());
             DPRINTF("  offset : %d, t: %d, r: %d, b:%d\n", offset_left_,
                     offset_top_, offset_right_, offset_bottom_);
-            if (Component::GetFixedWidth()) {
+            if (GetFixedWidth()) {
                 child_->SetFixedWidth(GetFixedWidth() - GetOffsetHorizontal());
             }
-            if (Component::GetFixedHeight()) {
+            if (GetFixedHeight()) {
                 child_->SetFixedHeight(GetFixedHeight() - GetOffsetVertical());
             }
             child_->SetSize(GetWidth() - GetOffsetHorizontal(), GetHeight() - GetOffsetVertical());
