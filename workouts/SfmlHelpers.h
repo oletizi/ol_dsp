@@ -32,7 +32,7 @@ namespace ol::gui {
 
         void Resized() override {
             Text::Resized();
-            DPRINTF("  SfmlText resized: %d, %d\n", GetWidth(), GetHeight());
+            DPRINTF("  SfmlText resized: w: %d, h: %d, fixed w: %d, h: %d\n", GetWidth(), GetHeight(), GetFixedWidth(), GetFixedHeight());
         }
 
         int GetFixedHeight() const override {

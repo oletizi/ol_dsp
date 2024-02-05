@@ -91,7 +91,9 @@ namespace ol::app::synth {
         explicit DialFace(Control &c) : control_(c) {}
 
         void Resized() override {
-            radius_ = GetFixedWidth() ? GetFixedWidth() / 2 : GetWidth() / 2;
+            int width = GetFixedWidth() ? GetFixedWidth() : GetWidth();
+            int height = GetFixedHeight() ? GetFixedHeight() : GetHeight();
+            radius_ = std::min(width, height) / 2;
         }
 
         void Paint(Graphics &g) override {

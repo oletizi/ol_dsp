@@ -356,12 +356,12 @@ namespace ol::gui {
     class Text : public Component {
     public:
         explicit Text(Font &font, std::string text) : font_(font), text_(std::move(text)) {
-            Component::SetFixedHeight(font.GetLineHeight());
+            Component::SetFixedHeight(font_.GetLineHeight());
         }
 
         void Resized() override {
             area_.dimension.width = GetWidth();
-            area_.dimension.height = GetHeight();
+            area_.dimension.height = GetFixedHeight();
         }
 
         void Paint(Graphics &g) override {

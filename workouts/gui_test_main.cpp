@@ -27,6 +27,7 @@ int main() {
     ol::app::synth::Fader fader_dynamic_2(text_factory.NewText("Dynamic 2"), control2);
     ol::app::synth::Dial dial_fixed_1(text_factory.NewText("Fixed 1"), control1);
     dial_fixed_1.SetFixedSize(ol::gui::Dimension{30, 45});
+    ol::app::synth::Dial dial_dynamic_1(text_factory.NewText("Dynamic 1"), control2);
 
     ol::gui::Layout layout{};
 //    layout.SetVertical();
@@ -40,7 +41,8 @@ int main() {
 //    layout.Add(&fader_fixed_2);
 //    layout.Add(&fader_dynamic_1);
 //    layout.Add(&fader_dynamic_2);
-    layout.Add(&dial_fixed_1);
+//    layout.Add(&dial_fixed_1);
+    layout.Add(&dial_dynamic_1);
 
     layout.SetSize(width, height);
     // run the program as long as the window is open
