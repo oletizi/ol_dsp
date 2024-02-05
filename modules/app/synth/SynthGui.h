@@ -47,7 +47,8 @@ namespace ol::app::synth {
         void Paint(Graphics &g) override {
             g.DrawLine(fader_vertical_.point.x, fader_vertical_.point.y, fader_vertical_.dimension.width,
                        fader_vertical_.dimension.height, fader_vertical_.dimension.width);
-            g.FillRect(fader_rect_.point.x, fader_rect_.point.y, fader_rect_.dimension.width, fader_rect_.dimension.height);
+            g.FillRect(fader_rect_.point.x, fader_rect_.point.y, fader_rect_.dimension.width,
+                       fader_rect_.dimension.height);
         }
 
     private:
@@ -69,8 +70,8 @@ namespace ol::app::synth {
         }
 
         void Resized() override {
-            DPRINTF("Fader resized: w:%d, h:%d, fixed w: %d, fixed h:%d\n", GetWidth(), GetHeight(), GetFixedWidth(), GetFixedHeight());
-            box_.SetSize(GetFixedWidth() ? GetFixedWidth() : GetWidth(), GetFixedHeight() ? GetFixedHeight() : GetHeight());
+            box_.SetSize(GetFixedWidth() ? GetFixedWidth() : GetWidth(),
+                         GetFixedHeight() ? GetFixedHeight() : GetHeight());
         }
 
         void Paint(Graphics &g) override {
@@ -90,21 +91,17 @@ namespace ol::app::synth {
         explicit DialFace(Control &c) : control_(c) {}
 
         void Resized() override {
-
+            radius_ = GetFixedWidth() ? GetFixedWidth() / 2 : GetWidth() / 2;
+            DPRINTF("DialFace resized: w: %d, h: %d, fixed w: %d, h: %d, radius: %d\n", GetWidth(), GetHeight(),
+                    GetFixedWidth(), GetFixedHeight(), radius_);
         }
 
         void Paint(Graphics &g) override {
-            int radius = 0;
-            if (GetFixedWidth() > 0) {
-                radius = GetFixedWidth() / 2;
-            } else {
-                radius = GetWidth() / 2;
-            }
-
-            g.DrawCircle(0, 0, radius);
+            g.DrawCircle(0, 0, radius_);
         }
 
     private:
+        int radius_;
         Control &control_;
     };
 
@@ -118,19 +115,21 @@ namespace ol::app::synth {
         }
 
         void Resized() override {
-            layout_.SetSize(GetWidth(), GetHeight());
-            layout_.Resized();
+            DPRINTF("Dial resized: w: %d, h: %d; fixed w: %d, h: %d\n", GetWidth(), GetHeight(), GetFixedWidth(),
+                    GetFixedHeight());
+            box_.SetFixedSize(Dimension{GetFixedWidth(), GetFixedHeight()});
+            box_.SetSize(Dimension{GetWidth(), GetHeight()});
         }
 
         void Paint(Graphics &g) override {
-            layout_.Paint(g);
+            box_.Paint(g);
         }
 
     private:
         Control &control_;
         Text *label_;
         Layout layout_ = Layout();
-        Box box = Box(&layout_);
+        Box box_ = Box(&layout_);
         DialFace face_ = DialFace(control_);
     };
 
@@ -141,6 +140,7 @@ namespace ol::app::synth {
             Dimension widget_size{50, 50};
             waveform_dial_->SetFixedSize(widget_size);
             level_fader_->SetFixedSize(widget_size);
+
             layout_.SetHorizontal();
             layout_.Add(waveform_dial_);
             layout_.Add(level_fader_);

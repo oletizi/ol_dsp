@@ -123,6 +123,7 @@ namespace ol::gui {
 
         virtual Component *SetFixedWidth(int w) {
             fixed_width_ = w;
+            Resized();
             return this;
         }
 
@@ -130,6 +131,7 @@ namespace ol::gui {
 
         virtual Component *SetFixedHeight(int h) {
             fixed_height_ = h;
+            Resized();
             return this;
         }
 
@@ -157,11 +159,23 @@ namespace ol::gui {
         explicit Box(Component *child) : child_(child) {}
 
         [[nodiscard]] int GetFixedWidth() const override {
-            return child_->GetFixedWidth() ? child_->GetFixedWidth() + offset_right_ + offset_left_ : 0;
+            int rv = 0;
+            if (Component::GetFixedWidth()) {
+                rv = Component::GetFixedWidth();
+            } else {
+                rv = child_->GetFixedWidth() ? child_->GetFixedWidth() + offset_right_ + offset_left_ : 0;
+            }
+            return rv;
         }
 
         [[nodiscard]] int GetFixedHeight() const override {
-            return child_->GetFixedHeight() ? child_->GetFixedHeight() + offset_top_ + offset_bottom_ : 0;
+            int rv = 0;
+            if (Component::GetFixedWidth()) {
+                rv = Component::GetFixedWidth();
+            } else {
+                rv = child_->GetFixedHeight() ? child_->GetFixedHeight() + offset_top_ + offset_bottom_ : 0;
+            }
+            return rv;
         }
 
         void Resized() override {
@@ -169,27 +183,36 @@ namespace ol::gui {
             offset_top_ = margin_top_ + padding_top_;
             offset_right_ = margin_right_ + padding_right_;
             offset_bottom_ = margin_bottom_ + padding_bottom_;
-            DPRINTF("Box resized: w: %d, h: %d\n", GetWidth(), GetHeight());
+            DPRINTF("Box resized: w: %d, h: %d, fixed: h: %d, w: %d\n", GetWidth(), GetHeight(), GetFixedWidth(),
+                    GetFixedHeight());
             DPRINTF("  offset : %d, t: %d, r: %d, b:%d\n", offset_left_,
                     offset_top_, offset_right_, offset_bottom_);
-            child_->SetSize(GetWidth() - (offset_left_ + offset_right_), GetHeight() - (offset_top_ + offset_bottom_));
+            if (Component::GetFixedWidth()) {
+                child_->SetFixedWidth(GetFixedWidth() - GetOffsetHorizontal());
+            }
+            if (Component::GetFixedHeight()) {
+                child_->SetFixedHeight(GetFixedHeight() - GetOffsetVertical());
+            }
+            child_->SetSize(GetWidth() - GetOffsetHorizontal(), GetHeight() - GetOffsetVertical());
         }
 
         void Paint(Graphics &g) override {
+            int width = GetFixedWidth() ? GetFixedWidth() : GetWidth();
+            int height = GetFixedHeight() ? GetFixedHeight() : GetHeight();
             auto og = OffsetGraphics(g, Point{offset_left_, offset_top_});
             if (border_.width_left > 0) {
-                g.DrawLine(margin_left_, margin_top_, margin_left_, GetHeight() - margin_bottom_, border_.width_left);
+                g.DrawLine(margin_left_, margin_top_, margin_left_, height - margin_bottom_, border_.width_left);
             }
             if (border_.width_top > 0) {
-                g.DrawLine(margin_left_, margin_top_, GetWidth() - margin_right_, margin_top_, border_.width_top);
+                g.DrawLine(margin_left_, margin_top_, width - margin_right_, margin_top_, border_.width_top);
             }
             if (border_.width_right > 0) {
-                g.DrawLine(GetWidth() - margin_right_, margin_top_, GetWidth() - margin_right_,
-                           GetHeight() - margin_bottom_, border_.width_right);
+                g.DrawLine(width - margin_right_, margin_top_, width - margin_right_,
+                           height - margin_bottom_, border_.width_right);
             }
             if (border_.width_bottom > 0) {
-                g.DrawLine(margin_left_, GetHeight() - margin_bottom_, GetWidth() - margin_right_,
-                           GetHeight() - margin_bottom_,
+                g.DrawLine(margin_left_, height - margin_bottom_, width - margin_right_,
+                           height - margin_bottom_,
                            border_.width_bottom);
             }
             child_->Paint(og);
@@ -292,7 +315,7 @@ namespace ol::gui {
             outside_offset_ = offset;
         }
 
-        Point GetOutsideOffset() const {
+        [[nodiscard]] Point GetOutsideOffset() const {
             return outside_offset_;
         }
 
@@ -350,14 +373,6 @@ namespace ol::gui {
         virtual void SetText(std::string text) {
             text_ = std::move(text);
         }
-//
-//        [[nodiscard]] int GetHeight() const override {
-//            return GetFixedHeight();
-//        }
-//
-//        [[nodiscard]] int GetFixedHeight() const override {
-//            return font_.GetLineHeight();
-//        }
 
     private:
         Font &font_;
@@ -427,10 +442,14 @@ namespace ol::gui {
 
 
         void Resized() override {
+            DPRINTF("Layout resized: w: %d, h: %d, fixed w: %d, h: %d", GetWidth(), GetHeight(), GetFixedWidth(),
+                    GetFixedHeight());
             bool vert = properties_.direction == LayoutProperties::VERTICAL;
             int fixedLengthSum = 0;
             int fixedCount = 0;
             int dynamicCount = 0;
+            int width = GetFixedWidth() ? GetFixedWidth() : GetWidth();
+            int height = GetFixedHeight() ? GetFixedHeight() : GetHeight();
             for (auto c: children_) {
                 fixedLengthSum += vert ? c->GetFixedHeight() : c->GetFixedWidth();
                 if ((vert ? c->GetFixedHeight() : c->GetFixedWidth())) { fixedCount++; } else { dynamicCount++; }
@@ -442,28 +461,28 @@ namespace ol::gui {
             int dynamicSpacingSpacingSum =
                     properties_.spacing * (dynamicCount * (dynamicCount > 0 ? dynamicCount - 1 : 0));
             Dimension dynamicSize{
-                    vert ? GetWidth() : (GetWidth() - fixedLengthSum - dynamicSpacingSpacingSum) /
-                                        (dynamicCount > 0 ? dynamicCount : 1),
-                    vert ? (GetHeight() - fixedLengthSum - dynamicSpacingSpacingSum) /
-                           (dynamicCount > 0 ? dynamicCount : 1) : GetHeight()
+                    vert ? width : (width - fixedLengthSum - dynamicSpacingSpacingSum) /
+                                   (dynamicCount > 0 ? dynamicCount : 1),
+                    vert ? (height - fixedLengthSum - dynamicSpacingSpacingSum) /
+                           (dynamicCount > 0 ? dynamicCount : 1) : height
             };
             Point offset{};
             for (auto b: boxes_) {
                 // calculate  offset based on alignment
-                int boxWidth = b->GetFixedWidth() ? b->GetFixedWidth() : GetWidth();
-                int boxHeight = b->GetFixedHeight() ? b->GetFixedHeight() : GetHeight();
+                int boxWidth = b->GetFixedWidth() ? b->GetFixedWidth() : width;
+                int boxHeight = b->GetFixedHeight() ? b->GetFixedHeight() : height;
                 if (vert && properties_.halign == LayoutProperties::CENTER) {
                     // center halign, set the X offset to half the difference between the horizontal size of the container
                     // and the horizontal size of the component.
-                    offset.x = (GetWidth() - boxWidth) / 2;
+                    offset.x = (width - boxWidth) / 2;
                 } else if (vert && properties_.halign == LayoutProperties::RIGHT) {
                     // right halign, set the X offset to the entire difference betweent the horizontal size of the container
                     // and the horizontal size of the component.
-                    offset.x = GetWidth() - boxWidth;
+                    offset.x = width - boxWidth;
                 } else if ((!vert) && properties_.valign == LayoutProperties::MIDDLE) {
-                    offset.y = (GetHeight() - boxHeight) / 2;
+                    offset.y = (height - boxHeight) / 2;
                 } else if ((!vert) && properties_.valign == LayoutProperties::BOTTOM) {
-                    offset.y = GetHeight() - boxHeight;
+                    offset.y = height - boxHeight;
                 }
                 b->SetOutsideOffset(offset);
                 b->SetSize(dynamicSize);
