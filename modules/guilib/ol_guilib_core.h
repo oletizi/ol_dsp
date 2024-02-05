@@ -114,6 +114,8 @@ namespace ol::gui {
 
         [[nodiscard]] virtual int GetHeight() const { return height_; }
 
+        Dimension GetSize() { return Dimension{GetWidth(), GetHeight()}; }
+
         virtual Component *SetFixedSize(Dimension dimension) {
             fixed_width_ = dimension.width;
             fixed_height_ = dimension.height;
@@ -131,6 +133,10 @@ namespace ol::gui {
 
         virtual Component *SetFixedHeight(int h) {
             return SetFixedSize(Dimension{GetFixedWidth(), h});
+        }
+
+        Dimension GetFixedSize() {
+            return Dimension{GetFixedWidth(), GetFixedHeight()};
         }
 
         virtual void Resized() = 0;
@@ -416,7 +422,6 @@ namespace ol::gui {
             Component::SetSize(width, height);
         }
 
-
         Layout *Add(Component *child) {
             if (child != nullptr) {
                 children_.push_back(child);
@@ -466,7 +471,7 @@ namespace ol::gui {
             };
             Point offset{};
             for (auto b: boxes_) {
-                // calculate  offset based on alignment
+                // calculate offset based on alignment
                 int boxWidth = b->GetFixedWidth() ? b->GetFixedWidth() : width;
                 int boxHeight = b->GetFixedHeight() ? b->GetFixedHeight() : height;
                 if (vert && properties_.halign == LayoutProperties::CENTER) {

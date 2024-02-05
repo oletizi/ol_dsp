@@ -37,11 +37,11 @@ int main() {
     layout.SetValign(ol::gui::LayoutProperties::MIDDLE);
     layout.SetSpacing(10);
 
-//    layout.Add(&fader_fixed_1);
+    layout.Add(&fader_fixed_1);
 //    layout.Add(&fader_fixed_2);
 //    layout.Add(&fader_dynamic_1);
 //    layout.Add(&fader_dynamic_2);
-//    layout.Add(&dial_fixed_1);
+    layout.Add(&dial_fixed_1);
     layout.Add(&dial_dynamic_1);
 
     layout.SetSize(width, height);

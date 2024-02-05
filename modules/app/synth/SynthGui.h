@@ -94,14 +94,17 @@ namespace ol::app::synth {
             int width = GetFixedWidth() ? GetFixedWidth() : GetWidth();
             int height = GetFixedHeight() ? GetFixedHeight() : GetHeight();
             radius_ = std::min(width, height) / 2;
+            offset_.x = (width / 2) - radius_;
+            offset_.y = (height / 2) - radius_;
         }
 
         void Paint(Graphics &g) override {
-            g.DrawCircle(0, 0, radius_);
+            g.DrawCircle(offset_.x, offset_.y, radius_);
         }
 
     private:
         int radius_ = 0;
+        Point offset_{};
         Control &control_;
     };
 
@@ -115,19 +118,18 @@ namespace ol::app::synth {
         }
 
         void Resized() override {
-            layout_.SetFixedSize(Dimension{GetFixedWidth(), GetFixedHeight()});
-            layout_.SetSize(Dimension{GetWidth(), GetHeight()});
+            layout_.SetFixedSize(GetFixedSize());
+            layout_.SetSize(GetSize());
         }
 
         void Paint(Graphics &g) override {
-            box_.Paint(g);
+            layout_.Paint(g);
         }
 
     private:
         Control &control_;
         Text *label_;
         Layout layout_ = Layout();
-        Box box_ = Box(&layout_);
         DialFace face_ = DialFace(control_);
     };
 
@@ -307,7 +309,7 @@ namespace ol::app::synth {
 
         void Resized() override {
             int height = GetFixedHeight() ? GetFixedHeight() : GetHeight();
-            for (auto m : menu_items_) {
+            for (auto m: menu_items_) {
                 m->SetPaddingBottom(height / 4);
             }
             layout_.SetFixedSize(Dimension{GetFixedWidth(), GetFixedHeight()});
