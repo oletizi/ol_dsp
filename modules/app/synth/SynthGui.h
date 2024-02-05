@@ -271,12 +271,11 @@ namespace ol::app::synth {
 
     class MenuItem : public Box {
     public:
-        explicit MenuItem(Text *text, bool active) : text_(text), active_(active), Box(text) {
-
-        }
+        explicit MenuItem(Text *text, bool active) : active_(active), Box(text) {}
 
         void SetActive(bool active) {
             active_ = active;
+            SetBorder(Border{0, 0, 0, active_});
         }
 
         [[nodiscard]] bool IsActive() const {
@@ -284,13 +283,12 @@ namespace ol::app::synth {
         }
 
     private:
-        Text *text_;
         bool active_;
     };
 
-    class MainMenu : public Box {
+    class MainMenu : public Component {
     public:
-        explicit MainMenu(const std::vector<MenuItem *> &menu_items) : Box(&layout_) {
+        explicit MainMenu(const std::vector<MenuItem *> &menu_items) {
             layout_.SetHorizontal();
             for (auto m: menu_items) {
                 m->SetMarginLeft(10)->SetMarginRight(16);
@@ -299,17 +297,23 @@ namespace ol::app::synth {
             }
         }
 
-//        void Resized() override {
-//            SetFixedHeight(24 + GetOffsetVertical());
-//
-//            Box::Resized();
-//        }
-
-
         void SetActive(int element_id) {
             for (int i = 0; i < menu_items_.size(); i++) {
                 menu_items_[i]->SetActive(i == element_id);
             }
+        }
+
+        void Resized() override {
+            int height = GetFixedHeight() ? GetFixedHeight() : GetHeight();
+            for (auto m : menu_items_) {
+                m->SetPaddingBottom(height / 4);
+            }
+            layout_.SetFixedSize(Dimension{GetFixedWidth(), GetFixedHeight()});
+            layout_.SetSize(Dimension{GetWidth(), GetHeight()});
+        }
+
+        void Paint(Graphics &g) override {
+            layout_.Paint(g);
         }
 
     private:
@@ -406,12 +410,14 @@ namespace ol::app::synth {
             // screens go in the screen layout. Set the initial screen layout to the first main screen.
             screen_layout_.Add(main_layoutA);
 
+            main_menu_->SetFixedHeight(24);
+            main_menu_->SetActive(0);
+
             // app layout is the screen layout + the menu
             app_layout_.SetVertical();
+//            app_layout_.SetValign(LayoutProperties::BOTTOM);
             app_layout_.Add(&screen_layout_);
-            app_layout_.Add(main_menu_);
-
-            main_menu_->SetActive(0);
+            app_layout_.Add(main_menu_box);
         }
 
         void Resized() override {
@@ -534,7 +540,7 @@ namespace ol::app::synth {
                 new MenuItem(new Text(font_, "MOD"), false)
         };
         MainMenu *main_menu_ = new MainMenu(menu_items_);
-
+        Box *main_menu_box = new Box(main_menu_);
         Layout screen_layout_ = Layout();
         Layout app_layout_ = Layout();
 
