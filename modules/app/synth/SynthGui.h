@@ -299,11 +299,11 @@ namespace ol::app::synth {
             }
         }
 
-        void Resized() override {
-            SetFixedHeight(24 + GetOffsetVertical());
-
-            Box::Resized();
-        }
+//        void Resized() override {
+//            SetFixedHeight(24 + GetOffsetVertical());
+//
+//            Box::Resized();
+//        }
 
 
         void SetActive(int element_id) {
