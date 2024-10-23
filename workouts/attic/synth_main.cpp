@@ -11,12 +11,12 @@ using namespace ol::synth;
 
 int main() {
     //Voice *voices[VOICE_COUNT];
-    SynthVoice<CHANNEL_COUNT> sv1;
-    SynthVoice<CHANNEL_COUNT> sv2;
-    SynthVoice<CHANNEL_COUNT> sv3;
-    SynthVoice<CHANNEL_COUNT> sv4;
+    SynthVoice sv1;
+    SynthVoice sv2;
+    SynthVoice sv3;
+    SynthVoice sv4;
     std::vector<Voice *> voices = {&sv1, &sv2, &sv3, &sv4};
-    Polyvoice<CHANNEL_COUNT> poly(voices);
+    Polyvoice poly(voices);
 
 //    Voice *poly = new Polyvoice<CHANNEL_COUNT>(voices);
 

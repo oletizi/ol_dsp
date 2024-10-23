@@ -1,4 +1,4 @@
-#include <SFML/Graphics.hpp>
+#include "SFML/Graphics.hpp"
 #include "guilib/ol_guilib.h"
 
 namespace ol::gui {
