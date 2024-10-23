@@ -7,7 +7,7 @@
 
 #include "ol_synthlib.h"
 #include "iolib/PatchLoader.h"
-#include "workout_buddy.h"
+#include "../workout_buddy.h"
 
 namespace ol::io {
     struct VoiceData {

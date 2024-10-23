@@ -2,7 +2,7 @@
 // Created by Orion Letizi on 11/29/23.
 //
 #include <iostream>
-#include "workout_buddy.h"
+#include "../workout_buddy.h"
 #include "ol_fxlib.h"
 
 #define CHANNEL_COUNT 2

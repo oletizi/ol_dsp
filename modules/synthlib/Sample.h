@@ -47,6 +47,7 @@ namespace ol::synth {
         uint64_t loop_start_ = 0;
         uint64_t loop_end_ = 0;
         uint64_t current_frame_ = 0;
+        t_sample sample_rate_ = 0;
     };
 }
 

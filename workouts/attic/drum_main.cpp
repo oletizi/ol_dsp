@@ -3,7 +3,7 @@
 //
 #include <fstream>
 #include <sstream>
-#include "workout_buddy.h"
+#include "../workout_buddy.h"
 #include "iolib/PatchLoader.h"
 #include "SamplePool.h"
 

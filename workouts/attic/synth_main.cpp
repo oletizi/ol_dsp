@@ -3,7 +3,7 @@
 #include "SynthAudioCallback.h"
 #include "SynthMidiCallback.h"
 
-#include "workout_buddy.h"
+#include "../workout_buddy.h"
 
 #define CHANNEL_COUNT 2
 

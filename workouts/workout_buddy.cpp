@@ -6,7 +6,6 @@
 
 namespace ol::io {
 
-
     uint64_t MaSampleSource::Read(t_sample *frames_out) {
         uint64_t frames_read = 0;
         ma_decoder_read_pcm_frames(decoder_, frames_out, 1, &frames_read);

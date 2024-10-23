@@ -28,8 +28,8 @@ namespace ol::synth {
     }
 
     InitStatus ol::synth::Sample::Init(t_sample sample_rate) {
-//        sample_rate = sample_rate;
-        return InitStatus::Error;//data_source_.Init(sample_rate);
+        sample_rate_ = sample_rate;
+        return InitStatus::Ok;
     }
 
     void ol::synth::Sample::SetLoopStart(uint64_t frame_index) {
