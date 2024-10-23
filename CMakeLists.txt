@@ -9,6 +9,9 @@ set(BUILD_LLHTTP OFF)
 set(BUILD_DAISY ON)
 set(BUILD_TEENSY ON)
 set(BUILD_WORKOUTS ON)
+set(CMAKE_OSX_SYSROOT /Library/Developer/CommandLineTools/SDKs/MacOSX14.sdk)
+#CMAKE_OSX_SYSROOT
+# /Library/Developer/CommandLineTools/SDKs/MacOSX13.1.sdk
 
 #add_definitions(-DTEENSY_DEBUG)
 #add_definitions(-DTEENSY_LOCAL)

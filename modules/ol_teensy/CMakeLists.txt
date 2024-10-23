@@ -46,3 +46,8 @@ add_executable(ol_teensy_workouts_tft workouts/tft/loop.h workouts/tft_dummy.cpp
 target_link_libraries(ol_teensy_workouts_tft PUBLIC tgx ol_teensy ol_guilib ol_lvgl)
 target_include_directories(ol_teensy_workouts_tft PUBLIC . .. ${ARDUINO_INCLUDES})
 set_target_properties(ol_teensy_workouts_tft PROPERTIES LINKER_LANGUAGE CXX)
+
+add_executable(ol_teensy_workouts_midi workouts/midi/loop.h workouts/midi_dummy.cpp)
+target_link_libraries(ol_teensy_workouts_midi PUBLIC tgx ol_teensy)
+target_include_directories(ol_teensy_workouts_midi PUBLIC . .. ${ARDUINO_INCLUDES})
+set_target_properties(ol_teensy_workouts_midi PROPERTIES LINKER_LANGUAGE CXX)
