@@ -11,8 +11,11 @@ set(BUILD_TEENSY OFF)
 
 #add_definitions(-DTEENSY_DEBUG)
 #add_definitions(-DTEENSY_LOCAL)
-
-include(cmake/CPM.cmake)
+# This tells cmake we have goodies in the /cmake folder
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+#include(cmake/CPM.cmake)
+include(CPM)
+include(JUCEDefaults)
 
 add_subdirectory(libs/DaisySP)
 add_subdirectory(libs/dattorro-verb)
