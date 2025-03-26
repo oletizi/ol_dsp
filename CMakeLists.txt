@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.26)
+cmake_minimum_required(VERSION 3.30.5)
 project(ol_dsp VERSION 0.1)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -55,11 +55,14 @@ add_subdirectory(modules/ctllib)
 add_subdirectory(modules/fxlib)
 add_subdirectory(modules/guilib)
 add_subdirectory(modules/iolib)
+add_subdirectory(modules/juce)
 add_subdirectory(modules/synthlib)
 add_subdirectory(workouts)
 add_subdirectory(test)
 
-add_library(spline INTERFACE libs/spline/spline.h)
+add_library(spline INTERFACE libs/spline/spline.h
+        modules/juce/hello/hello.cpp
+)
 set_target_properties(spline PROPERTIES LINKER_LANGUAGE CXX)
 target_include_directories(spline INTERFACE libs)
 

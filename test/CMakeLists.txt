@@ -2,7 +2,7 @@ enable_testing()
 
 add_subdirectory(googletest)
 add_subdirectory(FakeIt)
-find_package(GTest REQUIRED)
+#find_package(GTest REQUIRED)
 #find_package(FakeIt REQUIRED)
 add_executable(gtest_run
         basic_test.cpp

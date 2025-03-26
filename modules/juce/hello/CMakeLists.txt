@@ -1,0 +1,1 @@
+add_executable(ol_juce_hello hello.cpp)
