@@ -22,16 +22,16 @@ void OLJuceHost::initialise(const juce::String &commandLineParameters) {
         constexpr bool recursive = true;
         juce::FileSearchPath path;
         juce::File deadMansPedalFile("~/tmp/deadPedals");
-        juce::AudioPluginFormat *format = formatManager.getFormat(i);
+        auto format = formatManager.getFormat(i);
         juce::String pluginName;
-        juce::PluginDirectoryScanner *scanner = new juce::PluginDirectoryScanner(
+        auto scanner = new juce::PluginDirectoryScanner(
             this->knownPlugins, *format, path, recursive, deadMansPedalFile);
 
         std::cout << "Scanning " << format->getName() << std::endl;
         bool more = true;
         int count = 0;
         while (more && ++count < scanMax) {
-            juce::String next = scanner->getNextPluginFileThatWillBeScanned();
+            auto next = scanner->getNextPluginFileThatWillBeScanned();
             more = next.length();
             if (next.contains(toLoad)) {
                 scanner->scanNextFile(true, pluginName);
@@ -41,21 +41,18 @@ void OLJuceHost::initialise(const juce::String &commandLineParameters) {
             }
         }
     }
-    // Add plugin
-    // formatManager.createPluginInstanceAsync (desc.pluginDescription,
-    //                                      graph.getSampleRate(),
-    //                                      graph.getBlockSize(),
-    //                                      [this, pos, dpiDisabler, useARA = desc.useARA] (std::unique_ptr<AudioPluginInstance> instance, const String& error)
-    //                                      {
-    //                                          addPluginCallback (std::move (instance), error, pos, useARA);
-    //                                      });
-    const juce::Array<juce::PluginDescription> plugs = this->knownPlugins.getTypes();
+    auto plugs = this->knownPlugins.getTypes();
     std::cout << "plugs count: " << plugs.size() << std::endl;
-    for (int i = 0; i < plugs.size(); ++i) {
-        const juce::PluginDescription &plugDescription = plugs[i];
+    for (auto plugDescription: plugs) {
         juce::String errorMessage("barf.");
         std::cout << "instantiating: " << plugDescription.name << std::endl;
-        std::unique_ptr<juce::AudioPluginInstance> plug = formatManager.createPluginInstance(plugDescription, 441000, 128, errorMessage);
+        auto plug = formatManager.createPluginInstance(
+            plugDescription, 441000, 128, errorMessage);
+        auto params = plug->getParameters();
+        for ( auto param : params) {
+            std::cout << "  param: " << param->getName(100) << std::endl;
+        }
+        this->instances.add(std::move(plug));
     }
 }
 

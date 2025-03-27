@@ -21,6 +21,7 @@ public:
 private:
     juce::AudioPluginFormatManager formatManager;
     juce::KnownPluginList knownPlugins;
+    juce::Array<std::unique_ptr<juce::AudioPluginInstance>> instances;
 };
 #endif //HOST_H
 START_JUCE_APPLICATION(OLJuceHost)
