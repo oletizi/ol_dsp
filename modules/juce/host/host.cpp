@@ -17,8 +17,8 @@ void OLJuceHost::initialise(const juce::String &commandLineParameters) {
     formatManager.addDefaultFormats();
     std::cout << "Num formats: " << formatManager.getNumFormats() << std::endl;
     const juce::String toLoad = "TAL"; // TODO: make this configurable
-    const int scanMax = 10000;
     for (int i = 0; i < formatManager.getNumFormats(); ++i) {
+        constexpr int scanMax = 10000; // TODO: make this configurable
         constexpr bool recursive = true;
         juce::FileSearchPath path;
         juce::File deadMansPedalFile("~/tmp/deadPedals");
