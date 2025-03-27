@@ -16,6 +16,8 @@ void OLJuceHost::initialise(const juce::String &commandLineParameters) {
     std::cout << "Initialising OLJuceHost..." << std::endl;
     formatManager.addDefaultFormats();
     std::cout << "Num formats: " << formatManager.getNumFormats() << std::endl;
+    const juce::String toLoad = "TAL"; // TODO: make this configurable
+    const int scanMax = 10000;
     for (int i = 0; i < formatManager.getNumFormats(); ++i) {
         constexpr bool recursive = true;
         juce::FileSearchPath path;
@@ -27,8 +29,17 @@ void OLJuceHost::initialise(const juce::String &commandLineParameters) {
             list, *format, path, recursive, deadMansPedalFile);
 
         std::cout << "Scanning " << format->getName() << std::endl;
-        while (scanner->scanNextFile(true, pluginName)) {
-            std::cout << "  Scanned: " << pluginName << std::endl;
+        bool more = true;
+        int count = 0;
+        while (more && ++count < scanMax) {
+            juce::String next = scanner->getNextPluginFileThatWillBeScanned();
+            more = next.length();
+            if (next.contains(toLoad)) {
+                scanner->scanNextFile(true, pluginName);
+                std::cout << "  Scanned: " << pluginName << std::endl;
+            } else {
+                scanner->skipNextFile();
+            }
         }
     }
 }
