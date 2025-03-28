@@ -22,6 +22,9 @@ public:
 
     void audioDeviceAboutToStart(juce::AudioIODevice *device) override;
 
+    void audioDeviceIOCallbackWithContext(const float* const* inputChannelData, int numInputChannels, float *const*outputChannelData, int numOutputChannels, int
+                                          numSamples, const juce::AudioIODeviceCallbackContext &context) override;
+
     void audioDeviceStopped() override;
 
 private:
@@ -29,6 +32,7 @@ private:
     juce::AudioPluginFormatManager formatManager;
     juce::KnownPluginList knownPlugins;
     juce::Array<std::unique_ptr<juce::AudioPluginInstance>> instances;
+    juce::AudioBuffer<float> audioBuffer;
 };
 #endif //HOST_H
 START_JUCE_APPLICATION(OLJuceHost)
