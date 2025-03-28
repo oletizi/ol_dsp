@@ -17,6 +17,7 @@ void OLJuceHost::initialise(const juce::String &commandLineParameters) {
     // this->deviceManager.initialise(2, 2);
     // setup();
     const juce::String outputDevice = "MacBook Pro Speakers";
+    const juce::String toLoad = "TAL Reverb 4 Plugin"; // TODO: make this configurable
 
     const juce::AudioDeviceManager::AudioDeviceSetup deviceSetup{
         .bufferSize = 128,
@@ -46,7 +47,6 @@ void OLJuceHost::initialise(const juce::String &commandLineParameters) {
 
     formatManager.addDefaultFormats();
     std::cout << "Num formats: " << formatManager.getNumFormats() << std::endl;
-    const juce::String toLoad = "TAL"; //TAL Reverb 4 Plugin"; // TODO: make this configurable
     for (int i = 0; i < formatManager.getNumFormats(); ++i) {
         constexpr int scanMax = 10000; // TODO: make this configurable
         constexpr bool recursive = true;
@@ -99,8 +99,20 @@ void OLJuceHost::initialise(const juce::String &commandLineParameters) {
                                                  &deviceSetup
     );
     std::cout << "Initialize result: " << result << std::endl;
+    if (result.length() == 0) {
+        std::cout << "Audio device initialized. Starting pipeline..." << std::endl;
+        this->deviceManager.addAudioCallback(this);
+    }
 }
 
 void OLJuceHost::shutdown() {
     std::cout << "Shutdown OLJuceHost..." << std::endl;
+}
+
+void OLJuceHost::audioDeviceAboutToStart(juce::AudioIODevice *device) {
+    std::cout << "Audio device starting..." << std::endl;
+}
+
+void OLJuceHost::audioDeviceStopped() {
+    std::cout << "Audio device stopped..." << std::endl;
 }

@@ -9,7 +9,8 @@
 
 #ifndef HOST_H
 #define HOST_H
-class OLJuceHost : public juce::JUCEApplication  {
+
+class OLJuceHost final : public juce::JUCEApplication, public juce::AudioIODeviceCallback {
 public:
     const juce::String getApplicationName() override;
 
@@ -18,6 +19,10 @@ public:
     void initialise(const juce::String &commandLineParameters) override;
 
     void shutdown() override;
+
+    void audioDeviceAboutToStart(juce::AudioIODevice *device) override;
+
+    void audioDeviceStopped() override;
 
 private:
     juce::AudioDeviceManager deviceManager;
