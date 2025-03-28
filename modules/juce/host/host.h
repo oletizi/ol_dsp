@@ -4,11 +4,12 @@
 #pragma once
 #include <iostream>
 #include <juce_gui_basics/juce_gui_basics.h>
+#include <juce_audio_devices/juce_audio_devices.h>
 #include <juce_audio_processors/juce_audio_processors.h>
 
 #ifndef HOST_H
 #define HOST_H
-class OLJuceHost : public juce::JUCEApplication {
+class OLJuceHost : public juce::JUCEApplication  {
 public:
     const juce::String getApplicationName() override;
 
@@ -19,6 +20,7 @@ public:
     void shutdown() override;
 
 private:
+    juce::AudioDeviceManager deviceManager;
     juce::AudioPluginFormatManager formatManager;
     juce::KnownPluginList knownPlugins;
     juce::Array<std::unique_ptr<juce::AudioPluginInstance>> instances;

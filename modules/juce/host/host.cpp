@@ -14,6 +14,36 @@ const juce::String OLJuceHost::getApplicationVersion() {
 
 void OLJuceHost::initialise(const juce::String &commandLineParameters) {
     std::cout << "Initialising OLJuceHost..." << std::endl;
+    // this->deviceManager.initialise(2, 2);
+    // setup();
+    const juce::String outputDevice = "MacBook Pro Speakers";
+
+    const juce::AudioDeviceManager::AudioDeviceSetup deviceSetup{
+        .bufferSize = 128,
+        .sampleRate = 44100,
+        .inputChannels = 2,
+        .outputChannels = 2,
+        .outputDeviceName = outputDevice,
+        .useDefaultInputChannels = true,
+        .useDefaultOutputChannels = true
+    };
+
+    auto currentSetup = this->deviceManager.getAudioDeviceSetup();
+    std::cout << "Current setup" << std::endl;
+    std::cout << "  input device: " << currentSetup.inputDeviceName << std::endl;
+    std::cout << "  output device: " << currentSetup.outputDeviceName << std::endl;
+    std::cout << "  sample rate: " << currentSetup.sampleRate << std::endl;
+    std::cout << "  num channels: " << currentSetup.outputChannels.toString(10) << std::endl;
+    for (auto type: this->deviceManager.getAvailableDeviceTypes()) {
+        std::cout << "Device type: " << type->getTypeName() << std::endl;
+        for (auto name: type->getDeviceNames(true)) {
+            std::cout << "  input: " << name << std::endl;
+        }
+        for (auto name: type->getDeviceNames()) {
+            std::cout << "  output: " << name << std::endl;
+        }
+    }
+
     formatManager.addDefaultFormats();
     std::cout << "Num formats: " << formatManager.getNumFormats() << std::endl;
     const juce::String toLoad = "TAL"; //TAL Reverb 4 Plugin"; // TODO: make this configurable
@@ -48,12 +78,27 @@ void OLJuceHost::initialise(const juce::String &commandLineParameters) {
         std::cout << "instantiating: " << plugDescription.name << std::endl;
         auto plug = formatManager.createPluginInstance(
             plugDescription, 441000, 128, errorMessage);
-        auto params = plug->getParameters();
-        for ( auto param : params) {
-            std::cout << "  param: " << param->getName(100) << std::endl;
-        }
+        // auto params = plug->getParameters();
+        // for ( auto param : params) {
+        //     std::cout << "  param: " << param->getName(100) << std::endl;
+        // }
+
         this->instances.add(std::move(plug));
     }
+    // String initialise (int numInputChannelsNeeded,
+    //                int numOutputChannelsNeeded,
+    //                const XmlElement* savedState,
+    //                bool selectDefaultDeviceOnFailure,
+    //                const String& preferredDefaultDeviceName = String(),
+    //                const AudioDeviceSetup* preferredSetupOptions = nullptr);
+    auto result = this->deviceManager.initialise(1,
+                                                 2,
+                                                 nullptr,
+                                                 true,
+                                                 outputDevice,
+                                                 &deviceSetup
+    );
+    std::cout << "Initialize result: " << result << std::endl;
 }
 
 void OLJuceHost::shutdown() {
