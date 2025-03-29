@@ -11,38 +11,56 @@
 #define HOST_H
 
 namespace ol::jucehost {
+    struct ControlMap {
+        const juce::String parameterName;
+        const int midiCC;
+    };
 
+    struct PluginConfig {
+        const juce::String *name;
+        const std::vector<ControlMap> *controlMaps;
+    };
 
-class OLJuceHost final : public juce::JUCEApplication,
-                         public juce::AudioIODeviceCallback,
-                         public juce::MidiInputCallback {
-public:
-    const juce::String getApplicationName() override;
+    struct HostConfig {
+        juce::String midiInputDevice, audioInputDevice, audioOutputDevice;
+        std::vector<PluginConfig *> plugins;
+        int inputChannelCount = 2;
+        int outputChannelCount = 2;
+        double sampleRate = 44100;
+        int bufferSize = 128;
+    };
 
-    const juce::String getApplicationVersion() override;
+    class OLJuceHost final : public juce::JUCEApplication,
+                             public juce::AudioIODeviceCallback,
+                             public juce::MidiInputCallback {
+    public:
+        const juce::String getApplicationName() override;
 
-    void initialise(const juce::String &commandLineParameters) override;
+        const juce::String getApplicationVersion() override;
 
-    void shutdown() override;
+        void initialise(const juce::String &commandLineParameters) override;
 
-    void audioDeviceAboutToStart(juce::AudioIODevice *device) override;
+        void shutdown() override;
 
-    void audioDeviceIOCallbackWithContext(const float *const*inputChannelData, int numInputChannels,
-                                          float *const*outputChannelData, int numOutputChannels, int
-                                          numSamples, const juce::AudioIODeviceCallbackContext &context) override;
+        void audioDeviceAboutToStart(juce::AudioIODevice *device) override;
 
-    void audioDeviceStopped() override;
+        void audioDeviceIOCallbackWithContext(const float *const*inputChannelData, int numInputChannels,
+                                              float *const*outputChannelData, int numOutputChannels, int
+                                              numSamples, const juce::AudioIODeviceCallbackContext &context) override;
 
-    void handleIncomingMidiMessage(juce::MidiInput *source, const juce::MidiMessage &message) override;
+        void audioDeviceStopped() override;
 
-private:
-    juce::AudioDeviceManager deviceManager;
-    juce::AudioPluginFormatManager formatManager;
-    juce::KnownPluginList knownPlugins;
-    std::vector<std::unique_ptr<juce::AudioPluginInstance> > instances;
-    juce::AudioBuffer<float> audioBuffer;
-    int count = 0;
-};
+        void handleIncomingMidiMessage(juce::MidiInput *source, const juce::MidiMessage &message) override;
+
+    private:
+        HostConfig config;
+        juce::AudioDeviceManager deviceManager;
+        juce::AudioPluginFormatManager formatManager;
+        juce::KnownPluginList knownPlugins;
+        std::vector<std::unique_ptr<juce::AudioPluginInstance> > instances;
+        juce::AudioBuffer<float> audioBuffer;
+        int count = 0;
+    };
 }
 #endif //HOST_H
 START_JUCE_APPLICATION(ol::jucehost::OLJuceHost)

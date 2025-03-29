@@ -3,6 +3,7 @@
 //
 
 #include "host.h"
+
 namespace ol::jucehost {
     const juce::String OLJuceHost::getApplicationName() {
         return "JuceHello";
@@ -15,18 +16,28 @@ namespace ol::jucehost {
     void OLJuceHost::initialise(const juce::String &commandLineParameters) {
         std::cout << "Initialising OLJuceHost..." << std::endl;
 
-        const juce::String audioInputDevice = "Volt 4";
-        const juce::String audioOutputDevice = "Volt 4";
-        const juce::String midiInputDevice = "Volt 4";
-        const juce::String toLoad = "AUReverb"; //"TAL Reverb 4 Plugin"; // TODO: make this configurable
+        auto controlMaps = new std::vector<ControlMap>();
+        controlMaps->push_back(ControlMap{"Low Freq Decay", 80});
+        controlMaps->push_back(ControlMap{"High Freq Decay", 81});
+        controlMaps->push_back(ControlMap{"Gain", 82});
+        controlMaps->push_back(ControlMap{"Dry/Wet Mix", 83});
+
+        auto cfg = new PluginConfig();
+        cfg->name = new juce::String("AUReverb");
+        cfg->controlMaps = controlMaps;
+        this->config.plugins.push_back(cfg);
+
+        this->config.audioInputDevice = "Volt 4";
+        this->config.audioOutputDevice = "Volt 4";
+        this->config.midiInputDevice = "Volt 4";
 
         const juce::AudioDeviceManager::AudioDeviceSetup deviceSetup{
-            .bufferSize = 128,
-            .sampleRate = 44100,
-            .inputChannels = 2,
-            .outputChannels = 2,
-            .inputDeviceName = audioInputDevice,
-            .outputDeviceName = audioOutputDevice,
+            .bufferSize = this->config.bufferSize,
+            .sampleRate = this->config.sampleRate,
+            .inputChannels = this->config.inputChannelCount,
+            .outputChannels = this->config.outputChannelCount,
+            .inputDeviceName = this->config.audioInputDevice,
+            .outputDeviceName = this->config.audioOutputDevice,
             .useDefaultInputChannels = true,
             .useDefaultOutputChannels = true
         };
@@ -75,11 +86,13 @@ namespace ol::jucehost {
             while (more && ++count < scanMax) {
                 auto next = scanner->getNextPluginFileThatWillBeScanned();
                 more = next.length();
-                if (next.contains(toLoad)) {
-                    scanner->scanNextFile(true, pluginName);
-                    std::cout << "  Scanned: " << pluginName << std::endl;
-                } else {
-                    scanner->skipNextFile();
+                for (const auto pluginConfig: this->config.plugins) {
+                    if (next.contains(* pluginConfig->name)) {
+                        scanner->scanNextFile(true, pluginName);
+                        std::cout << "  Scanned: " << pluginName << std::endl;
+                    } else {
+                        scanner->skipNextFile();
+                    }
                 }
             }
         }
@@ -98,7 +111,7 @@ namespace ol::jucehost {
                                                      deviceSetup.outputChannels.toInteger(),
                                                      nullptr,
                                                      true,
-                                                     audioOutputDevice,
+                                                     this->config.audioOutputDevice,
                                                      &deviceSetup
         );
         std::cout << "Initialize result: " << result << std::endl;
@@ -121,11 +134,13 @@ namespace ol::jucehost {
         std::cout << "==============================" << std::endl;
         std::cout << "Midi input devices:" << std::endl;
         for (const auto midiInputDevice: midiInputs) {
-            std::cout << "  Name: " << midiInputDevice.name << "; Identifier: " <<  midiInputDevice.identifier << std::endl;
+            std::cout << "  Name: " << midiInputDevice.name << "; Identifier: " << midiInputDevice.identifier <<
+                    std::endl;
             if (!this->deviceManager.isMidiInputDeviceEnabled(midiInputDevice.identifier)) {
                 std::cout << "    Enabling: " << midiInputDevice.name << std::endl;
                 this->deviceManager.setMidiInputDeviceEnabled(midiInputDevice.identifier, true);
-                std::cout << "    Enabled: " << this->deviceManager.isMidiInputDeviceEnabled(midiInputDevice.identifier) << std::endl;
+                std::cout << "    Enabled: " << this->deviceManager.isMidiInputDeviceEnabled(midiInputDevice.identifier)
+                        << std::endl;
             }
             std::cout << "    Adding this as a midi input device callback to: " << midiInputDevice.name << std::endl;
             this->deviceManager.addMidiInputDeviceCallback(midiInputDevice.identifier, this);
