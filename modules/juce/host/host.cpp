@@ -3,6 +3,7 @@
 //
 
 #include "host.h"
+#include <ol_corelib.h>
 
 namespace ol::jucehost {
     const juce::String OLJuceHost::getApplicationName() {
@@ -23,7 +24,7 @@ namespace ol::jucehost {
         controlMaps->push_back(ControlMap{"Dry/Wet Mix", 83});
 
         auto cfg = new PluginConfig();
-        cfg->name = new juce::String("AUReverb");
+        cfg->name = juce::String("AUReverb");
         cfg->controlMaps = controlMaps;
         this->config.plugins.push_back(cfg);
 
@@ -87,7 +88,7 @@ namespace ol::jucehost {
                 auto next = scanner->getNextPluginFileThatWillBeScanned();
                 more = next.length();
                 for (const auto pluginConfig: this->config.plugins) {
-                    if (next.contains(* pluginConfig->name)) {
+                    if (next.contains(pluginConfig->name)) {
                         scanner->scanNextFile(true, pluginName);
                         std::cout << "  Scanned: " << pluginName << std::endl;
                     } else {
@@ -147,7 +148,6 @@ namespace ol::jucehost {
         }
         std::cout << std::endl;
 
-        // for (int i = 0; i < this->instances.size(); ++i) {
         for (const auto &plug: this->instances) {
             // https://forum.juce.com/t/setting-buses-layout-of-hosted-plugin/55262
             // TODO: make number of inputs and outputs configurable
@@ -200,15 +200,6 @@ namespace ol::jucehost {
 
         juce::MidiBuffer messages;
         for (const auto &plug: this->instances) {
-            if (debug) {
-                for (const auto param: plug->getParameters()) {
-                    // TODO: remove me when plugin parameters are mapped
-                    if (param->getName(100).startsWith("Dry")) {
-                        param->setValue(.5);
-                    }
-                    std::cout << "    " << param->getName(100) << ": " << param->getValue() << std::endl;
-                }
-            }
             plug->processBlock(audioBuffer, messages);
         }
 
@@ -229,5 +220,26 @@ namespace ol::jucehost {
 
     void OLJuceHost::handleIncomingMidiMessage(juce::MidiInput *source, const juce::MidiMessage &message) {
         std::cout << "MIDI: " << message.getDescription() << std::endl;
+        if (message.isController()) {
+            for (const auto cfg: this->config.plugins) {
+                for (const auto [parameterName, midiCC]: *cfg->controlMaps) {
+                    if (midiCC == message.getControllerNumber()) {
+                        std::cout << "MIDI CC: " << message.getControllerNumber() << " maps to " << cfg->name <<
+                                parameterName << std::endl;
+                        for (const auto &instance: this->instances) {
+                            for (const auto parameter: instance->getParameters()) {
+                                if (parameter->getName(100).startsWith(parameterName)) {
+                                    t_sample value = core::scale(message.getControllerValue(), 0, 127, 0, 1, 1);
+                                    std::cout << "Mapped cc: " << midiCC << " to parameter: " << parameter->getName(100)
+                                            << "; midi cc value: " << midiCC << parameter->getValue()
+                                            << "; param value: " << value << std::endl;
+                                    parameter->setValue(value);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }
