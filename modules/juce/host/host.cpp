@@ -36,7 +36,9 @@ void OLJuceHost::initialise(const juce::String &commandLineParameters) {
     std::cout << "  input device: " << currentSetup.inputDeviceName << std::endl;
     std::cout << "  output device: " << currentSetup.outputDeviceName << std::endl;
     std::cout << "  sample rate: " << currentSetup.sampleRate << std::endl;
-    std::cout << "  num channels: " << currentSetup.outputChannels.toString(10) << std::endl;
+    std::cout << "  buffer size: " << currentSetup.bufferSize << std::endl;
+    std::cout << "  num input channels: " << currentSetup.inputChannels.toString(10) << std::endl;
+    std::cout << "  num output channels: " << currentSetup.outputChannels.toString(10) << std::endl;
     for (auto type: this->deviceManager.getAvailableDeviceTypes()) {
         std::cout << "Device type: " << type->getTypeName() << std::endl;
         for (auto name: type->getDeviceNames(true)) {
@@ -95,8 +97,8 @@ void OLJuceHost::initialise(const juce::String &commandLineParameters) {
     //                bool selectDefaultDeviceOnFailure,
     //                const String& preferredDefaultDeviceName = String(),
     //                const AudioDeviceSetup* preferredSetupOptions = nullptr);
-    auto result = this->deviceManager.initialise(1,
-                                                 2,
+    auto result = this->deviceManager.initialise(deviceSetup.inputChannels.toInteger(),
+                                                 deviceSetup.outputChannels.toInteger(),
                                                  nullptr,
                                                  true,
                                                  outputDevice,
