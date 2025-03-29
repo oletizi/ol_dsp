@@ -137,36 +137,49 @@ void OLJuceHost::audioDeviceIOCallbackWithContext(const float *const*inputChanne
     if (numInputChannels == 0) {
         return;
     }
-    audioBuffer.setSize(numOutputChannels, numSamples, false, false, true);
-    for (int ch = 0; ch < numOutputChannels; ++ch) {
-        int i = ch + 1 > numInputChannels ? 0 : ch;
-        if (inputChannelData[ch] != nullptr) {
-            audioBuffer.copyFrom(ch, 0, inputChannelData[i], numSamples);
-        } else {
-            audioBuffer.clear(ch, 0, numSamples);
-        }
-    }
 
     count++;
-    if (count % 1000 == 0) {
+    const bool debug = count % 1000 == 0;
+    if (debug) {
+        count = 0;
+    }
+
+    audioBuffer.setSize(numOutputChannels, numSamples, false, false, true);
+
+    if (debug) {
         std::cout << "count: " << count <<
                 "; input channels: " << numInputChannels <<
                 "; output channels: " << numOutputChannels <<
                 "; sample count: " << numSamples <<
                 "; audio buffer: channels: " << audioBuffer.getNumChannels() <<
                 std::endl;
-        count = 0;
     }
 
-    juce::MidiBuffer messages;
-    for (int i = 0; i < this->instances.size(); ++i) {
-        this->instances.getReference(i)->processBlock(audioBuffer, messages);
+    for (int ch = 0; ch < numOutputChannels; ch++) {
+        const int i = ch >= numInputChannels ? 0 : ch;
+        // const int i = ch;
+        if (debug) {
+            std::cout << "  in->buf: ch: " << ch << "; i: " << i << std::endl;
+        }
+        if (inputChannelData[i] != nullptr) {
+            audioBuffer.copyFrom(ch, 0, inputChannelData[i], numSamples);
+        } else {
+            audioBuffer.clear(ch, 0, numSamples);
+        }
     }
+
+
+    // juce::MidiBuffer messages;
+    // for (int i = 0; i < this->instances.size(); ++i) {
+    //     this->instances.getReference(i)->processBlock(audioBuffer, messages);
+    // }
 
     // === Copy audioBuffer into output ===
-    for (int ch = 0; ch < numOutputChannels; ++ch) {
+    for (int ch = 0; ch < numOutputChannels; ch++) {
         float *dest = outputChannelData[ch];
-
+        if (debug) {
+            std::cout << "  buf->out  ch: " << ch << "; dest: " << dest << std::endl;
+        }
         if (const float *src = audioBuffer.getReadPointer(ch); dest != nullptr && src != nullptr)
             std::memcpy(dest, src, sizeof(float) * numSamples);
     }
