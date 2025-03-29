@@ -112,14 +112,11 @@ void OLJuceHost::audioDeviceAboutToStart(juce::AudioIODevice *device) {
     for (const auto & plug : this->instances) {
         // https://forum.juce.com/t/setting-buses-layout-of-hosted-plugin/55262
         // TODO: make number of inputs and outputs configurable
-        // auto layout = this->instances.getReference(i)->getBusesLayout();
         auto layout = plug->getBusesLayout();
         for (auto bus: layout.getBuses(true)) {
-            auto count = bus.size();
+            const auto count = bus.size();
             std::cout << "Bus size: " << count << std::endl;
         }
-        // this->instances.getReference(i)->prepareToPlay(device->getCurrentSampleRate(),
-        //                                                device->getCurrentBufferSizeSamples());
         plug->prepareToPlay(device->getCurrentSampleRate(), device->getCurrentBufferSizeSamples());
     }
 }
@@ -151,7 +148,6 @@ void OLJuceHost::audioDeviceIOCallbackWithContext(const float *const*inputChanne
 
     for (int ch = 0; ch < numOutputChannels; ch++) {
         const int i = ch >= numInputChannels ? 0 : ch;
-        // const int i = ch;
         if (debug) {
             std::cout << "  in->buf: ch: " << ch << "; i: " << i << std::endl;
         }
@@ -164,18 +160,16 @@ void OLJuceHost::audioDeviceIOCallbackWithContext(const float *const*inputChanne
 
 
     juce::MidiBuffer messages;
-    // for (int i = 0; i < this->instances.size(); ++i) {
     for (const auto & plug: this->instances) {
         if (debug) {
-            // for (const auto param: this->instances.getReference(i)->getParameters()) {
             for (const auto param: plug->getParameters()) {
+                // TODO: remove me when plugin parameters are mapped
                 if (param->getName(100).startsWith("Dry")) {
                     param->setValue(.5);
                 }
                 std::cout << "    " << param->getName(100) << ": " << param->getValue() << std::endl;
             }
         }
-        // this->instances.getReference(i)->processBlock(audioBuffer, messages);
         plug->processBlock(audioBuffer, messages);
     }
 
