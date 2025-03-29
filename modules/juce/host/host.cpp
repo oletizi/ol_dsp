@@ -15,8 +15,9 @@ const juce::String OLJuceHost::getApplicationVersion() {
 void OLJuceHost::initialise(const juce::String &commandLineParameters) {
     std::cout << "Initialising OLJuceHost..." << std::endl;
 
-    const juce::String inputDevice = "Volt 4";
-    const juce::String outputDevice = "Volt 4";
+    const juce::String audioInputDevice = "Volt 4";
+    const juce::String audioOutputDevice = "Volt 4";
+    const juce::String midiInputDevice = "Volt 4";
     const juce::String toLoad = "AUReverb"; //"TAL Reverb 4 Plugin"; // TODO: make this configurable
 
     const juce::AudioDeviceManager::AudioDeviceSetup deviceSetup{
@@ -24,13 +25,16 @@ void OLJuceHost::initialise(const juce::String &commandLineParameters) {
         .sampleRate = 44100,
         .inputChannels = 2,
         .outputChannels = 2,
-        .inputDeviceName = inputDevice,
-        .outputDeviceName = outputDevice,
+        .inputDeviceName = audioInputDevice,
+        .outputDeviceName = audioOutputDevice,
         .useDefaultInputChannels = true,
         .useDefaultOutputChannels = true
     };
 
+    // === Dump audio device info ===
     auto currentSetup = this->deviceManager.getAudioDeviceSetup();
+    std::cout << "==============================" << std::endl;
+    std::cout << "Audio devices" << std::endl;
     std::cout << "Current setup" << std::endl;
     std::cout << "  input device: " << currentSetup.inputDeviceName << std::endl;
     std::cout << "  output device: " << currentSetup.outputDeviceName << std::endl;
@@ -38,16 +42,21 @@ void OLJuceHost::initialise(const juce::String &commandLineParameters) {
     std::cout << "  buffer size: " << currentSetup.bufferSize << std::endl;
     std::cout << "  num input channels: " << currentSetup.inputChannels.toString(10) << std::endl;
     std::cout << "  num output channels: " << currentSetup.outputChannels.toString(10) << std::endl;
-    for (auto type: this->deviceManager.getAvailableDeviceTypes()) {
+    for (const auto type: this->deviceManager.getAvailableDeviceTypes()) {
         std::cout << "Device type: " << type->getTypeName() << std::endl;
-        for (auto name: type->getDeviceNames(true)) {
+        for (const auto name: type->getDeviceNames(true)) {
             std::cout << "  input: " << name << std::endl;
         }
-        for (auto name: type->getDeviceNames()) {
+        for (const auto name: type->getDeviceNames()) {
             std::cout << "  output: " << name << std::endl;
         }
     }
+    std::cout << std::endl;
 
+
+    // === Scan & instantiate plugins ===
+    std::cout << "==============================" << std::endl;
+    std::cout << "Scanning plugins..." << std::endl;
     formatManager.addDefaultFormats();
     std::cout << "Num formats: " << formatManager.getNumFormats() << std::endl;
     for (int i = 0; i < formatManager.getNumFormats(); ++i) {
@@ -90,7 +99,7 @@ void OLJuceHost::initialise(const juce::String &commandLineParameters) {
                                                  deviceSetup.outputChannels.toInteger(),
                                                  nullptr,
                                                  true,
-                                                 outputDevice,
+                                                 audioOutputDevice,
                                                  &deviceSetup
     );
     std::cout << "Initialize result: " << result << std::endl;
@@ -108,8 +117,24 @@ void OLJuceHost::audioDeviceAboutToStart(juce::AudioIODevice *device) {
     std::cout << "Audio device starting..." << std::endl;
     std::cout << "Audio device: " << device->getName() << std::endl;
 
+    // === Dump midi device info ===
+    const auto midiInputs = juce::MidiInput::getAvailableDevices();
+    std::cout << "==============================" << std::endl;
+    std::cout << "Midi input devices:" << std::endl;
+    for (const auto midiInputDevice: midiInputs) {
+        std::cout << "  Name: " << midiInputDevice.name << "; Identifier: " <<  midiInputDevice.identifier << std::endl;
+        if (!this->deviceManager.isMidiInputDeviceEnabled(midiInputDevice.identifier)) {
+            std::cout << "    Enabling: " << midiInputDevice.name << std::endl;
+            this->deviceManager.setMidiInputDeviceEnabled(midiInputDevice.identifier, true);
+            std::cout << "    Enabled: " << this->deviceManager.isMidiInputDeviceEnabled(midiInputDevice.identifier) << std::endl;
+        }
+        std::cout << "    Adding this as a midi input device callback to: " << midiInputDevice.name << std::endl;
+        this->deviceManager.addMidiInputDeviceCallback(midiInputDevice.identifier, this);
+    }
+    std::cout << std::endl;
+
     // for (int i = 0; i < this->instances.size(); ++i) {
-    for (const auto & plug : this->instances) {
+    for (const auto &plug: this->instances) {
         // https://forum.juce.com/t/setting-buses-layout-of-hosted-plugin/55262
         // TODO: make number of inputs and outputs configurable
         auto layout = plug->getBusesLayout();
@@ -160,7 +185,7 @@ void OLJuceHost::audioDeviceIOCallbackWithContext(const float *const*inputChanne
 
 
     juce::MidiBuffer messages;
-    for (const auto & plug: this->instances) {
+    for (const auto &plug: this->instances) {
         if (debug) {
             for (const auto param: plug->getParameters()) {
                 // TODO: remove me when plugin parameters are mapped
@@ -186,4 +211,8 @@ void OLJuceHost::audioDeviceIOCallbackWithContext(const float *const*inputChanne
 
 void OLJuceHost::audioDeviceStopped() {
     std::cout << "Audio device stopped..." << std::endl;
+}
+
+void OLJuceHost::handleIncomingMidiMessage(juce::MidiInput *source, const juce::MidiMessage &message) {
+    std::cout << "MIDI: " << message.getDescription() << std::endl;
 }

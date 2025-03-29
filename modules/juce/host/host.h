@@ -10,7 +10,9 @@
 #ifndef HOST_H
 #define HOST_H
 
-class OLJuceHost final : public juce::JUCEApplication, public juce::AudioIODeviceCallback {
+class OLJuceHost final : public juce::JUCEApplication,
+                         public juce::AudioIODeviceCallback,
+                         public juce::MidiInputCallback {
 public:
     const juce::String getApplicationName() override;
 
@@ -22,18 +24,19 @@ public:
 
     void audioDeviceAboutToStart(juce::AudioIODevice *device) override;
 
-    void audioDeviceIOCallbackWithContext(const float* const* inputChannelData, int numInputChannels, float *const*outputChannelData, int numOutputChannels, int
+    void audioDeviceIOCallbackWithContext(const float *const*inputChannelData, int numInputChannels,
+                                          float *const*outputChannelData, int numOutputChannels, int
                                           numSamples, const juce::AudioIODeviceCallbackContext &context) override;
 
     void audioDeviceStopped() override;
+
+    void handleIncomingMidiMessage(juce::MidiInput *source, const juce::MidiMessage &message) override;
 
 private:
     juce::AudioDeviceManager deviceManager;
     juce::AudioPluginFormatManager formatManager;
     juce::KnownPluginList knownPlugins;
-    // TODO: make this a std::vector
-    // juce::Array<std::unique_ptr<juce::AudioPluginInstance>> instances;
-    std::vector<std::unique_ptr<juce::AudioPluginInstance>> instances;
+    std::vector<std::unique_ptr<juce::AudioPluginInstance> > instances;
     juce::AudioBuffer<float> audioBuffer;
     int count = 0;
 };
