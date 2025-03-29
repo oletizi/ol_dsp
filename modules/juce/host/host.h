@@ -31,7 +31,9 @@ private:
     juce::AudioDeviceManager deviceManager;
     juce::AudioPluginFormatManager formatManager;
     juce::KnownPluginList knownPlugins;
-    juce::Array<std::unique_ptr<juce::AudioPluginInstance>> instances;
+    // TODO: make this a std::vector
+    // juce::Array<std::unique_ptr<juce::AudioPluginInstance>> instances;
+    std::vector<std::unique_ptr<juce::AudioPluginInstance>> instances;
     juce::AudioBuffer<float> audioBuffer;
     int count = 0;
 };

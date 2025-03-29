@@ -3,7 +3,6 @@
 //
 
 #include "host.h"
-#include <cstdio>
 
 const juce::String OLJuceHost::getApplicationName() {
     return "JuceHello";
@@ -83,7 +82,8 @@ void OLJuceHost::initialise(const juce::String &commandLineParameters) {
         auto plug = formatManager.createPluginInstance(
             plugDescription, 441000, 128, errorMessage);
         if (plug != nullptr) {
-            this->instances.add(std::move(plug));
+            //this->instances.add(std::move(plug));
+            this->instances.push_back(std::move(plug));
         }
     }
     auto result = this->deviceManager.initialise(deviceSetup.inputChannels.toInteger(),
@@ -108,16 +108,19 @@ void OLJuceHost::audioDeviceAboutToStart(juce::AudioIODevice *device) {
     std::cout << "Audio device starting..." << std::endl;
     std::cout << "Audio device: " << device->getName() << std::endl;
 
-    for (int i = 0; i < this->instances.size(); ++i) {
+    // for (int i = 0; i < this->instances.size(); ++i) {
+    for (const auto & plug : this->instances) {
         // https://forum.juce.com/t/setting-buses-layout-of-hosted-plugin/55262
         // TODO: make number of inputs and outputs configurable
-        auto layout = this->instances.getReference(i)->getBusesLayout();
+        // auto layout = this->instances.getReference(i)->getBusesLayout();
+        auto layout = plug->getBusesLayout();
         for (auto bus: layout.getBuses(true)) {
             auto count = bus.size();
             std::cout << "Bus size: " << count << std::endl;
         }
-        this->instances.getReference(i)->prepareToPlay(device->getCurrentSampleRate(),
-                                                       device->getCurrentBufferSizeSamples());
+        // this->instances.getReference(i)->prepareToPlay(device->getCurrentSampleRate(),
+        //                                                device->getCurrentBufferSizeSamples());
+        plug->prepareToPlay(device->getCurrentSampleRate(), device->getCurrentBufferSizeSamples());
     }
 }
 
@@ -161,17 +164,19 @@ void OLJuceHost::audioDeviceIOCallbackWithContext(const float *const*inputChanne
 
 
     juce::MidiBuffer messages;
-    for (int i = 0; i < this->instances.size(); ++i) {
+    // for (int i = 0; i < this->instances.size(); ++i) {
+    for (const auto & plug: this->instances) {
         if (debug) {
-            std::cout << "  plug[" << i << "].processBlock()" << std::endl;
-            for (const auto param: this->instances.getReference(i)->getParameters()) {
+            // for (const auto param: this->instances.getReference(i)->getParameters()) {
+            for (const auto param: plug->getParameters()) {
                 if (param->getName(100).startsWith("Dry")) {
                     param->setValue(.5);
                 }
                 std::cout << "    " << param->getName(100) << ": " << param->getValue() << std::endl;
             }
         }
-        this->instances.getReference(i)->processBlock(audioBuffer, messages);
+        // this->instances.getReference(i)->processBlock(audioBuffer, messages);
+        plug->processBlock(audioBuffer, messages);
     }
 
     // === Copy audioBuffer into output ===
