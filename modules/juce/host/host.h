@@ -10,6 +10,9 @@
 #ifndef HOST_H
 #define HOST_H
 
+namespace ol::jucehost {
+
+
 class OLJuceHost final : public juce::JUCEApplication,
                          public juce::AudioIODeviceCallback,
                          public juce::MidiInputCallback {
@@ -40,5 +43,6 @@ private:
     juce::AudioBuffer<float> audioBuffer;
     int count = 0;
 };
+}
 #endif //HOST_H
-START_JUCE_APPLICATION(OLJuceHost)
+START_JUCE_APPLICATION(ol::jucehost::OLJuceHost)
