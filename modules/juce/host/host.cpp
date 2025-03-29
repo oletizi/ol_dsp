@@ -219,8 +219,11 @@ namespace ol::jucehost {
     }
 
     void OLJuceHost::handleIncomingMidiMessage(juce::MidiInput *source, const juce::MidiMessage &message) {
-        // TODO: push parameter changes to a queue; dequeue and apply them in the render loop so they're applied atomically
-        // per buffer cycle
+        // TODO:
+        // * prepare the cc->parameter mappings so it's an array lookup rather than whatever this ghastly
+        //   nested wad of fors and ifs is...
+        // * push parameter changes to a queue; dequeue and apply them in the render loop so they're applied atomically
+        //   per buffer cycle
         std::cout << "MIDI: " << message.getDescription() << std::endl;
         if (message.isController()) {
             for (const auto cfg: this->config.plugins) {
