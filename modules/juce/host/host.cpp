@@ -82,21 +82,10 @@ void OLJuceHost::initialise(const juce::String &commandLineParameters) {
         std::cout << "instantiating: " << plugDescription.name << std::endl;
         auto plug = formatManager.createPluginInstance(
             plugDescription, 441000, 128, errorMessage);
-        // auto params = plug->getParameters();
-        // for ( auto param : params) {
-        //     std::cout << "  param: " << param->getName(100) << std::endl;
-        // }
         if (plug != nullptr) {
-            // plug->enableAllBuses();
             this->instances.add(std::move(plug));
         }
     }
-    // String initialise (int numInputChannelsNeeded,
-    //                int numOutputChannelsNeeded,
-    //                const XmlElement* savedState,
-    //                bool selectDefaultDeviceOnFailure,
-    //                const String& preferredDefaultDeviceName = String(),
-    //                const AudioDeviceSetup* preferredSetupOptions = nullptr);
     auto result = this->deviceManager.initialise(deviceSetup.inputChannels.toInteger(),
                                                  deviceSetup.outputChannels.toInteger(),
                                                  nullptr,
@@ -175,7 +164,7 @@ void OLJuceHost::audioDeviceIOCallbackWithContext(const float *const*inputChanne
     for (int i = 0; i < this->instances.size(); ++i) {
         if (debug) {
             std::cout << "  plug[" << i << "].processBlock()" << std::endl;
-            for (auto param: this->instances.getReference(i)->getParameters()) {
+            for (const auto param: this->instances.getReference(i)->getParameters()) {
                 if (param->getName(100).startsWith("Dry")) {
                     param->setValue(.5);
                 }
