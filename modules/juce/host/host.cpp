@@ -171,10 +171,19 @@ void OLJuceHost::audioDeviceIOCallbackWithContext(const float *const*inputChanne
     }
 
 
-    // juce::MidiBuffer messages;
-    // for (int i = 0; i < this->instances.size(); ++i) {
-    //     this->instances.getReference(i)->processBlock(audioBuffer, messages);
-    // }
+    juce::MidiBuffer messages;
+    for (int i = 0; i < this->instances.size(); ++i) {
+        if (debug) {
+            std::cout << "  plug[" << i << "].processBlock()" << std::endl;
+            for (auto param: this->instances.getReference(i)->getParameters()) {
+                if (param->getName(100).startsWith("Dry")) {
+                    param->setValue(.5);
+                }
+                std::cout << "    " << param->getName(100) << ": " << param->getValue() << std::endl;
+            }
+        }
+        this->instances.getReference(i)->processBlock(audioBuffer, messages);
+    }
 
     // === Copy audioBuffer into output ===
     for (int ch = 0; ch < numOutputChannels; ch++) {
