@@ -3,6 +3,7 @@
 //
 
 #include "host.h"
+#include <cstdio>
 
 const juce::String OLJuceHost::getApplicationName() {
     return "JuceHello";
@@ -14,16 +15,17 @@ const juce::String OLJuceHost::getApplicationVersion() {
 
 void OLJuceHost::initialise(const juce::String &commandLineParameters) {
     std::cout << "Initialising OLJuceHost..." << std::endl;
-    // this->deviceManager.initialise(2, 2);
-    // setup();
-    const juce::String outputDevice = "MacBook Pro Speakers";
-    const juce::String toLoad = "TAL Reverb 4 Plugin"; // TODO: make this configurable
+
+    const juce::String inputDevice = "Volt 4";
+    const juce::String outputDevice = "Volt 4";
+    const juce::String toLoad = "AUReverb"; //"TAL Reverb 4 Plugin"; // TODO: make this configurable
 
     const juce::AudioDeviceManager::AudioDeviceSetup deviceSetup{
         .bufferSize = 128,
         .sampleRate = 44100,
         .inputChannels = 2,
         .outputChannels = 2,
+        .inputDeviceName = inputDevice,
         .outputDeviceName = outputDevice,
         .useDefaultInputChannels = true,
         .useDefaultOutputChannels = true
@@ -82,8 +84,10 @@ void OLJuceHost::initialise(const juce::String &commandLineParameters) {
         // for ( auto param : params) {
         //     std::cout << "  param: " << param->getName(100) << std::endl;
         // }
-
-        this->instances.add(std::move(plug));
+        if (plug != nullptr) {
+            // plug->enableAllBuses();
+            this->instances.add(std::move(plug));
+        }
     }
     // String initialise (int numInputChannelsNeeded,
     //                int numOutputChannelsNeeded,
@@ -111,17 +115,25 @@ void OLJuceHost::shutdown() {
 
 void OLJuceHost::audioDeviceAboutToStart(juce::AudioIODevice *device) {
     std::cout << "Audio device starting..." << std::endl;
-    // for (int i = 0; i < this->instances.size(); ++i) {
-    //     // this->instances.getReference(i)->processBlock(audioBuffer, messages);
-    // }
+    std::cout << "Audio device: " << device->getName() << std::endl;
+
+    for (int i = 0; i < this->instances.size(); ++i) {
+        // https://forum.juce.com/t/setting-buses-layout-of-hosted-plugin/55262
+        // TODO: make number of inputs and outputs configurable
+        auto layout = this->instances.getReference(i)->getBusesLayout();
+        for (auto bus: layout.getBuses(true)) {
+            auto count = bus.size();
+            std::cout << "Bus size: " << count << std::endl;
+        }
+        this->instances.getReference(i)->prepareToPlay(device->getCurrentSampleRate(),
+                                                       device->getCurrentBufferSizeSamples());
+    }
 }
 
 void OLJuceHost::audioDeviceIOCallbackWithContext(const float *const*inputChannelData, int numInputChannels,
                                                   float *const*outputChannelData, int numOutputChannels,
-                                                  int numSamples,
+                                                  const int numSamples,
                                                   const juce::AudioIODeviceCallbackContext &context) {
-    // AudioIODeviceCallback::audioDeviceIOCallbackWithContext(inputChannelData, numInputChannels, outputChannelData,
-    //                                                         numOutputChannels, numSamples, context);
     if (numInputChannels == 0) {
         return;
     }
@@ -135,6 +147,17 @@ void OLJuceHost::audioDeviceIOCallbackWithContext(const float *const*inputChanne
         }
     }
 
+    count++;
+    if (count % 1000 == 0) {
+        std::cout << "count: " << count <<
+                "; input channels: " << numInputChannels <<
+                "; output channels: " << numOutputChannels <<
+                "; sample count: " << numSamples <<
+                "; audio buffer: channels: " << audioBuffer.getNumChannels() <<
+                std::endl;
+        count = 0;
+    }
+
     juce::MidiBuffer messages;
     for (int i = 0; i < this->instances.size(); ++i) {
         this->instances.getReference(i)->processBlock(audioBuffer, messages);
@@ -143,9 +166,8 @@ void OLJuceHost::audioDeviceIOCallbackWithContext(const float *const*inputChanne
     // === Copy audioBuffer into output ===
     for (int ch = 0; ch < numOutputChannels; ++ch) {
         float *dest = outputChannelData[ch];
-        const float *src = audioBuffer.getReadPointer(ch);
 
-        if (dest != nullptr && src != nullptr)
+        if (const float *src = audioBuffer.getReadPointer(ch); dest != nullptr && src != nullptr)
             std::memcpy(dest, src, sizeof(float) * numSamples);
     }
 }

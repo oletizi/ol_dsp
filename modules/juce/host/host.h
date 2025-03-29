@@ -33,6 +33,7 @@ private:
     juce::KnownPluginList knownPlugins;
     juce::Array<std::unique_ptr<juce::AudioPluginInstance>> instances;
     juce::AudioBuffer<float> audioBuffer;
+    int count = 0;
 };
 #endif //HOST_H
 START_JUCE_APPLICATION(OLJuceHost)
