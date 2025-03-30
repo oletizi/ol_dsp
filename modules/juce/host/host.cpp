@@ -94,6 +94,7 @@ namespace ol::jucehost {
             int count = 0;
             while (more && ++count < scanMax) {
                 auto next = scanner->getNextPluginFileThatWillBeScanned();
+                // std::cout << "Next Plugin: " << next << std::endl;
                 more = next.length();
                 bool shouldIgnore = false;
                 for (const auto ignore: config.ignore) {
@@ -138,7 +139,7 @@ namespace ol::jucehost {
                 }
             }
             if (shouldIgnore) { continue; }
-
+            std::cout << "Instantiating " << plugDescription.name << std::endl;
             auto plug = formatManager.createPluginInstance(
                 plugDescription, 441000, 128, errorMessage);
             if (plug != nullptr) {
