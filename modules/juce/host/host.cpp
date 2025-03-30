@@ -17,11 +17,11 @@ namespace ol::jucehost {
     void OLJuceHost::initialise(const juce::String &commandLineParameters) {
         std::cout << "Initialising OLJuceHost..." << std::endl;
 
-        auto controlMaps = new std::vector<ControlMap>();
-        controlMaps->push_back(ControlMap{"Low Freq Decay", 80});
-        controlMaps->push_back(ControlMap{"High Freq Decay", 81});
-        controlMaps->push_back(ControlMap{"Gain", 82});
-        controlMaps->push_back(ControlMap{"Dry/Wet Mix", 83});
+        auto controlMaps = new std::vector<ControlMapConfig>();
+        controlMaps->push_back(ControlMapConfig{"Low Freq Decay", 80});
+        controlMaps->push_back(ControlMapConfig{"High Freq Decay", 81});
+        controlMaps->push_back(ControlMapConfig{"Gain", 82});
+        controlMaps->push_back(ControlMapConfig{"Dry/Wet Mix", 83});
 
         auto cfg = new PluginConfig();
         cfg->name = juce::String("AUReverb");
@@ -158,6 +158,8 @@ namespace ol::jucehost {
             }
             plug->prepareToPlay(device->getCurrentSampleRate(), device->getCurrentBufferSizeSamples());
         }
+
+        this->mapCCs();
     }
 
     void OLJuceHost::audioDeviceIOCallbackWithContext(const float *const*inputChannelData, int numInputChannels,
@@ -218,6 +220,22 @@ namespace ol::jucehost {
         std::cout << "Audio device stopped..." << std::endl;
     }
 
+    void OLJuceHost::mapCCs() {
+        for (const auto cfg: this->config.plugins) {
+            for (const auto [parameterName, midiCC]: *cfg->controlMaps) {
+                for (const auto &instance: this->instances) {
+                    for (const auto parameter: instance->getParameters()) {
+                        if (parameter->getName(100).startsWith(parameterName)) {
+                            this->ccMap.emplace(midiCC, parameter);
+                            // t_sample value = core::scale(message.getControllerValue(), 0, 127, 0, 1, 1);
+                            // parameter->setValue(value);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     void OLJuceHost::handleIncomingMidiMessage(juce::MidiInput *source, const juce::MidiMessage &message) {
         // TODO:
         // * prepare the cc->parameter mappings so it's an array lookup rather than whatever this ghastly
@@ -226,25 +244,15 @@ namespace ol::jucehost {
         //   per buffer cycle
         std::cout << "MIDI: " << message.getDescription() << std::endl;
         if (message.isController()) {
-            for (const auto cfg: this->config.plugins) {
-                for (const auto [parameterName, midiCC]: *cfg->controlMaps) {
-                    if (midiCC == message.getControllerNumber()) {
-                        std::cout << "MIDI CC: " << message.getControllerNumber() << " maps to " << cfg->name <<
-                                parameterName << std::endl;
-                        for (const auto &instance: this->instances) {
-                            for (const auto parameter: instance->getParameters()) {
-                                if (parameter->getName(100).startsWith(parameterName)) {
-                                    t_sample value = core::scale(message.getControllerValue(), 0, 127, 0, 1, 1);
-                                    std::cout << "Mapped cc: " << midiCC << " to parameter: " << parameter->getName(100)
-                                            << "; midi cc value: " << midiCC << parameter->getValue()
-                                            << "; param value: " << value << std::endl;
-                                    parameter->setValue(value);
-                                }
-                            }
-                        }
-                    }
-                }
+            // mapCCs();
+            auto parameter = this->ccMap.at(message.getControllerNumber());
+            if (parameter != nullptr) {
+                const auto value = core::scale(message.getControllerValue(), 0, 127, 0, 1, 1);
+                std::cout << " Setting parameter: " << parameter->getName(100) << ": " << value << std::endl;
+                parameter->setValue(value);
             }
+
+            // parameter->setValue(value);
         }
     }
 }

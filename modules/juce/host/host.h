@@ -11,14 +11,14 @@
 #define HOST_H
 
 namespace ol::jucehost {
-    struct ControlMap {
+    struct ControlMapConfig {
         const juce::String parameterName;
         const int midiCC;
     };
 
     struct PluginConfig {
         juce::String name;
-        const std::vector<ControlMap> *controlMaps;
+        const std::vector<ControlMapConfig> *controlMaps;
     };
 
     struct HostConfig {
@@ -29,6 +29,7 @@ namespace ol::jucehost {
         double sampleRate = 44100;
         int bufferSize = 128;
     };
+
 
     class OLJuceHost final : public juce::JUCEApplication,
                              public juce::AudioIODeviceCallback,
@@ -50,6 +51,8 @@ namespace ol::jucehost {
 
         void audioDeviceStopped() override;
 
+        void mapCCs();
+
         void handleIncomingMidiMessage(juce::MidiInput *source, const juce::MidiMessage &message) override;
 
     private:
@@ -60,6 +63,7 @@ namespace ol::jucehost {
         std::vector<std::unique_ptr<juce::AudioPluginInstance> > instances;
         juce::AudioBuffer<float> audioBuffer;
         int count = 0;
+        std::map<int, juce::AudioProcessorParameter *> ccMap;
     };
 }
 #endif //HOST_H
