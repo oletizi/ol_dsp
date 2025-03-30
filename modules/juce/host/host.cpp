@@ -17,11 +17,14 @@ namespace ol::jucehost {
         return "0.5";
     }
 
-    juce::String OLJuceHost::parseDeviceName(const juce::String &line) {
-        const juce::String startToken = "<Name: ";
-        const auto start = line.lastIndexOf(startToken) + startToken.length();
-        const auto end = line.lastIndexOf(">");
+    juce::String parseConfigValue(const juce::String &line, const juce::String &startToken) {
+        const auto start = line.indexOf(startToken) + startToken.length();
+        const auto end = line.substring(start).indexOf(">") + start;
         return line.substring(start, end);
+    }
+
+    juce::String OLJuceHost::parseDeviceName(const juce::String &line) {
+        return parseConfigValue(line, "<Name: ");
     }
 
     void OLJuceHost::parseConfigLine(const juce::String &line) {
@@ -34,6 +37,8 @@ namespace ol::jucehost {
         }
         if (line.startsWith("Midi Input Device")) {
             config.midiInputDevice = parseDeviceName(line);
+        }
+        if (line.startsWith("Plugin Parameter")) {
         }
     }
 

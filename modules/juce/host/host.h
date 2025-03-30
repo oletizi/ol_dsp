@@ -40,7 +40,6 @@ namespace ol::jucehost {
                              public juce::AudioIODeviceCallback,
                              public juce::MidiInputCallback {
     public:
-        static juce::String parseDeviceName(const juce::String &line);
 
         const juce::String getApplicationName() override;
 
@@ -66,6 +65,9 @@ namespace ol::jucehost {
         void handleIncomingMidiMessage(juce::MidiInput *source, const juce::MidiMessage &message) override;
 
     private:
+
+        static juce::String parseDeviceName(const juce::String &line);
+
         HostConfig config;
         juce::AudioDeviceManager deviceManager;
         juce::AudioPluginFormatManager formatManager;
