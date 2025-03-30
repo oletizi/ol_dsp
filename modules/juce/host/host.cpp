@@ -41,7 +41,7 @@ namespace ol::jucehost {
         config.ignore.push_back("drumkv1");
         config.ignore.push_back("padthv1");
         config.ignore.push_back("samplv1");
-
+        config.ignore.push_back("synthv1");
 
         const juce::AudioDeviceManager::AudioDeviceSetup deviceSetup{
             .outputDeviceName = config.audioOutputDevice,
