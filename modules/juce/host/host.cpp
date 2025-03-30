@@ -106,15 +106,14 @@ namespace ol::jucehost {
                 if (shouldIgnore) {
                     std::cout << "  Ignore: " << next << std::endl;
                     scanner->skipNextFile();
-                    continue;
                 }
 
-                if (doList) {
+                if (doList && !shouldIgnore) {
                     // we want to print out all the plugin names
                     scanner->scanNextFile(true, pluginName);
                     // std::cout << "Plugin: <Format:" << format->getName() << ">, <Name: " << pluginName << ">" <<
                     //         std::endl;
-                } else {
+                } else if (!shouldIgnore) {
                     for (const auto pluginConfig: this->config.plugins) {
                         if (next.contains(pluginConfig->name)) {
                             scanner->scanNextFile(true, pluginName);
