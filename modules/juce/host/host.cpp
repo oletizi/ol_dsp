@@ -4,6 +4,7 @@
 
 #include "host.h"
 #include <ol_corelib.h>
+#define DEBUG 0
 
 namespace ol::jucehost {
     const juce::String OLJuceHost::getApplicationName() {
@@ -171,13 +172,13 @@ namespace ol::jucehost {
         }
 
         count++;
-        const bool debug = count % 1000 == 0;
-        if (debug) {
+        constexpr bool debug = DEBUG && count % 1000 == 0;
+        if (count >= 1000) {
             count = 0;
         } {
             std::lock_guard lock(q_mutex);
-            while (! controlChanges.empty()) {
-                std::cout << "  q.size(): " << controlChanges.size() << std::endl;
+            while (!controlChanges.empty()) {
+                std::cout << "  Applying parameter change; q.size(): " << controlChanges.size() << std::endl;
                 const auto cc = controlChanges.front();
                 cc->parameter->setValue(cc->value);
                 controlChanges.pop();
@@ -188,14 +189,14 @@ namespace ol::jucehost {
 
         audioBuffer.setSize(numOutputChannels, numSamples, false, false, true);
 
-        // if (debug) {
-        //     std::cout << "count: " << count <<
-        //             "; input channels: " << numInputChannels <<
-        //             "; output channels: " << numOutputChannels <<
-        //             "; sample count: " << numSamples <<
-        //             "; audio buffer: channels: " << audioBuffer.getNumChannels() <<
-        //             std::endl;
-        // }
+        if (debug) {
+            std::cout << "count: " << count <<
+                    "; input channels: " << numInputChannels <<
+                    "; output channels: " << numOutputChannels <<
+                    "; sample count: " << numSamples <<
+                    "; audio buffer: channels: " << audioBuffer.getNumChannels() <<
+                    std::endl;
+        }
 
         for (int ch = 0; ch < numOutputChannels; ch++) {
             const int i = ch >= numInputChannels ? 0 : ch;
@@ -237,8 +238,6 @@ namespace ol::jucehost {
                     for (const auto parameter: instance->getParameters()) {
                         if (parameter->getName(100).startsWith(parameterName)) {
                             this->ccMap.emplace(midiCC, parameter);
-                            // t_sample value = core::scale(message.getControllerValue(), 0, 127, 0, 1, 1);
-                            // parameter->setValue(value);
                         }
                     }
                 }
@@ -250,8 +249,8 @@ namespace ol::jucehost {
         // TODO:
         // * push parameter changes to a queue; dequeue and apply them in the render loop so they're applied atomically
         //   per buffer cycle
-        std::cout << "MIDI: " << message.getDescription() << std::endl;
         if (message.isController()) {
+            std::cout << std::endl << "MIDI CC: " << message.getControllerNumber() << std::endl;
             auto parameter = this->ccMap.at(message.getControllerNumber());
             if (parameter != nullptr) {
                 const auto value = core::scale(message.getControllerValue(), 0, 127, 0, 1, 1);
