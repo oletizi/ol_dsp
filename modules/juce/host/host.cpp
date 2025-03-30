@@ -16,7 +16,11 @@ namespace ol::jucehost {
     }
 
     void OLJuceHost::initialise(const juce::String &commandLineParameters) {
+        std::cout << commandLineParameters << std::endl;
         std::cout << "Initialising OLJuceHost..." << std::endl;
+
+        const juce::String configDir = "~/.ol_juce_host";
+        const bool doList = commandLineParameters.contains("--list");
 
         auto controlMaps = new std::vector<ControlMapConfig>();
         controlMaps->push_back(ControlMapConfig{"Low Freq Decay", 80});
@@ -45,61 +49,50 @@ namespace ol::jucehost {
         };
 
         // === Dump audio device info ===
-        auto currentSetup = this->deviceManager.getAudioDeviceSetup();
-        std::cout << "==============================" << std::endl;
-        std::cout << "Audio devices" << std::endl;
-        std::cout << "Current setup" << std::endl;
-        std::cout << "  input device: " << currentSetup.inputDeviceName << std::endl;
-        std::cout << "  output device: " << currentSetup.outputDeviceName << std::endl;
-        std::cout << "  sample rate: " << currentSetup.sampleRate << std::endl;
-        std::cout << "  buffer size: " << currentSetup.bufferSize << std::endl;
-        std::cout << "  num input channels: " << currentSetup.inputChannels.toString(10) << std::endl;
-        std::cout << "  num output channels: " << currentSetup.outputChannels.toString(10) << std::endl;
         for (const auto type: this->deviceManager.getAvailableDeviceTypes()) {
-            std::cout << "Device type: " << type->getTypeName() << std::endl;
+            auto typeName = type->getTypeName();
             for (const auto name: type->getDeviceNames(true)) {
-                std::cout << "  input: " << name << std::endl;
+                std::cout << "Audio Input Device: <Type: " << typeName << ">, <Name: " << name << ">" << std::endl;
             }
             for (const auto name: type->getDeviceNames()) {
-                std::cout << "  output: " << name << std::endl;
+                std::cout << "Audio Output Device: <Type: " << typeName << ">, <Name: " << name << ">" << std::endl;
             }
         }
-        std::cout << std::endl;
-
-
         // === Scan & instantiate plugins ===
-        std::cout << "==============================" << std::endl;
-        std::cout << "Scanning plugins..." << std::endl;
         formatManager.addDefaultFormats();
-        std::cout << "Num formats: " << formatManager.getNumFormats() << std::endl;
         for (int i = 0; i < formatManager.getNumFormats(); ++i) {
             constexpr int scanMax = 10000; // TODO: make this configurable
             constexpr bool recursive = true;
             juce::FileSearchPath path;
-            juce::File deadMansPedalFile("~/tmp/deadPedals");
+            juce::File deadMansPedalFile(configDir + "/deadPedals");
             auto format = formatManager.getFormat(i);
             juce::String pluginName;
             auto scanner = new juce::PluginDirectoryScanner(
                 this->knownPlugins, *format, path, recursive, deadMansPedalFile);
-
-            std::cout << "Scanning " << format->getName() << std::endl;
             bool more = true;
             int count = 0;
             while (more && ++count < scanMax) {
                 auto next = scanner->getNextPluginFileThatWillBeScanned();
                 more = next.length();
-                for (const auto pluginConfig: this->config.plugins) {
-                    if (next.contains(pluginConfig->name)) {
-                        scanner->scanNextFile(true, pluginName);
-                        std::cout << "  Scanned: " << pluginName << std::endl;
-                    } else {
-                        scanner->skipNextFile();
+                if (doList) {
+                    // we want to print out all the plugin names
+                    scanner->scanNextFile(true, pluginName);
+                    std::cout << "Plugin: <Format:" << format->getName() << ">, <Name: " << pluginName << ">" <<
+                            std::endl;
+                } else {
+                    for (const auto pluginConfig: this->config.plugins) {
+                        if (next.contains(pluginConfig->name)) {
+                            scanner->scanNextFile(true, pluginName);
+                            std::cout << "  Scanned: " << pluginName << std::endl;
+                        } else {
+                            scanner->skipNextFile();
+                        }
                     }
                 }
             }
         }
+        if (doList) { return; }
         auto plugs = this->knownPlugins.getTypes();
-        std::cout << "plugs count: " << plugs.size() << std::endl;
         for (auto plugDescription: plugs) {
             juce::String errorMessage("barf.");
             std::cout << "instantiating: " << plugDescription.name << std::endl;
