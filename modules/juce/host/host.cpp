@@ -96,8 +96,8 @@ namespace ol::jucehost {
                 if (doList) {
                     // we want to print out all the plugin names
                     scanner->scanNextFile(true, pluginName);
-                    std::cout << "Plugin: <Format:" << format->getName() << ">, <Name: " << pluginName << ">" <<
-                            std::endl;
+                    // std::cout << "Plugin: <Format:" << format->getName() << ">, <Name: " << pluginName << ">" <<
+                    //         std::endl;
                 } else {
                     for (const auto pluginConfig: this->config.plugins) {
                         if (next.contains(pluginConfig->name)) {
@@ -110,20 +110,26 @@ namespace ol::jucehost {
                 }
             }
         }
+        auto plugs = this->knownPlugins.getTypes();
+        for (auto plugDescription: plugs) {
+            juce::String errorMessage("barf.");
+            auto plug = formatManager.createPluginInstance(
+                plugDescription, 441000, 128, errorMessage);
+            if (plug != nullptr) {
+                std::cout << "Plugin: <Name: " << plug->getName() << ">" << std::endl;
+                for (const auto parameter: plug->getParameters()) {
+                    std::cout << "Plugin Parameter: <Format: " << plugDescription.pluginFormatName <<">, <Plugin Name: " << plug->getName() << ">, <Parameter Name: " <<
+                            parameter->getName(100) << ">" << std::endl;
+                }
+                this->instances.push_back(std::move(plug));
+            }
+        }
+
         if (doList) {
             quit();
             return;
         }
-        auto plugs = this->knownPlugins.getTypes();
-        for (auto plugDescription: plugs) {
-            juce::String errorMessage("barf.");
-            std::cout << "instantiating: " << plugDescription.name << std::endl;
-            auto plug = formatManager.createPluginInstance(
-                plugDescription, 441000, 128, errorMessage);
-            if (plug != nullptr) {
-                this->instances.push_back(std::move(plug));
-            }
-        }
+
         auto result = this->deviceManager.initialise(deviceSetup.inputChannels.toInteger(),
                                                      deviceSetup.outputChannels.toInteger(),
                                                      nullptr,
@@ -131,6 +137,7 @@ namespace ol::jucehost {
                                                      this->config.audioOutputDevice,
                                                      &deviceSetup
         );
+
         std::cout << "Initialize result: " << result << std::endl;
         if (result.length() == 0) {
             std::cout << "Audio device initialized. Starting pipeline..." << std::endl;
