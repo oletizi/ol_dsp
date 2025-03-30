@@ -40,6 +40,7 @@ namespace ol::jucehost {
         // config.ignore.push_back("DrumGizmo");
         config.ignore.push_back("drumkv1");
         config.ignore.push_back("padthv1");
+        config.ignore.push_back("samplv1");
 
 
         const juce::AudioDeviceManager::AudioDeviceSetup deviceSetup{
