@@ -24,6 +24,7 @@ namespace ol::jucehost {
     struct HostConfig {
         juce::String midiInputDevice, audioInputDevice, audioOutputDevice;
         std::vector<PluginConfig *> plugins;
+        std::vector<juce::String> ignore;
         int inputChannelCount = 2;
         int outputChannelCount = 2;
         double sampleRate = 44100;

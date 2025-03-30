@@ -37,6 +37,8 @@ namespace ol::jucehost {
         this->config.audioOutputDevice = "Volt 4";
         this->config.midiInputDevice = "Volt 4";
 
+        this->config.ignore.push_back("DrumGizmo");
+
         const juce::AudioDeviceManager::AudioDeviceSetup deviceSetup{
             .outputDeviceName = this->config.audioOutputDevice,
             .inputDeviceName = this->config.audioInputDevice,
@@ -93,6 +95,16 @@ namespace ol::jucehost {
             while (more && ++count < scanMax) {
                 auto next = scanner->getNextPluginFileThatWillBeScanned();
                 more = next.length();
+                bool shouldIgnore = false;
+                for (const auto ignore: config.ignore) {
+                    if (next.startsWith(ignore)) {
+                        shouldIgnore = true;
+                        break;
+                    }
+                }
+
+                if (shouldIgnore) { scanner->skipNextFile(); continue;}
+
                 if (doList) {
                     // we want to print out all the plugin names
                     scanner->scanNextFile(true, pluginName);
@@ -118,7 +130,8 @@ namespace ol::jucehost {
             if (plug != nullptr) {
                 std::cout << "Plugin: <Name: " << plug->getName() << ">" << std::endl;
                 for (const auto parameter: plug->getParameters()) {
-                    std::cout << "Plugin Parameter: <Format: " << plugDescription.pluginFormatName <<">, <Plugin Name: " << plug->getName() << ">, <Parameter Name: " <<
+                    std::cout << "Plugin Parameter: <Format: " << plugDescription.pluginFormatName <<
+                            ">, <Plugin Name: " << plug->getName() << ">, <Parameter Name: " <<
                             parameter->getName(100) << ">" << std::endl;
                 }
                 this->instances.push_back(std::move(plug));
