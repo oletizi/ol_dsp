@@ -39,6 +39,24 @@ namespace ol::jucehost {
             config.midiInputDevice = parseDeviceName(line);
         }
         if (line.startsWith("Plugin Parameter")) {
+            const auto pluginFormat = parseConfigValue(line, "<Format: ");
+            const auto pluginName = parseConfigValue(line, "<Plugin Name: ");
+            const auto parameterName = parseConfigValue(line, "<Parameter Name: ");
+            const auto cc = parseConfigValue(line, "<CC: ").getIntValue();
+            PluginConfig *plug = nullptr;
+            for (auto test: config.plugins) {
+                if (test->name.startsWith(pluginName)) {
+                    plug = test;
+                }
+            }
+            if (plug == nullptr) {
+                plug = new PluginConfig();
+                plug->name = pluginName;
+                plug->format = pluginFormat;
+                config.plugins.push_back(plug);
+            }
+            const auto ccMap = new ControlMapConfig{.parameterName = parameterName, .midiCC = cc};
+            plug->controlMaps.push_back(ccMap);
         }
     }
 
@@ -273,7 +291,6 @@ namespace ol::jucehost {
             }
         }
 
-
         juce::MidiBuffer messages;
         for (const auto &plug: this->instances) {
             plug->processBlock(audioBuffer, messages);
@@ -296,11 +313,11 @@ namespace ol::jucehost {
 
     void OLJuceHost::mapCCs() {
         for (const auto cfg: this->config.plugins) {
-            for (const auto [parameterName, midiCC]: *cfg->controlMaps) {
+            for (const auto map: cfg->controlMaps) {
                 for (const auto &instance: this->instances) {
                     for (const auto parameter: instance->getParameters()) {
-                        if (parameter->getName(100).startsWith(parameterName)) {
-                            this->ccMap.emplace(midiCC, parameter);
+                        if (parameter->getName(100).startsWith(map->parameterName)) {
+                            this->ccMap.emplace(map->midiCC, parameter);
                         }
                     }
                 }

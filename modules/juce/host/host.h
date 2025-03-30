@@ -17,8 +17,9 @@ namespace ol::jucehost {
     };
 
     struct PluginConfig {
+        juce::String format;
         juce::String name;
-        const std::vector<ControlMapConfig> *controlMaps;
+        std::vector<ControlMapConfig *> controlMaps;
     };
 
     struct HostConfig {
