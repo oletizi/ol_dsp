@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.30.5)
+cmake_minimum_required(VERSION 3.30)
 project(ol_dsp VERSION 0.1)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -48,7 +48,7 @@ if (${BUILD_TEENSY})
     add_subdirectory(modules/ol_teensy)
 endif ()
 
-add_subdirectory(libs/rapidyaml)
+#add_subdirectory(libs/rapidyaml)
 add_subdirectory(libs/rtmidi)
 add_subdirectory(libs/Soundpipe)
 

@@ -34,13 +34,13 @@ namespace ol::jucehost {
         this->config.midiInputDevice = "Volt 4";
 
         const juce::AudioDeviceManager::AudioDeviceSetup deviceSetup{
-            .bufferSize = this->config.bufferSize,
-            .sampleRate = this->config.sampleRate,
-            .inputChannels = this->config.inputChannelCount,
-            .outputChannels = this->config.outputChannelCount,
-            .inputDeviceName = this->config.audioInputDevice,
             .outputDeviceName = this->config.audioOutputDevice,
+            .inputDeviceName = this->config.audioInputDevice,
+            .sampleRate = this->config.sampleRate,
+            .bufferSize = this->config.bufferSize,
+            .inputChannels = this->config.inputChannelCount,
             .useDefaultInputChannels = true,
+            .outputChannels = this->config.outputChannelCount,
             .useDefaultOutputChannels = true
         };
 
