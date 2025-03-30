@@ -104,6 +104,7 @@ namespace ol::jucehost {
                 }
 
                 if (shouldIgnore) {
+                    std::cout << "  Ignore: " << next << std::endl;
                     scanner->skipNextFile();
                     continue;
                 }
