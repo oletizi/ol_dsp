@@ -91,7 +91,10 @@ namespace ol::jucehost {
                 }
             }
         }
-        if (doList) { return; }
+        if (doList) {
+            quit();
+            return;
+        }
         auto plugs = this->knownPlugins.getTypes();
         for (auto plugDescription: plugs) {
             juce::String errorMessage("barf.");
