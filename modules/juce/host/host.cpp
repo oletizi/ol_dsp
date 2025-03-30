@@ -31,27 +31,29 @@ namespace ol::jucehost {
         auto cfg = new PluginConfig();
         cfg->name = juce::String("AUReverb");
         cfg->controlMaps = controlMaps;
-        this->config.plugins.push_back(cfg);
+        config.plugins.push_back(cfg);
 
-        this->config.audioInputDevice = "Volt 4";
-        this->config.audioOutputDevice = "Volt 4";
-        this->config.midiInputDevice = "Volt 4";
+        config.audioInputDevice = "Volt 4";
+        config.audioOutputDevice = "Volt 4";
+        config.midiInputDevice = "Volt 4";
 
-        this->config.ignore.push_back("DrumGizmo");
+        // config.ignore.push_back("DrumGizmo");
+        config.ignore.push_back("drumkv1");
+
 
         const juce::AudioDeviceManager::AudioDeviceSetup deviceSetup{
-            .outputDeviceName = this->config.audioOutputDevice,
-            .inputDeviceName = this->config.audioInputDevice,
-            .sampleRate = this->config.sampleRate,
-            .bufferSize = this->config.bufferSize,
-            .inputChannels = this->config.inputChannelCount,
+            .outputDeviceName = config.audioOutputDevice,
+            .inputDeviceName = config.audioInputDevice,
+            .sampleRate = config.sampleRate,
+            .bufferSize = config.bufferSize,
+            .inputChannels = config.inputChannelCount,
             .useDefaultInputChannels = true,
-            .outputChannels = this->config.outputChannelCount,
+            .outputChannels = config.outputChannelCount,
             .useDefaultOutputChannels = true
         };
 
         // === Dump audio device info ===
-        for (const auto type: this->deviceManager.getAvailableDeviceTypes()) {
+        for (const auto type: deviceManager.getAvailableDeviceTypes()) {
             auto typeName = type->getTypeName();
             for (const auto name: type->getDeviceNames(true)) {
                 std::cout << "Audio Input Device: <Type: " << typeName << ">, <Name: " << name << ">" << std::endl;
