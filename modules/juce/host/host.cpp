@@ -58,6 +58,25 @@ namespace ol::jucehost {
                 std::cout << "Audio Output Device: <Type: " << typeName << ">, <Name: " << name << ">" << std::endl;
             }
         }
+
+        // === Dump midi device info ===
+        const auto midiInputs = juce::MidiInput::getAvailableDevices();
+        for (const auto midiInputDevice: midiInputs) {
+            std::cout << "Midi Input Device: <" << midiInputDevice.name << ">, <Identifier: " << midiInputDevice.
+                    identifier << ">" << std::endl;
+
+            if (!doList && !this->deviceManager.isMidiInputDeviceEnabled(midiInputDevice.identifier)) {
+                std::cout << "    Enabling: " << midiInputDevice.name << std::endl;
+                this->deviceManager.setMidiInputDeviceEnabled(midiInputDevice.identifier, true);
+                std::cout << "    Enabled: " << this->deviceManager.isMidiInputDeviceEnabled(midiInputDevice.identifier)
+                        << std::endl;
+            }
+            if (!doList) {
+                std::cout << "    Adding this as a midi input device callback to: " << midiInputDevice.name <<
+                        std::endl;
+                this->deviceManager.addMidiInputDeviceCallback(midiInputDevice.identifier, this);
+            }
+        }
         // === Scan & instantiate plugins ===
         formatManager.addDefaultFormats();
         for (int i = 0; i < formatManager.getNumFormats(); ++i) {
@@ -127,23 +146,6 @@ namespace ol::jucehost {
         std::cout << "Audio device starting..." << std::endl;
         std::cout << "Audio device: " << device->getName() << std::endl;
 
-        // === Dump midi device info ===
-        const auto midiInputs = juce::MidiInput::getAvailableDevices();
-        std::cout << "==============================" << std::endl;
-        std::cout << "Midi input devices:" << std::endl;
-        for (const auto midiInputDevice: midiInputs) {
-            std::cout << "  Name: " << midiInputDevice.name << "; Identifier: " << midiInputDevice.identifier <<
-                    std::endl;
-            if (!this->deviceManager.isMidiInputDeviceEnabled(midiInputDevice.identifier)) {
-                std::cout << "    Enabling: " << midiInputDevice.name << std::endl;
-                this->deviceManager.setMidiInputDeviceEnabled(midiInputDevice.identifier, true);
-                std::cout << "    Enabled: " << this->deviceManager.isMidiInputDeviceEnabled(midiInputDevice.identifier)
-                        << std::endl;
-            }
-            std::cout << "    Adding this as a midi input device callback to: " << midiInputDevice.name << std::endl;
-            this->deviceManager.addMidiInputDeviceCallback(midiInputDevice.identifier, this);
-        }
-        std::cout << std::endl;
 
         for (const auto &plug: this->instances) {
             // https://forum.juce.com/t/setting-buses-layout-of-hosted-plugin/55262
