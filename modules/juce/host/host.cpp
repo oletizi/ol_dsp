@@ -4,6 +4,8 @@
 
 #include "host.h"
 #include <ol_corelib.h>
+#include <fstream>
+#include <string>
 #define DEBUG 0
 
 namespace ol::jucehost {
@@ -15,28 +17,48 @@ namespace ol::jucehost {
         return "0.5";
     }
 
+    juce::String OLJuceHost::parseDeviceName(const juce::String &line) {
+        const juce::String startToken = "<Name: ";
+        const auto start = line.lastIndexOf(startToken) + startToken.length();
+        const auto end = line.lastIndexOf(">");
+        return line.substring(start, end);
+    }
+
+    void OLJuceHost::parseConfigLine(const juce::String &line) {
+        std::cout << "Config line: " << line << std::endl;
+        if (line.startsWith("Audio Input Device")) {
+            config.audioInputDevice = parseDeviceName(line);
+        }
+        if (line.startsWith("Audio Output Device")) {
+            config.audioOutputDevice = parseDeviceName(line);
+        }
+        if (line.startsWith("Midi Input Device")) {
+            config.midiInputDevice = parseDeviceName(line);
+        }
+    }
+
     void OLJuceHost::initialise(const juce::String &commandLineParameters) {
         std::cout << commandLineParameters << std::endl;
         std::cout << "Initialising OLJuceHost..." << std::endl;
-
-        const juce::String configDir = "~/.ol_juce_host";
         const bool doList = commandLineParameters.contains("--list");
 
-        auto controlMaps = new std::vector<ControlMapConfig>();
-        controlMaps->push_back(ControlMapConfig{"Low Freq Decay", 80});
-        controlMaps->push_back(ControlMapConfig{"High Freq Decay", 81});
-        controlMaps->push_back(ControlMapConfig{"Gain", 82});
-        controlMaps->push_back(ControlMapConfig{"Dry/Wet Mix", 83});
+        const juce::String configDir = juce::String(std::getenv("HOME")) + "/.ol_juce_host";
+        if (!doList) {
+            auto path = configDir + "/config";
+            std::cout << "Loading config from: " << path << std::endl;
+            if (std::ifstream file(path.toStdString()); file.is_open()) {
+                std::string line;
+                while (getline(file, line)) {
+                    parseConfigLine(juce::String(line));
+                }
+            } else {
+                std::cerr << "Unable to open config file: " << path << std::endl;
+            }
+        }
 
-        auto cfg = new PluginConfig();
-        cfg->name = juce::String("AUReverb");
-        cfg->controlMaps = controlMaps;
-        config.plugins.push_back(cfg);
-
-        config.audioInputDevice = "Volt 4";
-        config.audioOutputDevice = "Volt 4";
-        config.midiInputDevice = "Volt 4";
-
+        std::cout << "INPUT DEVICE     : " << config.audioInputDevice << std::endl;
+        std::cout << "OUTPUT DEVICE    : " << config.audioOutputDevice << std::endl;
+        std::cout << "MIDI INPUT DEVICE: " << config.midiInputDevice << std::endl;
         // config.ignore.push_back("DrumGizmo");
         config.ignore.push_back("drumkv1");
         config.ignore.push_back("padthv1");
@@ -68,8 +90,7 @@ namespace ol::jucehost {
         // === Dump midi device info ===
         const auto midiInputs = juce::MidiInput::getAvailableDevices();
         for (const auto midiInputDevice: midiInputs) {
-            std::cout << "Midi Input Device: <" << midiInputDevice.name << ">, <Identifier: " << midiInputDevice.
-                    identifier << ">" << std::endl;
+            std::cout << "Midi Input Device: <Name: " << midiInputDevice.name << ">" << std::endl;
 
             if (!doList && !this->deviceManager.isMidiInputDeviceEnabled(midiInputDevice.identifier)) {
                 std::cout << "    Enabling: " << midiInputDevice.name << std::endl;

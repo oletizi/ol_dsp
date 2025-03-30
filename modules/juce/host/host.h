@@ -40,9 +40,14 @@ namespace ol::jucehost {
                              public juce::AudioIODeviceCallback,
                              public juce::MidiInputCallback {
     public:
+        static juce::String parseDeviceName(const juce::String &line);
+
         const juce::String getApplicationName() override;
 
         const juce::String getApplicationVersion() override;
+
+
+        void parseConfigLine(const juce::String &line);
 
         void initialise(const juce::String &commandLineParameters) override;
 
