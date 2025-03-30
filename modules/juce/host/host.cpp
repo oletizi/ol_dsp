@@ -103,7 +103,10 @@ namespace ol::jucehost {
                     }
                 }
 
-                if (shouldIgnore) { scanner->skipNextFile(); continue;}
+                if (shouldIgnore) {
+                    scanner->skipNextFile();
+                    continue;
+                }
 
                 if (doList) {
                     // we want to print out all the plugin names
@@ -125,6 +128,17 @@ namespace ol::jucehost {
         auto plugs = this->knownPlugins.getTypes();
         for (auto plugDescription: plugs) {
             juce::String errorMessage("barf.");
+
+            bool shouldIgnore = false;
+            for (const auto ignore: config.ignore) {
+                if (plugDescription.name.startsWith(ignore)) {
+                    std::cout << "  Ignore: " << plugDescription.name << std::endl;
+                    shouldIgnore = true;
+                    break;
+                }
+            }
+            if (shouldIgnore) { continue; }
+
             auto plug = formatManager.createPluginInstance(
                 plugDescription, 441000, 128, errorMessage);
             if (plug != nullptr) {
