@@ -6,6 +6,7 @@
 #include <ol_corelib.h>
 #include <fstream>
 #include <string>
+
 #define DEBUG 0
 
 namespace ol::jucehost {
@@ -129,12 +130,13 @@ namespace ol::jucehost {
         }
         // === Scan & instantiate plugins ===
         formatManager.addDefaultFormats();
-        for (int i = 0; i < formatManager.getNumFormats(); ++i) {
+        // for (int i = 0; i < formatManager.getNumFormats(); ++i) {
+        for (const auto format: formatManager.getFormats()) {
             constexpr int scanMax = 10000; // TODO: make this configurable
             constexpr bool recursive = true;
             juce::FileSearchPath path;
             juce::File deadMansPedalFile(configDir + "/deadPedals");
-            auto format = formatManager.getFormat(i);
+            //auto format = formatManager.getFormat(i);
             juce::String pluginName;
             auto scanner = new juce::PluginDirectoryScanner(
                 this->knownPlugins, *format, path, recursive, deadMansPedalFile);
@@ -164,20 +166,25 @@ namespace ol::jucehost {
                     //         std::endl;
                 } else if (!shouldIgnore) {
                     for (const auto pluginConfig: this->config.plugins) {
+                        std::cout << "Checking to see if : " << next << " contains " << pluginConfig->name << std::endl;
                         if (next.contains(pluginConfig->name)) {
+                            std::cout << "  Next plugin: " << next << " matches plugin config: " << pluginConfig->name
+                                    << std::endl;
                             scanner->scanNextFile(true, pluginName);
                             std::cout << "  Scanned: " << pluginName << std::endl;
                         } else {
-                            scanner->skipNextFile();
+                            // std::cout << " Skipping next plugin: " << next << std::endl;
+                            // scanner->skipNextFile();
+                            scanner->scanNextFile(true, pluginName);
                         }
                     }
                 }
             }
         }
         auto plugs = this->knownPlugins.getTypes();
+        std::cout << "Filtering " << plugs.size() << " plugins..." << std::endl;
+        std::vector<juce::PluginDescription> toInstantiate;
         for (auto plugDescription: plugs) {
-            juce::String errorMessage("barf.");
-
             bool shouldIgnore = false;
             for (const auto ignore: config.ignore) {
                 if (plugDescription.name.startsWith(ignore)) {
@@ -187,6 +194,25 @@ namespace ol::jucehost {
                 }
             }
             if (shouldIgnore) { continue; }
+            if (doList) {
+                toInstantiate.push_back(plugDescription);
+            } else {
+                for (const auto pluginConfig: this->config.plugins) {
+                    const auto format = plugDescription.pluginFormatName;
+                    const auto name = plugDescription.name;
+
+                    if (format.startsWith(pluginConfig->format) && name.startsWith(pluginConfig->name)) {
+                        // MATCH!
+                        toInstantiate.push_back(plugDescription);
+                        break;
+                    }
+                }
+            }
+        }
+        // TODO: Sort instantiations by config order
+        // Instantiate the selected plugins
+        for (const auto plugDescription: toInstantiate) {
+            juce::String errorMessage("barf.");
             std::cout << "Instantiating " << plugDescription.name << std::endl;
             auto plug = formatManager.createPluginInstance(
                 plugDescription, 441000, 128, errorMessage);
@@ -329,6 +355,7 @@ namespace ol::jucehost {
         // TODO:
         // * push parameter changes to a queue; dequeue and apply them in the render loop so they're applied atomically
         //   per buffer cycle
+        std::cout << "MIDI Message: " << message.getDescription() << std::endl;
         if (message.isController()) {
             std::cout << std::endl << "MIDI CC: " << message.getControllerNumber() << std::endl;
             auto parameter = this->ccMap.at(message.getControllerNumber());
@@ -337,7 +364,9 @@ namespace ol::jucehost {
                 std::cout << "  Midi CC parameter change: " << parameter->getName(100) << ": " << value << std::endl;
                 // parameter->setValue(value);
                 {
+                    std::cout << "  Acquiring lock to add control change to queue: " << value << std::endl;
                     std::lock_guard lock(q_mutex);
+                    std::cout << "  SUCCESS acquiring lock to add control change to queue." << value << std::endl;
                     this->controlChanges.push(new ControlChange{parameter, value});
                 }
             }
