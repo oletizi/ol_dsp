@@ -11,7 +11,7 @@ namespace ol::jucehost {
     }
 
     const juce::String OLJuceHost::getApplicationVersion() {
-        return "0.1";
+        return "0.5";
     }
 
     void OLJuceHost::initialise(const juce::String &commandLineParameters) {
@@ -174,18 +174,28 @@ namespace ol::jucehost {
         const bool debug = count % 1000 == 0;
         if (debug) {
             count = 0;
+        } {
+            std::lock_guard lock(q_mutex);
+            while (! controlChanges.empty()) {
+                std::cout << "  q.size(): " << controlChanges.size() << std::endl;
+                const auto cc = controlChanges.front();
+                cc->parameter->setValue(cc->value);
+                controlChanges.pop();
+                delete cc;
+            }
         }
+
 
         audioBuffer.setSize(numOutputChannels, numSamples, false, false, true);
 
-        if (debug) {
-            std::cout << "count: " << count <<
-                    "; input channels: " << numInputChannels <<
-                    "; output channels: " << numOutputChannels <<
-                    "; sample count: " << numSamples <<
-                    "; audio buffer: channels: " << audioBuffer.getNumChannels() <<
-                    std::endl;
-        }
+        // if (debug) {
+        //     std::cout << "count: " << count <<
+        //             "; input channels: " << numInputChannels <<
+        //             "; output channels: " << numOutputChannels <<
+        //             "; sample count: " << numSamples <<
+        //             "; audio buffer: channels: " << audioBuffer.getNumChannels() <<
+        //             std::endl;
+        // }
 
         for (int ch = 0; ch < numOutputChannels; ch++) {
             const int i = ch >= numInputChannels ? 0 : ch;
@@ -238,21 +248,20 @@ namespace ol::jucehost {
 
     void OLJuceHost::handleIncomingMidiMessage(juce::MidiInput *source, const juce::MidiMessage &message) {
         // TODO:
-        // * prepare the cc->parameter mappings so it's an array lookup rather than whatever this ghastly
-        //   nested wad of fors and ifs is...
         // * push parameter changes to a queue; dequeue and apply them in the render loop so they're applied atomically
         //   per buffer cycle
         std::cout << "MIDI: " << message.getDescription() << std::endl;
         if (message.isController()) {
-            // mapCCs();
             auto parameter = this->ccMap.at(message.getControllerNumber());
             if (parameter != nullptr) {
                 const auto value = core::scale(message.getControllerValue(), 0, 127, 0, 1, 1);
-                std::cout << " Setting parameter: " << parameter->getName(100) << ": " << value << std::endl;
-                parameter->setValue(value);
+                std::cout << "  Midi CC parameter change: " << parameter->getName(100) << ": " << value << std::endl;
+                // parameter->setValue(value);
+                {
+                    std::lock_guard lock(q_mutex);
+                    this->controlChanges.push(new ControlChange{parameter, value});
+                }
             }
-
-            // parameter->setValue(value);
         }
     }
 }

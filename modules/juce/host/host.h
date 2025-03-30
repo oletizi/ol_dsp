@@ -30,6 +30,10 @@ namespace ol::jucehost {
         int bufferSize = 128;
     };
 
+    struct ControlChange {
+        juce::AudioProcessorParameter *parameter;
+        float value;
+    };
 
     class OLJuceHost final : public juce::JUCEApplication,
                              public juce::AudioIODeviceCallback,
@@ -62,8 +66,10 @@ namespace ol::jucehost {
         juce::KnownPluginList knownPlugins;
         std::vector<std::unique_ptr<juce::AudioPluginInstance> > instances;
         juce::AudioBuffer<float> audioBuffer;
-        int count = 0;
         std::map<int, juce::AudioProcessorParameter *> ccMap;
+        std::queue<ControlChange *> controlChanges;
+        std::mutex q_mutex;
+        int count = 0;
     };
 }
 #endif //HOST_H
