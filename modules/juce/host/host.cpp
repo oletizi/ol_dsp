@@ -162,8 +162,8 @@ namespace ol::jucehost {
                 if (doList && !shouldIgnore) {
                     // we want to print out all the plugin names
                     scanner->scanNextFile(true, pluginName);
-                    // std::cout << "Plugin: <Format:" << format->getName() << ">, <Name: " << pluginName << ">" <<
-                    //         std::endl;
+                    std::cout << "Plugin: <Format:" << format->getName() << ">, <Name: " << pluginName << ">" <<
+                             std::endl;
                 } else if (!shouldIgnore) {
                     for (const auto pluginConfig: this->config.plugins) {
                         std::cout << "Checking to see if : " << next << " contains " << pluginConfig->name << std::endl;
@@ -210,13 +210,17 @@ namespace ol::jucehost {
             }
         }
         std::vector<juce::PluginDescription> sorted;
-        for (auto plugConfig: config.plugins) {
+	if (doList) {
+	  sorted = toInstantiate;
+	} else {
+	  for (auto plugConfig: config.plugins) {
             for (auto plugDescription: toInstantiate) {
-                if (plugDescription.name.startsWith(plugConfig->name)) {
-                    sorted.push_back(plugDescription);
-                }
+	      if (plugDescription.name.startsWith(plugConfig->name)) {
+		sorted.push_back(plugDescription);
+	      }
             }
-        }
+	  }
+	}
         // TODO: Sort instantiations by config order
         // Instantiate the selected plugins
         for (const auto plugDescription: sorted) {
