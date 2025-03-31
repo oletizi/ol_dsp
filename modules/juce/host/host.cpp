@@ -116,16 +116,16 @@ namespace ol::jucehost {
         for (const auto midiInputDevice: midiInputs) {
             std::cout << "Midi Input Device: <Name: " << midiInputDevice.name << ">" << std::endl;
 
-            if (!doList && !this->deviceManager.isMidiInputDeviceEnabled(midiInputDevice.identifier)) {
+            if (!doList && !deviceManager.isMidiInputDeviceEnabled(midiInputDevice.identifier)) {
                 std::cout << "    Enabling: " << midiInputDevice.name << std::endl;
-                this->deviceManager.setMidiInputDeviceEnabled(midiInputDevice.identifier, true);
-                std::cout << "    Enabled: " << this->deviceManager.isMidiInputDeviceEnabled(midiInputDevice.identifier)
+                deviceManager.setMidiInputDeviceEnabled(midiInputDevice.identifier, true);
+                std::cout << "    Enabled: " << deviceManager.isMidiInputDeviceEnabled(midiInputDevice.identifier)
                         << std::endl;
             }
             if (!doList) {
                 std::cout << "    Adding this as a midi input device callback to: " << midiInputDevice.name <<
                         std::endl;
-                this->deviceManager.addMidiInputDeviceCallback(midiInputDevice.identifier, this);
+                deviceManager.addMidiInputDeviceCallback(midiInputDevice.identifier, this);
             }
         }
         // === Scan & instantiate plugins ===
@@ -139,7 +139,7 @@ namespace ol::jucehost {
             //auto format = formatManager.getFormat(i);
             juce::String pluginName;
             auto scanner = new juce::PluginDirectoryScanner(
-                this->knownPlugins, *format, path, recursive, deadMansPedalFile);
+                knownPlugins, *format, path, recursive, deadMansPedalFile);
             bool more = true;
             int count = 0;
             while (more && ++count < scanMax) {
@@ -209,9 +209,17 @@ namespace ol::jucehost {
                 }
             }
         }
+        std::vector<juce::PluginDescription> sorted;
+        for (auto plugConfig: config.plugins) {
+            for (auto plugDescription: toInstantiate) {
+                if (plugDescription.name.startsWith(plugConfig->name)) {
+                    sorted.push_back(plugDescription);
+                }
+            }
+        }
         // TODO: Sort instantiations by config order
         // Instantiate the selected plugins
-        for (const auto plugDescription: toInstantiate) {
+        for (const auto plugDescription: sorted) {
             juce::String errorMessage("barf.");
             std::cout << "Instantiating " << plugDescription.name << std::endl;
             auto plug = formatManager.createPluginInstance(
