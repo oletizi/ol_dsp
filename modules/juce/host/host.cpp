@@ -44,8 +44,9 @@ namespace ol::jucehost {
             const auto pluginName = parseConfigValue(line, "<Plugin Name: ");
             const auto parameterName = parseConfigValue(line, "<Parameter Name: ");
             const auto cc = parseConfigValue(line, "<CC: ").getIntValue();
+            const auto osc = parseConfigValue(line, "<OSC: ");
             PluginConfig *plug = nullptr;
-            for (auto test: config.plugins) {
+            for (const auto test: config.plugins) {
                 if (test->name.startsWith(pluginName)) {
                     plug = test;
                 }
@@ -56,7 +57,7 @@ namespace ol::jucehost {
                 plug->format = pluginFormat;
                 config.plugins.push_back(plug);
             }
-            const auto ccMap = new ControlMapConfig{.parameterName = parameterName, .midiCC = cc};
+            const auto ccMap = new ControlMapConfig{.parameterName = parameterName, .midiCC = cc, .oscPath = osc};
             plug->controlMaps.push_back(ccMap);
         }
     }
@@ -131,7 +132,7 @@ namespace ol::jucehost {
 
         // Start OSC receiver
         if (!doList) {
-            const int port = 3819;
+            constexpr int port = 3819;
             if (!oscReceiver.connect(port)) {
                 std::cerr << "OSC connect error: Unable to connect to UDP port: " << port << std::endl;
             } else {

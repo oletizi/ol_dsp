@@ -15,6 +15,7 @@ namespace ol::jucehost {
     struct ControlMapConfig {
         const juce::String parameterName;
         const int midiCC;
+        const juce::String oscPath;
     };
 
     struct PluginConfig {
