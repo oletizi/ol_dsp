@@ -244,7 +244,7 @@ namespace ol::jucehost {
             juce::String errorMessage("barf.");
             std::cout << "Instantiating " << plugDescription.name << std::endl;
             auto plug = formatManager.createPluginInstance(
-                plugDescription, 441000, 128, errorMessage);
+                plugDescription, 48000, 128, errorMessage);
             if (plug != nullptr) {
                 std::cout << "Plugin: <Name: " << plug->getName() << ">" << std::endl;
                 for (const auto parameter: plug->getParameters()) {
