@@ -128,6 +128,18 @@ namespace ol::jucehost {
                 deviceManager.addMidiInputDeviceCallback(midiInputDevice.identifier, this);
             }
         }
+
+        // Start OSC receiver
+        if (!doList) {
+            const int port = 3819;
+            if (!oscReceiver.connect(port)) {
+                std::cerr << "OSC connect error: Unable to connect to UDP port: " << port << std::endl;
+            } else {
+                std::cout << "OSC connect success: Connected to UDP port: " << port << std::endl;
+            }
+            oscReceiver.addListener(this);
+        }
+
         // === Scan & instantiate plugins ===
         formatManager.addDefaultFormats();
         // for (int i = 0; i < formatManager.getNumFormats(); ++i) {
@@ -382,6 +394,15 @@ namespace ol::jucehost {
                     this->controlChanges.push(new ControlChange{parameter, value});
                 }
             }
+        }
+    }
+
+    void OLJuceHost::oscMessageReceived(const juce::OSCMessage &message) {
+        std::cout << "OSC Message: size: " << message.size() << std::endl;
+        std::cout << "  Address pattern: " << message.getAddressPattern().toString() << std::endl;
+        for (const auto thingy: message) {
+            std::cout << "  Type: " << thingy.getType() << std::endl;
+            std::cout << "  Value: " << thingy.getFloat32() << std::endl;
         }
     }
 }

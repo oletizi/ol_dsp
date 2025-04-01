@@ -6,6 +6,7 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <juce_audio_devices/juce_audio_devices.h>
 #include <juce_audio_processors/juce_audio_processors.h>
+#include <juce_osc/juce_osc.h>
 
 #ifndef HOST_H
 #define HOST_H
@@ -39,9 +40,9 @@ namespace ol::jucehost {
 
     class OLJuceHost final : public juce::JUCEApplication,
                              public juce::AudioIODeviceCallback,
-                             public juce::MidiInputCallback {
+                             public juce::MidiInputCallback,
+                             public juce::OSCReceiver::Listener<juce::OSCReceiver::MessageLoopCallback> {
     public:
-
         const juce::String getApplicationName() override;
 
         const juce::String getApplicationVersion() override;
@@ -65,13 +66,17 @@ namespace ol::jucehost {
 
         void handleIncomingMidiMessage(juce::MidiInput *source, const juce::MidiMessage &message) override;
 
-    private:
+        void oscMessageReceived(const juce::OSCMessage &message) override;
 
+    private:
         static juce::String parseDeviceName(const juce::String &line);
 
+
+    private:
         HostConfig config;
         juce::AudioDeviceManager deviceManager;
         juce::AudioPluginFormatManager formatManager;
+        juce::OSCReceiver oscReceiver;
         juce::KnownPluginList knownPlugins;
         std::vector<std::unique_ptr<juce::AudioPluginInstance> > instances;
         juce::AudioBuffer<float> audioBuffer;
