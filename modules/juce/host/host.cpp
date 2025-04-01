@@ -19,9 +19,12 @@ namespace ol::jucehost {
     }
 
     juce::String parseConfigValue(const juce::String &line, const juce::String &startToken) {
-        const auto start = line.indexOf(startToken) + startToken.length();
-        const auto end = line.substring(start).indexOf(">") + start;
-        return line.substring(start, end);
+        if (const auto index = line.indexOf(startToken); index >= 0) {
+            const auto start = index + startToken.length();
+            const auto end = line.substring(start).indexOf(">") + start;
+            return line.substring(start, end);
+        }
+        return "";
     }
 
     juce::String OLJuceHost::parseDeviceName(const juce::String &line) {
@@ -45,6 +48,7 @@ namespace ol::jucehost {
             const auto parameterName = parseConfigValue(line, "<Parameter Name: ");
             const auto cc = parseConfigValue(line, "<CC: ").getIntValue();
             const auto osc = parseConfigValue(line, "<OSC: ");
+            std::cout << "OSC Config: " << osc << std::endl;
             PluginConfig *plug = nullptr;
             for (const auto test: config.plugins) {
                 if (test->name.startsWith(pluginName)) {
@@ -57,8 +61,8 @@ namespace ol::jucehost {
                 plug->format = pluginFormat;
                 config.plugins.push_back(plug);
             }
-            const auto ccMap = new ControlMapConfig{.parameterName = parameterName, .midiCC = cc, .oscPath = osc};
-            plug->controlMaps.push_back(ccMap);
+            const auto controlMap = new ControlMapConfig{.parameterName = parameterName, .midiCC = cc, .oscPath = osc};
+            plug->controlMaps.push_back(controlMap);
         }
     }
 
@@ -176,9 +180,9 @@ namespace ol::jucehost {
                     // we want to print out all the plugin names
                     scanner->scanNextFile(true, pluginName);
                     std::cout << "Plugin: <Format:" << format->getName() << ">, <Name: " << pluginName << ">" <<
-                             std::endl;
+                            std::endl;
                 } else if (!shouldIgnore) {
-                    for (const auto pluginConfig: this->config.plugins) {
+                    for (const auto pluginConfig: config.plugins) {
                         std::cout << "Checking to see if : " << next << " contains " << pluginConfig->name << std::endl;
                         if (next.contains(pluginConfig->name)) {
                             std::cout << "  Next plugin: " << next << " matches plugin config: " << pluginConfig->name
@@ -194,7 +198,7 @@ namespace ol::jucehost {
                 }
             }
         }
-        auto plugs = this->knownPlugins.getTypes();
+        auto plugs = knownPlugins.getTypes();
         std::cout << "Filtering " << plugs.size() << " plugins..." << std::endl;
         std::vector<juce::PluginDescription> toInstantiate;
         for (auto plugDescription: plugs) {
@@ -223,17 +227,17 @@ namespace ol::jucehost {
             }
         }
         std::vector<juce::PluginDescription> sorted;
-	if (doList) {
-	  sorted = toInstantiate;
-	} else {
-	  for (auto plugConfig: config.plugins) {
-            for (auto plugDescription: toInstantiate) {
-	      if (plugDescription.name.startsWith(plugConfig->name)) {
-		sorted.push_back(plugDescription);
-	      }
+        if (doList) {
+            sorted = toInstantiate;
+        } else {
+            for (auto plugConfig: config.plugins) {
+                for (auto plugDescription: toInstantiate) {
+                    if (plugDescription.name.startsWith(plugConfig->name)) {
+                        sorted.push_back(plugDescription);
+                    }
+                }
             }
-	  }
-	}
+        }
         // TODO: Sort instantiations by config order
         // Instantiate the selected plugins
         for (const auto plugDescription: sorted) {
@@ -248,7 +252,7 @@ namespace ol::jucehost {
                             ">, <Plugin Name: " << plug->getName() << ">, <Parameter Name: " <<
                             parameter->getName(100) << ">" << std::endl;
                 }
-                this->instances.push_back(std::move(plug));
+                instances.push_back(std::move(plug));
             }
         }
 
@@ -256,7 +260,7 @@ namespace ol::jucehost {
             quit();
             return;
         }
-
+        mapControls();
         auto result = this->deviceManager.initialise(deviceSetup.inputChannels.toInteger(),
                                                      deviceSetup.outputChannels.toInteger(),
                                                      nullptr,
@@ -281,7 +285,7 @@ namespace ol::jucehost {
         std::cout << "Audio device: " << device->getName() << std::endl;
 
 
-        for (const auto &plug: this->instances) {
+        for (const auto &plug: instances) {
             // https://forum.juce.com/t/setting-buses-layout-of-hosted-plugin/55262
             // TODO: make number of inputs and outputs configurable
             auto layout = plug->getBusesLayout();
@@ -291,8 +295,6 @@ namespace ol::jucehost {
             }
             plug->prepareToPlay(device->getCurrentSampleRate(), device->getCurrentBufferSizeSamples());
         }
-
-        this->mapCCs();
     }
 
     void OLJuceHost::audioDeviceIOCallbackWithContext(const float *const*inputChannelData, int numInputChannels,
@@ -362,13 +364,17 @@ namespace ol::jucehost {
         std::cout << "Audio device stopped..." << std::endl;
     }
 
-    void OLJuceHost::mapCCs() {
+    void OLJuceHost::mapControls() {
+        std::cout << "Map controls..." << std::endl;
         for (const auto cfg: this->config.plugins) {
             for (const auto map: cfg->controlMaps) {
-                for (const auto &instance: this->instances) {
+                for (const auto &instance: instances) {
                     for (const auto parameter: instance->getParameters()) {
                         if (parameter->getName(100).startsWith(map->parameterName)) {
-                            this->ccMap.emplace(map->midiCC, parameter);
+                            std::cout << "Adding to control map: oscPath: " << map->oscPath << ", cc: " << map->midiCC
+                                    << "; Parameter: " << parameter->getName(100) << std::endl;
+                            oscMap.emplace(map->oscPath, parameter);
+                            ccMap.emplace(map->midiCC, parameter);
                         }
                     }
                 }
@@ -383,7 +389,7 @@ namespace ol::jucehost {
         std::cout << "MIDI Message: " << message.getDescription() << std::endl;
         if (message.isController()) {
             std::cout << std::endl << "MIDI CC: " << message.getControllerNumber() << std::endl;
-            auto parameter = this->ccMap.at(message.getControllerNumber());
+            auto parameter = ccMap.at(message.getControllerNumber());
             if (parameter != nullptr) {
                 const auto value = core::scale(message.getControllerValue(), 0, 127, 0, 1, 1);
                 std::cout << "  Midi CC parameter change: " << parameter->getName(100) << ": " << value << std::endl;
@@ -392,7 +398,7 @@ namespace ol::jucehost {
                     std::cout << "  Acquiring lock to add control change to queue: " << value << std::endl;
                     std::lock_guard lock(q_mutex);
                     std::cout << "  SUCCESS acquiring lock to add control change to queue." << value << std::endl;
-                    this->controlChanges.push(new ControlChange{parameter, value});
+                    controlChanges.push(new ControlChange{parameter, value});
                 }
             }
         }
@@ -400,10 +406,29 @@ namespace ol::jucehost {
 
     void OLJuceHost::oscMessageReceived(const juce::OSCMessage &message) {
         std::cout << "OSC Message: size: " << message.size() << std::endl;
+        if (message.isEmpty()) {
+            return;
+        }
         std::cout << "  Address pattern: " << message.getAddressPattern().toString() << std::endl;
-        for (const auto thingy: message) {
-            std::cout << "  Type: " << thingy.getType() << std::endl;
-            std::cout << "  Value: " << thingy.getFloat32() << std::endl;
+        const auto pattern = message.getAddressPattern();
+        std::cout << "  Checking oscMap; size: " << oscMap.size() << std::endl;
+        for (const auto &[path, parameter]: oscMap) {
+            std::cout << "  pattern: " << pattern.toString() << "; path: <" << path << ">" << std::endl;
+            if (path.length() > 0 && pattern.matches(path)) {
+                std::cout << "  Matches: " << path << " for " << parameter->getName(100) << std::endl;
+                const auto arg = message.begin();
+                if (arg->isFloat32()) {
+                    const auto value = arg->getFloat32();
+                    std::cout << "  Float value: " << value << std::endl; {
+                        std::cout << "  Acquiring lock to add control change to queue: " << value << std::endl;
+                        std::lock_guard lock(q_mutex);
+                        std::cout << "  SUCCESS acquiring lock to add control change to queue." << value << std::endl;
+                        this->controlChanges.push(new ControlChange{parameter, value});
+                    }
+                } else {
+                    std::cout << "  OSC argument is not a float: " << arg->getType() << std::endl;
+                }
+            }
         }
     }
 }

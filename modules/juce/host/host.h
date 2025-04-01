@@ -63,7 +63,7 @@ namespace ol::jucehost {
 
         void audioDeviceStopped() override;
 
-        void mapCCs();
+        void mapControls();
 
         void handleIncomingMidiMessage(juce::MidiInput *source, const juce::MidiMessage &message) override;
 
@@ -82,6 +82,7 @@ namespace ol::jucehost {
         std::vector<std::unique_ptr<juce::AudioPluginInstance> > instances;
         juce::AudioBuffer<float> audioBuffer;
         std::map<int, juce::AudioProcessorParameter *> ccMap;
+        std::map<juce::String, juce::AudioProcessorParameter *> oscMap;
         std::queue<ControlChange *> controlChanges;
         std::mutex q_mutex;
         int count = 0;
