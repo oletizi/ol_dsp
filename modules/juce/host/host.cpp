@@ -411,9 +411,7 @@ namespace ol::jucehost {
         }
         std::cout << "  Address pattern: " << message.getAddressPattern().toString() << std::endl;
         const auto pattern = message.getAddressPattern();
-        std::cout << "  Checking oscMap; size: " << oscMap.size() << std::endl;
         for (const auto &[path, parameter]: oscMap) {
-            std::cout << "  pattern: " << pattern.toString() << "; path: <" << path << ">" << std::endl;
             if (path.length() > 0 && pattern.matches(path)) {
                 std::cout << "  Matches: " << path << " for " << parameter->getName(100) << std::endl;
                 const auto arg = message.begin();
