@@ -246,7 +246,7 @@ namespace ol::jucehost {
             auto plug = formatManager.createPluginInstance(
                 plugDescription, 48000, 128, errorMessage);
             if (plug != nullptr) {
-                std::cout << "Plugin: <Format:" << plugDescription.pluginFormatName << ">, <Name: " << plug->getName() << ">" << std::endl;
+                std::cout << "Plugin: <Format: " << plugDescription.pluginFormatName << ">, <Name: " << plug->getName() << ">" << std::endl;
                 for (const auto parameter: plug->getParameters()) {
                     std::cout << "Plugin Parameter: <Format: " << plugDescription.pluginFormatName <<
                             ">, <Plugin Name: " << plug->getName() << ">, <Parameter Name: " <<
