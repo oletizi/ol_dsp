@@ -71,7 +71,7 @@ namespace ol::jucehost {
         std::cout << "Initialising OLJuceHost..." << std::endl;
         const bool doList = commandLineParameters.contains("--list");
 
-        const juce::String configDir = juce::String(std::getenv("HOME")) + "/.ol_juce_host";
+        const juce::String configDir = juce::String(std::getenv("HOME")) + "/.config/plughost";
         if (!doList) {
             auto path = configDir + "/config";
             std::cout << "Loading config from: " << path << std::endl;
