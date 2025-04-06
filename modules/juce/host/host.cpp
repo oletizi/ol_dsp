@@ -179,7 +179,7 @@ namespace ol::jucehost {
                 if (doList && !shouldIgnore) {
                     // we want to print out all the plugin names
                     scanner->scanNextFile(true, pluginName);
-                    std::cout << "Plugin: <Format:" << format->getName() << ">, <Name: " << pluginName << ">" <<
+                    std::cout << "Next Plugin: <Format:" << format->getName() << ">, <Name: " << pluginName << ">" <<
                             std::endl;
                 } else if (!shouldIgnore) {
                     for (const auto pluginConfig: config.plugins) {
@@ -246,7 +246,7 @@ namespace ol::jucehost {
             auto plug = formatManager.createPluginInstance(
                 plugDescription, 48000, 128, errorMessage);
             if (plug != nullptr) {
-                std::cout << "Plugin: <Name: " << plug->getName() << ">" << std::endl;
+                std::cout << "Plugin: <Format:" << plugDescription.pluginFormatName << ">, <Name: " << plug->getName() << ">" << std::endl;
                 for (const auto parameter: plug->getParameters()) {
                     std::cout << "Plugin Parameter: <Format: " << plugDescription.pluginFormatName <<
                             ">, <Plugin Name: " << plug->getName() << ">, <Parameter Name: " <<
