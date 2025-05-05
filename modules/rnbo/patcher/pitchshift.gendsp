@@ -188,8 +188,8 @@
 					"numinlets" : 0,
 					"numoutlets" : 1,
 					"outlettype" : [ "" ],
-					"patching_rect" : [ 24.5, 97.0, 231.0, 22.0 ],
-					"text" : "param window 100 @min 4 @max 44100"
+					"patching_rect" : [ 24.5, 97.0, 202.0, 22.0 ],
+					"text" : "param window 10 @min 4 @max 10"
 				}
 
 			}
@@ -508,7 +508,7 @@
 
 			}
  ],
-		"originid" : "pat-47"
+		"originid" : "pat-60"
 	}
 
 }
