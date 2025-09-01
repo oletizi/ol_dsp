@@ -1,0 +1,29 @@
+{
+  "name": "ol_dsp",
+  "version": "1.0.0",
+  "description": "An eclectic collection of digital signal processing tools, audio effects, and hardware sampler utilities for Arduino microcontrollers and desktop applications.",
+  "private": true,
+  "workspaces": [
+    "modules/audio-tools"
+  ],
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "npm run test --workspace=modules/audio-tools",
+    "dev": "npm run dev --workspace=modules/audio-tools",
+    "build:audio-tools": "npm run build --workspace=modules/audio-tools"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/oletizi/ol_dsp.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/oletizi/ol_dsp/issues"
+  },
+  "homepage": "https://github.com/oletizi/ol_dsp#readme"
+}
