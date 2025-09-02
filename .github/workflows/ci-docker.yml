@@ -148,23 +148,33 @@ jobs:
         chmod +x scripts/setup-submodules.sh
         ./scripts/setup-submodules.sh
     
-    - name: Check if pre-built libraries exist
+    - name: Check if pre-built JUCE exists in cache
       id: check-prebuild
       run: |
-        if [ -f "./cmake-build/modules/juce/host/plughost_artefacts/plughost" ]; then
+        if [ -f "/workspace/.submodule_cache/JUCE/build/tools/extras/Build/juceaide/juceaide_artefacts/Debug/juceaide" ]; then
           echo "prebuild=true" >> $GITHUB_OUTPUT
-          echo "Pre-built libraries found, skipping build"
+          echo "Pre-built JUCE found in Docker cache, will use cached version"
+          echo "JUCE cache location: /workspace/.submodule_cache/JUCE/build"
         else
           echo "prebuild=false" >> $GITHUB_OUTPUT  
-          echo "No pre-built libraries found, will build from source"
+          echo "No pre-built JUCE found, will build from source"
         fi
     
-    - name: Build with Make
+    - name: Configure build to use pre-built JUCE
+      if: steps.check-prebuild.outputs.prebuild == 'true'
+      run: |
+        mkdir -p ./cmake-build
+        cd ./cmake-build
+        cmake .. -DJUCE_DIR=/workspace/.submodule_cache/JUCE/build
+        make plughost
+        echo "Build completed using pre-built JUCE from cache"
+    
+    - name: Build with Make (from source)
       if: steps.check-prebuild.outputs.prebuild == 'false'
       run: |
         make
         
-    - name: Build Plugin Host
+    - name: Build Plugin Host (from source)
       if: steps.check-prebuild.outputs.prebuild == 'false'
       run: |
         make plughost
