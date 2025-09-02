@@ -1,5 +1,8 @@
 BUILD_DIR=./cmake-build
 
+# Default target - show help
+.DEFAULT_GOAL := help
+
 # Build targets
 all: ## Build all C++ components using CMake
 	echo ${BUILD_DIR} && if [ ! -e ${BUILD_DIR} ]; then mkdir ${BUILD_DIR}; fi && cd ${BUILD_DIR} && cmake ../ && make
@@ -53,6 +56,9 @@ docker-ci-cpp: ## Run C++ Docker CI test only (auto-detects images)
 docker-ci-npm: ## Run npm Docker CI test only (auto-detects images)
 	./scripts/run-docker-ci.sh npm
 
+docker-shell: ## Start interactive Docker shell for manual CI testing
+	docker run -it --platform linux/arm64 -v "$(PWD)/scripts:/workspace/scripts:ro" ghcr.io/oletizi/ol_dsp/cpp-builder:latest-arm64 bash
+
 test-ci-with-act: ## Test GitHub Actions workflows locally using act CLI
 	./scripts/test-ci-with-act.sh
 
@@ -60,7 +66,10 @@ run-act-in-docker: ## Run act CLI inside Docker for GitHub Actions testing
 	./scripts/run-act-in-docker.sh
 
 # Setup targets
-setup-submodules: ## Setup git submodules using cached repositories
+setup-deps: ## Setup dependencies in ../.ol_dsp-deps (works locally and in Docker)
+	./scripts/setup-deps.sh
+
+setup-submodules: ## Setup git submodules using cached repositories (legacy)
 	./scripts/setup-submodules.sh
 
 help: ## Show this help message
@@ -69,4 +78,4 @@ help: ## Show this help message
 	@echo 'Available targets:'
 	@awk 'BEGIN {FS = ":.*?## "}; /^[a-zA-Z0-9_-]+:.*?## / {printf "  %-30s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
-.PHONY: all test clean docker-build-images docker-build-images-locally docker-build-and-push-images docker-build-cpp docker-build-npm docker-dev docker-clean quick-test docker-ci docker-ci-cpp docker-ci-npm test-ci-with-act run-act-in-docker setup-submodules help
+.PHONY: all test clean docker-build-images docker-build-images-locally docker-build-and-push-images docker-build-cpp docker-build-npm docker-dev docker-clean quick-test docker-ci docker-ci-cpp docker-ci-npm docker-shell test-ci-with-act run-act-in-docker setup-deps setup-submodules help

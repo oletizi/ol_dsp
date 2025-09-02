@@ -78,18 +78,25 @@ run_cpp_build() {
     docker run --rm --platform "$PLATFORM" \
         "$CPP_IMAGE" \
         bash -c "
-            echo '📁 Checking out source code with preserved timestamps...'
+            echo '📁 Checking out source code...'
             cd /workspace
-            # Remove any existing source files but keep the cache
-            find . -maxdepth 1 ! -name '.submodule_cache' ! -name '.' -exec rm -rf {} + 2>/dev/null || true
-            git clone $REPO_URL src
-            cd src
+            # Clone directly over the workspace, preserving pre-built dependencies
+            git clone $REPO_URL tmp_src
+            cd tmp_src
             git checkout $CURRENT_BRANCH || git checkout main
             
-            # Move source files to workspace root
-            mv * .[^.]* /workspace/ 2>/dev/null || true
+            # Copy source files, preserving pre-built dependencies in libs/ and test/
+            echo '📁 Copying source files while preserving pre-built dependencies...'
+            # Copy everything except the pre-built directories
+            for item in *; do
+                if [ \"\$item\" != \"libs\" ] && [ \"\$item\" != \"test\" ]; then
+                    cp -r \"\$item\" /workspace/
+                fi
+            done
+            # Copy hidden files
+            cp -r .[^.]* /workspace/ 2>/dev/null || true
             cd /workspace
-            rm -rf src
+            rm -rf tmp_src
             
             echo '📁 Verifying pre-built dependencies are in expected locations...'
             if [ -d 'libs/JUCE/build' ]; then

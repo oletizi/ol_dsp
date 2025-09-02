@@ -71,6 +71,12 @@
       "url": "https://github.com/google/googletest.git",
       "commit": "eb2d85edd0bff7a712b6aff147cd9f789f0d7d0b",
       "description": "Google Test framework"
+    },
+    {
+      "path": "DaisySP",
+      "url": "https://github.com/electro-smith/DaisySP.git",
+      "commit": "master",
+      "description": "DaisySP audio library"
     }
   ]
 }

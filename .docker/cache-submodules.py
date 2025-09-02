@@ -51,6 +51,28 @@ def main():
             sys.exit(1)
     
     print(f'Successfully cloned {len(config["submodules"])} repositories to expected locations')
+    
+    # Create symlinks for path mismatches between .gitmodules and CMakeLists.txt
+    symlinks = [
+        ('DaisySP', 'libs/DaisySP')
+    ]
+    
+    for source, target in symlinks:
+        source_path = os.path.join(base_dir, source)
+        target_path = os.path.join(base_dir, target)
+        
+        if os.path.exists(source_path):
+            # Create parent directory for target
+            os.makedirs(os.path.dirname(target_path), exist_ok=True)
+            
+            # Create symlink
+            if not os.path.exists(target_path):
+                os.symlink(os.path.relpath(source_path, os.path.dirname(target_path)), target_path)
+                print(f'Created symlink: {target} -> {source}')
+            else:
+                print(f'Symlink already exists: {target}')
+        else:
+            print(f'Source not found for symlink: {source}')
 
 if __name__ == '__main__':
     main()

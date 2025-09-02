@@ -23,7 +23,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 include(CPM)
 include(JUCEDefaults)
 
-add_subdirectory(libs/DaisySP)
+add_subdirectory(../.ol_dsp-deps/DaisySP ${CMAKE_BINARY_DIR}/deps/DaisySP)
 add_subdirectory(libs/dattorro-verb)
 
 # FetchContent_Declare(SFML
@@ -32,7 +32,7 @@ add_subdirectory(libs/dattorro-verb)
 # FetchContent_MakeAvailable(SFML)  # TODO: SFML has OpenAL CMake compatibility issues
 
 
-add_subdirectory(libs/JUCE)
+add_subdirectory(../.ol_dsp-deps/libs/JUCE ${CMAKE_BINARY_DIR}/deps/JUCE)
 #CPMAddPackage("gh:ImJimmi/JIVE@1.0.4")
 
 if (${BUILD_LLHTTP})
@@ -55,7 +55,7 @@ if (${BUILD_TEENSY})
 endif ()
 
 #add_subdirectory(libs/rapidyaml)
-add_subdirectory(libs/rtmidi)
+add_subdirectory(../.ol_dsp-deps/libs/rtmidi ${CMAKE_BINARY_DIR}/deps/rtmidi)
 # add_subdirectory(libs/Soundpipe)  # TODO: Soundpipe doesn't have CMakeLists.txt - needs integration work
 
 add_subdirectory(modules/app)
@@ -68,6 +68,7 @@ add_subdirectory(modules/juce)
 add_subdirectory(modules/synthlib)
 add_subdirectory(workouts)
 add_subdirectory(test)
+# Test dependencies in ../.ol_dsp-deps/test/ are used by test/ directory
 
 add_library(spline INTERFACE libs/spline/spline.h
         modules/juce/hello/hello.cpp
@@ -76,24 +77,24 @@ set_target_properties(spline PROPERTIES LINKER_LANGUAGE CXX)
 target_include_directories(spline INTERFACE libs)
 
 add_library(stmlib
-        libs/stmlib/stmlib/stmlib.h
-        libs/stmlib/stmlib/dsp/atan.h
-        libs/stmlib/stmlib/dsp/atan.cc
-        libs/stmlib/stmlib/dsp/cosine_oscillator.h
-        libs/stmlib/stmlib/dsp/delay_line.h
-        libs/stmlib/stmlib/dsp/dsp.h
-        libs/stmlib/stmlib/dsp/filter.h
-        libs/stmlib/stmlib/dsp/hysteresis_filter.h
-        libs/stmlib/stmlib/dsp/hysteresis_quantizer.h
-        libs/stmlib/stmlib/dsp/limiter.h
-        libs/stmlib/stmlib/dsp/parameter_interpolator.h
-        libs/stmlib/stmlib/dsp/polyblep.h
-        libs/stmlib/stmlib/dsp/rsqrt.h
-        libs/stmlib/stmlib/dsp/sample_rate_converter.h
-        libs/stmlib/stmlib/dsp/units.h
-        libs/stmlib/stmlib/dsp/units.cc
-        libs/stmlib/stmlib/fft/shy_fft.h)
-target_include_directories(stmlib PUBLIC libs/stmlib)
+        ../.ol_dsp-deps/libs/stmlib/stmlib/stmlib.h
+        ../.ol_dsp-deps/libs/stmlib/stmlib/dsp/atan.h
+        ../.ol_dsp-deps/libs/stmlib/stmlib/dsp/atan.cc
+        ../.ol_dsp-deps/libs/stmlib/stmlib/dsp/cosine_oscillator.h
+        ../.ol_dsp-deps/libs/stmlib/stmlib/dsp/delay_line.h
+        ../.ol_dsp-deps/libs/stmlib/stmlib/dsp/dsp.h
+        ../.ol_dsp-deps/libs/stmlib/stmlib/dsp/filter.h
+        ../.ol_dsp-deps/libs/stmlib/stmlib/dsp/hysteresis_filter.h
+        ../.ol_dsp-deps/libs/stmlib/stmlib/dsp/hysteresis_quantizer.h
+        ../.ol_dsp-deps/libs/stmlib/stmlib/dsp/limiter.h
+        ../.ol_dsp-deps/libs/stmlib/stmlib/dsp/parameter_interpolator.h
+        ../.ol_dsp-deps/libs/stmlib/stmlib/dsp/polyblep.h
+        ../.ol_dsp-deps/libs/stmlib/stmlib/dsp/rsqrt.h
+        ../.ol_dsp-deps/libs/stmlib/stmlib/dsp/sample_rate_converter.h
+        ../.ol_dsp-deps/libs/stmlib/stmlib/dsp/units.h
+        ../.ol_dsp-deps/libs/stmlib/stmlib/dsp/units.cc
+        ../.ol_dsp-deps/libs/stmlib/stmlib/fft/shy_fft.h)
+target_include_directories(stmlib PUBLIC ../.ol_dsp-deps/libs/stmlib)
 set_target_properties(stmlib PROPERTIES LINKER_LANGUAGE CXX)
 
 if (${BUILD_TEENSY})
