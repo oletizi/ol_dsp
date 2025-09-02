@@ -57,13 +57,17 @@ Current Docker CI setup has complexity around copying/excluding source files vs 
   - ✅ Fixed test dependency paths
 
 ### Phase 3: Docker Integration
-- [ ] 3.1: Update `cpp-builder.Dockerfile`
-  - Remove current submodule caching logic
-  - Add `RUN make setup-deps` to pre-build dependencies
-- [ ] 3.2: Simplify CI scripts
-  - Remove all copying/excluding logic from `01-clone-repo.sh`
-  - Just clone repo normally - no special handling needed
-- [ ] 3.3: Update `cache-submodules.py` or remove if no longer needed
+- [x] 3.1: Update `cpp-builder.Dockerfile`
+  - ✅ Replaced complex submodule caching with simple `setup-deps.sh` call
+  - ✅ Dependencies built to `/workspace/.ol_dsp-deps` in Docker image
+  - ✅ Eliminates all copying/symlink complexity
+- [x] 3.2: Simplify CI scripts
+  - ✅ Removed all copying/excluding logic from `run-docker-ci.sh`
+  - ✅ Now just clones repo to `/workspace/ol_dsp` - no special handling needed
+  - ✅ Dependencies already pre-built at `../.ol_dsp-deps/`
+- [ ] 3.3: Build and test new Docker images
+  - 🔄 Currently building multi-arch images with new approach
+  - [ ] Test Docker CI with new images
 
 ### Phase 4: Testing & Cleanup
 - [ ] 4.1: Test full Docker CI pipeline

@@ -78,43 +78,36 @@ run_cpp_build() {
     docker run --rm --platform "$PLATFORM" \
         "$CPP_IMAGE" \
         bash -c "
-            echo '📁 Checking out source code...'
+            echo '📁 Cloning ol_dsp repository...'
             cd /workspace
-            # Clone directly over the workspace, preserving pre-built dependencies
-            git clone $REPO_URL tmp_src
-            cd tmp_src
+            git clone $REPO_URL ol_dsp
+            cd ol_dsp
             git checkout $CURRENT_BRANCH || git checkout main
             
-            # Copy source files, preserving pre-built dependencies in libs/ and test/
-            echo '📁 Copying source files while preserving pre-built dependencies...'
-            # Copy everything except the pre-built directories
-            for item in *; do
-                if [ \"\$item\" != \"libs\" ] && [ \"\$item\" != \"test\" ]; then
-                    cp -r \"\$item\" /workspace/
-                fi
-            done
-            # Copy hidden files
-            cp -r .[^.]* /workspace/ 2>/dev/null || true
-            cd /workspace
-            rm -rf tmp_src
-            
-            echo '📁 Verifying pre-built dependencies are in expected locations...'
-            if [ -d 'libs/JUCE/build' ]; then
-                echo '✅ Pre-built JUCE found at libs/JUCE/build'
-                echo '   Pre-built dependencies ready - no symlinks needed!'
+            echo '📁 Verifying pre-built dependencies...'
+            if [ -d '../.ol_dsp-deps/libs/JUCE/build' ]; then
+                echo '✅ Pre-built dependencies found at ../.ol_dsp-deps/'
+                ls -la ../.ol_dsp-deps/libs/JUCE/build/ | head -5
             else
-                echo '❌ Pre-built JUCE not found, will build from scratch'
+                echo '❌ Pre-built dependencies not found!'
+                exit 1
             fi
             
             echo '🔨 Building project...'
-            time make
+            time make all
             
             echo '🔨 Building Plugin Host...'
             time make plughost
             
             echo '📊 Verifying Plugin Host...'
-            ls -la ./cmake-build/modules/juce/host/plughost_artefacts/plughost
-            timeout 10s ./cmake-build/modules/juce/host/plughost_artefacts/plughost --help || echo 'Plugin host help completed'
+            PLUGHOST_PATH='./cmake-build/modules/juce/host/plughost_artefacts/plughost'
+            if [ -f \"\$PLUGHOST_PATH\" ]; then
+                ls -la \"\$PLUGHOST_PATH\"
+                timeout 10s \"\$PLUGHOST_PATH\" --help || echo 'Plugin host help completed'
+            else
+                echo '⚠️  Plugin host not found at expected location'
+                find ./cmake-build -name 'plughost' -type f 2>/dev/null || echo 'No plughost found'
+            fi
             
             echo '✅ C++ build test completed successfully'
         "
