@@ -31,6 +31,7 @@ RUN apt-get update && apt-get install -y \
     libegl1-mesa-dev \
     libgl1-mesa-dev \
     libudev-dev \
+    libopenal-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Install newer CMake from Kitware
