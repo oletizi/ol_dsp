@@ -1,5 +1,12 @@
 # OL_DSP: Digital Signal Processing Toolkit
 
+[![CI](https://github.com/oletizi/ol_dsp/workflows/CI/badge.svg)](https://github.com/oletizi/ol_dsp/actions)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![C++](https://img.shields.io/badge/C++-11%2B-blue.svg)](https://isocpp.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.6+-3178c6.svg)](https://www.typescriptlang.org/)
+[![Arduino](https://img.shields.io/badge/Arduino-Compatible-00979D.svg)](https://www.arduino.cc/)
+[![JUCE](https://img.shields.io/badge/JUCE-Framework-orange.svg)](https://juce.com/)
+
 An eclectic collection of digital signal processing tools, audio effects, and hardware sampler utilities for Arduino microcontrollers and desktop applications.
 
 ## Overview
