@@ -1,0 +1,76 @@
+{
+  "submodules": [
+    {
+      "path": "libs/JUCE",
+      "url": "https://github.com/juce-framework/JUCE.git",
+      "commit": "5179f4e720d8406ebd1b5401c86aea8da6cc83c9",
+      "description": "JUCE framework for audio applications"
+    },
+    {
+      "path": "libs/Soundpipe",
+      "url": "https://github.com/PaulBatchelor/Soundpipe.git",
+      "commit": "951b501f00656f0fdf8ac8a8691e550284f155b7",
+      "description": "Audio DSP library"
+    },
+    {
+      "path": "libs/TeensyAudio",
+      "url": "https://github.com/PaulStoffregen/Audio.git",
+      "commit": "f3777604cfa07f795c5bf6340c4abf967fbf4ffe",
+      "description": "Teensy Audio Library"
+    },
+    {
+      "path": "libs/du-ino",
+      "url": "https://github.com/oletizi/du-ino.git",
+      "commit": "ea8eab6f8dae6df5a855d79dad6a3d6b88077341",
+      "description": "DU-INO Eurorack module framework"
+    },
+    {
+      "path": "libs/libDaisy",
+      "url": "https://github.com/electro-smith/libDaisy.git",
+      "commit": "bd13385c823b6777d7f3c0a90c488a345409175c",
+      "description": "Daisy audio platform library"
+    },
+    {
+      "path": "libs/rapidyaml",
+      "url": "https://github.com/biojppm/rapidyaml.git",
+      "commit": "8c1d6221dea11259bd63b9fadb081002fe064766",
+      "description": "Fast YAML parser"
+    },
+    {
+      "path": "libs/rtmidi",
+      "url": "https://github.com/thestk/rtmidi.git",
+      "commit": "b45dae2d3a9e3aae819ade3e5a53504d601e05dd",
+      "description": "Real-time MIDI library"
+    },
+    {
+      "path": "libs/sfizz",
+      "url": "https://github.com/sfztools/sfizz.git",
+      "commit": "276ab2ce68d0c09716578cd576d9f18b8ac85593",
+      "description": "SFZ sampler library"
+    },
+    {
+      "path": "libs/stk",
+      "url": "https://github.com/thestk/stk.git",
+      "commit": "8ba275a18dc8e4376dd8d72e310beb3070438c51",
+      "description": "Synthesis ToolKit"
+    },
+    {
+      "path": "libs/stmlib/stmlib",
+      "url": "https://github.com/pichenettes/stmlib.git",
+      "commit": "d18def816c51d1da0c108236928b2bbd25c17481",
+      "description": "STM32 utility library"
+    },
+    {
+      "path": "test/FakeIt",
+      "url": "https://github.com/eranpeer/FakeIt.git",
+      "commit": "cb39d8a053876f74dfeed66dd335d3041f142095",
+      "description": "C++ mocking framework"
+    },
+    {
+      "path": "test/googletest",
+      "url": "https://github.com/google/googletest.git",
+      "commit": "2ae29b52fdff88c52fef655fa0d245fc514ca35b",
+      "description": "Google Test framework"
+    }
+  ]
+}

@@ -94,8 +94,11 @@ jobs:
     
     steps:
     - uses: actions/checkout@v4
-      with:
-        submodules: recursive
+    
+    - name: Setup cached submodules
+      run: |
+        chmod +x scripts/setup-submodules.sh
+        ./scripts/setup-submodules.sh
     
     - name: Build with Make
       run: |

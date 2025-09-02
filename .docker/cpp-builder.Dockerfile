@@ -35,6 +35,7 @@ RUN apt-get update && apt-get install -y \
     libvorbis-dev \
     libogg-dev \
     libflac-dev \
+    python3 \
     && rm -rf /var/lib/apt/lists/*
 
 # Install newer CMake from Kitware
@@ -47,6 +48,28 @@ RUN wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/nul
 
 # Set working directory
 WORKDIR /workspace
+
+# Pre-cache submodules to speed up CI builds (670MB+ of dependencies)
+# Clone repositories and checkout specific commits defined in submodules.json
+COPY submodules.json /tmp/submodules.json
+RUN mkdir -p /workspace/.submodule_cache && \
+    python3 -c "
+import json
+import os
+
+with open('/tmp/submodules.json', 'r') as f:
+    config = json.load(f)
+
+for submodule in config['submodules']:
+    url = submodule['url']
+    commit = submodule['commit']
+    cache_name = os.path.basename(url).replace('.git', '')
+    cache_path = f'/workspace/.submodule_cache/{cache_name}'
+    
+    print(f'Caching {cache_name} @ {commit[:8]}...')
+    os.system(f'git clone \"{url}\" \"{cache_path}\"')
+    os.system(f'cd \"{cache_path}\" && git checkout {commit}')
+" && rm /tmp/submodules.json
 
 # Set default command
 CMD ["bash"]
