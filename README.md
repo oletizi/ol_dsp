@@ -137,13 +137,10 @@ console.log(`Loaded ${sampleData.name}: ${sampleData.sampleRate}Hz, ${sampleData
 
 ```bash
 # List available plugins
-./juce_host --list
+./cmake-build/modules/juce/host/plughost_artefacts/plughost --list
 
-# Load and test a plugin
-./juce_host --load path/to/plugin.vst3
-
-# Process audio through plugin
-./juce_host --input audio.wav --plugin myplugin.vst3 --output processed.wav
+# Load and test a plugin (after building with make plughost)
+./cmake-build/modules/juce/host/plughost_artefacts/plughost --load path/to/plugin.vst3
 ```
 
 ## Development
