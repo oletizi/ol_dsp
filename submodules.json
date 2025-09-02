@@ -9,13 +9,13 @@
     {
       "path": "libs/Soundpipe",
       "url": "https://github.com/PaulBatchelor/Soundpipe.git",
-      "commit": "951b501f00656f0fdf8ac8a8691e550284f155b7",
+      "commit": "3efb43bdabd0ed23b17c694292b5a79f1692a3ea",
       "description": "Audio DSP library"
     },
     {
       "path": "libs/TeensyAudio",
       "url": "https://github.com/PaulStoffregen/Audio.git",
-      "commit": "f3777604cfa07f795c5bf6340c4abf967fbf4ffe",
+      "commit": "bd7de878a802841857a762e855e55fcc9da37fa2",
       "description": "Teensy Audio Library"
     },
     {
@@ -27,31 +27,31 @@
     {
       "path": "libs/libDaisy",
       "url": "https://github.com/electro-smith/libDaisy.git",
-      "commit": "bd13385c823b6777d7f3c0a90c488a345409175c",
+      "commit": "c6887c69c9d38a54bc5ba15bc89e4c2256c04895",
       "description": "Daisy audio platform library"
     },
     {
       "path": "libs/rapidyaml",
       "url": "https://github.com/biojppm/rapidyaml.git",
-      "commit": "8c1d6221dea11259bd63b9fadb081002fe064766",
+      "commit": "e4aa0b3b5b47d4691935f127087af812ef8477f3",
       "description": "Fast YAML parser"
     },
     {
       "path": "libs/rtmidi",
       "url": "https://github.com/thestk/rtmidi.git",
-      "commit": "b45dae2d3a9e3aae819ade3e5a53504d601e05dd",
+      "commit": "9af27d0c0e6afc94634121f7c9bed73827a23e4b",
       "description": "Real-time MIDI library"
     },
     {
       "path": "libs/sfizz",
       "url": "https://github.com/sfztools/sfizz.git",
-      "commit": "276ab2ce68d0c09716578cd576d9f18b8ac85593",
+      "commit": "4e70dc0bef53b41f2853ed46e26f5911114c92d0",
       "description": "SFZ sampler library"
     },
     {
       "path": "libs/stk",
       "url": "https://github.com/thestk/stk.git",
-      "commit": "8ba275a18dc8e4376dd8d72e310beb3070438c51",
+      "commit": "6aacd357d76250bb7da2b1ddf675651828784bbc",
       "description": "Synthesis ToolKit"
     },
     {
@@ -63,13 +63,13 @@
     {
       "path": "test/FakeIt",
       "url": "https://github.com/eranpeer/FakeIt.git",
-      "commit": "cb39d8a053876f74dfeed66dd335d3041f142095",
+      "commit": "1d172eb87929b8bd5a8dd9a981fc0e43b9245475",
       "description": "C++ mocking framework"
     },
     {
       "path": "test/googletest",
       "url": "https://github.com/google/googletest.git",
-      "commit": "2ae29b52fdff88c52fef655fa0d245fc514ca35b",
+      "commit": "eb2d85edd0bff7a712b6aff147cd9f789f0d7d0b",
       "description": "Google Test framework"
     }
   ]
