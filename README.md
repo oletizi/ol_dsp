@@ -164,6 +164,30 @@ make test-dsp
 npm run test:samplers
 ```
 
+### Local CI Testing
+
+Test GitHub Actions workflows locally before pushing changes:
+
+```bash
+# Run all GitHub Actions workflows locally (requires Docker)
+./scripts/run-act-in-docker.sh
+
+# Run specific job
+./scripts/run-act-in-docker.sh --job build-cpp
+./scripts/run-act-in-docker.sh --job build-npm
+
+# List available workflows and jobs
+./scripts/run-act-in-docker.sh --list
+
+# Alternative: Use act CLI directly (requires act installation)
+./scripts/test-ci-with-act.sh
+```
+
+The Docker-based approach (`run-act-in-docker.sh`) provides the most faithful reproduction of GitHub Actions environment by:
+- Using official GitHub Actions runner Docker images
+- Providing consistent environment across different development machines  
+- Eliminating local environment differences that could cause false CI passes/failures
+
 ### Code Style
 
 - C/C++: Follow the existing code style, use clang-format
