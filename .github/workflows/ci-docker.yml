@@ -11,9 +11,9 @@ env:
   BASE_IMAGE_NAME: ${{ github.repository }}/base
   CPP_IMAGE_NAME: ${{ github.repository }}/cpp-builder
   NODE_IMAGE_NAME: ${{ github.repository }}/node-builder
-  BASE_IMAGE: ghcr.io/${{ github.repository }}/base:latest
-  CPP_IMAGE: ghcr.io/${{ github.repository }}/cpp-builder:latest
-  NODE_IMAGE: ghcr.io/${{ github.repository }}/node-builder:latest
+  BASE_IMAGE: ghcr.io/${{ github.repository }}/base:latest-amd64
+  CPP_IMAGE: ghcr.io/${{ github.repository }}/cpp-builder:latest-amd64
+  NODE_IMAGE: ghcr.io/${{ github.repository }}/node-builder:latest-amd64
 
 jobs:
   build-images:
