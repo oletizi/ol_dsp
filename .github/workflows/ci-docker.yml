@@ -86,34 +86,43 @@ jobs:
           echo "Image ${{ env.NODE_IMAGE }} does not exist, will build"
         fi
     
-    - name: Build and push base image
-      if: steps.base-exists.outputs.exists == 'false'
-      uses: docker/build-push-action@v5
-      with:
-        context: .
-        file: .docker/base.Dockerfile
-        push: true
-        tags: ${{ env.BASE_IMAGE }}
+    - name: Skip Docker builds (use locally built images)
+      run: |
+        echo "ℹ️  Docker images should be built and pushed locally using:"
+        echo "   ./scripts/build-and-push-images.sh"
+        echo ""
+        echo "This avoids long CI build times and provides faster feedback."
+        echo "Images will be pulled from registry instead of built in CI."
+        
+    # Uncomment these steps if you need to build images in CI
+    # - name: Build and push base image
+    #   if: steps.base-exists.outputs.exists == 'false'
+    #   uses: docker/build-push-action@v5
+    #   with:
+    #     context: .
+    #     file: .docker/base.Dockerfile
+    #     push: true
+    #     tags: ${{ env.BASE_IMAGE }}
     
-    - name: Build and push C++ image
-      if: steps.cpp-exists.outputs.exists == 'false' || steps.base-exists.outputs.exists == 'false'
-      uses: docker/build-push-action@v5
-      with:
-        context: .
-        file: .docker/cpp-builder.Dockerfile
-        push: true
-        tags: ${{ env.CPP_IMAGE }}
-        build-args: |
-          GITHUB_REPOSITORY=${{ github.repository }}
+    # - name: Build and push C++ image
+    #   if: steps.cpp-exists.outputs.exists == 'false' || steps.base-exists.outputs.exists == 'false'
+    #   uses: docker/build-push-action@v5
+    #   with:
+    #     context: .
+    #     file: .docker/cpp-builder.Dockerfile
+    #     push: true
+    #     tags: ${{ env.CPP_IMAGE }}
+    #     build-args: |
+    #       GITHUB_REPOSITORY=${{ github.repository }}
     
-    - name: Build and push Node image
-      if: steps.node-exists.outputs.exists == 'false'
-      uses: docker/build-push-action@v5
-      with:
-        context: .
-        file: .docker/node-builder.Dockerfile
-        push: true
-        tags: ${{ env.NODE_IMAGE }}
+    # - name: Build and push Node image
+    #   if: steps.node-exists.outputs.exists == 'false'
+    #   uses: docker/build-push-action@v5
+    #   with:
+    #     context: .
+    #     file: .docker/node-builder.Dockerfile
+    #     push: true
+    #     tags: ${{ env.NODE_IMAGE }}
 
   build-cpp:
     name: Build C++ Components (Docker)
