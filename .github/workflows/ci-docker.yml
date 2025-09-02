@@ -148,9 +148,21 @@ jobs:
         chmod +x scripts/setup-submodules.sh
         ./scripts/setup-submodules.sh
     
+    - name: Copy pre-built JUCE to expected build location
+      run: |
+        echo "📁 Copying pre-built JUCE build directory to expected location"
+        mkdir -p ./cmake-build/libs
+        if [ -d "/workspace/.submodule_cache/JUCE/build" ]; then
+          cp -r /workspace/.submodule_cache/JUCE/build ./cmake-build/libs/JUCE
+          echo "✅ Copied pre-built JUCE build directory (CMake can now write to it)"
+          ls -la ./cmake-build/libs/JUCE/
+        else
+          echo "❌ Pre-built JUCE build directory not found"
+        fi
+    
     - name: Build project using Docker cache
       run: |
-        echo "🚀 Building project (automatically uses cached dependencies from Docker image)"
+        echo "🚀 Building project (should use pre-built JUCE via symlink)"
         make
         
     - name: Verify Plugin Host
