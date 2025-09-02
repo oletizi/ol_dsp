@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  cpp-builder:
+    build:
+      context: .
+      dockerfile: .docker/cpp-builder.Dockerfile
+    image: ol_dsp/cpp-builder:local
+    volumes:
+      - .:/workspace
+    working_dir: /workspace
+    command: tail -f /dev/null  # Keep container running
+    
+  node-builder:
+    build:
+      context: .
+      dockerfile: .docker/node-builder.Dockerfile
+    image: ol_dsp/node-builder:local
+    volumes:
+      - .:/workspace
+      - /workspace/node_modules  # Use container's node_modules
+    working_dir: /workspace
+    command: tail -f /dev/null  # Keep container running
+    
+  # Combined development environment
+  dev:
+    build:
+      context: .
+      dockerfile: .docker/cpp-builder.Dockerfile
+    image: ol_dsp/dev:local
+    volumes:
+      - .:/workspace
+    working_dir: /workspace
+    command: tail -f /dev/null
+    # Add Node.js to the C++ container for full development
+    environment:
+      - NODE_VERSION=20
+    # Install Node.js in the C++ container
+    entrypoint: |
+      bash -c "
+        if ! command -v node &> /dev/null; then
+          curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+          apt-get install -y nodejs
+        fi
+        exec tail -f /dev/null
+      "
