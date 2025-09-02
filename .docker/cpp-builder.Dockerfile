@@ -30,6 +30,7 @@ RUN apt-get update && apt-get install -y \
     mesa-common-dev \
     libegl1-mesa-dev \
     libgl1-mesa-dev \
+    libudev-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Install newer CMake from Kitware
