@@ -15,6 +15,11 @@ RUN python3 /tmp/cache-submodules.py
 # This avoids copying application code that changes frequently
 WORKDIR /tmp/juce-prebuild
 
+# Create symlinks to cached submodules first
+COPY scripts/setup-submodules.sh .
+COPY submodules.json .
+RUN ./setup-submodules.sh
+
 # Create a minimal CMakeLists.txt that only builds JUCE
 RUN cat > CMakeLists.txt << 'EOF'
 cmake_minimum_required(VERSION 3.30)
@@ -28,11 +33,6 @@ add_subdirectory(libs/JUCE)
 # Build juceaide tool
 set(JUCE_BUILD_EXTRAS ON)
 EOF
-
-# Create symlinks to cached submodules
-COPY scripts/setup-submodules.sh .
-COPY submodules.json .
-RUN ./setup-submodules.sh
 
 # Pre-build JUCE (juceaide and core libraries)
 RUN mkdir cmake-build && \
