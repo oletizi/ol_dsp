@@ -10,7 +10,7 @@ set -e
 
 # Base directory for cached submodules (can be baked into Docker image)
 CACHE_DIR="${SUBMODULE_CACHE:-/workspace/.submodule_cache}"
-PREBUILD_CACHE="/workspace/.prebuild_cache"
+PREBUILD_CACHE="/opt/prebuild_cache"
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CONFIG_FILE="$PROJECT_ROOT/submodules.json"
 
