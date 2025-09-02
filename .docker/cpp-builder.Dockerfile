@@ -10,9 +10,9 @@ ENV DEBIAN_FRONTEND=noninteractive
 # Install all C++ build dependencies in one layer
 RUN apt-get update && apt-get install -y \
     build-essential \
-    cmake \
     git \
     pkg-config \
+    wget \
     libasound2-dev \
     libjack-jackd2-dev \
     ladspa-sdk \
@@ -31,6 +31,14 @@ RUN apt-get update && apt-get install -y \
     libegl1-mesa-dev \
     libgl1-mesa-dev \
     && rm -rf /var/lib/apt/lists/*
+
+# Install newer CMake from Kitware
+RUN wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | \
+    gpg --dearmor - > /usr/share/keyrings/kitware-archive-keyring.gpg && \
+    echo 'deb [signed-by=/usr/share/keyrings/kitware-archive-keyring.gpg] https://apt.kitware.com/ubuntu/ noble main' > /etc/apt/sources.list.d/kitware.list && \
+    apt-get update && \
+    apt-get install -y cmake && \
+    rm -rf /var/lib/apt/lists/*
 
 # Set working directory
 WORKDIR /workspace
