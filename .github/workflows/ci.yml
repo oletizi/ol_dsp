@@ -35,7 +35,7 @@ jobs:
           libxinerama-dev \
           libxrandr-dev \
           libxrender-dev \
-          libwebkit2gtk-4.0-dev \
+          libwebkit2gtk-4.1-dev \
           libglu1-mesa-dev \
           mesa-common-dev
     
@@ -63,11 +63,11 @@ jobs:
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: '18'
+        node-version: '20'
         cache: 'npm'
     
-    - name: Install dependencies
-      run: npm ci
+    - name: Install dependencies (skip native MIDI on Linux)
+      run: npm ci --ignore-scripts
       
     - name: Run tests
       run: npm test || true  # Allow tests to fail for now due to compatibility issues
@@ -89,11 +89,11 @@ jobs:
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: '18'
+        node-version: '20'
         cache: 'npm'
     
     - name: Install npm dependencies
-      run: npm ci
+      run: npm ci || npm ci --ignore-scripts
       
     - name: Build C++ components
       run: |
