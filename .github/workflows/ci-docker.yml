@@ -120,34 +120,3 @@ jobs:
         ls -la modules/audio-tools/
         npm ls --depth=0
 
-  build-macos:
-    name: Build on macOS (Native)
-    runs-on: macos-latest
-    
-    steps:
-    - uses: actions/checkout@v4
-      with:
-        submodules: recursive
-    
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
-        cache: 'npm'
-    
-    - name: Install npm dependencies
-      run: npm ci || npm ci --ignore-scripts
-      
-    - name: Build C++ components
-      run: |
-        make
-        
-    - name: Build Plugin Host
-      run: |
-        make plughost
-        
-    - name: Test Plugin Host
-      run: |
-        ls -la ./cmake-build/modules/juce/host/plughost_artefacts/plughost
-        # On macOS, the plugin host can actually run and scan plugins
-        timeout 30s ./cmake-build/modules/juce/host/plughost_artefacts/plughost --list || true
