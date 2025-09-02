@@ -123,9 +123,18 @@ jobs:
       image: ${{ needs.build-images.outputs.cpp-image }}
     
     steps:
+    # Skip checkout - submodules are already baked into Docker image
+    # Just copy the source code we need for building
     - uses: actions/checkout@v4
+      with:
+        path: source
     
-    - name: Setup cached submodules
+    - name: Copy source files to workspace  
+      run: |
+        cp -r source/* .
+        rm -rf source
+    
+    - name: Setup submodule symlinks
       run: |
         chmod +x scripts/setup-submodules.sh
         ./scripts/setup-submodules.sh
