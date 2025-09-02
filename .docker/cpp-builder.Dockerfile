@@ -32,6 +32,8 @@ RUN apt-get update && apt-get install -y \
     libgl1-mesa-dev \
     libudev-dev \
     libopenal-dev \
+    libvorbis-dev \
+    libogg-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Install newer CMake from Kitware
