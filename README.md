@@ -188,6 +188,53 @@ The Docker-based approach (`run-act-in-docker.sh`) provides the most faithful re
 - Providing consistent environment across different development machines  
 - Eliminating local environment differences that could cause false CI passes/failures
 
+### Docker-Optimized Local Testing
+
+For faster development cycles, use the pre-built Docker images directly. This approach leverages pre-compiled dependencies (JUCE, submodules) cached in the Docker images:
+
+```bash
+# Test C++ build with pre-built dependencies (fast ~2s vs ~80s)
+docker run --rm ghcr.io/oletizi/ol_dsp/cpp-builder:latest-arm64 /bin/bash -c "
+  git clone https://github.com/oletizi/ol_dsp.git /tmp/test_build
+  cd /tmp/test_build
+  git checkout feat/docker  # or your branch
+  ./scripts/setup-submodules.sh
+  mkdir -p ./cmake-build/libs
+  cp -r /workspace/.submodule_cache/JUCE/build ./cmake-build/libs/JUCE
+  make
+"
+
+# Test npm workspace build
+docker run --rm ghcr.io/oletizi/ol_dsp/node-builder:latest-arm64 /bin/bash -c "
+  git clone https://github.com/oletizi/ol_dsp.git /tmp/test_build
+  cd /tmp/test_build  
+  git checkout feat/docker  # or your branch
+  npm ci --ignore-scripts
+  npm test
+"
+```
+
+**Important**: Use repository cloning (`git clone`) inside the container rather than volume mounting (`-v $PWD:/workspace`). Volume mounting shadows the Docker image's pre-built dependencies at `/workspace/.submodule_cache`, forcing expensive recompilation.
+
+#### Building and Pushing Docker Images Locally
+
+To update Docker images with changes to dependencies or build environment:
+
+```bash
+# Build and push all images for both AMD64 (CI) and ARM64 (local)
+make docker-build-and-push-images
+
+# This runs: ./scripts/build-and-push-images.sh
+# Requires: GitHub CLI authenticated (gh auth login)
+# Builds: base, cpp-builder, and node-builder images
+# Pushes: To GitHub Container Registry (ghcr.io)
+```
+
+The multi-architecture approach ensures:
+- AMD64 images for GitHub Actions runners
+- ARM64 images for local Apple Silicon development
+- Pre-built JUCE and dependencies cached in images (~78 seconds saved per build)
+
 ### Code Style
 
 - C/C++: Follow the existing code style, use clang-format
