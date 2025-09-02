@@ -10,18 +10,14 @@ set -e
 
 # Base directory for cached submodules (can be baked into Docker image)
 CACHE_DIR="${SUBMODULE_CACHE:-/workspace/.submodule_cache}"
-PREBUILD_CACHE="/opt/prebuild_cache"
+# No separate prebuild cache - JUCE is built directly in submodule cache
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CONFIG_FILE="$PROJECT_ROOT/submodules.json"
 
 echo "Setting up submodules using cache at: $CACHE_DIR"
 
-# Check if we have pre-built libraries available
-if [ -d "$PREBUILD_CACHE" ]; then
-    echo "Found pre-built libraries cache, copying to project..."
-    cp -r "$PREBUILD_CACHE"/* "$PROJECT_ROOT/"
-    echo "Pre-built libraries copied successfully"
-fi
+# Pre-built JUCE artifacts are already in the submodule cache
+# No need to copy from separate location - they're built in place
 
 # Check if config file exists
 if [ ! -f "$CONFIG_FILE" ]; then
