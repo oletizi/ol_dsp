@@ -34,6 +34,7 @@ RUN apt-get update && apt-get install -y \
     libopenal-dev \
     libvorbis-dev \
     libogg-dev \
+    libflac-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Install newer CMake from Kitware
