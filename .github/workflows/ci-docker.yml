@@ -33,23 +33,35 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
     
-    - name: Check if C++ image exists
+    - name: Check if C++ image exists (AMD64)
       id: cpp-exists
       run: |
         if docker manifest inspect ${{ env.CPP_IMAGE }} >/dev/null 2>&1; then
-          echo "exists=true" >> $GITHUB_OUTPUT
-          echo "Image ${{ env.CPP_IMAGE }} already exists, skipping build"
+          # Check if AMD64 variant exists
+          if docker manifest inspect ${{ env.CPP_IMAGE }} | grep -q '"architecture": "amd64"'; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "Image ${{ env.CPP_IMAGE }} (AMD64) already exists, skipping build"
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "Image ${{ env.CPP_IMAGE }} exists but not for AMD64, will rebuild"
+          fi
         else
           echo "exists=false" >> $GITHUB_OUTPUT
           echo "Image ${{ env.CPP_IMAGE }} does not exist, will build"
         fi
     
-    - name: Check if Node image exists
+    - name: Check if Node image exists (AMD64)
       id: node-exists
       run: |
         if docker manifest inspect ${{ env.NODE_IMAGE }} >/dev/null 2>&1; then
-          echo "exists=true" >> $GITHUB_OUTPUT
-          echo "Image ${{ env.NODE_IMAGE }} already exists, skipping build"
+          # Check if AMD64 variant exists
+          if docker manifest inspect ${{ env.NODE_IMAGE }} | grep -q '"architecture": "amd64"'; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "Image ${{ env.NODE_IMAGE }} (AMD64) already exists, skipping build"
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "Image ${{ env.NODE_IMAGE }} exists but not for AMD64, will rebuild"
+          fi
         else
           echo "exists=false" >> $GITHUB_OUTPUT
           echo "Image ${{ env.NODE_IMAGE }} does not exist, will build"
