@@ -10,6 +10,8 @@ env:
   REGISTRY: ghcr.io
   CPP_IMAGE_NAME: ${{ github.repository }}/cpp-builder
   NODE_IMAGE_NAME: ${{ github.repository }}/node-builder
+  CPP_IMAGE: ghcr.io/${{ github.repository }}/cpp-builder:latest
+  NODE_IMAGE: ghcr.io/${{ github.repository }}/node-builder:latest
 
 jobs:
   build-images:
@@ -19,8 +21,8 @@ jobs:
       contents: read
       packages: write
     outputs:
-      cpp-image: ${{ steps.cpp-meta.outputs.tags }}
-      node-image: ${{ steps.node-meta.outputs.tags }}
+      cpp-image: ${{ env.CPP_IMAGE }}
+      node-image: ${{ env.NODE_IMAGE }}
     steps:
     - uses: actions/checkout@v4
     
@@ -31,48 +33,26 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
     
-    - name: Extract metadata for C++ image
-      id: cpp-meta
-      uses: docker/metadata-action@v5
-      with:
-        images: ${{ env.REGISTRY }}/${{ env.CPP_IMAGE_NAME }}
-        tags: |
-          type=ref,event=branch
-          type=ref,event=pr
-          type=sha,prefix={{branch}}-
-    
-    - name: Extract metadata for Node image
-      id: node-meta
-      uses: docker/metadata-action@v5
-      with:
-        images: ${{ env.REGISTRY }}/${{ env.NODE_IMAGE_NAME }}
-        tags: |
-          type=ref,event=branch
-          type=ref,event=pr
-          type=sha,prefix={{branch}}-
-    
     - name: Check if C++ image exists
       id: cpp-exists
       run: |
-        PRIMARY_TAG=$(echo "${{ steps.cpp-meta.outputs.tags }}" | head -n1)
-        if docker manifest inspect $PRIMARY_TAG >/dev/null 2>&1; then
+        if docker manifest inspect ${{ env.CPP_IMAGE }} >/dev/null 2>&1; then
           echo "exists=true" >> $GITHUB_OUTPUT
-          echo "Image $PRIMARY_TAG already exists, skipping build"
+          echo "Image ${{ env.CPP_IMAGE }} already exists, skipping build"
         else
           echo "exists=false" >> $GITHUB_OUTPUT
-          echo "Image $PRIMARY_TAG does not exist, will build"
+          echo "Image ${{ env.CPP_IMAGE }} does not exist, will build"
         fi
     
     - name: Check if Node image exists
       id: node-exists
       run: |
-        PRIMARY_TAG=$(echo "${{ steps.node-meta.outputs.tags }}" | head -n1)
-        if docker manifest inspect $PRIMARY_TAG >/dev/null 2>&1; then
+        if docker manifest inspect ${{ env.NODE_IMAGE }} >/dev/null 2>&1; then
           echo "exists=true" >> $GITHUB_OUTPUT
-          echo "Image $PRIMARY_TAG already exists, skipping build"
+          echo "Image ${{ env.NODE_IMAGE }} already exists, skipping build"
         else
           echo "exists=false" >> $GITHUB_OUTPUT
-          echo "Image $PRIMARY_TAG does not exist, will build"
+          echo "Image ${{ env.NODE_IMAGE }} does not exist, will build"
         fi
     
     - name: Build and push C++ image
@@ -82,8 +62,7 @@ jobs:
         context: .
         file: .docker/cpp-builder.Dockerfile
         push: true
-        tags: ${{ steps.cpp-meta.outputs.tags }}
-        labels: ${{ steps.cpp-meta.outputs.labels }}
+        tags: ${{ env.CPP_IMAGE }}
     
     - name: Build and push Node image
       if: steps.node-exists.outputs.exists == 'false'
@@ -92,8 +71,7 @@ jobs:
         context: .
         file: .docker/node-builder.Dockerfile
         push: true
-        tags: ${{ steps.node-meta.outputs.tags }}
-        labels: ${{ steps.node-meta.outputs.labels }}
+        tags: ${{ env.NODE_IMAGE }}
 
   build-cpp:
     name: Build C++ Components (Docker)
