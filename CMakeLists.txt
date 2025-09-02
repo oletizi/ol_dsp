@@ -1,5 +1,11 @@
 cmake_minimum_required(VERSION 3.30)
 project(ol_dsp VERSION 0.1)
+
+# Relax CMake policies for compatibility with older dependencies
+if(POLICY CMP0111)
+    cmake_policy(SET CMP0111 OLD)  # Allow IMPORTED_LIBNAME to contain paths
+endif()
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -20,10 +26,10 @@ include(JUCEDefaults)
 add_subdirectory(libs/DaisySP)
 add_subdirectory(libs/dattorro-verb)
 
-FetchContent_Declare(SFML
-        GIT_REPOSITORY https://github.com/SFML/SFML.git
-        GIT_TAG 2.6.x)
-FetchContent_MakeAvailable(SFML)
+# FetchContent_Declare(SFML
+#         GIT_REPOSITORY https://github.com/SFML/SFML.git
+#         GIT_TAG 2.6.x)
+# FetchContent_MakeAvailable(SFML)  # TODO: SFML has OpenAL CMake compatibility issues
 
 
 add_subdirectory(libs/JUCE)
@@ -50,7 +56,7 @@ endif ()
 
 #add_subdirectory(libs/rapidyaml)
 add_subdirectory(libs/rtmidi)
-add_subdirectory(libs/Soundpipe)
+# add_subdirectory(libs/Soundpipe)  # TODO: Soundpipe doesn't have CMakeLists.txt - needs integration work
 
 add_subdirectory(modules/app)
 add_subdirectory(modules/corelib)

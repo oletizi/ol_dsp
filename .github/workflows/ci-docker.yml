@@ -148,37 +148,10 @@ jobs:
         chmod +x scripts/setup-submodules.sh
         ./scripts/setup-submodules.sh
     
-    - name: Check if pre-built JUCE exists in cache
-      id: check-prebuild
+    - name: Build project using Docker cache
       run: |
-        if [ -f "/workspace/.submodule_cache/JUCE/build/tools/extras/Build/juceaide/juceaide_artefacts/Debug/juceaide" ]; then
-          echo "prebuild=true" >> $GITHUB_OUTPUT
-          echo "✅ Pre-built JUCE found in Docker cache, will use cached version"
-          echo "📍 JUCE cache location: /workspace/.submodule_cache/JUCE/build"
-          ls -la /workspace/.submodule_cache/JUCE/build/tools/extras/Build/juceaide/juceaide_artefacts/Debug/
-        else
-          echo "prebuild=false" >> $GITHUB_OUTPUT  
-          echo "❌ No pre-built JUCE found, will build from source"
-          echo "🔍 Searched for: /workspace/.submodule_cache/JUCE/build/tools/extras/Build/juceaide/juceaide_artefacts/Debug/juceaide"
-        fi
-    
-    - name: Build using pre-built JUCE cache
-      if: steps.check-prebuild.outputs.prebuild == 'true'
-      run: |
-        echo "🚀 Using pre-built JUCE from Docker cache"
-        mkdir -p ./cmake-build
-        cd ./cmake-build
-        cmake .. -DJUCE_DIR=/workspace/.submodule_cache/JUCE/build
-        make plughost
-        echo "✅ Build completed using pre-built JUCE from cache"
-    
-    - name: Build from source (no cache available)
-      if: steps.check-prebuild.outputs.prebuild != 'true'
-      run: |
-        echo "🔨 Building JUCE and project from source"
+        echo "🚀 Building project (automatically uses cached dependencies from Docker image)"
         make
-        make plughost
-        echo "✅ Build completed from source"
         
     - name: Verify Plugin Host
       run: |
