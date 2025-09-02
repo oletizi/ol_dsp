@@ -52,24 +52,9 @@ WORKDIR /workspace
 # Pre-cache submodules to speed up CI builds (670MB+ of dependencies)
 # Clone repositories and checkout specific commits defined in submodules.json
 COPY submodules.json /tmp/submodules.json
-RUN mkdir -p /workspace/.submodule_cache && \
-    python3 -c "
-import json
-import os
-
-with open('/tmp/submodules.json', 'r') as f:
-    config = json.load(f)
-
-for submodule in config['submodules']:
-    url = submodule['url']
-    commit = submodule['commit']
-    cache_name = os.path.basename(url).replace('.git', '')
-    cache_path = f'/workspace/.submodule_cache/{cache_name}'
-    
-    print(f'Caching {cache_name} @ {commit[:8]}...')
-    os.system(f'git clone \"{url}\" \"{cache_path}\"')
-    os.system(f'cd \"{cache_path}\" && git checkout {commit}')
-" && rm /tmp/submodules.json
+COPY .docker/cache-submodules.py /tmp/cache-submodules.py
+RUN python3 /tmp/cache-submodules.py && \
+    rm /tmp/submodules.json /tmp/cache-submodules.py
 
 # Set default command
 CMD ["bash"]
