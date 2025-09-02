@@ -51,7 +51,32 @@ jobs:
           type=ref,event=pr
           type=sha,prefix={{branch}}-
     
+    - name: Check if C++ image exists
+      id: cpp-exists
+      run: |
+        PRIMARY_TAG=$(echo "${{ steps.cpp-meta.outputs.tags }}" | head -n1)
+        if docker manifest inspect $PRIMARY_TAG >/dev/null 2>&1; then
+          echo "exists=true" >> $GITHUB_OUTPUT
+          echo "Image $PRIMARY_TAG already exists, skipping build"
+        else
+          echo "exists=false" >> $GITHUB_OUTPUT
+          echo "Image $PRIMARY_TAG does not exist, will build"
+        fi
+    
+    - name: Check if Node image exists
+      id: node-exists
+      run: |
+        PRIMARY_TAG=$(echo "${{ steps.node-meta.outputs.tags }}" | head -n1)
+        if docker manifest inspect $PRIMARY_TAG >/dev/null 2>&1; then
+          echo "exists=true" >> $GITHUB_OUTPUT
+          echo "Image $PRIMARY_TAG already exists, skipping build"
+        else
+          echo "exists=false" >> $GITHUB_OUTPUT
+          echo "Image $PRIMARY_TAG does not exist, will build"
+        fi
+    
     - name: Build and push C++ image
+      if: steps.cpp-exists.outputs.exists == 'false'
       uses: docker/build-push-action@v5
       with:
         context: .
@@ -61,6 +86,7 @@ jobs:
         labels: ${{ steps.cpp-meta.outputs.labels }}
     
     - name: Build and push Node image
+      if: steps.node-exists.outputs.exists == 'false'
       uses: docker/build-push-action@v5
       with:
         context: .
