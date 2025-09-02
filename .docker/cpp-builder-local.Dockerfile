@@ -1,6 +1,5 @@
-# C++ build environment extending base image with cached submodules and pre-built libraries
-ARG GITHUB_REPOSITORY=oletizi/ol_dsp
-FROM ghcr.io/${GITHUB_REPOSITORY}/base:latest
+# C++ build environment extending local base image for testing
+FROM ol_dsp/base:arm64-test
 
 LABEL org.opencontainers.image.description="OL_DSP C++ Build Environment with Pre-built Libraries"
 LABEL org.opencontainers.image.source="https://github.com/oletizi/ol_dsp"

@@ -4,15 +4,24 @@
 # Fast submodule setup using symlinks to cached repositories
 # This avoids cloning 670MB of submodules on every CI run
 # Reads configuration from submodules.json
+# Uses pre-built cache if available
 
 set -e
 
 # Base directory for cached submodules (can be baked into Docker image)
 CACHE_DIR="${SUBMODULE_CACHE:-/workspace/.submodule_cache}"
+PREBUILD_CACHE="/workspace/.prebuild_cache"
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CONFIG_FILE="$PROJECT_ROOT/submodules.json"
 
 echo "Setting up submodules using cache at: $CACHE_DIR"
+
+# Check if we have pre-built libraries available
+if [ -d "$PREBUILD_CACHE" ]; then
+    echo "Found pre-built libraries cache, copying to project..."
+    cp -r "$PREBUILD_CACHE"/* "$PROJECT_ROOT/"
+    echo "Pre-built libraries copied successfully"
+fi
 
 # Check if config file exists
 if [ ! -f "$CONFIG_FILE" ]; then
