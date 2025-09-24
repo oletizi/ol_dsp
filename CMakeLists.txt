@@ -60,6 +60,9 @@ if (${BUILD_TEENSY})
 endif ()
 
 #add_subdirectory(libs/rapidyaml)
+
+# Disable JACK support for rtmidi to avoid linking issues
+set(RTMIDI_API_JACK OFF CACHE BOOL "Disable JACK support in RtMidi" FORCE)
 add_subdirectory(../.ol_dsp-deps/libs/rtmidi ${CMAKE_BINARY_DIR}/deps/rtmidi)
 # add_subdirectory(libs/Soundpipe)  # TODO: Soundpipe doesn't have CMakeLists.txt - needs integration work
 

@@ -5,7 +5,7 @@
 #ifndef OL_DSP_PORTAMENTO_H
 #define OL_DSP_PORTAMENTO_H
 
-#include "Utility/port.h"
+#include "daisysp.h"
 #include "corelib/ol_corelib.h"
 namespace ol::synth {
     class Portamento {
