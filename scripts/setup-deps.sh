@@ -90,26 +90,30 @@ for i, submodule in enumerate(config['submodules']):
     print(f'   🔄 Checking out {commit}...')
     run_command(f'git checkout {commit}', cwd=target_path)
     
-    # Pre-build if CMakeLists.txt exists
+    # Pre-build if CMakeLists.txt exists (but skip JUCE to avoid memory issues in Docker)
     cmake_file = os.path.join(target_path, 'CMakeLists.txt')
     if os.path.exists(cmake_file):
-        build_dir = os.path.join(target_path, 'build')
-        print(f'   🔨 Pre-building (CMake detected)...')
-        os.makedirs(build_dir, exist_ok=True)
-        
-        # Configure
-        config_result = run_command('cmake .. -DJUCE_BUILD_EXTRAS=ON -DBUILD_TESTING=OFF -DBUILD_EXAMPLES=OFF', cwd=build_dir, allow_failure=True)
-        if config_result is None:
-            print(f'   ⚠️  CMake configuration failed, skipping build')
+        # Skip JUCE pre-build in Docker (too memory intensive)
+        if 'JUCE' in path:
+            print(f'   ⚠️  Skipping JUCE pre-build in Docker (memory intensive, will build on-demand)')
         else:
-            # Build
-            import multiprocessing
-            cores = multiprocessing.cpu_count()
-            build_result = run_command(f'make -j{cores}', cwd=build_dir, allow_failure=True)
-            if build_result is None:
-                print(f'   ⚠️  Build failed, but dependency is available')
+            build_dir = os.path.join(target_path, 'build')
+            print(f'   🔨 Pre-building (CMake detected)...')
+            os.makedirs(build_dir, exist_ok=True)
+            
+            # Configure
+            config_result = run_command('cmake .. -DJUCE_BUILD_EXTRAS=ON -DBUILD_TESTING=OFF -DBUILD_EXAMPLES=OFF', cwd=build_dir, allow_failure=True)
+            if config_result is None:
+                print(f'   ⚠️  CMake configuration failed, skipping build')
             else:
-                print(f'   ✅ Pre-build complete')
+                # Build
+                import multiprocessing
+                cores = multiprocessing.cpu_count()
+                build_result = run_command(f'make -j{cores}', cwd=build_dir, allow_failure=True)
+                if build_result is None:
+                    print(f'   ⚠️  Build failed, but dependency is available')
+                else:
+                    print(f'   ✅ Pre-build complete')
     else:
         print(f'   ⚠️  No CMakeLists.txt found, skipping pre-build')
     
