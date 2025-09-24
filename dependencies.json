@@ -1,0 +1,244 @@
+{
+  "version": "1.0",
+  "description": "OL_DSP Dependency Configuration - Explicit dependency management with deterministic build/clean commands",
+  "dependencies": [
+    {
+      "name": "JUCE",
+      "path": "libs/JUCE",
+      "url": "https://github.com/juce-framework/JUCE.git",
+      "commit": "5179f4e720d8406ebd1b5401c86aea8da6cc83c9",
+      "description": "JUCE framework for audio applications",
+      "build": {
+        "enabled": true,
+        "strategy": "cmake",
+        "build_dir": "build",
+        "configure_command": "cmake .. -DJUCE_BUILD_EXTRAS=ON -DBUILD_TESTING=OFF -DBUILD_EXAMPLES=OFF",
+        "build_command": "make -j$(nproc)",
+        "artifacts": [
+          "build/JUCEConfig.cmake",
+          "build/lib/cmake/JUCE-8.0.3/JUCEModuleSupport.cmake",
+          "build/lib/cmake/JUCE-8.0.3/JUCEUtils.cmake",
+          "build/LV2_HELPER.cmake"
+        ],
+        "skip_in_docker": true,
+        "skip_reason": "Memory intensive, built on-demand by main project"
+      },
+      "clean": {
+        "directories": ["build"],
+        "files": []
+      }
+    },
+    {
+      "name": "Soundpipe",
+      "path": "libs/Soundpipe",
+      "url": "https://github.com/PaulBatchelor/Soundpipe.git",
+      "commit": "3efb43bdabd0ed23b17c694292b5a79f1692a3ea",
+      "description": "Audio DSP library",
+      "build": {
+        "enabled": false,
+        "reason": "No CMakeLists.txt, header-only or needs custom integration"
+      },
+      "clean": {
+        "directories": [],
+        "files": []
+      }
+    },
+    {
+      "name": "TeensyAudio",
+      "path": "libs/TeensyAudio",
+      "url": "https://github.com/PaulStoffregen/Audio.git",
+      "commit": "bd7de878a802841857a762e855e55fcc9da37fa2",
+      "description": "Teensy Audio Library",
+      "build": {
+        "enabled": false,
+        "reason": "Arduino library, no CMake build system"
+      },
+      "clean": {
+        "directories": [],
+        "files": []
+      }
+    },
+    {
+      "name": "du-ino",
+      "path": "libs/du-ino",
+      "url": "https://github.com/oletizi/du-ino.git",
+      "commit": "ea8eab6f8dae6df5a855d79dad6a3d6b88077341",
+      "description": "DU-INO Eurorack module framework",
+      "build": {
+        "enabled": false,
+        "reason": "Arduino library, no CMake build system"
+      },
+      "clean": {
+        "directories": [],
+        "files": []
+      }
+    },
+    {
+      "name": "libDaisy",
+      "path": "libs/libDaisy",
+      "url": "https://github.com/electro-smith/libDaisy.git",
+      "commit": "c6887c69c9d38a54bc5ba15bc89e4c2256c04895",
+      "description": "Daisy audio platform library",
+      "build": {
+        "enabled": false,
+        "strategy": "cmake",
+        "build_dir": "build",
+        "configure_command": "cmake .. -DJUCE_BUILD_EXTRAS=ON -DBUILD_TESTING=OFF -DBUILD_EXAMPLES=OFF",
+        "build_command": "make -j$(nproc)",
+        "reason": "CMake configuration fails due to embedded toolchain requirements"
+      },
+      "clean": {
+        "directories": ["build"],
+        "files": []
+      }
+    },
+    {
+      "name": "rapidyaml",
+      "path": "libs/rapidyaml",
+      "url": "https://github.com/biojppm/rapidyaml.git",
+      "commit": "e4aa0b3b5b47d4691935f127087af812ef8477f3",
+      "description": "Fast YAML parser",
+      "build": {
+        "enabled": false,
+        "strategy": "cmake",
+        "build_dir": "build",
+        "configure_command": "cmake .. -DJUCE_BUILD_EXTRAS=ON -DBUILD_TESTING=OFF -DBUILD_EXAMPLES=OFF",
+        "build_command": "make -j$(nproc)",
+        "reason": "CMake configuration fails due to missing submodules"
+      },
+      "clean": {
+        "directories": ["build"],
+        "files": []
+      }
+    },
+    {
+      "name": "rtmidi",
+      "path": "libs/rtmidi",
+      "url": "https://github.com/thestk/rtmidi.git",
+      "commit": "9af27d0c0e6afc94634121f7c9bed73827a23e4b",
+      "description": "Real-time MIDI library",
+      "build": {
+        "enabled": true,
+        "strategy": "cmake",
+        "build_dir": "build",
+        "configure_command": "cmake .. -DJUCE_BUILD_EXTRAS=ON -DBUILD_TESTING=OFF -DBUILD_EXAMPLES=OFF",
+        "build_command": "make -j$(nproc)",
+        "allow_failure": true,
+        "failure_reason": "May fail due to missing JACK library, but sources are available"
+      },
+      "clean": {
+        "directories": ["build"],
+        "files": []
+      }
+    },
+    {
+      "name": "sfizz",
+      "path": "libs/sfizz",
+      "url": "https://github.com/sfztools/sfizz.git",
+      "commit": "4e70dc0bef53b41f2853ed46e26f5911114c92d0",
+      "description": "SFZ sampler library",
+      "build": {
+        "enabled": true,
+        "strategy": "cmake",
+        "build_dir": "build",
+        "configure_command": "cmake .. -DJUCE_BUILD_EXTRAS=ON -DBUILD_TESTING=OFF -DBUILD_EXAMPLES=OFF",
+        "build_command": "make -j$(nproc)",
+        "allow_failure": true,
+        "failure_reason": "May fail due to ARM64 compilation issues, but sources are available"
+      },
+      "clean": {
+        "directories": ["build"],
+        "files": []
+      }
+    },
+    {
+      "name": "stk",
+      "path": "libs/stk",
+      "url": "https://github.com/thestk/stk.git",
+      "commit": "6aacd357d76250bb7da2b1ddf675651828784bbc",
+      "description": "Synthesis ToolKit",
+      "build": {
+        "enabled": true,
+        "strategy": "cmake",
+        "build_dir": "build",
+        "configure_command": "cmake .. -DJUCE_BUILD_EXTRAS=ON -DBUILD_TESTING=OFF -DBUILD_EXAMPLES=OFF",
+        "build_command": "make -j$(nproc)",
+        "allow_failure": true,
+        "failure_reason": "May fail due to missing JACK library, but sources are available"
+      },
+      "clean": {
+        "directories": ["build"],
+        "files": []
+      }
+    },
+    {
+      "name": "stmlib",
+      "path": "libs/stmlib/stmlib",
+      "url": "https://github.com/pichenettes/stmlib.git",
+      "commit": "d18def816c51d1da0c108236928b2bbd25c17481",
+      "description": "STM32 utility library",
+      "build": {
+        "enabled": false,
+        "reason": "Header-only library for embedded systems, no CMake build"
+      },
+      "clean": {
+        "directories": [],
+        "files": []
+      }
+    },
+    {
+      "name": "FakeIt",
+      "path": "test/FakeIt",
+      "url": "https://github.com/eranpeer/FakeIt.git",
+      "commit": "1d172eb87929b8bd5a8dd9a981fc0e43b9245475",
+      "description": "C++ mocking framework",
+      "build": {
+        "enabled": true,
+        "strategy": "cmake",
+        "build_dir": "build",
+        "configure_command": "cmake .. -DJUCE_BUILD_EXTRAS=ON -DBUILD_TESTING=OFF -DBUILD_EXAMPLES=OFF",
+        "build_command": "make -j$(nproc)"
+      },
+      "clean": {
+        "directories": ["build"],
+        "files": []
+      }
+    },
+    {
+      "name": "googletest",
+      "path": "test/googletest",
+      "url": "https://github.com/google/googletest.git",
+      "commit": "eb2d85edd0bff7a712b6aff147cd9f789f0d7d0b",
+      "description": "Google Test framework",
+      "build": {
+        "enabled": true,
+        "strategy": "cmake",
+        "build_dir": "build",
+        "configure_command": "cmake .. -DJUCE_BUILD_EXTRAS=ON -DBUILD_TESTING=OFF -DBUILD_EXAMPLES=OFF",
+        "build_command": "make -j$(nproc)"
+      },
+      "clean": {
+        "directories": ["build"],
+        "files": []
+      }
+    },
+    {
+      "name": "DaisySP",
+      "path": "DaisySP",
+      "url": "https://github.com/electro-smith/DaisySP.git",
+      "commit": "master",
+      "description": "DaisySP audio library",
+      "build": {
+        "enabled": true,
+        "strategy": "cmake",
+        "build_dir": "build",
+        "configure_command": "cmake .. -DJUCE_BUILD_EXTRAS=ON -DBUILD_TESTING=OFF -DBUILD_EXAMPLES=OFF",
+        "build_command": "make -j$(nproc)"
+      },
+      "clean": {
+        "directories": ["build"],
+        "files": []
+      }
+    }
+  ]
+}

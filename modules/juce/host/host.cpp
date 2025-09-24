@@ -126,6 +126,10 @@ namespace ol::jucehost {
         config.ignore.push_back("samplv1");
         config.ignore.push_back("synthv1");
 
+        // Blacklist UAD plugins (hardware-dependent, will crash without UAD hardware)
+        // Note: UADx plugins are native and should work fine
+        config.ignore.push_back("UAD ");  // Note the space to avoid matching "UADx"
+
         const juce::AudioDeviceManager::AudioDeviceSetup deviceSetup{
             .outputDeviceName = config.audioOutputDevice,
             .inputDeviceName = config.audioInputDevice,

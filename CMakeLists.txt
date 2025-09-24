@@ -32,10 +32,12 @@ add_subdirectory(libs/dattorro-verb)
 # FetchContent_MakeAvailable(SFML)  # TODO: SFML has OpenAL CMake compatibility issues
 
 
-# Optimize JUCE build: Use out-of-tree build directory to cache JUCE builds
-# This prevents rebuilding JUCE from scratch every time
-set(JUCE_BUILD_CACHE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../.ol_dsp-deps/juce-build-cache")
-add_subdirectory(../.ol_dsp-deps/libs/JUCE ${JUCE_BUILD_CACHE_DIR})
+# JUCE Build Cache Optimization
+# Always use add_subdirectory for JUCE to properly use it from source
+# The build directory will cache the compiled objects for faster rebuilds
+set(JUCE_DEPS_BUILD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../.ol_dsp-deps/libs/JUCE/build")
+message(STATUS "Building JUCE from source with cache at: ${JUCE_DEPS_BUILD_DIR}")
+add_subdirectory(../.ol_dsp-deps/libs/JUCE ${JUCE_DEPS_BUILD_DIR})
 #CPMAddPackage("gh:ImJimmi/JIVE@1.0.4")
 
 if (${BUILD_LLHTTP})

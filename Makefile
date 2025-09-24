@@ -19,6 +19,9 @@ clean: ## Clean build artifacts and submodule symlinks
 	find libs test -type l -delete 2>/dev/null || true
 	rm -rf .submodule_cache
 
+clean-deps: ## Clean dependency build artifacts using configuration-driven approach
+	./scripts/manage-deps.sh clean
+
 # Docker targets
 docker-build-images: ## Build Docker images locally for testing
 	docker build -f .docker/cpp-builder.Dockerfile -t ol_dsp/cpp-builder .
@@ -67,10 +70,7 @@ run-act-in-docker: ## Run act CLI inside Docker for GitHub Actions testing
 
 # Setup targets
 setup-deps: ## Setup dependencies in ../.ol_dsp-deps (works locally and in Docker)
-	./scripts/setup-deps.sh
-
-setup-submodules: ## Setup git submodules using cached repositories (legacy)
-	./scripts/setup-submodules.sh
+	./scripts/manage-deps.sh setup
 
 help: ## Show this help message
 	@echo 'Usage: make <target>'
@@ -78,4 +78,4 @@ help: ## Show this help message
 	@echo 'Available targets:'
 	@awk 'BEGIN {FS = ":.*?## "}; /^[a-zA-Z0-9_-]+:.*?## / {printf "  %-30s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
-.PHONY: all test clean docker-build-images docker-build-images-locally docker-build-and-push-images docker-build-cpp docker-build-npm docker-dev docker-clean quick-test docker-ci docker-ci-cpp docker-ci-npm docker-shell test-ci-with-act run-act-in-docker setup-deps setup-submodules help
+.PHONY: all test clean clean-deps docker-build-images docker-build-images-locally docker-build-and-push-images docker-build-cpp docker-build-npm docker-dev docker-clean quick-test docker-ci docker-ci-cpp docker-ci-npm docker-shell test-ci-with-act run-act-in-docker setup-deps help
