@@ -7,9 +7,6 @@
 [submodule "test/googletest"]
 	path = test/googletest
 	url = git@github.com:oletizi/googletest.git
-[submodule "reverbDattorro-scverb"]
-	path = reverbDattorro-scverb
-	url = git@github.com:oletizi/reverbDattorro-scverb.git
 [submodule "miniaudio"]
 	path = miniaudio
 	url = git@github.com:oletizi/miniaudio.git

@@ -268,3 +268,5 @@ An AI agent has successfully completed work when:
 - Throw errors with context instead of using fallbacks
 - don't mock/stub modules.
 - don't mock/stub modules; use dependency injection and a mock interface instead.
+- always document make targets in the Makefile itself to ensure it's self documenting
+- always use make targets instead of running ./scripts/* directly to ensure the make targets work properly. There should only be a single path to achieve a goal.
