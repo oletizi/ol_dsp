@@ -224,7 +224,7 @@
     },
     {
       "name": "DaisySP",
-      "path": "DaisySP",
+      "path": "libs/DaisySP",
       "url": "https://github.com/electro-smith/DaisySP.git",
       "commit": "master",
       "description": "DaisySP audio library",

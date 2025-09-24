@@ -23,7 +23,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 include(CPM)
 include(JUCEDefaults)
 
-add_subdirectory(../.ol_dsp-deps/DaisySP ${CMAKE_BINARY_DIR}/deps/DaisySP)
+add_subdirectory(../.ol_dsp-deps/libs/DaisySP ${CMAKE_BINARY_DIR}/deps/DaisySP)
 add_subdirectory(libs/dattorro-verb)
 
 # FetchContent_Declare(SFML
