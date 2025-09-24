@@ -6,6 +6,7 @@
 #include <ol_corelib.h>
 #include <fstream>
 #include <string>
+#include <iomanip>
 
 #define DEBUG 0
 
@@ -70,9 +71,40 @@ namespace ol::jucehost {
         std::cout << commandLineParameters << std::endl;
         std::cout << "Initialising OLJuceHost..." << std::endl;
         const bool doList = commandLineParameters.contains("--list");
+        const bool doInterrogate = commandLineParameters.contains("--interrogate");
+        const bool outputJson = commandLineParameters.contains("--json");
+        const bool showHelp = commandLineParameters.contains("--help");
+
+        // Extract plugin name for interrogation
+        juce::String interrogatePluginName;
+        if (doInterrogate) {
+            auto args = juce::StringArray::fromTokens(commandLineParameters, true);
+            for (int i = 0; i < args.size() - 1; i++) {
+                if (args[i] == "--interrogate") {
+                    interrogatePluginName = args[i + 1];
+                    break;
+                }
+            }
+        }
+
+        if (showHelp) {
+            std::cout << "Usage: plughost [options]" << std::endl;
+            std::cout << "Options:" << std::endl;
+            std::cout << "  --help                    Show this help message" << std::endl;
+            std::cout << "  --list                    List all available plugins" << std::endl;
+            std::cout << "  --interrogate <name>      Extract parameters from specific plugin" << std::endl;
+            std::cout << "  --json                    Output in JSON format (use with --interrogate)" << std::endl;
+            std::cout << std::endl;
+            std::cout << "Examples:" << std::endl;
+            std::cout << "  plughost --list" << std::endl;
+            std::cout << "  plughost --interrogate \"Jup-8 V3\"" << std::endl;
+            std::cout << "  plughost --interrogate \"Jup-8 V3\" --json" << std::endl;
+            quit();
+            return;
+        }
 
         const juce::String configDir = juce::String(std::getenv("HOME")) + "/.config/plughost";
-        if (!doList) {
+        if (!doList && !doInterrogate) {
             auto path = configDir + "/config";
             std::cout << "Loading config from: " << path << std::endl;
             if (std::ifstream file(path.toStdString()); file.is_open()) {
@@ -152,6 +184,22 @@ namespace ol::jucehost {
             constexpr int scanMax = 10000; // TODO: make this configurable
             constexpr bool recursive = true;
             juce::FileSearchPath path;
+
+            // Add default plugin search paths when in interrogation mode
+            if (doInterrogate || doList) {
+                if (format->getName() == "AudioUnit") {
+                    path.add(juce::File("/Library/Audio/Plug-Ins/Components"));
+                    path.add(juce::File("~/Library/Audio/Plug-Ins/Components").getFullPathName());
+                } else if (format->getName() == "VST3") {
+                    path.add(juce::File("/Library/Audio/Plug-Ins/VST3"));
+                    path.add(juce::File("~/Library/Audio/Plug-Ins/VST3").getFullPathName());
+                    path.add(juce::File("/usr/local/lib/vst3"));
+                } else if (format->getName() == "VST") {
+                    path.add(juce::File("/Library/Audio/Plug-Ins/VST"));
+                    path.add(juce::File("~/Library/Audio/Plug-Ins/VST").getFullPathName());
+                }
+            }
+
             juce::File deadMansPedalFile(configDir + "/deadPedals");
             //auto format = formatManager.getFormat(i);
             juce::String pluginName;
@@ -176,11 +224,13 @@ namespace ol::jucehost {
                     scanner->skipNextFile();
                 }
 
-                if (doList && !shouldIgnore) {
-                    // we want to print out all the plugin names
+                if ((doList || doInterrogate) && !shouldIgnore) {
+                    // For listing or interrogation, scan all plugins
                     scanner->scanNextFile(true, pluginName);
-                    std::cout << "Next Plugin: <Format:" << format->getName() << ">, <Name: " << pluginName << ">" <<
-                            std::endl;
+                    if (doList) {
+                        std::cout << "Next Plugin: <Format:" << format->getName() << ">, <Name: " << pluginName << ">" <<
+                                std::endl;
+                    }
                 } else if (!shouldIgnore) {
                     for (const auto pluginConfig: config.plugins) {
                         std::cout << "Checking to see if : " << next << " contains " << pluginConfig->name << std::endl;
@@ -213,6 +263,12 @@ namespace ol::jucehost {
             if (shouldIgnore) { continue; }
             if (doList) {
                 toInstantiate.push_back(plugDescription);
+            } else if (doInterrogate) {
+                // For interrogation mode, match by plugin name
+                if (plugDescription.name.contains(interrogatePluginName)) {
+                    toInstantiate.push_back(plugDescription);
+                    std::cout << "Found plugin for interrogation: " << plugDescription.name << std::endl;
+                }
             } else {
                 for (const auto pluginConfig: this->config.plugins) {
                     const auto format = plugDescription.pluginFormatName;
@@ -227,7 +283,7 @@ namespace ol::jucehost {
             }
         }
         std::vector<juce::PluginDescription> sorted;
-        if (doList) {
+        if (doList || doInterrogate) {
             sorted = toInstantiate;
         } else {
             for (auto plugConfig: config.plugins) {
@@ -247,16 +303,77 @@ namespace ol::jucehost {
                 plugDescription, 48000, 128, errorMessage);
             if (plug != nullptr) {
                 std::cout << "Plugin: <Format: " << plugDescription.pluginFormatName << ">, <Name: " << plug->getName() << ">" << std::endl;
-                for (const auto parameter: plug->getParameters()) {
-                    std::cout << "Plugin Parameter: <Format: " << plugDescription.pluginFormatName <<
-                            ">, <Plugin Name: " << plug->getName() << ">, <Parameter Name: " <<
-                            parameter->getName(100) << ">" << std::endl;
+
+                if (doInterrogate) {
+                    // Enhanced parameter extraction for interrogation mode
+                    auto parameters = plug->getParameters();
+
+                    if (outputJson) {
+                        // Output JSON format
+                        std::cout << "{" << std::endl;
+                        std::cout << "  \"plugin\": {" << std::endl;
+                        std::cout << "    \"manufacturer\": \"" << plugDescription.manufacturerName << "\"," << std::endl;
+                        std::cout << "    \"name\": \"" << plug->getName() << "\"," << std::endl;
+                        std::cout << "    \"version\": \"" << plugDescription.version << "\"," << std::endl;
+                        std::cout << "    \"format\": \"" << plugDescription.pluginFormatName << "\"," << std::endl;
+                        std::cout << "    \"uid\": \"" << plugDescription.uniqueId << "\"" << std::endl;
+                        std::cout << "  }," << std::endl;
+                        std::cout << "  \"metadata\": {" << std::endl;
+                        std::cout << "    \"parameter_count\": " << parameters.size() << "," << std::endl;
+                        std::cout << "    \"extracted_by\": \"plughost\"," << std::endl;
+                        std::cout << "    \"timestamp\": \"" << juce::Time::getCurrentTime().toISO8601(false) << "\"" << std::endl;
+                        std::cout << "  }," << std::endl;
+                        std::cout << "  \"parameters\": [" << std::endl;
+
+                        for (int i = 0; i < parameters.size(); ++i) {
+                            const auto parameter = parameters[i];
+                            std::cout << "    {" << std::endl;
+                            std::cout << "      \"index\": " << i << "," << std::endl;
+                            std::cout << "      \"name\": \"" << parameter->getName(100) << "\"," << std::endl;
+                            std::cout << "      \"label\": \"" << parameter->getLabel() << "\"," << std::endl;
+                            std::cout << "      \"text\": \"" << parameter->getText(parameter->getValue(), 100) << "\"," << std::endl;
+                            std::cout << "      \"default_value\": " << parameter->getDefaultValue() << "," << std::endl;
+                            std::cout << "      \"current_value\": " << parameter->getValue() << "," << std::endl;
+                            std::cout << "      \"automatable\": " << (parameter->isAutomatable() ? "true" : "false") << "," << std::endl;
+                            std::cout << "      \"meta_parameter\": " << (parameter->isMetaParameter() ? "true" : "false") << "," << std::endl;
+                            std::cout << "      \"discrete\": " << (parameter->isDiscrete() ? "true" : "false") << std::endl;
+                            std::cout << "    }" << (i < parameters.size() - 1 ? "," : "") << std::endl;
+                        }
+
+                        std::cout << "  ]" << std::endl;
+                        std::cout << "}" << std::endl;
+                    } else {
+                        // Human-readable format
+                        std::cout << std::endl << "=== Parameter Interrogation Report ===" << std::endl;
+                        std::cout << "Plugin: " << plug->getName() << " (" << plugDescription.pluginFormatName << ")" << std::endl;
+                        std::cout << "Manufacturer: " << plugDescription.manufacturerName << std::endl;
+                        std::cout << "Parameter Count: " << parameters.size() << std::endl;
+                        std::cout << std::endl;
+
+                        for (int i = 0; i < parameters.size(); ++i) {
+                            const auto parameter = parameters[i];
+                            std::cout << "Parameter " << std::setw(2) << i << ": " << parameter->getName(100) << std::endl;
+                            std::cout << "    Label: " << parameter->getLabel() << std::endl;
+                            std::cout << "    Current: " << parameter->getText(parameter->getValue(), 100) << " (" << parameter->getValue() << ")" << std::endl;
+                            std::cout << "    Default: " << parameter->getDefaultValue() << std::endl;
+                            std::cout << "    Automatable: " << (parameter->isAutomatable() ? "Yes" : "No") << std::endl;
+                            std::cout << "    Discrete: " << (parameter->isDiscrete() ? "Yes" : "No") << std::endl;
+                            std::cout << std::endl;
+                        }
+                    }
+                } else {
+                    // Original format for backward compatibility
+                    for (const auto parameter: plug->getParameters()) {
+                        std::cout << "Plugin Parameter: <Format: " << plugDescription.pluginFormatName <<
+                                ">, <Plugin Name: " << plug->getName() << ">, <Parameter Name: " <<
+                                parameter->getName(100) << ">" << std::endl;
+                    }
                 }
                 instances.push_back(std::move(plug));
             }
         }
 
-        if (doList) {
+        if (doList || doInterrogate) {
             quit();
             return;
         }
