@@ -74,16 +74,21 @@ namespace ol::jucehost {
         const bool doInterrogate = commandLineParameters.contains("--interrogate");
         const bool outputJson = commandLineParameters.contains("--json");
         const bool showHelp = commandLineParameters.contains("--help");
+        const bool quickScan = commandLineParameters.contains("--quick-scan");
+        const bool batchJson = commandLineParameters.contains("--batch-json");
+        const bool skipInstantiation = commandLineParameters.contains("--skip-instantiation");
+        const bool formatFilter = commandLineParameters.contains("--format-filter");
 
         // Extract plugin name for interrogation
         juce::String interrogatePluginName;
-        if (doInterrogate) {
-            auto args = juce::StringArray::fromTokens(commandLineParameters, true);
-            for (int i = 0; i < args.size() - 1; i++) {
-                if (args[i] == "--interrogate") {
-                    interrogatePluginName = args[i + 1];
-                    break;
-                }
+        juce::String targetFormat = "ALL";
+
+        auto args = juce::StringArray::fromTokens(commandLineParameters, true);
+        for (int i = 0; i < args.size() - 1; i++) {
+            if (args[i] == "--interrogate") {
+                interrogatePluginName = args[i + 1];
+            } else if (args[i] == "--format-filter") {
+                targetFormat = args[i + 1];
             }
         }
 
@@ -94,10 +99,15 @@ namespace ol::jucehost {
             std::cout << "  --list                    List all available plugins" << std::endl;
             std::cout << "  --interrogate <name>      Extract parameters from specific plugin" << std::endl;
             std::cout << "  --json                    Output in JSON format (use with --interrogate)" << std::endl;
+            std::cout << "  --quick-scan              Skip slow plugins (UAD, etc.) for faster scanning" << std::endl;
+            std::cout << "  --batch-json              Output all plugins as JSON array (use with --list)" << std::endl;
+            std::cout << "  --skip-instantiation      List plugins without loading them (faster)" << std::endl;
+            std::cout << "  --format-filter <fmt>     Only scan specific format (AudioUnit, VST3, VST)" << std::endl;
             std::cout << std::endl;
             std::cout << "Examples:" << std::endl;
             std::cout << "  plughost --list" << std::endl;
-            std::cout << "  plughost --interrogate \"Jup-8 V3\"" << std::endl;
+            std::cout << "  plughost --list --quick-scan --batch-json" << std::endl;
+            std::cout << "  plughost --list --format-filter AudioUnit --skip-instantiation" << std::endl;
             std::cout << "  plughost --interrogate \"Jup-8 V3\" --json" << std::endl;
             quit();
             return;
@@ -129,6 +139,23 @@ namespace ol::jucehost {
         // Blacklist UAD plugins (hardware-dependent, will crash without UAD hardware)
         // Note: UADx plugins are native and should work fine
         config.ignore.push_back("UAD ");  // Note the space to avoid matching "UADx"
+
+        // Add additional ignores for quick-scan mode
+        if (quickScan) {
+            std::cout << "Quick-scan mode enabled, skipping slow plugins..." << std::endl;
+            // Skip plugins known to be slow or problematic during scanning
+            config.ignore.push_back("TyrellN6");      // Has verbose logging
+            config.ignore.push_back("sfizz");         // Sample-based, can be slow
+            config.ignore.push_back("Element");       // Can have timeout issues
+            config.ignore.push_back("AGridder");      // Network-based, can timeout
+            config.ignore.push_back("DecentSampler"); // Sample-based
+            config.ignore.push_back("TX16Wx");        // Large sampler
+            config.ignore.push_back("ADSR Sample Manager"); // Sample library
+            // Skip u-he plugins that have verbose logging
+            config.ignore.push_back("Diva");
+            config.ignore.push_back("Hive");
+            config.ignore.push_back("Repro");
+        }
 
         const juce::AudioDeviceManager::AudioDeviceSetup deviceSetup{
             .outputDeviceName = config.audioOutputDevice,
@@ -185,6 +212,11 @@ namespace ol::jucehost {
         formatManager.addDefaultFormats();
         // for (int i = 0; i < formatManager.getNumFormats(); ++i) {
         for (const auto format: formatManager.getFormats()) {
+            // Skip format if format filtering is enabled and this isn't the target format
+            if (formatFilter && targetFormat != "ALL" && format->getName() != targetFormat) {
+                continue;
+            }
+
             constexpr int scanMax = 10000; // TODO: make this configurable
             constexpr bool recursive = true;
             juce::FileSearchPath path;
@@ -299,6 +331,49 @@ namespace ol::jucehost {
             }
         }
         // TODO: Sort instantiations by config order
+
+        // Handle batch JSON output for list mode
+        if (doList && batchJson) {
+            std::cout << "{" << std::endl;
+            std::cout << "  \"plugins\": [" << std::endl;
+
+            for (int i = 0; i < sorted.size(); ++i) {
+                const auto& plugDescription = sorted[i];
+                std::cout << "    {" << std::endl;
+                std::cout << "      \"manufacturer\": \"" << plugDescription.manufacturerName << "\"," << std::endl;
+                std::cout << "      \"name\": \"" << plugDescription.name << "\"," << std::endl;
+                std::cout << "      \"version\": \"" << plugDescription.version << "\"," << std::endl;
+                std::cout << "      \"format\": \"" << plugDescription.pluginFormatName << "\"," << std::endl;
+                std::cout << "      \"uid\": \"" << plugDescription.uniqueId << "\"," << std::endl;
+                std::cout << "      \"category\": \"" << plugDescription.category << "\"," << std::endl;
+                std::cout << "      \"file_path\": \"" << plugDescription.fileOrIdentifier << "\"" << std::endl;
+                std::cout << "    }" << (i < sorted.size() - 1 ? "," : "") << std::endl;
+            }
+
+            std::cout << "  ]," << std::endl;
+            std::cout << "  \"metadata\": {" << std::endl;
+            std::cout << "    \"total_plugins\": " << sorted.size() << "," << std::endl;
+            std::cout << "    \"extracted_by\": \"plughost\"," << std::endl;
+            std::cout << "    \"timestamp\": \"" << juce::Time::getCurrentTime().toISO8601(false) << "\"" << std::endl;
+            std::cout << "  }" << std::endl;
+            std::cout << "}" << std::endl;
+            quit();
+            return;
+        }
+
+        // Skip instantiation if requested (just list plugin metadata)
+        if (skipInstantiation) {
+            for (const auto& plugDescription: sorted) {
+                std::cout << "Plugin Info: <Format:" << plugDescription.pluginFormatName
+                         << ">, <Name:" << plugDescription.name
+                         << ">, <Manufacturer:" << plugDescription.manufacturerName
+                         << ">, <Version:" << plugDescription.version
+                         << ">, <UID:" << plugDescription.uniqueId << ">" << std::endl;
+            }
+            quit();
+            return;
+        }
+
         // Instantiate the selected plugins
         for (const auto plugDescription: sorted) {
             juce::String errorMessage("barf.");
