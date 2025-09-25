@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ArdourMIDIBindings version="1.0.0" name="Novation Launch Control XL 3 - CHANNEV">
+  <Binding channel="0" ctl="13" function="plugin-parameter[5]" encoder="yes"/>
+  <Binding channel="0" ctl="14" function="plugin-parameter[19]" encoder="yes"/>
+  <Binding channel="0" ctl="5" function="plugin-parameter[2]" encoder="yes"/>
+  <Binding channel="0" ctl="6" function="plugin-parameter[10]" encoder="yes"/>
+  <Binding channel="0" ctl="17" function="plugin-parameter[25]" encoder="yes"/>
+  <Binding channel="0" ctl="18" function="plugin-parameter[22]" encoder="yes"/>
+  <Binding channel="0" ctl="19" function="plugin-parameter[29]" encoder="yes"/>
+  <Binding channel="0" ctl="20" function="plugin-parameter[30]" encoder="yes"/>
+  <Binding channel="0" ctl="22" function="plugin-parameter[12]" encoder="yes"/>
+  <Binding channel="0" ctl="23" function="plugin-parameter[14]" encoder="yes"/>
+  <Binding channel="0" ctl="24" function="plugin-parameter[16]" encoder="yes"/>
+  <Binding channel="0" ctl="25" function="plugin-parameter[18]" encoder="yes"/>
+  <Binding channel="0" ctl="26" function="plugin-parameter[23]" encoder="yes"/>
+  <Binding channel="0" ctl="27" function="plugin-parameter[27]" encoder="yes"/>
+  <Binding channel="0" ctl="28" function="track-set-send-gain[1,1]" encoder="yes"/>
+  <Binding channel="0" ctl="29" function="plugin-parameter[3]" encoder="yes"/>
+  <Binding channel="0" ctl="30" function="plugin-parameter[11]" encoder="yes"/>
+  <Binding channel="0" ctl="31" function="plugin-parameter[13]" encoder="yes"/>
+  <Binding channel="0" ctl="32" function="plugin-parameter[15]" encoder="yes"/>
+  <Binding channel="0" ctl="33" function="plugin-parameter[17]" encoder="yes"/>
+  <Binding channel="0" ctl="34" function="plugin-parameter[24]" encoder="yes"/>
+  <Binding channel="0" ctl="35" function="plugin-parameter[28]" encoder="yes"/>
+  <Binding channel="0" ctl="36" function="track-set-send-gain[1,1]" encoder="yes"/>
+  <Binding channel="0" ctl="37" function="track-set-send-gain[1,1]" encoder="yes"/>
+  <Binding channel="0" ctl="10" function="plugin-parameter[21]"/>
+  <Binding channel="0" ctl="11" function="plugin-parameter[26]"/>
+  <Binding channel="0" ctl="12" function="plugin-parameter[31]"/>
+  <Binding channel="0" ctl="39" function="plugin-parameter[40]"/>
+  <Binding channel="0" ctl="40" function="plugin-parameter[41]"/>
+  <Binding channel="0" ctl="42" function="track-set-gain[1]"/>
+  <Binding channel="0" ctl="43" function="track-set-gain[1]"/>
+  <Binding channel="0" ctl="53" function="plugin-parameter[4]"/>
+  <Binding channel="0" ctl="37" function="plugin-parameter[33]"/>
+  <Binding channel="0" ctl="38" function="plugin-parameter[39]"/>
+  <Binding channel="0" ctl="41" function="plugin-parameter[42]"/>
+  <Binding channel="0" ctl="44" function="toggle-plugin-window"/>
+  <Binding channel="0" ctl="45" function="plugin-parameter[35]"/>
+  <Binding channel="0" ctl="46" function="plugin-parameter[43]"/>
+  <Binding channel="0" ctl="47" function="track-select[1]" momentary="yes"/>
+  <Binding channel="0" ctl="48" function="track-select[1]" momentary="yes"/>
+  <Binding channel="0" ctl="49" function="track-select[1]" momentary="yes"/>
+  <Binding channel="0" ctl="50" function="plugin-parameter[44]"/>
+  <Binding channel="0" ctl="51" function="plugin-parameter[46]"/>
+  <Binding channel="0" ctl="52" function="toggle-plugin-bypass"/>
+  <Binding channel="0" ctl="53" function="track-select[1]" momentary="yes"/>
+  <Binding channel="0" ctl="54" function="track-select[1]" momentary="yes"/>
+  <Binding channel="0" ctl="55" function="track-select[1]" momentary="yes"/>
+  <Binding channel="0" ctl="56" function="track-select[1]" momentary="yes"/>
+</ArdourMIDIBindings>

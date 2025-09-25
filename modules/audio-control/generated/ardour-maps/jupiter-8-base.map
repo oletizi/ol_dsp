@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ArdourMIDIBindings version="1.0.0" name="Novation Launch Control XL 3">
+  <Binding channel="0" ctl="13" function="track-set-send-gain[1,1]" encoder="yes"/>
+  <Binding channel="0" ctl="14" function="track-set-send-gain[1,1]" encoder="yes"/>
+  <Binding channel="0" ctl="15" function="track-set-send-gain[1,1]" encoder="yes"/>
+  <Binding channel="0" ctl="16" function="track-set-send-gain[1,1]" encoder="yes"/>
+  <Binding channel="0" ctl="17" function="track-set-send-gain[1,1]" encoder="yes"/>
+  <Binding channel="0" ctl="18" function="track-set-send-gain[1,1]" encoder="yes"/>
+  <Binding channel="0" ctl="19" function="track-set-send-gain[1,1]" encoder="yes"/>
+  <Binding channel="0" ctl="41" function="track-set-send-gain[1,1]" encoder="yes"/>
+  <Binding channel="0" ctl="21" function="track-set-send-gain[1,1]" encoder="yes"/>
+  <Binding channel="0" ctl="22" function="track-set-send-gain[1,1]" encoder="yes"/>
+  <Binding channel="0" ctl="23" function="track-set-send-gain[1,1]" encoder="yes"/>
+  <Binding channel="0" ctl="24" function="track-set-send-gain[1,1]" encoder="yes"/>
+  <Binding channel="0" ctl="25" function="track-set-send-gain[1,1]" encoder="yes"/>
+  <Binding channel="0" ctl="26" function="track-set-send-gain[1,1]" encoder="yes"/>
+  <Binding channel="0" ctl="27" function="track-set-send-gain[1,1]" encoder="yes"/>
+  <Binding channel="0" ctl="28" function="track-set-send-gain[1,1]" encoder="yes"/>
+  <Binding channel="0" ctl="29" function="track-set-send-gain[1,1]" encoder="yes"/>
+  <Binding channel="0" ctl="30" function="track-set-send-gain[1,1]" encoder="yes"/>
+  <Binding channel="0" ctl="31" function="track-set-send-gain[1,1]" encoder="yes"/>
+  <Binding channel="0" ctl="61" function="track-set-send-gain[1,1]" encoder="yes"/>
+  <Binding channel="0" ctl="33" function="track-set-send-gain[1,1]" encoder="yes"/>
+  <Binding channel="0" ctl="34" function="track-set-send-gain[1,1]" encoder="yes"/>
+  <Binding channel="0" ctl="35" function="track-set-send-gain[1,1]" encoder="yes"/>
+  <Binding channel="0" ctl="36" function="track-set-send-gain[1,1]" encoder="yes"/>
+  <Binding channel="0" ctl="53" function="track-set-gain[1]"/>
+  <Binding channel="0" ctl="54" function="track-set-gain[1]"/>
+  <Binding channel="0" ctl="55" function="track-set-gain[1]"/>
+  <Binding channel="0" ctl="56" function="track-set-gain[1]"/>
+  <Binding channel="0" ctl="57" function="track-set-gain[1]"/>
+  <Binding channel="0" ctl="58" function="track-set-gain[1]"/>
+  <Binding channel="0" ctl="59" function="track-set-gain[1]"/>
+  <Binding channel="0" ctl="60" function="track-set-gain[1]"/>
+  <Binding channel="0" ctl="37" function="track-select[1]"/>
+  <Binding channel="0" ctl="37" function="track-select[1]"/>
+  <Binding channel="0" ctl="37" function="track-select[1]"/>
+  <Binding channel="0" ctl="37" function="track-select[1]" momentary="yes"/>
+  <Binding channel="0" ctl="41" function="track-select[1]"/>
+  <Binding channel="0" ctl="41" function="track-select[1]"/>
+  <Binding channel="0" ctl="41" function="track-select[1]" momentary="yes"/>
+  <Binding channel="0" ctl="41" function="track-select[1]" momentary="yes"/>
+  <Binding channel="0" ctl="45" function="track-select[1]"/>
+  <Binding channel="0" ctl="45" function="track-select[1]"/>
+  <Binding channel="0" ctl="45" function="track-select[1]"/>
+  <Binding channel="0" ctl="45" function="track-select[1]"/>
+  <Binding channel="0" ctl="49" function="track-select[1]"/>
+  <Binding channel="0" ctl="50" function="track-select[1]"/>
+  <Binding channel="0" ctl="51" function="track-select[1]"/>
+  <Binding channel="0" ctl="52" function="track-select[1]" momentary="yes"/>
+</ArdourMIDIBindings>
