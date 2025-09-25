@@ -285,9 +285,38 @@ Before committing changes, ensure:
 - **VERIFY**: File contents match review criteria with `cat` or `head` commands
 - Focus on real-time performance and memory efficiency
 
+## Agent Tool Capabilities & Task Assignment
+
+### 🚨 CRITICAL: Agent Tool Limitations
+**Before assigning tasks, verify agent tool access to avoid failed operations**
+
+#### Agents WITH File Writing Capabilities:
+- **documentation-engineer**: Read, Write, MultiEdit, Bash + documentation tools
+- **typescript-pro**: Read, Write, MultiEdit, Bash + TypeScript tools
+- **javascript-pro**: Read, Write, MultiEdit, Bash + JavaScript tools
+- **python-backend-engineer**: All tools (*)
+- **backend-typescript-architect**: All tools (*)
+- **ui-engineer**: All tools (*)
+- **senior-code-reviewer**: All tools (*)
+
+#### Agents WITHOUT File Writing Capabilities:
+- **orchestrator**: Coordination only - NO file operations (Tools: )
+- **architect-reviewer**: Planning/analysis - LIMITED tools
+- **embedded-systems**: Hardware-specific tools - NO general file writing
+- **test-automator**: Testing tools - LIMITED file operations
+- **api-designer**: Design tools - VERIFY file writing capability before assignment
+
+#### Task Assignment Rules:
+1. **Documentation Tasks**: Use **documentation-engineer** (NOT orchestrator)
+2. **Code Writing**: Use **typescript-pro** or agents with (*) tools
+3. **File Creation/Editing**: NEVER assign to orchestrator
+4. **Coordination**: orchestrator coordinates, other agents execute
+5. **Architecture Planning**: architect-reviewer plans, others implement
+
 ## Communication Protocols
 
-- **orchestrator** coordinates all major decisions and task assignments
+- **orchestrator** coordinates all major decisions and task assignments (NO file operations)
+- **documentation-engineer** creates all documentation files and workplans
 - **architect-reviewer** validates all architectural decisions before implementation
 - **embedded-systems** reviews all MIDI protocol implementations
 - **code-reviewer** provides feedback on all significant code changes
