@@ -136,15 +136,44 @@ namespace ol::jucehost {
         config.ignore.push_back("samplv1");
         config.ignore.push_back("synthv1");
 
-        // Blacklist UAD plugins (hardware-dependent, will crash without UAD hardware)
+        // Blacklist ALL UAD/Universal Audio plugins (hardware-dependent, will crash without UAD hardware)
         // Note: UADx plugins are native and should work fine
         config.ignore.push_back("UAD ");  // Note the space to avoid matching "UADx"
+
+        // AGGRESSIVE: Block all Universal Audio plugins
+        // The issue is these are loaded at the macOS AudioUnit level before our filter runs
+        // So we need broader patterns to catch them during JUCE's initial scan
+        config.ignore.push_back("uaudio");    // This should catch ALL uaudio_* variants
+
+
+        // Always blacklist Zam plugins due to Objective-C class conflicts
+        // These plugins cause duplicate class warnings and system instability
+        config.ignore.push_back("ZamVerb");
+        config.ignore.push_back("ZamTube");
+        config.ignore.push_back("ZamAutoSat");
+        config.ignore.push_back("ZamNoise");
+        config.ignore.push_back("ZaMaximX2");
+        config.ignore.push_back("ZamPhono");
+        config.ignore.push_back("ZaMultiComp");
+        config.ignore.push_back("ZaMultiCompX2");
+        config.ignore.push_back("ZamGrains");
+        config.ignore.push_back("ZamDynamicEQ");
+        config.ignore.push_back("ZamDelay");
+        config.ignore.push_back("ZamHeadX2");
+        config.ignore.push_back("ZamGateX2");
+        config.ignore.push_back("ZamGate");
+        config.ignore.push_back("ZamGEQ31");
+        config.ignore.push_back("ZamEQ2");
+        config.ignore.push_back("ZamCompX2");
+        config.ignore.push_back("ZamComp");
+
+        // Additional problematic plugins causing initialization failures
+        config.ignore.push_back("TyrellN6");  // License issues and verbose logging
 
         // Add additional ignores for quick-scan mode
         if (quickScan) {
             std::cout << "Quick-scan mode enabled, skipping slow plugins..." << std::endl;
             // Skip plugins known to be slow or problematic during scanning
-            config.ignore.push_back("TyrellN6");      // Has verbose logging
             config.ignore.push_back("sfizz");         // Sample-based, can be slow
             config.ignore.push_back("Element");       // Can have timeout issues
             config.ignore.push_back("AGridder");      // Network-based, can timeout
@@ -222,10 +251,34 @@ namespace ol::jucehost {
             juce::FileSearchPath path;
 
             // Add default plugin search paths when in interrogation mode
+            // AGGRESSIVE UAD FILTERING: Create custom search paths excluding UAD plugins
             if (doInterrogate || doList) {
                 if (format->getName() == "AudioUnit") {
-                    path.add(juce::File("/Library/Audio/Plug-Ins/Components"));
-                    path.add(juce::File("~/Library/Audio/Plug-Ins/Components").getFullPathName());
+                    // Instead of adding the entire directory, scan and filter out UAD plugins
+                    juce::Array<juce::File> auDirs;
+                    auDirs.add(juce::File("/Library/Audio/Plug-Ins/Components"));
+                    auDirs.add(juce::File("~/Library/Audio/Plug-Ins/Components"));
+
+                    for (const auto& auDir : auDirs) {
+                        if (!auDir.exists()) continue;
+
+                        juce::DirectoryIterator iter(auDir, false, "*.component", juce::File::findDirectories);
+                        while (iter.next()) {
+                            auto componentFile = iter.getFile();
+                            auto componentName = componentFile.getFileName();
+
+                            // Skip UAD plugins entirely
+                            bool isUAD = componentName.containsIgnoreCase("uaudio_") ||
+                                        componentName.containsIgnoreCase("UAD ");
+
+                            if (!isUAD) {
+                                // Add this component directly to the main path
+                                path.add(componentFile);
+                            } else {
+                                std::cout << "  Excluded UAD component: " << componentFile.getFullPathName() << std::endl;
+                            }
+                        }
+                    }
                 } else if (format->getName() == "VST3") {
                     path.add(juce::File("/Library/Audio/Plug-Ins/VST3"));
                     path.add(juce::File("~/Library/Audio/Plug-Ins/VST3").getFullPathName());
@@ -237,6 +290,7 @@ namespace ol::jucehost {
             }
 
             juce::File deadMansPedalFile(configDir + "/deadPedals");
+
             //auto format = formatManager.getFormat(i);
             juce::String pluginName;
             auto scanner = new juce::PluginDirectoryScanner(
@@ -249,14 +303,14 @@ namespace ol::jucehost {
                 more = next.length();
                 bool shouldIgnore = false;
                 for (const auto ignore: config.ignore) {
-                    if (next.startsWith(ignore)) {
+                    if (next.containsIgnoreCase(ignore)) {
                         shouldIgnore = true;
                         break;
                     }
                 }
 
                 if (shouldIgnore) {
-                    std::cout << "  Ignore: " << next << std::endl;
+                    std::cout << "  Scanner ignore: " << next << std::endl;
                     scanner->skipNextFile();
                 }
 
