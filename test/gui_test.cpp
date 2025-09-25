@@ -2,11 +2,11 @@
 // Created by Orion Letizi on 1/9/24.
 //
 #include "gtest/gtest.h"
-#include "gtest/fakeit.hpp"
+// #include "gtest/fakeit.hpp" - Temporarily disabled due to template compatibility issues
 #include "guilib/ol_guilib.h"
 
 using namespace ol::gui;
-using namespace fakeit;
+// using namespace fakeit;
 TEST(guilib, basics) {
     Dimension viewport{128, 64};
 

@@ -6,7 +6,6 @@
 #define OL_DSP_PATCHLOADER_H
 
 #include <string>
-#include "ryml.hpp"
 #include "VoiceMap.h"
 #include "SampleDataSource.h"
 
@@ -18,10 +17,6 @@ namespace ol::io {
         const char *patch_directory_;
         const std::string &patch_;
         char buf[BUF_LENGTH] = {};
-
-        inline void fill_buf(const c4::csubstr &s) {
-            std::snprintf(buf, BUF_LENGTH, "%.*s", (int) s.len, s.str);
-        }
 
     public:
         class PatchLoaderCallback {

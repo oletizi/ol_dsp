@@ -5,6 +5,9 @@
 #ifndef OL_DSP_FILTER_H
 #define OL_DSP_FILTER_H
 
+#include "daisysp.h"
+#include "corelib/ol_corelib.h"
+
 namespace ol::synth {
     class Filter {
     public:
@@ -31,7 +34,7 @@ namespace ol::synth {
 
     class MoogFilter : public Filter {
     private:
-        daisysp::MoogLadder flt_;
+        daisysp::LadderFilter flt_;
     public:
         void Init(t_sample sample_rate) override { flt_.Init(sample_rate); }
 
@@ -54,7 +57,7 @@ namespace ol::synth {
         void Peak(t_sample *frame_out) override {}
 
     private:
-        daisysp::MoogLadder moog;
+        daisysp::LadderFilter moog;
     public:
 
     };

@@ -8,6 +8,38 @@
 #include "daisysp.h"
 #include "corelib/ol_corelib.h"
 
+// Simple reverb stub to replace missing daisysp::ReverbSc
+namespace daisysp {
+    class ReverbSc {
+    private:
+        float feedback_;
+        float lpfreq_;
+        float sample_rate_;
+
+    public:
+        ReverbSc() : feedback_(0.7f), lpfreq_(6000.0f), sample_rate_(48000.0f) {}
+
+        void Init(float sample_rate) {
+            sample_rate_ = sample_rate;
+        }
+
+        void Process(float in1, float in2, float *out1, float *out2) {
+            // Simple pass-through with slight attenuation for now
+            // TODO: Implement proper reverb algorithm
+            *out1 = in1 * 0.8f;
+            *out2 = in2 * 0.8f;
+        }
+
+        void SetLpFreq(float freq) {
+            lpfreq_ = freq;
+        }
+
+        void SetFeedback(float feedback) {
+            feedback_ = feedback;
+        }
+    };
+}
+
 namespace ol::fx {
     class Reverb {
     public:

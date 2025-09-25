@@ -1,7 +1,7 @@
 enable_testing()
 
 add_subdirectory(../../.ol_dsp-deps/test/googletest ${CMAKE_BINARY_DIR}/deps/test/googletest)
-add_subdirectory(../../.ol_dsp-deps/test/FakeIt ${CMAKE_BINARY_DIR}/deps/test/FakeIt)
+# add_subdirectory(../../.ol_dsp-deps/test/FakeIt ${CMAKE_BINARY_DIR}/deps/test/FakeIt) - Temporarily disabled
 #find_package(GTest REQUIRED)
 #find_package(FakeIt REQUIRED)
 add_executable(gtest_run
@@ -14,6 +14,6 @@ add_executable(gtest_run
         serializer_test.cpp
 )
 message("GTEST_BOTH_LIBRARIES: ${GTEST_BOTH_LIBRARIES}")
-target_link_libraries(gtest_run ${GTEST_BOTH_LIBRARIES} gmock FakeIt::FakeIt-gtest ol_corelib ol_ctllib ol_fxlib ol_guilib ol_iolib ol_synthlib DaisySP)
-target_include_directories(gtest_run PUBLIC ../../.ol_dsp-deps/test/FakeIt/single_header)
+target_link_libraries(gtest_run gtest gtest_main gmock ol_corelib ol_ctllib ol_fxlib ol_guilib ol_iolib ol_synthlib DaisySP)
+# target_include_directories(gtest_run PUBLIC ../../.ol_dsp-deps/test/FakeIt/single_header) - Temporarily disabled
 add_test(gtest_run gtest_run)

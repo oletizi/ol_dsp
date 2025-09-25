@@ -7,6 +7,41 @@
 
 #include "daisysp.h"
 #include "corelib/ol_corelib.h"
+
+// Simple portamento/smoothing implementation to replace missing daisysp::Port
+namespace daisysp {
+    class Port {
+    private:
+        float sample_rate_;
+        float htime_;
+        float coeff_;
+        float z1_;
+
+    public:
+        Port() : sample_rate_(48000.0f), htime_(0.01f), coeff_(0.0f), z1_(0.0f) {}
+
+        void Init(float sample_rate, float htime) {
+            sample_rate_ = sample_rate;
+            SetHtime(htime);
+            z1_ = 0.0f;
+        }
+
+        float Process(float in) {
+            z1_ = in + coeff_ * (z1_ - in);
+            return z1_;
+        }
+
+        void SetHtime(float htime) {
+            htime_ = htime;
+            coeff_ = expf(-1.0f / (htime_ * sample_rate_));
+        }
+
+        float GetHtime() const {
+            return htime_;
+        }
+    };
+}
+
 namespace ol::synth {
     class Portamento {
     public:
