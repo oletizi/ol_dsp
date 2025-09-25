@@ -1,4 +1,4 @@
-import type { ArdourBinding, ArdourMidiMap, ArdourFunction, ArdourDeviceInfo, ArdourBindingGroup } from '../types/ardour.js';
+import type { ArdourBinding, ArdourMidiMap, ArdourFunction, ArdourDeviceInfo, ArdourBindingGroup } from '@/types/ardour.js';
 
 export interface MidiMapBuilderOptions {
   name: string;

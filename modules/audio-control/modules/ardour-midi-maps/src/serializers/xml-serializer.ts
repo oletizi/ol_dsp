@@ -1,4 +1,4 @@
-import type { ArdourMidiMap, ArdourBinding, ArdourDeviceInfo } from '../types/ardour.js';
+import type { ArdourMidiMap, ArdourBinding, ArdourDeviceInfo } from '@/types/ardour.js';
 
 export interface XMLSerializerOptions {
   indent?: string;
@@ -15,9 +15,10 @@ export class ArdourXMLSerializer {
   }
 
   serializeMidiMap(midiMap: ArdourMidiMap): string {
+    const version = midiMap.version || '1.0.0';
     const lines: string[] = [
       '<?xml version="1.0" encoding="UTF-8"?>',
-      `<ArdourMIDIBindings version="1.0.0" name="${this.escapeXML(midiMap.name)}">`,
+      `<ArdourMIDIBindings version="${version}" name="${this.escapeXML(midiMap.name)}">`,
     ];
 
     // Add DeviceInfo if present
@@ -151,7 +152,244 @@ export class ArdourXMLSerializer {
       .replace(/'/g, '&apos;');
   }
 
-  parseMidiMap(_xml: string): ArdourMidiMap {
-    throw new Error('XML parsing not yet implemented');
+  private unescapeXML(text: string): string {
+    return text
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&apos;/g, "'");
+  }
+
+  parseMidiMap(xml: string): ArdourMidiMap {
+    if (!xml || typeof xml !== 'string') {
+      throw new Error('Invalid XML input: expected non-empty string');
+    }
+
+    // Remove XML declaration and normalize whitespace
+    const cleanXml = xml.trim().replace(/<?xml[^>]*?>\s*/, '');
+
+    // Parse the root ArdourMIDIBindings element
+    const rootMatch = cleanXml.match(/<ArdourMIDIBindings\s+([^>]*)>/i);
+    if (!rootMatch) {
+      throw new Error('Invalid XML: missing ArdourMIDIBindings root element');
+    }
+
+    // Extract name and version from root attributes
+    const rootAttributes = this.parseAttributes(rootMatch[1] || '');
+    const name = rootAttributes['name'];
+    if (!name) {
+      throw new Error('Invalid XML: ArdourMIDIBindings element must have a name attribute');
+    }
+
+    const version = rootAttributes['version'];
+
+    // Find all Binding elements
+    const bindingMatches = cleanXml.match(/<Binding\s+([^>]*)\/>/gi) || [];
+    const bindings: ArdourBinding[] = [];
+
+    for (const bindingMatch of bindingMatches) {
+      const attributeString = bindingMatch.match(/<Binding\s+([^>]*)\/>/i)?.[1];
+      if (!attributeString) continue;
+
+      const attributes = this.parseAttributes(attributeString);
+      try {
+        const binding = this.parseBinding(attributes);
+        bindings.push(binding);
+      } catch (error) {
+        throw new Error(`Error parsing binding: ${(error as Error).message}`);
+      }
+    }
+
+    // Parse DeviceInfo if present
+    let deviceInfo: ArdourDeviceInfo | undefined;
+    const deviceInfoMatch = cleanXml.match(/<DeviceInfo\s+([^>]*)\/>/i);
+    if (deviceInfoMatch && deviceInfoMatch[1]) {
+      const deviceAttributes = this.parseAttributes(deviceInfoMatch[1]);
+      deviceInfo = this.parseDeviceInfo(deviceAttributes);
+    }
+
+    const result: ArdourMidiMap = {
+      name,
+      bindings
+    };
+
+    if (version !== undefined) {
+      result.version = version;
+    }
+
+    if (deviceInfo !== undefined) {
+      result.deviceInfo = deviceInfo;
+    }
+
+    return result;
+  }
+
+  private parseAttributes(attributeString: string): Record<string, string> {
+    const attributes: Record<string, string> = {};
+
+    // Match attribute="value" or attribute='value' patterns
+    const attrRegex = /(\w+(?:-\w+)*)\s*=\s*["']([^"']*)["']/g;
+    let match;
+
+    while ((match = attrRegex.exec(attributeString)) !== null) {
+      if (match[1] && match[2] !== undefined) {
+        attributes[match[1]] = this.unescapeXML(match[2]);
+      }
+    }
+
+    return attributes;
+  }
+
+  private parseBinding(attributes: Record<string, string>): ArdourBinding {
+    const channelStr = attributes['channel'];
+    if (!channelStr) {
+      throw new Error('Binding element must have a channel attribute');
+    }
+    const channel = parseInt(channelStr, 10);
+    if (isNaN(channel) || channel < 1 || channel > 16) {
+      throw new Error(`Invalid MIDI channel: ${channelStr}. Must be 1-16.`);
+    }
+
+    const binding: ArdourBinding = { channel };
+
+    // Parse MIDI message type attributes
+    if (attributes['ctl'] !== undefined) {
+      const ctl = parseInt(attributes['ctl'], 10);
+      if (isNaN(ctl) || ctl < 0 || ctl > 127) {
+        throw new Error(`Invalid MIDI CC: ${attributes['ctl']}. Must be 0-127.`);
+      }
+      binding.ctl = ctl;
+    }
+
+    if (attributes['note'] !== undefined) {
+      const note = parseInt(attributes['note'], 10);
+      if (isNaN(note) || note < 0 || note > 127) {
+        throw new Error(`Invalid MIDI note: ${attributes['note']}. Must be 0-127.`);
+      }
+      binding.note = note;
+    }
+
+    if (attributes['enc-r'] !== undefined) {
+      const encR = parseInt(attributes['enc-r'], 10);
+      if (isNaN(encR) || encR < 0 || encR > 127) {
+        throw new Error(`Invalid enc-r value: ${attributes['enc-r']}. Must be 0-127.`);
+      }
+      binding['enc-r'] = encR;
+    }
+
+    if (attributes['rpn'] !== undefined) {
+      const rpn = parseInt(attributes['rpn'], 10);
+      if (isNaN(rpn) || rpn < 0 || rpn > 16383) {
+        throw new Error(`Invalid RPN: ${attributes['rpn']}. Must be 0-16383.`);
+      }
+      binding.rpn = rpn;
+    }
+
+    if (attributes['nrpn'] !== undefined) {
+      const nrpn = parseInt(attributes['nrpn'], 10);
+      if (isNaN(nrpn) || nrpn < 0 || nrpn > 16383) {
+        throw new Error(`Invalid NRPN: ${attributes['nrpn']}. Must be 0-16383.`);
+      }
+      binding.nrpn = nrpn;
+    }
+
+    if (attributes['rpn-14'] !== undefined) {
+      const rpn14 = parseInt(attributes['rpn-14'], 10);
+      if (isNaN(rpn14) || rpn14 < 0 || rpn14 > 16383) {
+        throw new Error(`Invalid RPN-14: ${attributes['rpn-14']}. Must be 0-16383.`);
+      }
+      binding.rpn14 = rpn14;
+    }
+
+    if (attributes['nrpn-14'] !== undefined) {
+      const nrpn14 = parseInt(attributes['nrpn-14'], 10);
+      if (isNaN(nrpn14) || nrpn14 < 0 || nrpn14 > 16383) {
+        throw new Error(`Invalid NRPN-14: ${attributes['nrpn-14']}. Must be 0-16383.`);
+      }
+      binding.nrpn14 = nrpn14;
+    }
+
+    // Parse function and action attributes
+    if (attributes['function']) {
+      binding.function = attributes['function'];
+    }
+
+    if (attributes['uri']) {
+      binding.uri = attributes['uri'];
+    }
+
+    if (attributes['action']) {
+      binding.action = attributes['action'];
+    }
+
+    // Parse boolean attributes
+    if (attributes['encoder'] !== undefined) {
+      if (attributes['encoder'] === 'yes' || attributes['encoder'] === 'no') {
+        binding.encoder = attributes['encoder'];
+      } else {
+        throw new Error(`Invalid encoder value: ${attributes['encoder']}. Must be 'yes' or 'no'.`);
+      }
+    }
+
+    if (attributes['momentary'] !== undefined) {
+      if (attributes['momentary'] === 'yes' || attributes['momentary'] === 'no') {
+        binding.momentary = attributes['momentary'];
+      } else {
+        throw new Error(`Invalid momentary value: ${attributes['momentary']}. Must be 'yes' or 'no'.`);
+      }
+    }
+
+    // Parse threshold
+    if (attributes['threshold'] !== undefined) {
+      const threshold = parseInt(attributes['threshold'], 10);
+      if (isNaN(threshold) || threshold < 0 || threshold > 127) {
+        throw new Error(`Invalid threshold: ${attributes['threshold']}. Must be 0-127.`);
+      }
+      binding.threshold = threshold;
+    }
+
+    return binding;
+  }
+
+  private parseDeviceInfo(attributes: Record<string, string>): ArdourDeviceInfo {
+    // DeviceInfo elements in MIDI bindings don't have a name - they contain device properties
+    // The device name is implicit based on the parent MIDI map
+    const deviceInfo: ArdourDeviceInfo['device-info'] = {};
+
+    // Parse all known device info attributes
+    if (attributes['bank-size'] !== undefined) {
+      const bankSize = parseInt(attributes['bank-size'], 10);
+      if (!isNaN(bankSize) && bankSize > 0) {
+        deviceInfo['bank-size'] = bankSize;
+      }
+    }
+
+    const booleanAttrs: Array<keyof ArdourDeviceInfo['device-info']> = [
+      'motorized', 'has-master-fader', 'has-lcd', 'has-timecode', 'has-meters',
+      'uses-logic-control-buttons', 'uses-mackie-control-buttons', 'uses-ipmidi',
+      'has-touch-sense-faders', 'has-jog-wheel', 'has-global-controls', 'has-segmented-display'
+    ];
+
+    for (const attr of booleanAttrs) {
+      const value = attributes[attr];
+      if (value !== undefined) {
+        if (value === 'yes' || value === 'no') {
+          (deviceInfo as any)[attr] = value;
+        }
+      }
+    }
+
+    if (attributes['threshold'] !== undefined) {
+      const threshold = parseInt(attributes['threshold'], 10);
+      if (!isNaN(threshold) && threshold >= 0 && threshold <= 127) {
+        deviceInfo.threshold = threshold;
+      }
+    }
+
+    return {
+      'device-name': 'Default Device', // Use a default name since it's not in the XML
+      'device-info': deviceInfo
+    };
   }
 }

@@ -1,6 +1,6 @@
 import { parse as parseYAML, stringify as stringifyYAML } from 'yaml';
-import { CanonicalMidiMapSchema, type CanonicalMidiMapOutput } from '../validators/schema.js';
-import type { ValidationResult } from '../types/canonical.js';
+import { CanonicalMidiMapSchema, type CanonicalMidiMapOutput } from '@/validators/schema.js';
+import type { ValidationResult } from '@/types/canonical.js';
 
 export class CanonicalMapParser {
   static parseFromYAML(yamlContent: string): { map?: CanonicalMidiMapOutput; validation: ValidationResult } {

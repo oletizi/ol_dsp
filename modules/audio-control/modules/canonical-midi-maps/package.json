@@ -22,6 +22,7 @@
     "dev": "tsc -b --watch",
     "test": "vitest",
     "test:coverage": "vitest --coverage",
+    "test:ui": "vitest --ui",
     "lint": "eslint . --ext .ts,.tsx",
     "typecheck": "tsc --noEmit",
     "validate-maps": "node dist/cli/validate-maps.js",
@@ -56,6 +57,8 @@
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
+    "@vitest/coverage-v8": "^1.2.0",
+    "@vitest/ui": "^1.2.0",
     "tsx": "^4.7.0",
     "typescript": "^5.3.3",
     "vitest": "^1.2.0"
