@@ -72,6 +72,7 @@ namespace ol::jucehost {
         std::cout << "Initialising OLJuceHost..." << std::endl;
         const bool doList = commandLineParameters.contains("--list");
         const bool doInterrogate = commandLineParameters.contains("--interrogate");
+        const bool doBatchInterrogate = commandLineParameters.contains("--batch-interrogate");
         const bool outputJson = commandLineParameters.contains("--json");
         const bool showHelp = commandLineParameters.contains("--help");
         const bool quickScan = commandLineParameters.contains("--quick-scan");
@@ -98,6 +99,7 @@ namespace ol::jucehost {
             std::cout << "  --help                    Show this help message" << std::endl;
             std::cout << "  --list                    List all available plugins" << std::endl;
             std::cout << "  --interrogate <name>      Extract parameters from specific plugin" << std::endl;
+            std::cout << "  --batch-interrogate       Interrogate all plugins and output incrementally" << std::endl;
             std::cout << "  --json                    Output in JSON format (use with --interrogate)" << std::endl;
             std::cout << "  --quick-scan              Skip slow plugins (UAD, etc.) for faster scanning" << std::endl;
             std::cout << "  --batch-json              Output all plugins as JSON array (use with --list)" << std::endl;
@@ -252,7 +254,7 @@ namespace ol::jucehost {
 
             // Add default plugin search paths when in interrogation mode
             // AGGRESSIVE UAD FILTERING: Create custom search paths excluding UAD plugins
-            if (doInterrogate || doList) {
+            if (doInterrogate || doList || doBatchInterrogate) {
                 if (format->getName() == "AudioUnit") {
                     // Instead of adding the entire directory, scan and filter out UAD plugins
                     juce::Array<juce::File> auDirs;
@@ -373,7 +375,7 @@ namespace ol::jucehost {
             }
         }
         std::vector<juce::PluginDescription> sorted;
-        if (doList || doInterrogate) {
+        if (doList || doInterrogate || doBatchInterrogate) {
             sorted = toInstantiate;
         } else {
             for (auto plugConfig: config.plugins) {
@@ -504,6 +506,83 @@ namespace ol::jucehost {
                 }
                 instances.push_back(std::move(plug));
             }
+        }
+
+        // Batch interrogation mode - interrogate all plugins and output incrementally
+        if (doBatchInterrogate) {
+            std::cout << "{\"plugins\": [" << std::endl;
+
+            bool firstPlugin = true;
+            for (const auto& plugDescription: sorted) {
+                if (!firstPlugin) {
+                    std::cout << "," << std::endl;
+                }
+                firstPlugin = false;
+
+                // Try to instantiate and interrogate this plugin
+                juce::String errorMessage;
+                auto plug = formatManager.createPluginInstance(
+                    plugDescription, 48000, 128, errorMessage);
+
+                if (plug != nullptr) {
+                    auto parameters = plug->getParameters();
+
+                    // Output this plugin's data immediately (incremental output)
+                    std::cout << "{" << std::endl;
+                    std::cout << "  \"plugin\": {" << std::endl;
+                    std::cout << "    \"manufacturer\": \"" << plugDescription.manufacturerName << "\"," << std::endl;
+                    std::cout << "    \"name\": \"" << plug->getName() << "\"," << std::endl;
+                    std::cout << "    \"version\": \"" << plugDescription.version << "\"," << std::endl;
+                    std::cout << "    \"format\": \"" << plugDescription.pluginFormatName << "\"," << std::endl;
+                    std::cout << "    \"uid\": \"" << plugDescription.uniqueId << "\"," << std::endl;
+                    std::cout << "    \"category\": \"" << plugDescription.category << "\"," << std::endl;
+                    std::cout << "    \"file_path\": \"" << plugDescription.fileOrIdentifier << "\"" << std::endl;
+                    std::cout << "  }," << std::endl;
+                    std::cout << "  \"metadata\": {" << std::endl;
+                    std::cout << "    \"parameter_count\": " << parameters.size() << "," << std::endl;
+                    std::cout << "    \"extracted_by\": \"plughost\"," << std::endl;
+                    std::cout << "    \"timestamp\": \"" << juce::Time::getCurrentTime().toISO8601(false) << "\"" << std::endl;
+                    std::cout << "  }," << std::endl;
+                    std::cout << "  \"parameters\": [" << std::endl;
+
+                    for (int i = 0; i < parameters.size(); ++i) {
+                        const auto parameter = parameters[i];
+                        std::cout << "    {" << std::endl;
+                        std::cout << "      \"index\": " << i << "," << std::endl;
+                        std::cout << "      \"name\": \"" << parameter->getName(100) << "\"," << std::endl;
+                        std::cout << "      \"label\": \"" << parameter->getLabel() << "\"," << std::endl;
+                        std::cout << "      \"text\": \"" << parameter->getText(parameter->getValue(), 100) << "\"," << std::endl;
+                        std::cout << "      \"default_value\": " << parameter->getDefaultValue() << "," << std::endl;
+                        std::cout << "      \"current_value\": " << parameter->getValue() << "," << std::endl;
+                        std::cout << "      \"automatable\": " << (parameter->isAutomatable() ? "true" : "false") << "," << std::endl;
+                        std::cout << "      \"meta_parameter\": " << (parameter->isMetaParameter() ? "true" : "false") << "," << std::endl;
+                        std::cout << "      \"discrete\": " << (parameter->isDiscrete() ? "true" : "false") << std::endl;
+                        std::cout << "    }" << (i < parameters.size() - 1 ? "," : "") << std::endl;
+                    }
+
+                    std::cout << "  ]" << std::endl;
+                    std::cout << "}" << std::endl;
+
+                    // Flush output immediately so it's written even if we crash
+                    std::cout.flush();
+
+                } else {
+                    // Output error record for failed plugin
+                    std::cout << "{" << std::endl;
+                    std::cout << "  \"plugin\": {" << std::endl;
+                    std::cout << "    \"name\": \"" << plugDescription.name << "\"," << std::endl;
+                    std::cout << "    \"format\": \"" << plugDescription.pluginFormatName << "\"," << std::endl;
+                    std::cout << "    \"file_path\": \"" << plugDescription.fileOrIdentifier << "\"" << std::endl;
+                    std::cout << "  }," << std::endl;
+                    std::cout << "  \"error\": \"" << errorMessage << "\"" << std::endl;
+                    std::cout << "}" << std::endl;
+                    std::cout.flush();
+                }
+            }
+
+            std::cout << "]}" << std::endl;
+            quit();
+            return;
         }
 
         if (doList || doInterrogate) {
