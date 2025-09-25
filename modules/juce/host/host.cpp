@@ -80,6 +80,9 @@ namespace ol::jucehost {
         const bool skipInstantiation = commandLineParameters.contains("--skip-instantiation");
         const bool formatFilter = commandLineParameters.contains("--format-filter");
 
+        // Consolidate the scanning mode check
+        const bool needsPluginScanning = doList || doInterrogate || doBatchInterrogate;
+
         // Extract plugin name for interrogation
         juce::String interrogatePluginName;
         juce::String targetFormat = "ALL";
@@ -254,7 +257,7 @@ namespace ol::jucehost {
 
             // Add default plugin search paths when in interrogation mode
             // AGGRESSIVE UAD FILTERING: Create custom search paths excluding UAD plugins
-            if (doInterrogate || doList || doBatchInterrogate) {
+            if (needsPluginScanning) {
                 if (format->getName() == "AudioUnit") {
                     // Instead of adding the entire directory, scan and filter out UAD plugins
                     juce::Array<juce::File> auDirs;
@@ -316,7 +319,7 @@ namespace ol::jucehost {
                     scanner->skipNextFile();
                 }
 
-                if ((doList || doInterrogate) && !shouldIgnore) {
+                if (needsPluginScanning && !shouldIgnore) {
                     // For listing or interrogation, scan all plugins
                     scanner->scanNextFile(true, pluginName);
                     if (doList) {
@@ -353,10 +356,11 @@ namespace ol::jucehost {
                 }
             }
             if (shouldIgnore) { continue; }
-            if (doList) {
+            if (doList || doBatchInterrogate) {
+                // For listing and batch interrogation, include all scanned plugins
                 toInstantiate.push_back(plugDescription);
             } else if (doInterrogate) {
-                // For interrogation mode, match by plugin name
+                // For single interrogation mode, match by plugin name
                 if (plugDescription.name.contains(interrogatePluginName)) {
                     toInstantiate.push_back(plugDescription);
                     std::cout << "Found plugin for interrogation: " << plugDescription.name << std::endl;
@@ -375,7 +379,7 @@ namespace ol::jucehost {
             }
         }
         std::vector<juce::PluginDescription> sorted;
-        if (doList || doInterrogate || doBatchInterrogate) {
+        if (needsPluginScanning) {
             sorted = toInstantiate;
         } else {
             for (auto plugConfig: config.plugins) {
@@ -585,7 +589,7 @@ namespace ol::jucehost {
             return;
         }
 
-        if (doList || doInterrogate) {
+        if ((doList || doInterrogate) && !doBatchInterrogate) {
             quit();
             return;
         }
