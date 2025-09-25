@@ -512,16 +512,12 @@ namespace ol::jucehost {
             }
         }
 
-        // Batch interrogation mode - interrogate all plugins and output incrementally
+        // Batch interrogation mode - interrogate all plugins and output individual JSON stanzas
         if (doBatchInterrogate) {
-            std::cout << "{\"plugins\": [" << std::endl;
+            std::cerr << "Starting batch interrogation of " << sorted.size() << " plugins..." << std::endl;
 
-            bool firstPlugin = true;
             for (const auto& plugDescription: sorted) {
-                if (!firstPlugin) {
-                    std::cout << "," << std::endl;
-                }
-                firstPlugin = false;
+                std::cerr << "Interrogating: " << plugDescription.name << " (" << plugDescription.pluginFormatName << ")" << std::endl;
 
                 // Try to instantiate and interrogate this plugin
                 juce::String errorMessage;
@@ -531,7 +527,7 @@ namespace ol::jucehost {
                 if (plug != nullptr) {
                     auto parameters = plug->getParameters();
 
-                    // Output this plugin's data immediately (incremental output)
+                    // Output individual JSON stanza for this plugin to STDOUT
                     std::cout << "{" << std::endl;
                     std::cout << "  \"plugin\": {" << std::endl;
                     std::cout << "    \"manufacturer\": \"" << plugDescription.manufacturerName << "\"," << std::endl;
@@ -567,8 +563,10 @@ namespace ol::jucehost {
                     std::cout << "  ]" << std::endl;
                     std::cout << "}" << std::endl;
 
-                    // Flush output immediately so it's written even if we crash
+                    // Flush output immediately so it's available for reading
                     std::cout.flush();
+
+                    std::cerr << "  ✅ Success: " << parameters.size() << " parameters" << std::endl;
 
                 } else {
                     // Output error record for failed plugin
@@ -581,10 +579,12 @@ namespace ol::jucehost {
                     std::cout << "  \"error\": \"" << errorMessage << "\"" << std::endl;
                     std::cout << "}" << std::endl;
                     std::cout.flush();
+
+                    std::cerr << "  ❌ Failed: " << errorMessage << std::endl;
                 }
             }
 
-            std::cout << "]}" << std::endl;
+            std::cerr << "Batch interrogation complete." << std::endl;
             quit();
             return;
         }
