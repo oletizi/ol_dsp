@@ -135,7 +135,8 @@ export class PluginDiscovery implements IPluginDiscovery {
 
       return plugins;
     } catch (error) {
-      console.error('❌ Fallback listing also failed:', error instanceof Error ? error.message : error);
+      const errorMessage = error instanceof Error ? error.message : error;
+      console.error('❌ Fallback listing also failed:', errorMessage);
       return [];
     }
   }

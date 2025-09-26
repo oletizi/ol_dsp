@@ -43,6 +43,8 @@ export class ProcessManager implements IProcessManager {
       let stdout = '';
       let stderr = '';
       let lastProgress = Date.now();
+      let progressCheckInterval: NodeJS.Timeout;
+      let finalTimeoutHandle: NodeJS.Timeout;
 
       child.stdout?.on('data', (data) => {
         stdout += data.toString();
@@ -59,6 +61,9 @@ export class ProcessManager implements IProcessManager {
       });
 
       child.on('close', (code) => {
+        clearInterval(progressCheckInterval);
+        clearTimeout(finalTimeoutHandle);
+
         const result: ProcessResult = {
           stdout,
           stderr,
@@ -74,21 +79,27 @@ export class ProcessManager implements IProcessManager {
       });
 
       child.on('error', (error) => {
+        clearInterval(progressCheckInterval);
+        clearTimeout(finalTimeoutHandle);
         reject(new Error(`Process error: ${error.message}`));
       });
 
       // Progressive timeout with progress checking
-      const checkProgress = setInterval(() => {
+      // Use smaller check intervals for timeouts under 5 seconds
+      const checkInterval = timeoutMs < 5000 ? Math.max(50, timeoutMs / 10) : 5000;
+
+      progressCheckInterval = setInterval(() => {
         if (Date.now() - lastProgress > timeoutMs) {
-          clearInterval(checkProgress);
+          clearInterval(progressCheckInterval);
+          clearTimeout(finalTimeoutHandle);
           child.kill('SIGKILL');
           reject(new Error(`Process timed out after ${timeoutMs}ms with no progress`));
         }
-      }, 5000);
+      }, checkInterval);
 
-      // Final timeout
-      setTimeout(() => {
-        clearInterval(checkProgress);
+      // Final timeout as backup
+      finalTimeoutHandle = setTimeout(() => {
+        clearInterval(progressCheckInterval);
         if (!child.killed) {
           child.kill('SIGKILL');
           reject(new Error(`Process killed after ${timeoutMs}ms maximum timeout`));

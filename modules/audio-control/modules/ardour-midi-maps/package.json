@@ -13,8 +13,13 @@
   },
   "files": [
     "dist",
-    "src"
+    "src",
+    "bin"
   ],
+  "bin": {
+    "validate-ardour-maps": "./bin/validate-ardour-maps",
+    "convert-to-ardour": "./bin/convert-to-ardour"
+  },
   "scripts": {
     "build": "tsc -b",
     "clean": "rm -rf dist *.tsbuildinfo",
@@ -25,7 +30,9 @@
     "lint": "eslint . --ext .ts,.tsx",
     "typecheck": "tsc --noEmit",
     "generate": "tsx scripts/generate-ardour-maps.ts",
-    "generate:install": "tsx scripts/generate-ardour-maps.ts --install"
+    "generate:install": "tsx scripts/generate-ardour-maps.ts --install",
+    "validate-ardour-maps": "node dist/cli/validate-ardour-maps.js",
+    "convert-to-ardour": "node dist/cli/convert-to-ardour.js"
   },
   "keywords": [
     "ardour",

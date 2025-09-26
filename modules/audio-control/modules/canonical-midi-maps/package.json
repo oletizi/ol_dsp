@@ -14,8 +14,15 @@
   "files": [
     "dist",
     "src",
-    "maps"
+    "maps",
+    "bin"
   ],
+  "bin": {
+    "validate-maps": "./bin/validate-maps",
+    "convert-maps": "./bin/convert-maps",
+    "batch-process": "./bin/batch-process",
+    "generate-template": "./bin/generate-template"
+  },
   "scripts": {
     "build": "tsc -b",
     "clean": "rm -rf dist *.tsbuildinfo",
@@ -26,6 +33,9 @@
     "lint": "eslint . --ext .ts,.tsx",
     "typecheck": "tsc --noEmit",
     "validate-maps": "node dist/cli/validate-maps.js",
+    "convert-maps": "node dist/cli/convert-maps.js",
+    "batch-process": "node dist/cli/batch-process.js",
+    "generate-template": "node dist/cli/generate-template.js",
     "generate:plugin-specs": "JUCE_DISABLE_AUDIOUNIT_PLUGIN_SCANNING=1 tsx src/tools/generate-plugin-specs.ts",
     "generate:plugin-specs:quick": "JUCE_DISABLE_AUDIOUNIT_PLUGIN_SCANNING=1 tsx src/tools/generate-plugin-specs.ts --quick",
     "generate:plugin-specs:au": "JUCE_DISABLE_AUDIOUNIT_PLUGIN_SCANNING=1 tsx src/tools/generate-plugin-specs.ts --format AudioUnit",

@@ -1,19 +1,106 @@
 import type { ArdourMidiMap, ArdourBinding, ArdourDeviceInfo } from '@/types/ardour.js';
 
+/**
+ * Configuration options for XML serialization formatting.
+ * Controls the output format of generated Ardour MIDI map XML.
+ *
+ * @example
+ * ```typescript
+ * const options: XMLSerializerOptions = {
+ *   indent: '    ', // 4 spaces
+ *   newline: '\r\n' // Windows line endings
+ * };
+ * ```
+ */
 export interface XMLSerializerOptions {
+  /** String used for indentation (defaults to 2 spaces) */
   indent?: string;
+  /** String used for line endings (defaults to \n) */
   newline?: string;
 }
 
+/**
+ * Serializes and parses Ardour MIDI map configurations to/from XML format.
+ *
+ * This class handles the conversion between TypeScript objects and Ardour's XML format,
+ * including proper XML escaping, formatting, and validation.
+ *
+ * Key features:
+ * - Bidirectional conversion (serialize to XML, parse from XML)
+ * - Proper XML escaping for special characters
+ * - Organized output with comments for binding groups
+ * - MIDI protocol validation (channels 1-16, CC/note numbers 0-127)
+ * - Support for all Ardour binding types (CC, Note, RPN, NRPN, etc.)
+ *
+ * @example
+ * ```typescript
+ * const serializer = new ArdourXMLSerializer({ indent: '  ' });
+ *
+ * // Serialize a MIDI map to XML
+ * const xml = serializer.serializeMidiMap(midiMap);
+ *
+ * // Parse XML back to MIDI map
+ * const parsedMap = serializer.parseMidiMap(xml);
+ * ```
+ */
 export class ArdourXMLSerializer {
   private readonly indent: string;
   private readonly newline: string;
 
+  /**
+   * Creates a new XML serializer with the specified formatting options.
+   *
+   * @param options - Formatting configuration for XML output
+   *
+   * @example
+   * ```typescript
+   * // Default formatting (2 spaces, Unix line endings)
+   * const serializer = new ArdourXMLSerializer();
+   *
+   * // Custom formatting
+   * const customSerializer = new ArdourXMLSerializer({
+   *   indent: '\t',    // Tab indentation
+   *   newline: '\r\n'  // Windows line endings
+   * });
+   * ```
+   */
   constructor(options: XMLSerializerOptions = {}) {
     this.indent = options.indent ?? '  ';
     this.newline = options.newline ?? '\n';
   }
 
+  /**
+   * Serializes an Ardour MIDI map to XML format.
+   *
+   * Generates a complete Ardour MIDI bindings XML file including:
+   * - XML declaration
+   * - Root ArdourMIDIBindings element with name and version
+   * - Optional DeviceInfo element
+   * - Organized binding groups with comments
+   * - Individual bindings with proper MIDI parameter validation
+   *
+   * @param midiMap - The MIDI map to serialize
+   * @returns Well-formed XML string ready for Ardour
+   *
+   * @throws Error if the MIDI map contains invalid data
+   *
+   * @example
+   * ```typescript
+   * const midiMap: ArdourMidiMap = {
+   *   name: 'My Controller',
+   *   version: '1.0.0',
+   *   bindings: [
+   *     { channel: 1, ctl: 7, function: 'track-set-gain[1]' }
+   *   ]
+   * };
+   *
+   * const xml = serializer.serializeMidiMap(midiMap);
+   * // Result: <?xml version="1.0" encoding="UTF-8"?>
+   * // <ArdourMIDIBindings version="1.0.0" name="My Controller">
+   * //   <Binding channel="1" ctl="7" function="track-set-gain[1]"/>
+   * // </ArdourMIDIBindings>
+   * ```
+   */
   serializeMidiMap(midiMap: ArdourMidiMap): string {
     const version = midiMap.version || '1.0.0';
     const lines: string[] = [
@@ -57,6 +144,27 @@ export class ArdourXMLSerializer {
     return lines.join(this.newline);
   }
 
+  /**
+   * Serializes device information to standalone XML format.
+   * Useful for creating separate device info files or debugging.
+   *
+   * @param deviceInfo - Device capabilities and information
+   * @returns XML string with device information
+   *
+   * @example
+   * ```typescript
+   * const deviceInfo: ArdourDeviceInfo = {
+   *   'device-name': 'My Controller',
+   *   'device-info': {
+   *     'bank-size': 8,
+   *     'motorized': 'no',
+   *     'has-lcd': 'yes'
+   *   }
+   * };
+   *
+   * const xml = serializer.serializeDeviceInfo(deviceInfo);
+   * ```
+   */
   serializeDeviceInfo(deviceInfo: ArdourDeviceInfo): string {
     const lines: string[] = [
       '<?xml version="1.0" encoding="UTF-8"?>',
@@ -80,6 +188,10 @@ export class ArdourXMLSerializer {
     return lines.join(this.newline);
   }
 
+  /**
+   * Serializes device info as an inline XML element for inclusion in MIDI maps.
+   * @private
+   */
   private serializeDeviceInfoElement(deviceInfo: ArdourDeviceInfo): string {
     const info = deviceInfo['device-info'];
     const attributes: string[] = [];
@@ -93,6 +205,11 @@ export class ArdourXMLSerializer {
     return `<DeviceInfo ${attributes.join(' ')}/>`;
   }
 
+  /**
+   * Serializes a single MIDI binding to XML format.
+   * Handles all MIDI message types and validates parameter ranges.
+   * @private
+   */
   private serializeBinding(binding: ArdourBinding): string {
     const attributes: string[] = [];
 
@@ -143,6 +260,11 @@ export class ArdourXMLSerializer {
     return `<Binding ${attributes.join(' ')}/>`;
   }
 
+  /**
+   * Escapes special XML characters in text content.
+   * Converts: & < > " ' to their XML entity equivalents.
+   * @private
+   */
   private escapeXML(text: string): string {
     return text
       .replace(/&/g, '&amp;')
@@ -152,6 +274,11 @@ export class ArdourXMLSerializer {
       .replace(/'/g, '&apos;');
   }
 
+  /**
+   * Unescapes XML entities back to their original characters.
+   * Converts: &amp; &lt; &gt; &quot; &apos; back to & < > " '
+   * @private
+   */
   private unescapeXML(text: string): string {
     return text
       .replace(/&amp;/g, '&')
@@ -161,6 +288,33 @@ export class ArdourXMLSerializer {
       .replace(/&apos;/g, "'");
   }
 
+  /**
+   * Parses an Ardour MIDI map from XML format.
+   *
+   * Validates and converts XML back to TypeScript objects with:
+   * - MIDI channel validation (1-16)
+   * - MIDI CC/note number validation (0-127)
+   * - RPN/NRPN parameter validation (0-16383)
+   * - Boolean attribute parsing ('yes'/'no' to boolean flags)
+   * - XML unescaping for special characters
+   *
+   * @param xml - XML string to parse
+   * @returns Parsed MIDI map object
+   *
+   * @throws Error if XML is malformed or contains invalid MIDI data
+   *
+   * @example
+   * ```typescript
+   * const xml = `<?xml version="1.0" encoding="UTF-8"?>
+   * <ArdourMIDIBindings version="1.0.0" name="Test Map">
+   *   <Binding channel="1" ctl="7" function="track-set-gain[1]"/>
+   * </ArdourMIDIBindings>`;
+   *
+   * const map = serializer.parseMidiMap(xml);
+   * console.log(map.name); // "Test Map"
+   * console.log(map.bindings[0].ctl); // 7
+   * ```
+   */
   parseMidiMap(xml: string): ArdourMidiMap {
     if (!xml || typeof xml !== 'string') {
       throw new Error('Invalid XML input: expected non-empty string');
@@ -225,6 +379,11 @@ export class ArdourXMLSerializer {
     return result;
   }
 
+  /**
+   * Parses XML attribute string into key-value pairs.
+   * Handles both single and double quotes, with proper XML unescaping.
+   * @private
+   */
   private parseAttributes(attributeString: string): Record<string, string> {
     const attributes: Record<string, string> = {};
 
@@ -241,6 +400,15 @@ export class ArdourXMLSerializer {
     return attributes;
   }
 
+  /**
+   * Parses XML attributes into an ArdourBinding object.
+   * Validates all MIDI parameters and converts string attributes to appropriate types.
+   *
+   * @private
+   * @param attributes - Parsed XML attributes
+   * @returns Validated ArdourBinding object
+   * @throws Error for invalid MIDI parameters (channels, CC numbers, etc.)
+   */
   private parseBinding(attributes: Record<string, string>): ArdourBinding {
     const channelStr = attributes['channel'];
     if (!channelStr) {
@@ -352,6 +520,14 @@ export class ArdourXMLSerializer {
     return binding;
   }
 
+  /**
+   * Parses device info attributes into ArdourDeviceInfo object.
+   * Validates boolean attributes and numeric values.
+   *
+   * @private
+   * @param attributes - Parsed XML attributes
+   * @returns Device information object with default device name
+   */
   private parseDeviceInfo(attributes: Record<string, string>): ArdourDeviceInfo {
     // DeviceInfo elements in MIDI bindings don't have a name - they contain device properties
     // The device name is implicit based on the parent MIDI map

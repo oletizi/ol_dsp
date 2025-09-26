@@ -15,13 +15,33 @@ export interface IParameterCategorizer {
 export class ParameterCategorizer implements IParameterCategorizer {
   /**
    * Categorize a parameter based on its name
+   *
+   * Order matters! More specific terms should be checked first to handle
+   * compound names like "Filter Env Attack" correctly.
    */
   categorizeParameter(paramName: string): string {
     const name = paramName.toLowerCase();
 
-    // Master/Global controls
-    if (this.isMasterParameter(name)) {
-      return 'master';
+    // Check more specific terms first to handle compound parameter names correctly
+
+    // Envelope parameters (specific ADSR terms)
+    if (this.isEnvelopeParameter(name)) {
+      return 'envelope';
+    }
+
+    // Effects parameters (specific effect names)
+    if (this.isEffectsParameter(name)) {
+      return 'effects';
+    }
+
+    // Filter parameters (cutoff, resonance, Q are quite specific)
+    if (this.isFilterParameter(name)) {
+      return 'filter';
+    }
+
+    // LFO parameters (modulation terms)
+    if (this.isLfoParameter(name)) {
+      return 'lfo';
     }
 
     // Oscillator parameters
@@ -29,29 +49,14 @@ export class ParameterCategorizer implements IParameterCategorizer {
       return 'oscillator';
     }
 
-    // Filter parameters
-    if (this.isFilterParameter(name)) {
-      return 'filter';
-    }
-
-    // Envelope parameters
-    if (this.isEnvelopeParameter(name)) {
-      return 'envelope';
-    }
-
-    // LFO parameters
-    if (this.isLfoParameter(name)) {
-      return 'lfo';
-    }
-
-    // Effects parameters
-    if (this.isEffectsParameter(name)) {
-      return 'effects';
-    }
-
     // Amplifier parameters
     if (this.isAmplifierParameter(name)) {
       return 'amplifier';
+    }
+
+    // Master/Global controls (broader terms, checked later)
+    if (this.isMasterParameter(name)) {
+      return 'master';
     }
 
     return 'misc';
@@ -63,7 +68,9 @@ export class ParameterCategorizer implements IParameterCategorizer {
            name.includes('gain') ||
            name.includes('tune') ||
            name.includes('octave') ||
-           name.includes('output');
+           name.includes('output') ||
+           name.includes('main') ||
+           name.match(/\bout\b/) !== null; // Match "out" as whole word
   }
 
   private isOscillatorParameter(name: string): boolean {
@@ -81,7 +88,8 @@ export class ParameterCategorizer implements IParameterCategorizer {
            name.includes('cutoff') ||
            name.includes('resonance') ||
            name.includes('q ') ||
-           name.includes('freq');
+           name.includes('freq') ||
+           name.match(/\blp\b/) !== null; // Match "lp" for "LP Cutoff"
   }
 
   private isEnvelopeParameter(name: string): boolean {
