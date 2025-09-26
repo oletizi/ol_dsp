@@ -1,18 +1,58 @@
-# Architecture: Plugin Descriptors, Canonical MIDI Maps, and Ardour MIDI Maps
+# Audio Control Architecture: Script Organization & Workflow Integration
 
-This document explains the interaction between the three key components in the audio-control system for creating robust MIDI controller mappings.
+This document details the complete architecture of the audio-control project following the Phase 2 implementation of the tools review and streamlining initiative. It covers the new 12-script organization, module boundaries, TypeScript interfaces, and the 3-phase workflow structure.
 
-## Component Overview
+## Architecture Overview
+
+### Script Organization Structure
 
 ```
-┌─────────────────────────────┐    ┌─────────────────────────────┐    ┌─────────────────────────────┐
-│     Plugin Descriptors      │    │   Canonical MIDI Maps      │    │     Ardour MIDI Maps       │
-│                             │    │                             │    │                             │
-│ • Parameter extraction      │───▶│ • Device-specific mappings  │───▶│ • DAW-specific format       │
-│ • JSON format              │    │ • Real parameter indices    │    │ • XML serialization        │
-│ • Parameter categorization  │    │ • Controller-plugin pairs  │    │ • Transport controls        │
-│ • Metadata & validation     │    │ • Hardware abstraction     │    │ • Track/plugin automation   │
-└─────────────────────────────┘    └─────────────────────────────┘    └─────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                        Audio Control Architecture                                │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                 │
+│  Phase 1: Plugin Interrogation    Phase 2: Canonical Mapping   Phase 3: DAW Gen │
+│  ┌─────────────────────────────┐  ┌─────────────────────────────┐ ┌──────────────┐│
+│  │ plugins:extract             │  │ maps:validate               │ │ daw:generate ││
+│  │ plugins:list                │──│ maps:list                   │─│ daw:list     ││
+│  │ plugins:health              │  │ maps:check                  │ │              ││
+│  └─────────────────────────────┘  └─────────────────────────────┘ └──────────────┘│
+│                                                                                 │
+│  Workflow Orchestration:                                                        │
+│  ┌─────────────────────────────────────────────────────────────────────────────┐│
+│  │ workflow:complete  (runs complete pipeline)                                ││
+│  │ workflow:health    (validates all phases)                                  ││
+│  └─────────────────────────────────────────────────────────────────────────────┘│
+└─────────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Module Boundaries and Data Flow
+
+```
+tools/
+├── plugins/           # Phase 1: Plugin Interrogation
+│   ├── extract.ts      # JUCE plugin parameter extraction
+│   ├── list.ts         # Plugin discovery and catalog
+│   └── health.ts       # Plugin descriptor validation
+│
+├── maps/             # Phase 2: Canonical Mapping
+│   ├── validate.ts    # YAML/JSON mapping validation
+│   ├── list.ts        # Mapping discovery and metadata
+│   └── check.ts       # Cross-validation with descriptors
+│
+├── daw/              # Phase 3: DAW Generation
+│   ├── generate.ts    # Multi-DAW format generation
+│   └── list.ts        # Generated file management
+│
+├── workflow/         # Orchestration Layer
+│   ├── complete.ts    # End-to-end pipeline execution
+│   └── health.ts      # System-wide health monitoring
+│
+└── types/            # TypeScript Contracts
+    ├── workflow.ts    # Workflow execution interfaces
+    ├── plugin.ts      # Plugin descriptor schemas
+    ├── midi.ts        # MIDI mapping definitions
+    └── daw.ts         # DAW format specifications
 ```
 
 ## 1. Plugin Descriptors

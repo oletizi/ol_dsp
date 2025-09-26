@@ -22,9 +22,7 @@
     "test": "vitest",
     "test:coverage": "vitest --coverage",
     "lint": "eslint . --ext .ts,.tsx",
-    "typecheck": "tsc --noEmit",
-    "generate": "tsx scripts/generate-ardour-maps.ts",
-    "generate:install": "tsx scripts/generate-ardour-maps.ts --install"
+    "typecheck": "tsc --noEmit"
   },
   "keywords": [
     "ardour",
