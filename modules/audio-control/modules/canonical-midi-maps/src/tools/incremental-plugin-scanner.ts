@@ -12,7 +12,7 @@
 
 import { spawn } from 'child_process';
 import { join, dirname } from 'path';
-import { writeFileSync, appendFileSync, existsSync, readFileSync } from 'fs';
+import { writeFileSync, existsSync, readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -118,7 +118,7 @@ class IncrementalPluginScanner {
 
       for (const line of lines) {
         const match = line.match(/Next Plugin: <Format:([^>]+)>, <Name: ([^>]+)>/);
-        if (match) {
+        if (match && match[1] && match[2]) {
           const [, format, name] = match;
 
           // Check if we already have this plugin
@@ -151,7 +151,7 @@ class IncrementalPluginScanner {
 
       for (const line of lines) {
         const match = line.match(/Next Plugin: <Format:([^>]+)>, <Name: ([^>]+)>/);
-        if (match) {
+        if (match && match[1] && match[2]) {
           const [, format, name] = match;
 
           // Check if we already have this plugin
@@ -181,6 +181,7 @@ class IncrementalPluginScanner {
 
     for (let i = 0; i < this.catalog.plugins.length; i++) {
       const plugin = this.catalog.plugins[i];
+      if (!plugin) continue;
 
       if (plugin.interrogation_status !== 'pending') {
         console.log(`[${i + 1}/${this.catalog.plugins.length}] ⏭️  Skipping ${plugin.name} (already ${plugin.interrogation_status})`);

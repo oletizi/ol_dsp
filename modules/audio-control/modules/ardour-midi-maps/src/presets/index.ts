@@ -1,5 +1,5 @@
-import { MidiMapBuilder } from '../builders/midi-map-builder.js';
-import type { ArdourMidiMap } from '../types/ardour.js';
+import { MidiMapBuilder } from '@/builders/midi-map-builder.js';
+import type { ArdourMidiMap } from '@/types/ardour.js';
 
 export function createGeneric8ChannelMap(): ArdourMidiMap {
   const builder = new MidiMapBuilder({

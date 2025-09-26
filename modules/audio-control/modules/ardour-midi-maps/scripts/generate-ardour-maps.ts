@@ -15,7 +15,7 @@ import { homedir } from 'os';
 import { fileURLToPath } from 'url';
 // Import removed - will use CanonicalMapParser for YAML parsing
 import { CanonicalMapParser } from '../../canonical-midi-maps/src/index.js';
-import { MidiMapBuilder, ArdourXMLSerializer } from '../src/index.js';
+import { MidiMapBuilder, ArdourXMLSerializer } from '@/index.js';
 
 interface ConversionResult {
   device: string;
