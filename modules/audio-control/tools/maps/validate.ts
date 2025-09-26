@@ -15,6 +15,7 @@ import { CanonicalMapParser } from '@/modules/canonical-midi-maps/src/parsers/ya
 import type { CanonicalMidiMapOutput } from '@/modules/canonical-midi-maps/src/validators/schema';
 import type { ValidationResult, ValidationError, ValidationWarning } from '@/tools/types/workflow';
 import type { PluginDescriptor } from '@/modules/canonical-midi-maps/src/types/plugin-descriptor';
+import { PerformanceCache, cached } from '../cache/performance-cache.js';
 
 interface MapValidationResult extends ValidationResult {
   /** Map file path */
@@ -56,6 +57,7 @@ interface ValidationOptions {
 
 class MapsValidator {
   private readonly pluginDescriptors = new Map<string, PluginDescriptor>();
+  private readonly cache: PerformanceCache;
 
   constructor(private readonly options: ValidationOptions = {}) {
     // Set defaults
@@ -63,6 +65,12 @@ class MapsValidator {
     this.options.strict ??= true;
     this.options.includeWarnings ??= true;
     this.options.maxFileSize ??= 1024 * 1024; // 1MB
+
+    // Initialize performance cache
+    this.cache = new PerformanceCache({
+      cacheDir: '.cache/maps-validation',
+      ttl: 10 * 60 * 1000, // 10 minutes for validation cache
+    });
   }
 
   /**
@@ -91,10 +99,20 @@ class MapsValidator {
   }
 
   /**
-   * Validate a single map file
+   * Validate a single map file with caching
    */
   async validateMapFile(filePath: string): Promise<MapValidationResult> {
     const startTime = performance.now();
+
+    // Check cache first for validation result
+    const cacheKey = { filePath, options: this.options };
+    const cached = await this.cache.get<MapValidationResult>('validation', cacheKey);
+
+    if (cached) {
+      // Update performance timing to show cache hit
+      cached.performance.validationTime = performance.now() - startTime;
+      return cached;
+    }
 
     try {
       // Check file size
@@ -201,7 +219,7 @@ class MapsValidator {
       const isValid = allErrors.length === 0;
       const validationTime = performance.now() - startTime;
 
-      return {
+      const result: MapValidationResult = {
         filePath,
         mapId: this.generateMapId(parseResult.map),
         valid: isValid,
@@ -216,6 +234,16 @@ class MapsValidator {
           fileSize: stats.size,
         },
       };
+
+      // Cache successful validation results
+      if (isValid || allErrors.length <= 3) {
+        await this.cache.set('validation', cacheKey, result, {
+          timestamp: Date.now(),
+          fileSize: stats.size
+        });
+      }
+
+      return result;
 
     } catch (error) {
       return {
@@ -486,6 +514,20 @@ class MapsValidator {
 async function main() {
   const args = process.argv.slice(2);
 
+  // Handle help flag
+  if (args.includes('--help') || args.includes('-h')) {
+    console.log('Usage: validate.ts <map-file-or-directory> [options]');
+    console.log('');
+    console.log('Options:');
+    console.log('  --check-plugins         Cross-validate with plugin descriptors');
+    console.log('  --descriptors-dir <dir>  Plugin descriptors directory');
+    console.log('  --strict                 Enable strict validation mode');
+    console.log('  --no-warnings           Suppress warnings in output');
+    console.log('  --max-file-size <bytes>  Maximum allowed file size');
+    console.log('  -h, --help              Show this help message');
+    process.exit(0);
+  }
+
   if (args.length === 0) {
     console.error('Usage: validate.ts <map-file-or-directory> [options]');
     console.error('');
@@ -495,6 +537,7 @@ async function main() {
     console.error('  --strict                 Enable strict validation mode');
     console.error('  --no-warnings           Suppress warnings in output');
     console.error('  --max-file-size <bytes>  Maximum allowed file size');
+    console.error('  -h, --help              Show this help message');
     process.exit(1);
   }
 
@@ -591,7 +634,7 @@ async function main() {
   process.exit(hasErrors ? 1 : 0);
 }
 
-if (require.main === module) {
+if (import.meta.url === `file://${process.argv[1]}`) {
   main().catch(console.error);
 }
 

@@ -23,6 +23,10 @@
     "allowUnusedLabels": false,
     "allowUnreachableCode": false,
     "composite": true,
-    "incremental": true
+    "incremental": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["*"]
+    }
   }
 }

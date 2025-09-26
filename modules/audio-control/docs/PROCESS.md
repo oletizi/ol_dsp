@@ -30,11 +30,17 @@ See top-level project README
 
 #### 1.2 Run Plugin Interrogation
 ```bash
-# Navigate to canonical-midi-maps module
-cd modules/audio-control/modules/canonical-midi-maps
+# Extract plugin parameters (from project root)
+pnpm plugins:extract
 
-# Run batch interrogation (scans all VST3 plugins)
-pnpm plugin:generate-batch
+# Force re-extraction (bypass cache)
+pnpm plugins:extract:force
+
+# List available plugins
+pnpm plugins:list
+
+# Validate extracted descriptors
+pnpm plugins:health
 ```
 
 This command:
@@ -113,6 +119,18 @@ canonical bindings is to create a "custom mode" in the Novation components edito
 to label the controls; then, use Claude Code with playwright mcp to snarf the mapping from the components editor and generate
 a canonical mapping file like the following:
 
+#### 2.4 Validate Canonical Mappings
+```bash
+# Validate all mapping files
+pnpm maps:validate
+
+# List available canonical mappings
+pnpm maps:list
+
+# Health check (validate against plugin descriptors)
+pnpm maps:check
+```
+
 ```yaml
 version: 1.0.0
 device:
@@ -149,18 +167,21 @@ Convert canonical mappings into DAW-specific formats for actual use.
 
 ### Process
 
-#### 3.1 Ardour XML Generation
-Use the npm script to generate Ardour-compatible XML:
+#### 3.1 DAW Format Generation
+Use the new consolidated scripts to generate DAW-specific formats:
 
 ```bash
-# Navigate to ardour-midi-maps module
-cd modules/audio-control/modules/ardour-midi-maps
+# Generate all DAW formats
+pnpm daw:generate
 
-# Generate Ardour mappings from canonical maps
-pnpm generate
+# Generate Ardour only
+pnpm daw:generate:ardour
 
-# Or generate and install directly to Ardour config directory
-pnpm generate:install
+# Generate and install to Ardour config directory
+pnpm daw:generate:ardour:install
+
+# List generated DAW files
+pnpm daw:list
 ```
 
 #### 3.2 Installation in DAW
@@ -181,14 +202,50 @@ The same canonical mapping can generate:
 - **Bitwig**: Controller scripts (JavaScript)
 ~~- **Logic Pro**: Controller assignments~~
 
+## Workflow Management
+
+### Complete Workflow Commands
+
+```bash
+# Run complete workflow (extract → validate → generate)
+pnpm workflow:complete
+
+# System health check across all phases
+pnpm workflow:health
+```
+
+### Individual Phase Commands
+
+**Phase 1: Plugin Interrogation**
+```bash
+pnpm plugins:extract              # Main batch extraction
+pnpm plugins:extract:force        # Force re-extraction
+pnpm plugins:list                 # List available plugins
+pnpm plugins:health               # Validate extracted descriptors
+```
+
+**Phase 2: Canonical Mapping**
+```bash
+pnpm maps:validate                # Validate mapping files
+pnpm maps:list                    # List available mappings
+pnpm maps:check                   # Health check against descriptors
+```
+
+**Phase 3: DAW Generation**
+```bash
+pnpm daw:generate                 # Generate all DAW formats
+pnpm daw:generate:ardour          # Generate Ardour only
+pnpm daw:generate:ardour:install  # Generate and install to Ardour
+pnpm daw:list                     # List generated files
+```
+
 ## Complete Example Workflow
 
 ### Scenario: Mapping TAL-J-8 to Launch Control XL 3
 
 ```bash
 # Step 1: Extract plugin parameters
-cd modules/audio-control/modules/canonical-midi-maps
-pnpm plugin:generate-batch
+pnpm plugins:extract
 # Output: plugin-descriptors/tal-togu-audio-line-tal-j-8.json
 
 # Step 2: Create canonical mapping
@@ -208,8 +265,14 @@ controls:
     plugin_parameter: 105
 EOF
 
-# Step 3: Generate and install Ardour mapping
-cd ../ardour-midi-maps
-pnpm generate:ardour:install
-# Mapping file(s) will be written to dist/ardour-maps and copied to ~/Library/Preferences/Ardour8/midi_maps
+# Step 3: Validate the mapping
+pnpm maps:validate
+
+# Step 4: Generate and install Ardour mapping
+pnpm daw:generate:ardour:install
+# Mapping files will be generated and installed to Ardour config directory
+
+# Optional: Run complete workflow
+pnpm workflow:complete
+# Runs extraction → validation → generation in sequence
 ```

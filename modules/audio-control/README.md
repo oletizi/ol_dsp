@@ -30,13 +30,57 @@ See [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) for detailed information abou
 # Install dependencies
 pnpm install
 
-# Extract plugin parameters
-cd modules/canonical-midi-maps
-pnpm plugin:generate-batch
+# Run complete workflow (extract → validate → generate)
+pnpm workflow:complete
+
+# Or run individual phases:
+# Phase 1: Extract plugin parameters
+pnpm plugins:extract
+
+# Phase 2: Validate canonical mappings
+pnpm maps:validate
+
+# Phase 3: Generate DAW-specific formats
+pnpm daw:generate
 
 # Build libraries
 pnpm build
 ```
+
+## Available Scripts
+
+### Workflow Management
+```bash
+pnpm workflow:complete            # Complete workflow (extract → validate → generate)
+pnpm workflow:health              # System health check across all phases
+```
+
+### Phase 1: Plugin Interrogation
+```bash
+pnpm plugins:extract              # Extract plugin parameters
+pnpm plugins:extract:force        # Force re-extraction (bypass cache)
+pnpm plugins:list                 # List available plugins
+pnpm plugins:health               # Validate extracted descriptors
+```
+
+### Phase 2: Canonical Mapping
+```bash
+pnpm maps:validate                # Validate canonical mapping files
+pnpm maps:list                    # List available canonical mappings
+pnpm maps:check                   # Health check (validate against descriptors)
+```
+
+### Phase 3: DAW Generation
+```bash
+pnpm daw:generate                 # Generate all DAW formats
+pnpm daw:generate:ardour          # Generate Ardour only
+pnpm daw:generate:ardour:install  # Generate and install to Ardour
+pnpm daw:list                     # List generated DAW files
+```
+
+## Workflow Process
+
+See [docs/PROCESS.md](./docs/PROCESS.md) for the complete workflow documentation.
 
 ## License
 
