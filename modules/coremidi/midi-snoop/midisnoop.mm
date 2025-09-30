@@ -23,6 +23,7 @@ struct EndpointInfo {
     MIDIEndpointRef endpoint;
     std::string name;
     std::string type; // "source" or "destination"
+    bool inSysEx = false; // Track if we're in the middle of a fragmented SysEx
 };
 
 // Global map for endpoint lookup
@@ -48,6 +49,38 @@ std::string getTimestamp() {
        << std::setfill('0') << std::setw(2) << seconds << "."
        << std::setfill('0') << std::setw(3) << milliseconds;
     return ss.str();
+}
+
+// Detect SysEx fragment type and return indicator
+std::string getSysExIndicator(const Byte* data, size_t length, EndpointInfo* info) {
+    if (length == 0) return "";
+
+    bool startsWithF0 = (data[0] == 0xF0);
+    bool endsWithF7 = (data[length - 1] == 0xF7);
+
+    std::string indicator;
+
+    if (startsWithF0 && endsWithF7) {
+        // Complete SysEx in one packet
+        indicator = "[SYSEX   ]";
+        info->inSysEx = false;
+    } else if (startsWithF0 && !endsWithF7) {
+        // Beginning of fragmented SysEx
+        indicator = "[SX-BEGIN]";
+        info->inSysEx = true;
+    } else if (!startsWithF0 && endsWithF7 && info->inSysEx) {
+        // End of fragmented SysEx
+        indicator = "[SX-END  ]";
+        info->inSysEx = false;
+    } else if (info->inSysEx) {
+        // Middle fragment
+        indicator = "[SX-MID  ]";
+    } else {
+        // Not a SysEx message
+        indicator = "          ";
+    }
+
+    return indicator;
 }
 
 // Format MIDI message bytes for display
@@ -103,10 +136,23 @@ void midiInputCallback(const MIDIPacketList* packetList, void* readProcRefCon, v
 
     const MIDIPacket* packet = &packetList->packet[0];
     for (UInt32 i = 0; i < packetList->numPackets; i++) {
+        std::string sysexIndicator = getSysExIndicator(packet->data, packet->length, info);
+        std::string messageType = getMIDIMessageType(packet->data[0]);
+
+        // Override message type for SysEx fragments
+        if (sysexIndicator == "[SYSEX   ]") {
+            messageType = "SysEx Full";
+        } else if (sysexIndicator == "[SX-MID  ]") {
+            messageType = "SysEx Frag";
+        } else if (sysexIndicator == "[SX-END  ]") {
+            messageType = "SysEx End";
+        }
+
         std::cout << getTimestamp() << " "
                   << COLOR_INPUT << "[SRC ] " << COLOR_RESET
                   << std::left << std::setw(maxNameLength) << info->name << " : "
-                  << getMIDIMessageType(packet->data[0]) << " : "
+                  << sysexIndicator << " "
+                  << std::left << std::setw(28) << messageType << " : "
                   << formatMIDIBytes(packet->data, packet->length) << std::endl;
 
         packet = MIDIPacketNext(packet);
@@ -178,10 +224,23 @@ int main(int argc, char* argv[]) {
             if (destInfo) {
                 const MIDIPacket* packet = &packetList->packet[0];
                 for (UInt32 j = 0; j < packetList->numPackets; j++) {
+                    std::string sysexIndicator = getSysExIndicator(packet->data, packet->length, destInfo);
+                    std::string messageType = getMIDIMessageType(packet->data[0]);
+
+                    // Override message type for SysEx fragments
+                    if (sysexIndicator == "[SYSEX   ]") {
+                        messageType = "SysEx Full";
+                    } else if (sysexIndicator == "[SX-MID  ]") {
+                        messageType = "SysEx Frag";
+                    } else if (sysexIndicator == "[SX-END  ]") {
+                        messageType = "SysEx End";
+                    }
+
                     std::cout << getTimestamp() << " "
                               << COLOR_OUTPUT << "[DEST] " << COLOR_RESET
                               << std::left << std::setw(maxNameLength) << destInfo->name << " : "
-                              << getMIDIMessageType(packet->data[0]) << " : "
+                              << sysexIndicator << " "
+                              << std::left << std::setw(28) << messageType << " : "
                               << formatMIDIBytes(packet->data, packet->length) << std::endl;
 
                     packet = MIDIPacketNext(packet);
