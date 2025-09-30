@@ -1,10 +1,13 @@
 #import <Foundation/Foundation.h>
 #import <CoreMIDI/CoreMIDI.h>
+#include "MIDISpyClient.h"
+#include "MIDISpyDriverInstallation.h"
 #include <iostream>
 #include <iomanip>
 #include <sstream>
 #include <vector>
 #include <string>
+#include <map>
 
 // ANSI color codes for output
 #define COLOR_INPUT "\033[32m"   // Green for input
@@ -12,12 +15,16 @@
 #define COLOR_RESET "\033[0m"
 #define COLOR_HEADER "\033[1;33m" // Bold yellow for headers
 #define COLOR_ERROR "\033[1;31m"  // Bold red for errors
+#define COLOR_WARNING "\033[0;33m" // Yellow for warnings
 
-struct MIDISourceInfo {
+struct EndpointInfo {
     MIDIEndpointRef endpoint;
     std::string name;
-    bool isInput;
+    std::string type; // "source" or "destination"
 };
+
+// Global map for endpoint lookup
+std::map<MIDIEndpointRef, EndpointInfo*> endpointMap;
 
 // Format MIDI message bytes for display
 std::string formatMIDIBytes(const Byte* data, size_t length) {
@@ -66,29 +73,14 @@ std::string getMIDIMessageType(Byte statusByte) {
     return ss.str();
 }
 
-// MIDI read callback for inputs
+// MIDI read callback for inputs (sources)
 void midiInputCallback(const MIDIPacketList* packetList, void* readProcRefCon, void* srcConnRefCon) {
-    MIDISourceInfo* sourceInfo = static_cast<MIDISourceInfo*>(srcConnRefCon);
+    EndpointInfo* info = static_cast<EndpointInfo*>(srcConnRefCon);
 
     const MIDIPacket* packet = &packetList->packet[0];
     for (UInt32 i = 0; i < packetList->numPackets; i++) {
-        std::cout << COLOR_INPUT << "[INPUT] " << COLOR_RESET
-                  << sourceInfo->name << " : "
-                  << getMIDIMessageType(packet->data[0]) << " : "
-                  << formatMIDIBytes(packet->data, packet->length) << std::endl;
-
-        packet = MIDIPacketNext(packet);
-    }
-}
-
-// MIDI read callback for outputs (monitoring)
-void midiOutputCallback(const MIDIPacketList* packetList, void* readProcRefCon, void* srcConnRefCon) {
-    MIDISourceInfo* sourceInfo = static_cast<MIDISourceInfo*>(srcConnRefCon);
-
-    const MIDIPacket* packet = &packetList->packet[0];
-    for (UInt32 i = 0; i < packetList->numPackets; i++) {
-        std::cout << COLOR_OUTPUT << "[OUTPUT] " << COLOR_RESET
-                  << sourceInfo->name << " : "
+        std::cout << COLOR_INPUT << "[SOURCE] " << COLOR_RESET
+                  << info->name << " : "
                   << getMIDIMessageType(packet->data[0]) << " : "
                   << formatMIDIBytes(packet->data, packet->length) << std::endl;
 
@@ -112,85 +104,119 @@ std::string getEndpointName(MIDIEndpointRef endpoint) {
 
 int main(int argc, char* argv[]) {
     @autoreleasepool {
-        std::cout << COLOR_HEADER << "=== CoreMIDI Spy ===" << COLOR_RESET << std::endl;
-        std::cout << "Monitoring all MIDI inputs and outputs. Press Ctrl+C to exit." << std::endl << std::endl;
+        std::cout << COLOR_HEADER << "=== midisnoop ===" << COLOR_RESET << std::endl;
+        std::cout << "Passive monitoring of all MIDI sources and destinations." << std::endl;
+        std::cout << "Press Ctrl+C to exit." << std::endl << std::endl;
 
-        MIDIClientRef client = 0;
-        MIDIPortRef inputPort = 0;
-        MIDIPortRef outputPort = 0;
+        // Check if spy driver is installed and install if necessary
+        NSError *driverError = MIDISpyInstallDriverIfNecessary();
+        if (driverError) {
+            std::cerr << COLOR_ERROR << "❌ Failed to install driver: " << [[driverError localizedDescription] UTF8String] << COLOR_RESET << std::endl;
+            std::cerr << COLOR_ERROR << "Run: make install-driver" << COLOR_RESET << std::endl;
+            return 1;
+        }
 
-        // Create MIDI client
-        OSStatus status = MIDIClientCreate(CFSTR("MIDI Spy"), nullptr, nullptr, &client);
+        // Create MIDI spy client
+        MIDISpyClientRef spyClient = 0;
+        OSStatus status = MIDISpyClientCreate(&spyClient);
+        if (status != noErr) {
+            std::cerr << COLOR_ERROR << "Error: Failed to create MIDI spy client (status: " << status << ")" << COLOR_RESET << std::endl;
+            return 1;
+        }
+
+        // Create regular MIDI client for sources
+        MIDIClientRef regularClient = 0;
+        status = MIDIClientCreate(CFSTR("midisnoop-sources"), nullptr, nullptr, &regularClient);
         if (status != noErr) {
             std::cerr << COLOR_ERROR << "Error: Failed to create MIDI client (status: " << status << ")" << COLOR_RESET << std::endl;
             return 1;
         }
 
         // Create input port for monitoring sources
-        status = MIDIInputPortCreate(client, CFSTR("Spy Input Port"), midiInputCallback, nullptr, &inputPort);
+        MIDIPortRef inputPort = 0;
+        status = MIDIInputPortCreate(regularClient, CFSTR("Input Port"), midiInputCallback, nullptr, &inputPort);
         if (status != noErr) {
             std::cerr << COLOR_ERROR << "Error: Failed to create input port (status: " << status << ")" << COLOR_RESET << std::endl;
             return 1;
         }
 
-        // Create input port for monitoring destinations (outputs)
-        status = MIDIInputPortCreate(client, CFSTR("Spy Output Port"), midiOutputCallback, nullptr, &outputPort);
+        // Create spy port for monitoring destinations
+        MIDISpyPortRef spyPort = 0;
+        status = MIDISpyPortCreate(spyClient, ^(const MIDIPacketList *packetList, void *refCon) {
+            EndpointInfo* destInfo = static_cast<EndpointInfo*>(refCon);
+            if (destInfo) {
+                const MIDIPacket* packet = &packetList->packet[0];
+                for (UInt32 j = 0; j < packetList->numPackets; j++) {
+                    std::cout << COLOR_OUTPUT << "[DESTINATION] " << COLOR_RESET
+                              << destInfo->name << " : "
+                              << getMIDIMessageType(packet->data[0]) << " : "
+                              << formatMIDIBytes(packet->data, packet->length) << std::endl;
+
+                    packet = MIDIPacketNext(packet);
+                }
+            }
+        }, &spyPort);
         if (status != noErr) {
-            std::cerr << COLOR_ERROR << "Error: Failed to create output monitoring port (status: " << status << ")" << COLOR_RESET << std::endl;
+            std::cerr << COLOR_ERROR << "Error: Failed to create spy port (status: " << status << ")" << COLOR_RESET << std::endl;
             return 1;
         }
 
-        std::vector<MIDISourceInfo*> sourceInfos;
+        std::vector<EndpointInfo*> endpointInfos;
 
         // Monitor all MIDI sources (inputs)
         ItemCount sourceCount = MIDIGetNumberOfSources();
-        std::cout << COLOR_HEADER << "Found " << sourceCount << " MIDI input sources:" << COLOR_RESET << std::endl;
+        std::cout << COLOR_HEADER << "Monitoring " << sourceCount << " MIDI sources:" << COLOR_RESET << std::endl;
 
         for (ItemCount i = 0; i < sourceCount; i++) {
             MIDIEndpointRef source = MIDIGetSource(i);
             std::string name = getEndpointName(source);
             std::cout << "  [" << i << "] " << name << std::endl;
 
-            MIDISourceInfo* info = new MIDISourceInfo{source, name, true};
-            sourceInfos.push_back(info);
+            EndpointInfo* info = new EndpointInfo{source, name, "source"};
+            endpointInfos.push_back(info);
+            endpointMap[source] = info;
 
             status = MIDIPortConnectSource(inputPort, source, info);
             if (status != noErr) {
-                std::cerr << COLOR_ERROR << "Warning: Failed to connect to input source: " << name << COLOR_RESET << std::endl;
+                std::cerr << COLOR_WARNING << "Warning: Failed to connect to source: " << name << COLOR_RESET << std::endl;
             }
         }
 
-        // Monitor all MIDI destinations (outputs)
+        // Monitor all MIDI destinations using spy driver
         ItemCount destCount = MIDIGetNumberOfDestinations();
-        std::cout << COLOR_HEADER << "\nFound " << destCount << " MIDI output destinations:" << COLOR_RESET << std::endl;
+        std::cout << COLOR_HEADER << "\nMonitoring " << destCount << " MIDI destinations (passive):" << COLOR_RESET << std::endl;
 
         for (ItemCount i = 0; i < destCount; i++) {
             MIDIEndpointRef dest = MIDIGetDestination(i);
             std::string name = getEndpointName(dest);
             std::cout << "  [" << i << "] " << name << std::endl;
 
-            MIDISourceInfo* info = new MIDISourceInfo{dest, name, false};
-            sourceInfos.push_back(info);
+            EndpointInfo* info = new EndpointInfo{dest, name, "destination"};
+            endpointInfos.push_back(info);
+            endpointMap[dest] = info;
 
-            status = MIDIPortConnectSource(outputPort, dest, info);
+            // Connect to destination via spy driver (pass info as refCon)
+            status = MIDISpyPortConnectDestination(spyPort, dest, info);
+
             if (status != noErr) {
-                std::cerr << COLOR_ERROR << "Warning: Failed to connect to output destination: " << name << COLOR_RESET << std::endl;
+                std::cerr << COLOR_WARNING << "Warning: Failed to spy on destination: " << name << COLOR_RESET << std::endl;
             }
         }
 
-        std::cout << std::endl << COLOR_HEADER << "Listening for MIDI messages..." << COLOR_RESET << std::endl << std::endl;
+        std::cout << std::endl << COLOR_HEADER << "✅ Listening for MIDI messages..." << COLOR_RESET << std::endl << std::endl;
 
         // Run loop to keep listening
         CFRunLoopRun();
 
         // Cleanup
-        for (auto info : sourceInfos) {
+        for (auto info : endpointInfos) {
             delete info;
         }
 
         if (inputPort) MIDIPortDispose(inputPort);
-        if (outputPort) MIDIPortDispose(outputPort);
-        if (client) MIDIClientDispose(client);
+        if (spyPort) MIDISpyPortDispose(spyPort);
+        if (regularClient) MIDIClientDispose(regularClient);
+        if (spyClient) MIDISpyClientDispose(spyClient);
 
         return 0;
     }
