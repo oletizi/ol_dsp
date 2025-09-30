@@ -119,14 +119,36 @@ public:
     void sendMessage(const std::vector<uint8_t>& data) {
         if (!output) return;
 
-        if (data.size() > 0 && data[0] == 0xF0) {
-            output->sendMessageNow(
-                juce::MidiMessage::createSysExMessage(data.data(), (int)data.size())
-            );
-        } else {
+        // Validate message has data
+        if (data.empty()) {
+            std::cerr << "Warning: Attempted to send empty MIDI message\n";
+            return;
+        }
+
+        if (data[0] == 0xF0) {
+            // For SysEx messages, validate they end with 0xF7
+            if (data.back() != 0xF7) {
+                std::cerr << "Warning: Invalid SysEx message (missing 0xF7)\n";
+                return;
+            }
+
+            // createSysExMessage expects the data WITHOUT F0/F7 wrappers
+            // So we need to pass just the middle part
+            if (data.size() > 2) {
+                output->sendMessageNow(
+                    juce::MidiMessage::createSysExMessage(
+                        data.data() + 1,  // Skip F0
+                        (int)data.size() - 2  // Exclude F0 and F7
+                    )
+                );
+            }
+        } else if (data.size() >= 1 && data.size() <= 3) {
+            // Valid short MIDI message (1-3 bytes)
             output->sendMessageNow(
                 juce::MidiMessage(data.data(), (int)data.size())
             );
+        } else {
+            std::cerr << "Warning: Invalid MIDI message length: " << data.size() << " bytes\n";
         }
     }
 
