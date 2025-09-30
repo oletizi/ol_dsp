@@ -405,6 +405,7 @@ private:
         response << "HTTP/1.1 " << status << " OK\r\n";
         response << "Content-Type: application/json\r\n";
         response << "Access-Control-Allow-Origin: *\r\n";
+        response << "Connection: close\r\n";
         response << "Content-Length: " << body.length() << "\r\n";
         response << "\r\n";
         response << body;
