@@ -40,9 +40,20 @@ target_link_libraries(midisnoop
     SnoizeMIDISpy
 )
 
-# Set output directory
+# Set output directory and install rpath
 set_target_properties(midisnoop PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
+    INSTALL_RPATH "@executable_path/Frameworks"
+    BUILD_WITH_INSTALL_RPATH TRUE
+)
+
+# Copy the framework next to the executable so it can be found
+add_custom_command(TARGET midisnoop POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_BINARY_DIR}/bin/Frameworks"
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        "$<TARGET_FILE_DIR:SnoizeMIDISpy>/../.."
+        "${CMAKE_BINARY_DIR}/bin/Frameworks/SnoizeMIDISpy.framework"
+    COMMENT "Copying framework to executable directory"
 )
 
 # Install target
