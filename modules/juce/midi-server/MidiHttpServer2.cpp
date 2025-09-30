@@ -26,30 +26,51 @@
 class JsonBuilder
 {
 public:
-    JsonBuilder& startObject() { ss << "{"; firstItem = true; return *this; }
-    JsonBuilder& endObject() { ss << "}"; return *this; }
-    JsonBuilder& startArray() { ss << "["; firstItem = true; return *this; }
-    JsonBuilder& endArray() { ss << "]"; return *this; }
+    JsonBuilder& startObject() {
+        if (!firstItem) ss << ",";
+        ss << "{";
+        firstItem = true;
+        return *this;
+    }
+    JsonBuilder& endObject() {
+        ss << "}";
+        firstItem = false;  // Next key/item in parent needs comma
+        return *this;
+    }
+    JsonBuilder& startArray() {
+        if (!firstItem) ss << ",";
+        ss << "[";
+        firstItem = true;
+        return *this;
+    }
+    JsonBuilder& endArray() {
+        ss << "]";
+        firstItem = false;  // Next item in parent needs comma
+        return *this;
+    }
 
     JsonBuilder& key(const std::string& k) {
         if (!firstItem) ss << ",";
         ss << "\"" << k << "\":";
-        firstItem = false;
+        firstItem = true;  // Next value (not key) should not have comma
         return *this;
     }
 
     JsonBuilder& value(const std::string& v) {
         ss << "\"" << v << "\"";
+        firstItem = false;  // Next key needs comma
         return *this;
     }
 
     JsonBuilder& value(bool b) {
         ss << (b ? "true" : "false");
+        firstItem = false;  // Next key needs comma
         return *this;
     }
 
     JsonBuilder& value(int i) {
         ss << i;
+        firstItem = false;  // Next key needs comma
         return *this;
     }
 
@@ -166,22 +187,56 @@ public:
     void handleIncomingMidiMessage(juce::MidiInput* source,
                                   const juce::MidiMessage& message) override {
         std::vector<uint8_t> data;
-
-        if (message.isSysEx()) {
-            auto sysexData = message.getSysExData();
-            auto size = message.getSysExDataSize();
-            // Add F0 header and F7 trailer
-            data.push_back(0xF0);
-            data.insert(data.end(), sysexData, sysexData + size);
-            data.push_back(0xF7);
-        } else {
-            auto rawData = message.getRawData();
-            auto size = message.getRawDataSize();
-            data.insert(data.end(), rawData, rawData + size);
-        }
+        auto rawData = message.getRawData();
+        auto size = message.getRawDataSize();
 
         std::lock_guard<std::mutex> lock(queueMutex);
-        messageQueue.push(data);
+
+        // Check if this is a SysEx fragment
+        bool startsWithF0 = (size > 0 && rawData[0] == 0xF0);
+        bool endsWithF7 = (size > 0 && rawData[size - 1] == 0xF7);
+        bool isSysExRelated = message.isSysEx() || startsWithF0 ||
+                              (sysexBuffering && size > 0);
+
+        if (isSysExRelated) {
+            // Handle SysEx message or fragment
+            if (startsWithF0) {
+                // Start of new SysEx - initialize buffer
+                sysexBuffer.clear();
+                sysexBuffer.insert(sysexBuffer.end(), rawData, rawData + size);
+                sysexBuffering = true;
+
+                // Check if it's a complete SysEx in one message
+                if (endsWithF7) {
+                    messageQueue.push(sysexBuffer);
+                    sysexBuffer.clear();
+                    sysexBuffering = false;
+                }
+            } else if (sysexBuffering) {
+                // Continuation or end of SysEx
+                sysexBuffer.insert(sysexBuffer.end(), rawData, rawData + size);
+
+                if (endsWithF7) {
+                    // Complete SysEx received
+                    messageQueue.push(sysexBuffer);
+                    sysexBuffer.clear();
+                    sysexBuffering = false;
+                }
+                // Otherwise keep buffering
+            } else if (message.isSysEx()) {
+                // JUCE already assembled complete SysEx
+                auto sysexData = message.getSysExData();
+                auto sysexSize = message.getSysExDataSize();
+                data.push_back(0xF0);
+                data.insert(data.end(), sysexData, sysexData + sysexSize);
+                data.push_back(0xF7);
+                messageQueue.push(data);
+            }
+        } else {
+            // Regular MIDI message (non-SysEx)
+            data.insert(data.end(), rawData, rawData + size);
+            messageQueue.push(data);
+        }
     }
 
 private:
@@ -192,6 +247,10 @@ private:
     std::unique_ptr<juce::MidiOutput> output;
     std::queue<std::vector<uint8_t>> messageQueue;
     std::mutex queueMutex;
+
+    // SysEx buffering for fragmented messages
+    std::vector<uint8_t> sysexBuffer;
+    bool sysexBuffering = false;
 };
 
 //==============================================================================
