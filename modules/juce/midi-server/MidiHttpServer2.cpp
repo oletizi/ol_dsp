@@ -317,8 +317,37 @@ public:
                     std::istringstream iss(msgStr);
                     std::string token;
                     while (std::getline(iss, token, ',')) {
-                        message.push_back((uint8_t)std::stoi(token));
+                        // Handle empty tokens (from trailing commas or empty arrays)
+                        if (!token.empty()) {
+                            message.push_back((uint8_t)std::stoi(token));
+                        }
                     }
+                }
+
+                // Validate message before sending
+                if (message.empty()) {
+                    JsonBuilder json;
+                    json.startObject()
+                        .key("error").value(std::string("Invalid MIDI message: empty message"))
+                        .key("success").value(false)
+                        .endObject();
+                    res.status = 400;
+                    res.set_content(json.toString(), "application/json");
+                    std::cerr << "Rejected empty MIDI message\n";
+                    return;
+                }
+
+                // Reject incomplete SysEx (single 0xF0 byte)
+                if (message.size() == 1 && message[0] == 0xF0) {
+                    JsonBuilder json;
+                    json.startObject()
+                        .key("error").value(std::string("Invalid MIDI message: incomplete SysEx (0xF0 without 0xF7)"))
+                        .key("success").value(false)
+                        .endObject();
+                    res.status = 400;
+                    res.set_content(json.toString(), "application/json");
+                    std::cerr << "Rejected incomplete SysEx (single 0xF0)\n";
+                    return;
                 }
 
                 it->second->sendMessage(message);
