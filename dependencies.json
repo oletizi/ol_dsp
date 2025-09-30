@@ -239,6 +239,21 @@
         "directories": ["build"],
         "files": []
       }
+    },
+    {
+      "name": "MIDIApps",
+      "path": "libs/MIDIApps",
+      "url": "https://github.com/krevis/MIDIApps.git",
+      "commit": "main",
+      "description": "MIDI Monitor and SnoizeMIDISpy driver for passive MIDI monitoring",
+      "build": {
+        "enabled": false,
+        "reason": "Xcode-based build, will be integrated into midisnoop project manually"
+      },
+      "clean": {
+        "directories": ["build"],
+        "files": []
+      }
     }
   ]
 }
