@@ -93,7 +93,13 @@ std::string getEndpointName(MIDIEndpointRef endpoint) {
     CFStringRef name = nullptr;
     char nameBuf[256];
 
-    MIDIObjectGetStringProperty(endpoint, kMIDIPropertyName, &name);
+    // Try display name first (includes device name prefix)
+    MIDIObjectGetStringProperty(endpoint, kMIDIPropertyDisplayName, &name);
+    if (!name) {
+        // Fall back to basic name
+        MIDIObjectGetStringProperty(endpoint, kMIDIPropertyName, &name);
+    }
+
     if (name) {
         CFStringGetCString(name, nameBuf, sizeof(nameBuf), kCFStringEncodingUTF8);
         CFRelease(name);
