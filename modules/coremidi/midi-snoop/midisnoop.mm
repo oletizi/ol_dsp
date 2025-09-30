@@ -8,6 +8,8 @@
 #include <vector>
 #include <string>
 #include <map>
+#include <chrono>
+#include <sys/time.h>
 
 // ANSI color codes for output
 #define COLOR_INPUT "\033[32m"   // Green for input
@@ -25,6 +27,28 @@ struct EndpointInfo {
 
 // Global map for endpoint lookup
 std::map<MIDIEndpointRef, EndpointInfo*> endpointMap;
+
+// Global max name length for alignment
+size_t maxNameLength = 0;
+
+// Get timestamp in mm:ss.msec format
+std::string getTimestamp() {
+    struct timeval tv;
+    gettimeofday(&tv, nullptr);
+
+    time_t nowtime = tv.tv_sec;
+    struct tm* nowtm = localtime(&nowtime);
+
+    int minutes = nowtm->tm_min;
+    int seconds = nowtm->tm_sec;
+    int milliseconds = tv.tv_usec / 1000;
+
+    std::stringstream ss;
+    ss << std::setfill('0') << std::setw(2) << minutes << ":"
+       << std::setfill('0') << std::setw(2) << seconds << "."
+       << std::setfill('0') << std::setw(3) << milliseconds;
+    return ss.str();
+}
 
 // Format MIDI message bytes for display
 std::string formatMIDIBytes(const Byte* data, size_t length) {
@@ -79,8 +103,9 @@ void midiInputCallback(const MIDIPacketList* packetList, void* readProcRefCon, v
 
     const MIDIPacket* packet = &packetList->packet[0];
     for (UInt32 i = 0; i < packetList->numPackets; i++) {
-        std::cout << COLOR_INPUT << "[SOURCE] " << COLOR_RESET
-                  << info->name << " : "
+        std::cout << getTimestamp() << " "
+                  << COLOR_INPUT << "[SRC ] " << COLOR_RESET
+                  << std::left << std::setw(maxNameLength) << info->name << " : "
                   << getMIDIMessageType(packet->data[0]) << " : "
                   << formatMIDIBytes(packet->data, packet->length) << std::endl;
 
@@ -153,8 +178,9 @@ int main(int argc, char* argv[]) {
             if (destInfo) {
                 const MIDIPacket* packet = &packetList->packet[0];
                 for (UInt32 j = 0; j < packetList->numPackets; j++) {
-                    std::cout << COLOR_OUTPUT << "[DESTINATION] " << COLOR_RESET
-                              << destInfo->name << " : "
+                    std::cout << getTimestamp() << " "
+                              << COLOR_OUTPUT << "[DEST] " << COLOR_RESET
+                              << std::left << std::setw(maxNameLength) << destInfo->name << " : "
                               << getMIDIMessageType(packet->data[0]) << " : "
                               << formatMIDIBytes(packet->data, packet->length) << std::endl;
 
@@ -206,6 +232,13 @@ int main(int argc, char* argv[]) {
 
             if (status != noErr) {
                 std::cerr << COLOR_WARNING << "Warning: Failed to spy on destination: " << name << COLOR_RESET << std::endl;
+            }
+        }
+
+        // Calculate max name length for alignment
+        for (const auto* info : endpointInfos) {
+            if (info->name.length() > maxNameLength) {
+                maxNameLength = info->name.length();
             }
         }
 
