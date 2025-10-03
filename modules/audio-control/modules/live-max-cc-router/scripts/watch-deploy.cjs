@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const { spawn } = require('child_process');
 const chokidar = require('chokidar');
-const { findDeploymentPath } = require('./deploy');
+const { findDeploymentPath } = require('./deploy.cjs');
 
 // Configuration
 const SOURCE_FILE = path.join(__dirname, '..', 'dist', 'cc-router.js');
@@ -50,9 +50,10 @@ console.log('🚀 Starting Rollup in watch mode...');
 console.log(`📁 Auto-deploying to: ${targetFile}`);
 console.log('📍 Max autowatch will detect changes automatically\n');
 
-const rollup = spawn('npx', ['rollup', '-c', '-w'], {
+const rollup = spawn('node', ['node_modules/rollup/dist/bin/rollup', '-c', '-w'], {
   stdio: 'pipe',
-  shell: true
+  shell: true,
+  cwd: path.join(__dirname, '..')
 });
 
 // Handle Rollup output

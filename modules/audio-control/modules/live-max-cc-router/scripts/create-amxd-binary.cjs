@@ -468,48 +468,48 @@ function createMaxForLiveDevice() {
             "text": "loadbang"
           }
         },
-        // Audio inputs for pass-through
+        // Audio inputs for pass-through (Max for Live uses plugin~ for audio input)
         {
           "box": {
-            "id": "obj-in-1",
+            "id": "obj-plugin-in-1",
             "maxclass": "newobj",
             "numinlets": 1,
             "numoutlets": 1,
             "outlettype": ["signal"],
-            "patching_rect": [500.0, 50.0, 50.0, 22.0],
-            "text": "in~ 1"
+            "patching_rect": [500.0, 50.0, 60.0, 22.0],
+            "text": "plugin~ 1"
           }
         },
         {
           "box": {
-            "id": "obj-in-2",
+            "id": "obj-plugin-in-2",
             "maxclass": "newobj",
             "numinlets": 1,
             "numoutlets": 1,
             "outlettype": ["signal"],
-            "patching_rect": [560.0, 50.0, 50.0, 22.0],
-            "text": "in~ 2"
+            "patching_rect": [570.0, 50.0, 60.0, 22.0],
+            "text": "plugin~ 2"
           }
         },
-        // Audio outputs for pass-through
+        // Audio outputs for pass-through (Max for Live uses plugout~ for audio output)
         {
           "box": {
-            "id": "obj-out-1",
+            "id": "obj-plugout-1",
             "maxclass": "newobj",
             "numinlets": 1,
             "numoutlets": 0,
-            "patching_rect": [500.0, 200.0, 50.0, 22.0],
-            "text": "out~ 1"
+            "patching_rect": [500.0, 200.0, 65.0, 22.0],
+            "text": "plugout~ 1"
           }
         },
         {
           "box": {
-            "id": "obj-out-2",
+            "id": "obj-plugout-2",
             "maxclass": "newobj",
             "numinlets": 1,
             "numoutlets": 0,
-            "patching_rect": [560.0, 200.0, 50.0, 22.0],
-            "text": "out~ 2"
+            "patching_rect": [570.0, 200.0, 65.0, 22.0],
+            "text": "plugout~ 2"
           }
         }
       ],
@@ -696,17 +696,17 @@ function createMaxForLiveDevice() {
             "source": ["obj-controller-format", 0]
           }
         },
-        // Audio pass-through
+        // Audio pass-through (plugin~ to plugout~)
         {
           "patchline": {
-            "destination": ["obj-out-1", 0],
-            "source": ["obj-in-1", 0]
+            "destination": ["obj-plugout-1", 0],
+            "source": ["obj-plugin-in-1", 0]
           }
         },
         {
           "patchline": {
-            "destination": ["obj-out-2", 0],
-            "source": ["obj-in-2", 0]
+            "destination": ["obj-plugout-2", 0],
+            "source": ["obj-plugin-in-2", 0]
           }
         }
       ],
