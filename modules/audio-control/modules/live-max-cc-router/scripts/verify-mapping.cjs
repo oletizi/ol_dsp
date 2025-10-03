@@ -3,14 +3,20 @@
 const fs = require('fs');
 const path = require('path');
 const yaml = require('yaml');
+const Anthropic = require('@anthropic-ai/sdk');
 
 /**
- * Verify canonical MIDI mappings against plugin descriptors
+ * Verify canonical MIDI mappings against plugin descriptors using Claude AI
  *
  * Usage: node verify-mapping.cjs <mapping.yaml> <descriptor.json>
  */
 
-function verifyMapping(mappingPath, descriptorPath) {
+// Initialize Anthropic client
+const anthropic = new Anthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY,
+});
+
+async function verifyMapping(mappingPath, descriptorPath) {
   // Read files
   const mappingYaml = fs.readFileSync(mappingPath, 'utf8');
   const descriptorJson = fs.readFileSync(descriptorPath, 'utf8');
@@ -19,7 +25,7 @@ function verifyMapping(mappingPath, descriptorPath) {
   const descriptor = JSON.parse(descriptorJson);
 
   console.log('\n╔══════════════════════════════════════════════════════════════════════════════════╗');
-  console.log('║                    CANONICAL MAPPING VERIFICATION                                ║');
+  console.log('║                    CANONICAL MAPPING VERIFICATION (AI)                           ║');
   console.log('╚══════════════════════════════════════════════════════════════════════════════════╝\n');
 
   console.log(`Plugin: ${mapping.plugin.manufacturer} ${mapping.plugin.name}`);
@@ -32,7 +38,68 @@ function verifyMapping(mappingPath, descriptorPath) {
     paramsByIndex[param.index] = param;
   });
 
-  // Header
+  // Collect all control-parameter pairs for AI analysis
+  const controls = mapping.controls || [];
+  const controlData = [];
+
+  function collectControl(ctrl) {
+    if (!ctrl.plugin_parameter) {
+      return; // Skip unassigned controls
+    }
+
+    const cc = ctrl.cc;
+    const mappingName = ctrl.name;
+    const paramIndex = parseInt(ctrl.plugin_parameter);
+
+    // Special cases for non-numeric parameter references
+    if (isNaN(paramIndex)) {
+      controlData.push({
+        cc,
+        mappingName,
+        paramIndex: '--',
+        pluginName: `[${ctrl.plugin_parameter}]`,
+        status: 'SPECIAL'
+      });
+      return;
+    }
+
+    const pluginParam = paramsByIndex[paramIndex];
+
+    if (!pluginParam) {
+      controlData.push({
+        cc,
+        mappingName,
+        paramIndex,
+        pluginName: 'NOT FOUND',
+        status: 'MISSING'
+      });
+      return;
+    }
+
+    controlData.push({
+      cc,
+      mappingName,
+      paramIndex,
+      pluginName: pluginParam.name,
+      status: 'PENDING' // Will be determined by AI
+    });
+  }
+
+  controls.forEach(control => {
+    if (control.buttons) {
+      control.buttons.forEach(button => {
+        collectControl(button);
+      });
+    } else {
+      collectControl(control);
+    }
+  });
+
+  // Batch check names with Claude
+  console.log('🤖 Analyzing name matches with Claude AI...\n');
+  await batchCheckNames(controlData);
+
+  // Display results
   console.log('─'.repeat(100));
   console.log(
     pad('CC', 5) +
@@ -46,88 +113,42 @@ function verifyMapping(mappingPath, descriptorPath) {
   let mismatches = 0;
   let matches = 0;
   let missing = 0;
+  let special = 0;
 
-  // Process all controls
-  const controls = mapping.controls || [];
+  controlData.forEach(data => {
+    const { cc, mappingName, paramIndex, pluginName, status } = data;
 
-  controls.forEach(control => {
-    // Handle button groups
-    if (control.buttons) {
-      control.buttons.forEach(button => {
-        processControl(button);
-      });
-    } else {
-      processControl(control);
-    }
-  });
-
-  function processControl(ctrl) {
-    if (!ctrl.plugin_parameter) {
-      return; // Skip unassigned controls
-    }
-
-    const cc = ctrl.cc;
-    const mappingName = ctrl.name;
-    const paramIndex = parseInt(ctrl.plugin_parameter);
-
-    // Special cases for non-numeric parameter references
-    if (isNaN(paramIndex)) {
-      console.log(
-        pad(cc, 5) +
-        pad(mappingName, 35) +
-        pad('--', 5) +
-        pad(`[${ctrl.plugin_parameter}]`, 35) +
-        yellow(pad('SPECIAL', 15))
-      );
-      return;
-    }
-
-    const pluginParam = paramsByIndex[paramIndex];
-
-    if (!pluginParam) {
-      console.log(
-        pad(cc, 5) +
-        pad(mappingName, 35) +
-        pad(paramIndex, 5) +
-        pad('NOT FOUND', 35) +
-        red(pad('MISSING', 15))
-      );
-      missing++;
-      return;
-    }
-
-    const pluginName = pluginParam.name;
-
-    // Check for potential mismatch
-    const isMismatch = !namesMatch(mappingName, pluginName);
-
-    if (isMismatch) {
-      console.log(
-        pad(cc, 5) +
-        pad(mappingName, 35) +
-        pad(paramIndex, 5) +
-        pad(pluginName, 35) +
-        red(pad('⚠ MISMATCH', 15))
-      );
-      mismatches++;
-    } else {
-      console.log(
-        pad(cc, 5) +
-        pad(mappingName, 35) +
-        pad(paramIndex, 5) +
-        pad(pluginName, 35) +
-        green(pad('✓ OK', 15))
-      );
+    let statusStr;
+    if (status === 'MATCH') {
+      statusStr = green(pad('✓ OK', 15));
       matches++;
+    } else if (status === 'MISMATCH') {
+      statusStr = red(pad('⚠ MISMATCH', 15));
+      mismatches++;
+    } else if (status === 'MISSING') {
+      statusStr = red(pad('MISSING', 15));
+      missing++;
+    } else if (status === 'SPECIAL') {
+      statusStr = yellow(pad('SPECIAL', 15));
+      special++;
     }
-  }
+
+    console.log(
+      pad(cc, 5) +
+      pad(mappingName, 35) +
+      pad(paramIndex, 5) +
+      pad(pluginName, 35) +
+      statusStr
+    );
+  });
 
   console.log('─'.repeat(100));
   console.log('\n📊 Summary:');
   console.log(`   ${green('✓')} Matches:    ${matches}`);
   console.log(`   ${red('⚠')} Mismatches: ${mismatches}`);
   console.log(`   ${red('✗')} Missing:    ${missing}`);
-  console.log(`   Total mapped controls: ${matches + mismatches + missing}\n`);
+  console.log(`   ${yellow('⚡')} Special:    ${special}`);
+  console.log(`   Total mapped controls: ${matches + mismatches + missing + special}\n`);
 
   if (mismatches > 0 || missing > 0) {
     console.log(`${red('❌ Verification failed')}: ${mismatches + missing} issues found\n`);
@@ -137,46 +158,72 @@ function verifyMapping(mappingPath, descriptorPath) {
   }
 }
 
-// Helper: Check if names are similar enough (fuzzy match)
-function namesMatch(name1, name2) {
-  const normalize = (str) => str
-    .toLowerCase()
-    .replace(/[^a-z0-9]/g, '')
-    .replace(/hipass/g, 'highpass')
-    .replace(/lowpass/g, 'lopass')
-    .replace(/hpf/g, 'highpass')
-    .replace(/lpf/g, 'lowpass');
+// Batch check names using Claude AI
+async function batchCheckNames(controlData) {
+  // Filter items that need AI checking
+  const itemsToCheck = controlData.filter(d => d.status === 'PENDING');
 
-  const n1 = normalize(name1);
-  const n2 = normalize(name2);
+  if (itemsToCheck.length === 0) {
+    return;
+  }
 
-  // Exact match
-  if (n1 === n2) return true;
+  // Build comparison list for Claude
+  const comparisons = itemsToCheck.map((d, i) =>
+    `${i + 1}. Control: "${d.mappingName}" vs Plugin: "${d.pluginName}"`
+  ).join('\n');
 
-  // One contains the other
-  if (n1.includes(n2) || n2.includes(n1)) return true;
+  const prompt = `You are analyzing MIDI controller mappings for an audio plugin. I need to determine if control names from a MIDI mapping file semantically match the actual plugin parameter names.
 
-  // Common abbreviations
-  const abbrevs = {
-    'comp': 'compressor',
-    'thresh': 'threshold',
-    'eq': 'equalizer',
-    'freq': 'frequency',
-    'mic': 'microphone',
-    'pre': 'preamp'
-  };
+For each pair below, respond with ONLY "MATCH" or "MISMATCH" (one per line, in order).
 
-  let n1exp = n1;
-  let n2exp = n2;
-  Object.entries(abbrevs).forEach(([abbr, full]) => {
-    n1exp = n1exp.replace(abbr, full);
-    n2exp = n2exp.replace(abbr, full);
-  });
+Consider these as MATCH:
+- Exact semantic equivalents (e.g., "Comp Dry/Wet" = "Compressor Mix")
+- Common abbreviations (e.g., "Comp" = "Compressor", "Limit" = "Limiter", "Thresh" = "Threshold")
+- Synonyms for the same control (e.g., "Dry/Wet" = "Mix", "Enable" = "In")
+- Different word order for same meaning (e.g., "EQ Low Gain" = "Low Gain")
 
-  if (n1exp === n2exp) return true;
-  if (n1exp.includes(n2exp) || n2exp.includes(n1exp)) return true;
+Consider these as MISMATCH:
+- Different parameters entirely (e.g., "Low Freq" vs "High Freq")
+- Wrong section (e.g., "Compressor X" vs "Limiter X")
 
-  return false;
+Pairs to analyze:
+${comparisons}
+
+Respond with exactly ${itemsToCheck.length} lines, each containing only "MATCH" or "MISMATCH":`;
+
+  try {
+    const message = await anthropic.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 1024,
+      messages: [{
+        role: 'user',
+        content: prompt
+      }]
+    });
+
+    const responseText = message.content[0].text.trim();
+    const results = responseText.split('\n').map(line => line.trim().toUpperCase());
+
+    // Apply results back to controlData
+    itemsToCheck.forEach((data, i) => {
+      const result = results[i];
+      if (result === 'MATCH') {
+        data.status = 'MATCH';
+      } else if (result === 'MISMATCH') {
+        data.status = 'MISMATCH';
+      } else {
+        // Fallback if AI response is malformed
+        data.status = 'MISMATCH';
+        console.warn(`Warning: Unexpected AI response for item ${i + 1}: "${result}"`);
+      }
+    });
+  } catch (error) {
+    console.error('Error calling Claude API:', error.message);
+    console.error('Falling back to all MISMATCH for safety\n');
+    itemsToCheck.forEach(data => {
+      data.status = 'MISMATCH';
+    });
+  }
 }
 
 // Helper: Pad string to width
@@ -211,6 +258,7 @@ if (require.main === module) {
     console.error('  node verify-mapping.cjs \\');
     console.error('    maps/novation-launch-control-xl-3/channel-strips/analog-obsession-channev.yaml \\');
     console.error('    plugin-descriptors/analogobsession-channev.json');
+    console.error('\nNote: Requires ANTHROPIC_API_KEY environment variable');
     process.exit(1);
   }
 
@@ -226,7 +274,16 @@ if (require.main === module) {
     process.exit(1);
   }
 
-  verifyMapping(mappingPath, descriptorPath);
+  if (!process.env.ANTHROPIC_API_KEY) {
+    console.error('Error: ANTHROPIC_API_KEY environment variable not set');
+    process.exit(1);
+  }
+
+  verifyMapping(mappingPath, descriptorPath)
+    .catch(err => {
+      console.error('Fatal error:', err);
+      process.exit(1);
+    });
 }
 
 module.exports = { verifyMapping };
