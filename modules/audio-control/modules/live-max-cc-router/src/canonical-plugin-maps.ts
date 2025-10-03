@@ -41,170 +41,134 @@ export const CANONICAL_PLUGIN_MAPS: { [key: string]: PluginMapping } = {
     "mappings": {
       "5": {
         "deviceIndex": 1,
-        "parameterIndex": 2,
-        "parameterName": "Mic Pre Gain",
+        "parameterIndex": 1,
+        "parameterName": "Mic Gain",
         "curve": "linear"
       },
       "6": {
         "deviceIndex": 1,
-        "parameterIndex": 10,
+        "parameterIndex": 9,
         "parameterName": "Line Amp",
-        "curve": "linear"
-      },
-      "10": {
-        "deviceIndex": 1,
-        "parameterIndex": 21,
-        "parameterName": "Comp Threshold",
-        "curve": "linear"
-      },
-      "11": {
-        "deviceIndex": 1,
-        "parameterIndex": 26,
-        "parameterName": "Limit Threshold",
-        "curve": "linear"
-      },
-      "12": {
-        "deviceIndex": 1,
-        "parameterIndex": 31,
-        "parameterName": "Tape Output",
         "curve": "linear"
       },
       "13": {
         "deviceIndex": 1,
-        "parameterIndex": 5,
+        "parameterIndex": 4,
         "parameterName": "High Pass",
-        "curve": "linear"
-      },
-      "14": {
-        "deviceIndex": 1,
-        "parameterIndex": 19,
-        "parameterName": "EQ High Pass",
         "curve": "linear"
       },
       "17": {
         "deviceIndex": 1,
-        "parameterIndex": 25,
-        "parameterName": "Comp Dry/Wet",
-        "curve": "linear"
-      },
-      "18": {
-        "deviceIndex": 1,
-        "parameterIndex": 22,
-        "parameterName": "Comp Ratio",
-        "curve": "linear"
-      },
-      "19": {
-        "deviceIndex": 1,
-        "parameterIndex": 29,
-        "parameterName": "Limit Mix",
-        "curve": "linear"
-      },
-      "20": {
-        "deviceIndex": 1,
-        "parameterIndex": 30,
-        "parameterName": "Tape Drive",
-        "curve": "linear"
-      },
-      "22": {
-        "deviceIndex": 1,
-        "parameterIndex": 12,
-        "parameterName": "EQ Low Freq",
+        "parameterIndex": 5,
+        "parameterName": "Low Pass",
         "curve": "linear"
       },
       "23": {
         "deviceIndex": 1,
-        "parameterIndex": 14,
-        "parameterName": "EQ Low-Mid Freq",
+        "parameterIndex": 11,
+        "parameterName": "Low Freq",
         "curve": "linear"
       },
       "24": {
         "deviceIndex": 1,
-        "parameterIndex": 16,
-        "parameterName": "EQ High-Mid Freq",
+        "parameterIndex": 13,
+        "parameterName": "Low Mid Freq",
         "curve": "linear"
       },
       "25": {
         "deviceIndex": 1,
-        "parameterIndex": 18,
-        "parameterName": "EQ High Freq",
+        "parameterIndex": 15,
+        "parameterName": "High Mid Freq",
         "curve": "linear"
       },
       "26": {
         "deviceIndex": 1,
-        "parameterIndex": 23,
-        "parameterName": "Comp Release",
-        "curve": "linear"
-      },
-      "27": {
-        "deviceIndex": 1,
-        "parameterIndex": 27,
-        "parameterName": "Limit Release",
+        "parameterIndex": 17,
+        "parameterName": "High Freq",
         "curve": "linear"
       },
       "29": {
         "deviceIndex": 1,
-        "parameterIndex": 3,
+        "parameterIndex": 38,
         "parameterName": "Low Shelf",
         "curve": "linear"
       },
       "30": {
         "deviceIndex": 1,
-        "parameterIndex": 11,
-        "parameterName": "EQ Low Gain",
+        "parameterIndex": 10,
+        "parameterName": "Low Gain",
         "curve": "linear"
       },
       "31": {
         "deviceIndex": 1,
-        "parameterIndex": 13,
-        "parameterName": "EQ Low-Mid Gain",
+        "parameterIndex": 12,
+        "parameterName": "Low Mid Gain",
         "curve": "linear"
       },
       "32": {
         "deviceIndex": 1,
-        "parameterIndex": 15,
-        "parameterName": "EQ High-Mid Gain",
+        "parameterIndex": 14,
+        "parameterName": "High Mid Gain",
         "curve": "linear"
       },
       "33": {
         "deviceIndex": 1,
-        "parameterIndex": 17,
-        "parameterName": "EQ High Gain",
+        "parameterIndex": 16,
+        "parameterName": "High Gain",
         "curve": "linear"
       },
-      "34": {
+      "37": {
         "deviceIndex": 1,
-        "parameterIndex": 24,
-        "parameterName": "Comp Gain",
+        "parameterIndex": 34,
+        "parameterName": "In",
         "curve": "linear"
       },
-      "35": {
+      "38": {
         "deviceIndex": 1,
-        "parameterIndex": 28,
-        "parameterName": "Limit Gain",
+        "parameterIndex": 38,
+        "parameterName": "Low Peak/Shelf",
         "curve": "linear"
       },
       "39": {
         "deviceIndex": 1,
-        "parameterIndex": 40,
-        "parameterName": "EQ Low-Mid Q",
+        "parameterIndex": 39,
+        "parameterName": "Low Mid Q",
         "curve": "linear"
       },
       "40": {
         "deviceIndex": 1,
+        "parameterIndex": 40,
+        "parameterName": "High Mid Q",
+        "curve": "linear"
+      },
+      "41": {
+        "deviceIndex": 1,
         "parameterIndex": 41,
-        "parameterName": "EQ High-Mid Q",
+        "parameterName": "High Peak/Shelf",
+        "curve": "linear"
+      },
+      "45": {
+        "deviceIndex": 1,
+        "parameterIndex": 32,
+        "parameterName": "Polarity",
+        "curve": "linear"
+      },
+      "46": {
+        "deviceIndex": 1,
+        "parameterIndex": 42,
+        "parameterName": "EQ On/Off",
         "curve": "linear"
       },
       "53": {
         "deviceIndex": 1,
-        "parameterIndex": 4,
+        "parameterIndex": 41,
         "parameterName": "High Shelf",
         "curve": "linear"
       }
     },
     "metadata": {
       "name": "Analog Obsession CHANNEV Mapping",
-      "description": "Professional channel strip plugin control with Launch Control XL 3's default CC layout",
+      "description": "Professional channel strip plugin control with Launch Control XL 3's default CC layout (Updated from device: CHANNEVE) (Updated from device: CHANNEVE)",
       "version": "1.0.0"
     }
   },

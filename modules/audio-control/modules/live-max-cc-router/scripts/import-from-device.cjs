@@ -11,19 +11,19 @@ const yaml = require('yaml');
  * Uses the launch-control-xl3 backup utility to fetch a mode from device,
  * then uses AI to match controls to plugin parameters.
  *
- * Usage: node import-from-device.cjs <slot> <descriptor.json> <output.yaml>
+ * Usage: node import-from-device.cjs <slot> <descriptor.json> <canonical-mapping.yaml>
  *
  * Requirements:
  *   - JUCE MIDI server running (cd ../launch-control-xl3 && pnpm env:juce-server)
  *   - Launch Control XL 3 connected via USB
  *
  * Arguments:
- *   slot            - Custom mode slot number (1-15, physical slot number)
- *   descriptor.json - Plugin descriptor file path
- *   output.yaml     - Output canonical mapping file path
+ *   slot               - Custom mode slot number (1-15, physical slot number)
+ *   descriptor.json    - Plugin descriptor file path
+ *   canonical-mapping.yaml - Canonical mapping file to update (will be created if doesn't exist)
  */
 
-async function importFromDevice(slot, descriptorPath, outputPath) {
+async function importFromDevice(slot, descriptorPath, canonicalMappingPath) {
   console.log('\n╔══════════════════════════════════════════════════════════════════════════════════╗');
   console.log('║                    IMPORT MAPPING FROM DEVICE                                    ║');
   console.log('╚══════════════════════════════════════════════════════════════════════════════════╝\n');
@@ -97,16 +97,26 @@ async function importFromDevice(slot, descriptorPath, outputPath) {
 
   console.log(`✓ Matched ${mappings.length} controls to parameters\n`);
 
-  // Generate canonical mapping YAML
-  const canonicalMapping = generateCanonicalMapping(mode, descriptor, mappings);
+  // Generate or update canonical mapping YAML
+  let canonicalMapping;
+  if (fs.existsSync(canonicalMappingPath)) {
+    console.log(`📝 Updating existing canonical mapping...`);
+    const existingMapping = yaml.parse(fs.readFileSync(canonicalMappingPath, 'utf8'));
+    canonicalMapping = updateCanonicalMapping(existingMapping, mode, descriptor, mappings);
+    console.log(`✓ Updated existing mapping\n`);
+  } else {
+    console.log(`📝 Creating new canonical mapping...`);
+    canonicalMapping = generateCanonicalMapping(mode, descriptor, mappings);
+    console.log(`✓ Created new mapping\n`);
+  }
 
   // Write output
-  fs.writeFileSync(outputPath, yaml.stringify(canonicalMapping, {
+  fs.writeFileSync(canonicalMappingPath, yaml.stringify(canonicalMapping, {
     lineWidth: 0,
     defaultStringType: 'QUOTE_DOUBLE',
   }), 'utf8');
 
-  console.log(`✅ Canonical mapping saved to: ${outputPath}\n`);
+  console.log(`✅ Canonical mapping saved to: ${canonicalMappingPath}\n`);
 
   // Clean up temp file
   fs.unlinkSync(tempBackup);
@@ -223,6 +233,43 @@ Respond with ONLY a mapping table (one line per control):
   });
 
   return mappings;
+}
+
+function updateCanonicalMapping(existingMapping, mode, descriptor, mappings) {
+  // Preserve existing metadata but update description and date
+  const updatedMapping = {
+    ...existingMapping,
+    metadata: {
+      ...existingMapping.metadata,
+      description: `${existingMapping.metadata.description || ''} (Updated from device: ${mode.name || 'Unnamed'})`.trim(),
+      date: new Date().toISOString().split('T')[0],
+      tags: Array.from(new Set([...(existingMapping.metadata.tags || []), 'device-synced']))
+    }
+  };
+
+  // Build updated controls array
+  const updatedControls = mappings.map((m, i) => {
+    const control = {
+      id: `control_${i + 1}`,
+      name: m.control.name,
+      type: m.control.type,
+      cc: m.control.cc,
+      channel: 'global',
+      range: [0, 127],
+      description: `Control: ${m.control.name}`,
+      plugin_parameter: m.paramIndex.toString()
+    };
+
+    if (m.control.type === 'encoder') {
+      control.behavior = m.control.behavior;
+    }
+
+    return control;
+  });
+
+  updatedMapping.controls = updatedControls;
+
+  return updatedMapping;
 }
 
 function generateCanonicalMapping(mode, descriptor, mappings) {
