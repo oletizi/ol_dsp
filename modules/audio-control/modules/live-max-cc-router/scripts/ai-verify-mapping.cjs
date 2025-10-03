@@ -7,7 +7,10 @@ const yaml = require('yaml');
 /**
  * Verify MIDI mappings using Claude Code CLI for semantic analysis
  *
- * Usage: node ai-verify-mapping.cjs <mapping.yaml> <descriptor.json>
+ * Usage: node ai-verify-mapping.cjs <mapping.yaml> <descriptor.json> [--fix]
+ *
+ * Options:
+ *   --fix    Automatically update the mapping YAML file with corrected indices
  */
 
 function generatePrompt(mappingPath, descriptorPath) {
@@ -17,15 +20,17 @@ function generatePrompt(mappingPath, descriptorPath) {
   const mapping = yaml.parse(mappingYaml);
   const descriptor = JSON.parse(descriptorJson);
 
-  // Extract control names
+  // Extract control names and keep reference to controls for fixing
   const controls = mapping.controls || [];
   const controlNames = [];
+  const controlRefs = []; // Keep references for updating
 
   function collectControl(ctrl) {
     if (!ctrl.plugin_parameter) return;
     const paramIndex = parseInt(ctrl.plugin_parameter);
     if (isNaN(paramIndex)) return; // Skip special params
     controlNames.push(ctrl.name);
+    controlRefs.push(ctrl); // Store reference for later updates
   }
 
   controls.forEach(control => {
@@ -76,6 +81,7 @@ For example:
   return {
     prompt,
     controlNames,
+    controlRefs,
     paramsByIndex: descriptor.parameters.reduce((acc, p) => {
       acc[p.index] = p;
       return acc;
@@ -83,6 +89,67 @@ For example:
     mapping,
     descriptor
   };
+}
+
+function fixMappings(mappingPath, mapping, controlRefs, results) {
+  let fixed = 0;
+  const changes = [];
+
+  // Update control references with AI results
+  results.forEach((result, i) => {
+    if (controlRefs[i]) {
+      const oldValue = controlRefs[i].plugin_parameter;
+      const newValue = result.paramIndex.toString();
+
+      if (oldValue !== newValue) {
+        controlRefs[i].plugin_parameter = newValue;
+        changes.push({
+          control: result.control,
+          oldIndex: oldValue,
+          newIndex: newValue,
+          paramName: result.paramName
+        });
+        fixed++;
+      }
+    }
+  });
+
+  if (fixed > 0) {
+    // Write updated mapping (using the modified mapping object)
+    const updatedYaml = yaml.stringify(mapping, {
+      lineWidth: 0,
+      defaultStringType: 'QUOTE_DOUBLE',
+    });
+
+    fs.writeFileSync(mappingPath, updatedYaml, 'utf8');
+
+    console.log('\n' + '='.repeat(85));
+    console.log('🔧 FIXED MAPPINGS\n');
+    console.log('─'.repeat(85));
+    console.log(
+      pad('Control', 30) +
+      pad('Old', 8) +
+      pad('New', 8) +
+      pad('Parameter', 35)
+    );
+    console.log('─'.repeat(85));
+
+    changes.forEach(change => {
+      console.log(
+        pad(change.control, 30) +
+        pad(change.oldIndex, 8) +
+        pad(change.newIndex, 8) +
+        pad(change.paramName, 35)
+      );
+    });
+
+    console.log('─'.repeat(85));
+    console.log(`\n✅ Fixed ${fixed} mappings in ${mappingPath}\n`);
+  } else {
+    console.log('\n✅ No fixes needed - all mappings are already correct!\n');
+  }
+
+  return fixed;
 }
 
 function parseClaudeResponse(response, controlNames, paramsByIndex) {
@@ -151,16 +218,23 @@ function pad(str, width) {
 if (require.main === module) {
   const args = process.argv.slice(2);
 
-  if (args.length < 2) {
-    console.error('Usage: node ai-verify-mapping.cjs <mapping.yaml> <descriptor.json>');
+  // Parse flags
+  const fixMode = args.includes('--fix');
+  const fileArgs = args.filter(arg => !arg.startsWith('--'));
+
+  if (fileArgs.length < 2) {
+    console.error('Usage: node ai-verify-mapping.cjs <mapping.yaml> <descriptor.json> [--fix]');
+    console.error('\nOptions:');
+    console.error('  --fix    Automatically update the mapping YAML file with corrected indices');
     console.error('\nExample:');
     console.error('  node ai-verify-mapping.cjs \\');
     console.error('    maps/novation-launch-control-xl-3/channel-strips/analog-obsession-channev.yaml \\');
-    console.error('    plugin-descriptors/analogobsession-channev.json');
+    console.error('    plugin-descriptors/analogobsession-channev.json \\');
+    console.error('    --fix');
     process.exit(1);
   }
 
-  const [mappingPath, descriptorPath] = args;
+  const [mappingPath, descriptorPath] = fileArgs;
 
   if (!fs.existsSync(mappingPath)) {
     console.error(`Error: Mapping file not found: ${mappingPath}`);
@@ -173,7 +247,7 @@ if (require.main === module) {
   }
 
   console.log('🤖 Generating prompt for Claude Code...\n');
-  const { prompt, controlNames, paramsByIndex, mapping } = generatePrompt(mappingPath, descriptorPath);
+  const { prompt, controlNames, controlRefs, paramsByIndex, mapping } = generatePrompt(mappingPath, descriptorPath);
 
   // Write prompt to temp file
   const promptFile = '/tmp/claude-mapping-prompt.txt';
@@ -226,6 +300,11 @@ if (require.main === module) {
     // Display results
     displayResults(results, mapping);
 
+    // Fix mappings if requested
+    if (fixMode) {
+      fixMappings(mappingPath, mapping, controlRefs, results);
+    }
+
   } catch (error) {
     console.error('Error calling Claude Code CLI:', error.message);
     console.error('\nMake sure Claude Code CLI is installed and available as "claude" command.');
@@ -234,4 +313,4 @@ if (require.main === module) {
   }
 }
 
-module.exports = { generatePrompt, parseClaudeResponse };
+module.exports = { generatePrompt, parseClaudeResponse, fixMappings };

@@ -346,7 +346,7 @@
         "cc": 37
         "channel": "global"
         "mode": "toggle"
-        "plugin_parameter": "1"
+        "plugin_parameter": "32"
       - "id": "button_2"
         "name": "EQ Low Peak"
         "cc": 38
@@ -370,7 +370,7 @@
         "cc": 45
         "channel": "global"
         "mode": "toggle"
-        "plugin_parameter": "1"
+        "plugin_parameter": "34"
       - "id": "button_6"
         "name": "EQ Enable"
         "cc": 46

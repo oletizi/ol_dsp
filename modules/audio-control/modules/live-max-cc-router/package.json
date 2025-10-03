@@ -31,7 +31,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "verify-mapping": "node scripts/ai-verify-mapping.cjs",
-    "verify-mapping:channev": "node scripts/ai-verify-mapping.cjs ../canonical-midi-maps/maps/novation-launch-control-xl-3/channel-strips/analog-obsession-channev.yaml ../canonical-midi-maps/plugin-descriptors/analogobsession-channev.json"
+    "verify-mapping:channev": "node scripts/ai-verify-mapping.cjs ../canonical-midi-maps/maps/novation-launch-control-xl-3/channel-strips/analog-obsession-channev.yaml ../canonical-midi-maps/plugin-descriptors/analogobsession-channev.json",
+    "fix-mapping:channev": "node scripts/ai-verify-mapping.cjs ../canonical-midi-maps/maps/novation-launch-control-xl-3/channel-strips/analog-obsession-channev.yaml ../canonical-midi-maps/plugin-descriptors/analogobsession-channev.json --fix"
   },
   "keywords": [
     "max-for-live",
