@@ -34,7 +34,8 @@
     "verify-mapping:channev": "node scripts/ai-verify-mapping.cjs ../canonical-midi-maps/maps/novation-launch-control-xl-3/channel-strips/analog-obsession-channev.yaml ../canonical-midi-maps/plugin-descriptors/analogobsession-channev.json",
     "fix-mapping:channev": "node scripts/ai-verify-mapping.cjs ../canonical-midi-maps/maps/novation-launch-control-xl-3/channel-strips/analog-obsession-channev.yaml ../canonical-midi-maps/plugin-descriptors/analogobsession-channev.json --fix",
     "verify-all": "node scripts/verify-all-mappings.cjs",
-    "fix-all": "node scripts/verify-all-mappings.cjs --fix"
+    "fix-all": "node scripts/verify-all-mappings.cjs --fix",
+    "import-from-device": "node scripts/import-from-device.cjs"
   },
   "keywords": [
     "max-for-live",
