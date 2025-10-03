@@ -1,0 +1,232 @@
+#!/usr/bin/env node
+
+const fs = require('fs');
+const path = require('path');
+const yaml = require('yaml');
+
+/**
+ * Verify canonical MIDI mappings against plugin descriptors
+ *
+ * Usage: node verify-mapping.cjs <mapping.yaml> <descriptor.json>
+ */
+
+function verifyMapping(mappingPath, descriptorPath) {
+  // Read files
+  const mappingYaml = fs.readFileSync(mappingPath, 'utf8');
+  const descriptorJson = fs.readFileSync(descriptorPath, 'utf8');
+
+  const mapping = yaml.parse(mappingYaml);
+  const descriptor = JSON.parse(descriptorJson);
+
+  console.log('\n╔══════════════════════════════════════════════════════════════════════════════════╗');
+  console.log('║                    CANONICAL MAPPING VERIFICATION                                ║');
+  console.log('╚══════════════════════════════════════════════════════════════════════════════════╝\n');
+
+  console.log(`Plugin: ${mapping.plugin.manufacturer} ${mapping.plugin.name}`);
+  console.log(`Controller: ${mapping.device.manufacturer} ${mapping.device.model}`);
+  console.log(`Mapping: ${mapping.metadata.name}\n`);
+
+  // Create parameter lookup by index
+  const paramsByIndex = {};
+  descriptor.parameters.forEach(param => {
+    paramsByIndex[param.index] = param;
+  });
+
+  // Header
+  console.log('─'.repeat(100));
+  console.log(
+    pad('CC', 5) +
+    pad('Control Name (Mapping)', 35) +
+    pad('Idx', 5) +
+    pad('Parameter Name (Plugin)', 35) +
+    pad('Status', 15)
+  );
+  console.log('─'.repeat(100));
+
+  let mismatches = 0;
+  let matches = 0;
+  let missing = 0;
+
+  // Process all controls
+  const controls = mapping.controls || [];
+
+  controls.forEach(control => {
+    // Handle button groups
+    if (control.buttons) {
+      control.buttons.forEach(button => {
+        processControl(button);
+      });
+    } else {
+      processControl(control);
+    }
+  });
+
+  function processControl(ctrl) {
+    if (!ctrl.plugin_parameter) {
+      return; // Skip unassigned controls
+    }
+
+    const cc = ctrl.cc;
+    const mappingName = ctrl.name;
+    const paramIndex = parseInt(ctrl.plugin_parameter);
+
+    // Special cases for non-numeric parameter references
+    if (isNaN(paramIndex)) {
+      console.log(
+        pad(cc, 5) +
+        pad(mappingName, 35) +
+        pad('--', 5) +
+        pad(`[${ctrl.plugin_parameter}]`, 35) +
+        yellow(pad('SPECIAL', 15))
+      );
+      return;
+    }
+
+    const pluginParam = paramsByIndex[paramIndex];
+
+    if (!pluginParam) {
+      console.log(
+        pad(cc, 5) +
+        pad(mappingName, 35) +
+        pad(paramIndex, 5) +
+        pad('NOT FOUND', 35) +
+        red(pad('MISSING', 15))
+      );
+      missing++;
+      return;
+    }
+
+    const pluginName = pluginParam.name;
+
+    // Check for potential mismatch
+    const isMismatch = !namesMatch(mappingName, pluginName);
+
+    if (isMismatch) {
+      console.log(
+        pad(cc, 5) +
+        pad(mappingName, 35) +
+        pad(paramIndex, 5) +
+        pad(pluginName, 35) +
+        red(pad('⚠ MISMATCH', 15))
+      );
+      mismatches++;
+    } else {
+      console.log(
+        pad(cc, 5) +
+        pad(mappingName, 35) +
+        pad(paramIndex, 5) +
+        pad(pluginName, 35) +
+        green(pad('✓ OK', 15))
+      );
+      matches++;
+    }
+  }
+
+  console.log('─'.repeat(100));
+  console.log('\n📊 Summary:');
+  console.log(`   ${green('✓')} Matches:    ${matches}`);
+  console.log(`   ${red('⚠')} Mismatches: ${mismatches}`);
+  console.log(`   ${red('✗')} Missing:    ${missing}`);
+  console.log(`   Total mapped controls: ${matches + mismatches + missing}\n`);
+
+  if (mismatches > 0 || missing > 0) {
+    console.log(`${red('❌ Verification failed')}: ${mismatches + missing} issues found\n`);
+    process.exit(1);
+  } else {
+    console.log(`${green('✅ Verification passed')}: All mappings are correct\n`);
+  }
+}
+
+// Helper: Check if names are similar enough (fuzzy match)
+function namesMatch(name1, name2) {
+  const normalize = (str) => str
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '')
+    .replace(/hipass/g, 'highpass')
+    .replace(/lowpass/g, 'lopass')
+    .replace(/hpf/g, 'highpass')
+    .replace(/lpf/g, 'lowpass');
+
+  const n1 = normalize(name1);
+  const n2 = normalize(name2);
+
+  // Exact match
+  if (n1 === n2) return true;
+
+  // One contains the other
+  if (n1.includes(n2) || n2.includes(n1)) return true;
+
+  // Common abbreviations
+  const abbrevs = {
+    'comp': 'compressor',
+    'thresh': 'threshold',
+    'eq': 'equalizer',
+    'freq': 'frequency',
+    'mic': 'microphone',
+    'pre': 'preamp'
+  };
+
+  let n1exp = n1;
+  let n2exp = n2;
+  Object.entries(abbrevs).forEach(([abbr, full]) => {
+    n1exp = n1exp.replace(abbr, full);
+    n2exp = n2exp.replace(abbr, full);
+  });
+
+  if (n1exp === n2exp) return true;
+  if (n1exp.includes(n2exp) || n2exp.includes(n1exp)) return true;
+
+  return false;
+}
+
+// Helper: Pad string to width
+function pad(str, width) {
+  const s = String(str);
+  if (s.length >= width) {
+    return s.substring(0, width - 1) + ' ';
+  }
+  return s + ' '.repeat(width - s.length);
+}
+
+// ANSI color helpers
+function red(str) {
+  return `\x1b[31m${str}\x1b[0m`;
+}
+
+function green(str) {
+  return `\x1b[32m${str}\x1b[0m`;
+}
+
+function yellow(str) {
+  return `\x1b[33m${str}\x1b[0m`;
+}
+
+// Main
+if (require.main === module) {
+  const args = process.argv.slice(2);
+
+  if (args.length < 2) {
+    console.error('Usage: node verify-mapping.cjs <mapping.yaml> <descriptor.json>');
+    console.error('\nExample:');
+    console.error('  node verify-mapping.cjs \\');
+    console.error('    maps/novation-launch-control-xl-3/channel-strips/analog-obsession-channev.yaml \\');
+    console.error('    plugin-descriptors/analogobsession-channev.json');
+    process.exit(1);
+  }
+
+  const [mappingPath, descriptorPath] = args;
+
+  if (!fs.existsSync(mappingPath)) {
+    console.error(`Error: Mapping file not found: ${mappingPath}`);
+    process.exit(1);
+  }
+
+  if (!fs.existsSync(descriptorPath)) {
+    console.error(`Error: Descriptor file not found: ${descriptorPath}`);
+    process.exit(1);
+  }
+
+  verifyMapping(mappingPath, descriptorPath);
+}
+
+module.exports = { verifyMapping };
