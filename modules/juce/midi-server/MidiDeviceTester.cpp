@@ -1,7 +1,7 @@
 /**
- * JUCE-based MIDI Server for reliable SysEx handling
+ * JUCE-based MIDI Device Tester for reliable SysEx handling
  *
- * This server provides a simple command-line interface for testing
+ * This tester provides a simple command-line interface for testing
  * the Launch Control XL3 protocol with proper SysEx support.
  */
 
@@ -17,16 +17,16 @@
 #include <chrono>
 
 //==============================================================================
-class MidiServer : public juce::MidiInputCallback
+class MidiDeviceTester : public juce::MidiInputCallback
 {
 public:
-    MidiServer()
+    MidiDeviceTester()
     {
         // Initialize JUCE's message thread
         juce::MessageManager::getInstance();
     }
 
-    ~MidiServer()
+    ~MidiDeviceTester()
     {
         closeAllPorts();
     }
@@ -417,22 +417,22 @@ int main(int argc, char* argv[])
     // Initialize JUCE
     juce::ScopedJuceInitialiser_GUI juceInit;
 
-    MidiServer server;
+    MidiDeviceTester tester;
 
-    std::cout << "\nJUCE MIDI Server for Launch Control XL3" << std::endl;
-    std::cout << "========================================" << std::endl;
+    std::cout << "\nJUCE MIDI Device Tester for Launch Control XL3" << std::endl;
+    std::cout << "===============================================" << std::endl;
 
     // List available ports
-    server.listPorts();
+    tester.listPorts();
 
     // Open LCXL3 ports
     std::cout << "\nOpening Launch Control XL3 ports..." << std::endl;
 
     bool success = true;
-    success &= server.openOutput("LCXL3 1 MIDI In");
-    success &= server.openInput("LCXL3 1 MIDI Out");
-    success &= server.openDawOutput("LCXL3 1 DAW In");
-    success &= server.openDawInput("LCXL3 1 DAW Out");
+    success &= tester.openOutput("LCXL3 1 MIDI In");
+    success &= tester.openInput("LCXL3 1 MIDI Out");
+    success &= tester.openDawOutput("LCXL3 1 DAW In");
+    success &= tester.openDawInput("LCXL3 1 DAW Out");
 
     if (!success)
     {
@@ -443,10 +443,10 @@ int main(int argc, char* argv[])
     std::cout << "\n✓ All ports opened successfully" << std::endl;
 
     // Run the test
-    server.testLCXL3Protocol();
+    tester.testLCXL3Protocol();
 
     // Clean up
-    server.closeAllPorts();
+    tester.closeAllPorts();
 
     std::cout << "\n✓ Ports closed" << std::endl;
 

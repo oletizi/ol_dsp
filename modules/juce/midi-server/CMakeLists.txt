@@ -1,19 +1,20 @@
-juce_add_console_app(midi_server
-    PRODUCT_NAME "OL MIDI Server"
+# MIDI Device Tester - CLI tool for device-specific testing
+juce_add_console_app(midi_device_tester
+    PRODUCT_NAME "OL MIDI Device Tester"
 )
 
-target_sources(midi_server
+target_sources(midi_device_tester
     PRIVATE
-    MidiServer.cpp
+    MidiDeviceTester.cpp
 )
 
-target_compile_definitions(midi_server
+target_compile_definitions(midi_device_tester
     PRIVATE
     JUCE_WEB_BROWSER=0
     JUCE_USE_CURL=0
 )
 
-target_link_libraries(midi_server
+target_link_libraries(midi_device_tester
     PRIVATE
     juce::juce_core
     juce::juce_audio_devices
@@ -23,23 +24,26 @@ target_link_libraries(midi_server
     juce::juce_recommended_warning_flags
 )
 
-# HTTP Server for TypeScript integration
-juce_add_console_app(midi_http_server
-    PRODUCT_NAME "OL MIDI HTTP Server"
+# Network MIDI Server - Zero-configuration network MIDI mesh (Phase 1)
+juce_add_console_app(network_midi_server
+    PRODUCT_NAME "Network MIDI Server"
 )
 
-target_sources(midi_http_server
+# Phase 1: Core files only (NodeIdentity and InstanceManager)
+target_sources(network_midi_server
     PRIVATE
-    MidiHttpServer.cpp
+    NetworkMidiServer.cpp
+    network/core/NodeIdentity.cpp
+    network/core/InstanceManager.cpp
 )
 
-target_compile_definitions(midi_http_server
+target_compile_definitions(network_midi_server
     PRIVATE
     JUCE_WEB_BROWSER=0
     JUCE_USE_CURL=0
 )
 
-target_link_libraries(midi_http_server
+target_link_libraries(network_midi_server
     PRIVATE
     juce::juce_core
     juce::juce_audio_devices
@@ -49,28 +53,60 @@ target_link_libraries(midi_http_server
     juce::juce_recommended_warning_flags
 )
 
-# HTTP Server v2 using cpp-httplib
-juce_add_console_app(midi_http_server2
-    PRODUCT_NAME "OL MIDI HTTP Server v2"
-)
-
-target_sources(midi_http_server2
+# Add include directory for network modules
+target_include_directories(network_midi_server
     PRIVATE
-    MidiHttpServer2.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
-target_compile_definitions(midi_http_server2
+# Network Discovery Test Program (Phase 2)
+juce_add_console_app(discovery_test
+    PRODUCT_NAME "Network Discovery Test"
+)
+
+target_sources(discovery_test
+    PRIVATE
+    network/discovery/DiscoveryTest.cpp
+    network/discovery/ServiceDiscovery.cpp
+    network/discovery/FallbackDiscovery.cpp
+)
+
+# Platform-specific test sources
+if(APPLE)
+    target_sources(discovery_test
+        PRIVATE
+        network/discovery/platform/mdns_macos.cpp
+    )
+endif()
+
+target_compile_definitions(discovery_test
     PRIVATE
     JUCE_WEB_BROWSER=0
     JUCE_USE_CURL=0
 )
 
-target_link_libraries(midi_http_server2
+target_include_directories(discovery_test
+    PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
+target_link_libraries(discovery_test
     PRIVATE
     juce::juce_core
-    juce::juce_audio_devices
     juce::juce_events
     PUBLIC
     juce::juce_recommended_config_flags
     juce::juce_recommended_warning_flags
 )
+
+# Platform-specific mDNS libraries for discovery_test
+if(APPLE)
+    target_link_libraries(discovery_test
+        PRIVATE
+        "-framework CoreServices"
+    )
+elseif(UNIX)
+    # Linux - Avahi (when implemented)
+elseif(WIN32)
+    # Windows - Bonjour (when implemented)
+endif()
