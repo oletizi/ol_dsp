@@ -38,10 +38,6 @@ public:
     ConnectionPool() = default;
     ~ConnectionPool() = default;
 
-    // Non-copyable
-    ConnectionPool(const ConnectionPool&) = delete;
-    ConnectionPool& operator=(const ConnectionPool&) = delete;
-
     //==============================================================================
     // Connection management
 

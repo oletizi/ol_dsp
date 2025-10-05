@@ -53,10 +53,6 @@ public:
     explicit HeartbeatMonitor(ConnectionPool& pool);
     ~HeartbeatMonitor() override;
 
-    // Non-copyable
-    HeartbeatMonitor(const HeartbeatMonitor&) = delete;
-    HeartbeatMonitor& operator=(const HeartbeatMonitor&) = delete;
-
     //==============================================================================
     // Monitoring control
 

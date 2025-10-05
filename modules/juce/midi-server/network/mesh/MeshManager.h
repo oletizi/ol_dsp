@@ -70,10 +70,6 @@ public:
 
     ~MeshManager();
 
-    // Non-copyable
-    MeshManager(const MeshManager&) = delete;
-    MeshManager& operator=(const MeshManager&) = delete;
-
     //==============================================================================
     // Lifecycle management
 

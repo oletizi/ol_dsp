@@ -115,10 +115,6 @@ public:
     explicit NetworkConnection(const NodeInfo& remoteNode);
     ~NetworkConnection();
 
-    // Non-copyable
-    NetworkConnection(const NetworkConnection&) = delete;
-    NetworkConnection& operator=(const NetworkConnection&) = delete;
-
     //==============================================================================
     // Connection management
 
