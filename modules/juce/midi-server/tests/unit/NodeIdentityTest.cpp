@@ -97,7 +97,7 @@ TEST_F(NodeIdentityTest, RetrievesSystemHostname) {
     if (systemHost.isNotEmpty()) {
         EXPECT_EQ(systemHost, hostname);
     } else {
-        EXPECT_EQ("unknown-host", hostname);
+        EXPECT_EQ(juce::String("unknown-host"), hostname);
     }
 }
 
@@ -174,7 +174,7 @@ TEST_F(NodeIdentityTest, HandlesCorruptedUuidFile) {
     juce::Uuid nodeId = identity.getNodeId();
 
     EXPECT_FALSE(nodeId.isNull());
-    EXPECT_NE("invalid-uuid-format", nodeId.toString());
+    EXPECT_NE(juce::String("invalid-uuid-format"), nodeId.toString());
 }
 
 // Test empty UUID file handling

@@ -2,6 +2,7 @@
 
 #include "../core/MidiPacket.h"
 #include <juce_core/juce_core.h>
+#include <juce_events/juce_events.h>
 #include <map>
 #include <vector>
 #include <functional>
@@ -25,10 +26,18 @@ public:
      * Configuration for message buffering.
      */
     struct Config {
-        size_t maxBufferSize = 100;     // Maximum number of out-of-order packets to buffer
-        int maxSequenceGap = 50;        // Maximum sequence gap before declaring packet lost
-        bool allowDuplicates = false;   // Whether to deliver duplicate packets
-        int deliveryTimeoutMs = 1000;   // Max time to wait for missing packets
+        size_t maxBufferSize;
+        int maxSequenceGap;
+        bool allowDuplicates;
+        int deliveryTimeoutMs;
+
+        Config()
+            : maxBufferSize(100)
+            , maxSequenceGap(50)
+            , allowDuplicates(false)
+            , deliveryTimeoutMs(1000)
+        {
+        }
     };
 
     /**
@@ -145,17 +154,17 @@ private:
     // Timer for timeout checking
     class TimeoutChecker : public juce::Timer {
     public:
-        TimeoutChecker(MessageBuffer& buffer)
-            : buffer(buffer)
+        explicit TimeoutChecker(MessageBuffer& parentBuffer)
+            : ownerBuffer(parentBuffer)
         {
         }
 
         void timerCallback() override {
-            buffer.checkTimeouts();
+            ownerBuffer.checkTimeouts();
         }
 
     private:
-        MessageBuffer& buffer;
+        MessageBuffer& ownerBuffer;
     };
 
     std::unique_ptr<TimeoutChecker> timeoutChecker;

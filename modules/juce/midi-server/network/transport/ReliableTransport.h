@@ -26,9 +26,16 @@ public:
      * Configuration for reliable delivery.
      */
     struct Config {
-        int timeoutMs = 100;        // ACK timeout in milliseconds
-        int maxRetries = 3;         // Maximum number of retry attempts
-        int retryBackoffMs = 50;    // Additional delay per retry
+        int timeoutMs;
+        int maxRetries;
+        int retryBackoffMs;
+
+        Config()
+            : timeoutMs(100)
+            , maxRetries(3)
+            , retryBackoffMs(50)
+        {
+        }
     };
 
     /**
@@ -164,17 +171,17 @@ private:
     // Timer class for timeout checking
     class TimeoutChecker : public juce::Timer {
     public:
-        TimeoutChecker(ReliableTransport& transport)
-            : transport(transport)
+        explicit TimeoutChecker(ReliableTransport& parentTransport)
+            : ownerTransport(parentTransport)
         {
         }
 
         void timerCallback() override {
-            transport.checkTimeouts();
+            ownerTransport.checkTimeouts();
         }
 
     private:
-        ReliableTransport& transport;
+        ReliableTransport& ownerTransport;
     };
 
     std::unique_ptr<TimeoutChecker> timeoutChecker;

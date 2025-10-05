@@ -39,8 +39,8 @@ TEST_F(RoutingTableTest, AddsLocalRoute) {
     ASSERT_TRUE(route.has_value());
     EXPECT_EQ(1, route->deviceId);
     EXPECT_TRUE(route->isLocal());
-    EXPECT_EQ("Local Device", route->deviceName);
-    EXPECT_EQ("input", route->deviceType);
+    EXPECT_EQ(juce::String("Local Device"), route->deviceName);
+    EXPECT_EQ(juce::String("input"), route->deviceType);
 }
 
 // Test add remote route
@@ -53,7 +53,7 @@ TEST_F(RoutingTableTest, AddsRemoteRoute) {
     EXPECT_EQ(2, route->deviceId);
     EXPECT_FALSE(route->isLocal());
     EXPECT_EQ(remoteNode1, route->nodeId);
-    EXPECT_EQ("Remote Device", route->deviceName);
+    EXPECT_EQ(juce::String("Remote Device"), route->deviceName);
 }
 
 // Test remove route
@@ -249,8 +249,8 @@ TEST_F(RoutingTableTest, UpdatesExistingRoute) {
     auto route = table->getRoute(1);
 
     ASSERT_TRUE(route.has_value());
-    EXPECT_EQ("Updated Name", route->deviceName);
-    EXPECT_EQ("output", route->deviceType);
+    EXPECT_EQ(juce::String("Updated Name"), route->deviceName);
+    EXPECT_EQ(juce::String("output"), route->deviceType);
     EXPECT_FALSE(route->isLocal());
     EXPECT_EQ(remoteNode1, route->nodeId);
 }
@@ -403,8 +403,8 @@ TEST_F(RoutingTableTest, PreservesDeviceType) {
 
     ASSERT_TRUE(inputRoute.has_value());
     ASSERT_TRUE(outputRoute.has_value());
-    EXPECT_EQ("input", inputRoute->deviceType);
-    EXPECT_EQ("output", outputRoute->deviceType);
+    EXPECT_EQ(juce::String("input"), inputRoute->deviceType);
+    EXPECT_EQ(juce::String("output"), outputRoute->deviceType);
 }
 
 // Test node routes for non-existent node

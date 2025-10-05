@@ -38,10 +38,10 @@ TEST_F(DeviceRegistryTest, AddsLocalDevice) {
 
     ASSERT_TRUE(device.has_value());
     EXPECT_EQ(1, device->id);
-    EXPECT_EQ("Test Input", device->name);
-    EXPECT_EQ("input", device->type);
+    EXPECT_EQ(juce::String("Test Input"), device->name);
+    EXPECT_EQ(juce::String("input"), device->type);
     EXPECT_TRUE(device->isLocal);
-    EXPECT_EQ("Manufacturer", device->manufacturer);
+    EXPECT_EQ(juce::String("Manufacturer"), device->manufacturer);
 }
 
 // Test add remote device
@@ -52,11 +52,11 @@ TEST_F(DeviceRegistryTest, AddsRemoteDevice) {
 
     ASSERT_TRUE(device.has_value());
     EXPECT_EQ(2, device->id);
-    EXPECT_EQ("Remote Output", device->name);
-    EXPECT_EQ("output", device->type);
+    EXPECT_EQ(juce::String("Remote Output"), device->name);
+    EXPECT_EQ(juce::String("output"), device->type);
     EXPECT_FALSE(device->isLocal);
     EXPECT_EQ(remoteNode1, device->ownerNode);
-    EXPECT_EQ("Vendor", device->manufacturer);
+    EXPECT_EQ(juce::String("Vendor"), device->manufacturer);
 }
 
 // Test remove local device
@@ -227,9 +227,9 @@ TEST_F(DeviceRegistryTest, UpdatesExistingDevice) {
     auto device = registry->getDevice(1);
 
     ASSERT_TRUE(device.has_value());
-    EXPECT_EQ("Updated Name", device->name);
-    EXPECT_EQ("output", device->type);
-    EXPECT_EQ("Vendor B", device->manufacturer);
+    EXPECT_EQ(juce::String("Updated Name"), device->name);
+    EXPECT_EQ(juce::String("output"), device->type);
+    EXPECT_EQ(juce::String("Vendor B"), device->manufacturer);
 }
 
 // Test empty registry
@@ -336,8 +336,8 @@ TEST_F(DeviceRegistryTest, StoresDeviceTypes) {
 
     ASSERT_TRUE(inputDevice.has_value());
     ASSERT_TRUE(outputDevice.has_value());
-    EXPECT_EQ("input", inputDevice->type);
-    EXPECT_EQ("output", outputDevice->type);
+    EXPECT_EQ(juce::String("input"), inputDevice->type);
+    EXPECT_EQ(juce::String("output"), outputDevice->type);
 }
 
 // Test manufacturer field
@@ -347,7 +347,7 @@ TEST_F(DeviceRegistryTest, StoresManufacturer) {
     auto device = registry->getDevice(1);
 
     ASSERT_TRUE(device.has_value());
-    EXPECT_EQ("ACME Corp", device->manufacturer);
+    EXPECT_EQ(juce::String("ACME Corp"), device->manufacturer);
 }
 
 // Test empty manufacturer

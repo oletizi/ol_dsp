@@ -138,7 +138,7 @@ TEST_F(InstanceManagerTest, CreatesStateFiles) {
     juce::File stateFile = manager.getStateFile("test-state.json");
 
     EXPECT_FALSE(stateFile.existsAsFile());  // Not created until written
-    EXPECT_EQ(juce::String("test-state.json"), stateFile.getFileName());
+    EXPECT_EQ("test-state.json", stateFile.getFileName());
     EXPECT_TRUE(stateFile.getParentDirectory() == manager.getInstanceDirectory());
 }
 

@@ -3,8 +3,8 @@
 
 namespace NetworkMidi {
 
-MessageBuffer::MessageBuffer(const Config& config)
-    : config(config)
+MessageBuffer::MessageBuffer(const Config& cfg)
+    : config(cfg)
     , nextExpectedSequence(0)
 {
     // Create and start timeout checker
@@ -91,7 +91,7 @@ void MessageBuffer::addPacket(const MidiPacket& packet) {
 
             {
                 juce::ScopedLock statsLock_(statsLock);
-                stats.gapsDetected += gap;
+                stats.gapsDetected += static_cast<uint64_t>(gap);
             }
 
             // Skip to this packet

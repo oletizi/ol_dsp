@@ -3,10 +3,10 @@
 namespace NetworkMidi {
 
 ReliableTransport::ReliableTransport(
-    UdpMidiTransport& transport,
-    const Config& config)
-    : transport(transport)
-    , config(config)
+    UdpMidiTransport& udpTransport,
+    const Config& cfg)
+    : transport(udpTransport)
+    , config(cfg)
 {
     // Create and start timeout checker
     timeoutChecker = std::make_unique<TimeoutChecker>(*this);
