@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../core/MidiPacket.h"
-#include <JuceHeader.h>
+#include <juce_core/juce_core.h>
 #include <map>
 #include <vector>
 #include <functional>
