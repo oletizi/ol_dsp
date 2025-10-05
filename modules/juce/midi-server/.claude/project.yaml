@@ -1,0 +1,228 @@
+project:
+  name: juce-midi-http-server
+  description: |
+    JUCE-based MIDI HTTP server that discovers MIDI devices and provides
+    REST API endpoints for device queries. Part of the OL_DSP ecosystem.
+  version: 1.0.0
+  type: audio-backend-service
+  parent_project: /Users/orion/work/ol_dsp-midi-server
+
+technology_stack:
+  backend:
+    - cpp: 17
+    - juce: 7.x
+    - cpp-httplib: 0.14.3
+  build:
+    - cmake: 3.15+
+  testing:
+    - catch2: 3.x
+    - googletest: 1.x
+
+agents:
+  primary:
+    - orchestrator          # Workflow coordination
+    - cpp-pro              # C++ development specialist
+
+  required:
+    - build-engineer       # CMake build system management
+    - api-designer         # REST API design
+    - embedded-systems     # Real-time constraints & hardware
+
+  quality:
+    - code-reviewer        # Code quality assurance
+    - test-automator       # Test coverage
+    - debugger            # Troubleshooting
+
+workflows:
+  default: feature-development
+  available:
+    - feature-development   # Adding new endpoints/features
+    - bug-fix              # Debugging and fixes
+    - build-optimization   # CMake and compilation improvements
+
+  triggers:
+    auto_detect: true
+    keywords:
+      feature: feature-development
+      bug: bug-fix
+      fix: bug-fix
+      build: build-optimization
+      cmake: build-optimization
+
+context_management:
+  strategy: hierarchical
+  persistence:
+    enabled: true
+    location: .claude/context/
+    format: json
+    retention_days: 30
+
+  sharing:
+    mechanism: structured_handoff
+    include:
+      - task_requirements
+      - modified_files
+      - build_output
+      - test_results
+      - api_changes
+    exclude:
+      - verbose_logs
+      - binary_artifacts
+
+quality_standards:
+  code_coverage:
+    minimum: 70
+    target: 80
+
+  code_quality:
+    - modern_cpp: cpp17
+    - raii: required
+    - const_correctness: required
+    - smart_pointers: preferred
+
+  performance:
+    - real_time_safe: required_for_midi_callbacks
+    - thread_safe: required
+    - no_blocking_in_callbacks: required
+
+performance_targets:
+  midi:
+    device_discovery_ms: 100
+    callback_latency_us: 1000
+
+  http:
+    response_time_p95_ms: 50
+    throughput_rps: 100
+    error_rate_percent: 0.5
+
+  build:
+    clean_build_seconds: 30
+    incremental_build_seconds: 5
+
+api_specification:
+  base_path: /
+  port: 8080
+
+  endpoints:
+    - path: /midi/inputs
+      method: GET
+      description: List all MIDI input devices
+
+    - path: /midi/outputs
+      method: GET
+      description: List all MIDI output devices
+
+    - path: /midi/devices
+      method: GET
+      description: List all MIDI devices (inputs + outputs)
+
+    - path: /health
+      method: GET
+      description: Health check endpoint
+
+build_configuration:
+  cmake:
+    minimum_version: 3.15
+    build_type: Release
+    options:
+      - JUCE_BUILD_EXTRAS: OFF
+      - JUCE_BUILD_EXAMPLES: OFF
+
+  targets:
+    - MidiHttpServer
+    - MidiHttpServer2
+
+  platforms:
+    - macos
+    - linux
+    - windows
+
+agent_selection_rules:
+  - rule: cpp_development
+    condition: "task contains ['C++', 'class', 'implementation', 'header']"
+    agents: [cpp-pro, code-reviewer]
+
+  - rule: api_changes
+    condition: "task contains ['endpoint', 'API', 'HTTP', 'REST']"
+    agents: [api-designer, cpp-pro]
+
+  - rule: build_issues
+    condition: "task contains ['CMake', 'build', 'compile', 'link']"
+    agents: [build-engineer, cpp-pro]
+
+  - rule: midi_functionality
+    condition: "task contains ['MIDI', 'device', 'discovery', 'real-time']"
+    agents: [cpp-pro, embedded-systems]
+
+  - rule: debugging
+    condition: "task contains ['bug', 'crash', 'error', 'debug']"
+    agents: [debugger, cpp-pro]
+
+  - rule: testing
+    condition: "task contains ['test', 'coverage', 'unit test']"
+    agents: [test-automator, cpp-pro]
+
+handoff_templates:
+  standard: |
+    ## Task Handoff
+    **From**: {from_agent}
+    **To**: {to_agent}
+    **Task**: {task_description}
+
+    ### Context
+    {context}
+
+    ### Completed Work
+    {completed_items}
+
+    ### Modified Files
+    {modified_files}
+
+    ### Build Status
+    {build_status}
+
+    ### Next Steps
+    {next_steps}
+
+  build_failure: |
+    ## Build Error Handoff
+    **Component**: {component}
+    **Error Type**: {error_type}
+
+    ### Build Output
+    ```
+    {build_output}
+    ```
+
+    ### Attempted Solutions
+    {attempted_solutions}
+
+    ### Recommended Actions
+    {recommendations}
+
+optimization_settings:
+  parallel_execution:
+    enabled: false  # C++ compilation is already parallel
+    max_parallel_agents: 1
+
+  caching:
+    enabled: true
+    strategies:
+      - build_cache
+      - test_results
+    ttl_hours: 24
+
+constraints:
+  real_time:
+    - no_allocation_in_callbacks: true
+    - no_blocking_in_callbacks: true
+    - max_callback_duration_us: 1000
+
+  threading:
+    - thread_safe_device_list: true
+    - mutex_for_shared_state: required
+
+  memory:
+    - prefer_stack_allocation: true
+    - use_smart_pointers: true
+    - no_raw_pointers: preferred
