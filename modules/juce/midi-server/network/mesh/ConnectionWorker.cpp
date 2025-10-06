@@ -5,7 +5,12 @@
  */
 
 #include "ConnectionWorker.h"
+#include "../transport/MidiClassifier.h"
+#include "../transport/RealtimeMidiBuffer.h"
+#include "../transport/RealtimeMidiTransport.h"
+#include "../transport/NonRealtimeMidiTransport.h"
 #include <juce_core/juce_core.h>
+#include <juce_audio_basics/juce_audio_basics.h>
 #include <sstream>
 
 namespace NetworkMidi {
@@ -179,6 +184,43 @@ void ConnectionWorker::handleConnectCommand()
             }
         }
 
+        // Initialize dual-transport MIDI system after successful handshake
+        // Extract remote host and UDP port from remoteUdpEndpoint
+        // remoteUdpEndpoint format: "10.0.0.1:12345"
+        juce::String remoteHost;
+        int remoteUdpPort = 0;
+        int colonPos = remoteUdpEndpoint.lastIndexOf(":");
+        if (colonPos > 0) {
+            remoteHost = remoteUdpEndpoint.substring(0, colonPos);
+            remoteUdpPort = remoteUdpEndpoint.substring(colonPos + 1).getIntValue();
+        }
+
+        if (remoteHost.isNotEmpty() && remoteUdpPort > 0) {
+            // Initialize real-time transport (UDP)
+            realtimeBuffer = std::make_unique<RealtimeMidiBuffer>();
+            realtimeTransport = std::make_unique<RealtimeMidiTransport>(
+                *realtimeBuffer,
+                remoteHost,
+                remoteUdpPort
+            );
+            realtimeTransport->startThread();
+
+            // Initialize non-real-time transport (TCP)
+            // Use httpPort + 1 for TCP MIDI transport (convention)
+            int remoteTcpPort = remoteNodeInfo.httpPort + 1;
+            nonRealtimeTransport = std::make_unique<NonRealtimeMidiTransport>(
+                remoteHost,
+                remoteTcpPort
+            );
+            nonRealtimeTransport->startThread();
+
+            juce::Logger::writeToLog("ConnectionWorker: Dual-transport initialized (UDP: " +
+                                    remoteHost + ":" + juce::String(remoteUdpPort) +
+                                    ", TCP: " + remoteHost + ":" + juce::String(remoteTcpPort) + ")");
+        } else {
+            juce::Logger::writeToLog("ConnectionWorker: Failed to parse remote UDP endpoint");
+        }
+
         // Connection successful
         running = true;
         setState(NetworkConnection::State::Connected);
@@ -208,6 +250,19 @@ void ConnectionWorker::handleDisconnectCommand()
 
     // Set running flag to false
     running = false;
+
+    // Shutdown dual-transport threads first
+    if (realtimeTransport) {
+        realtimeTransport->stopThread(1000);
+        realtimeTransport.reset();
+    }
+
+    if (nonRealtimeTransport) {
+        nonRealtimeTransport->stopThread(1000);
+        nonRealtimeTransport.reset();
+    }
+
+    realtimeBuffer.reset();
 
     // Shutdown and reset network resources
     if (udpSocket) {
@@ -273,16 +328,49 @@ void ConnectionWorker::handleSendMidiCommand(Commands::SendMidiCommand* cmd)
     }
 
     // Validate data
-    if (cmd->data.empty()) {
-        juce::Logger::writeToLog("ConnectionWorker: Cannot send empty MIDI message");
+    if (cmd->data.empty() || cmd->data.size() > 4) {
+        juce::Logger::writeToLog("ConnectionWorker: Invalid MIDI data size: " +
+                                juce::String(cmd->data.size()));
         return;
     }
 
-    // TODO: Implement actual UDP MIDI packet transmission
-    // This will use MidiPacket protocol when implemented
-    juce::Logger::writeToLog("ConnectionWorker: Sending MIDI message - deviceId=" +
-                            juce::String(cmd->deviceId) +
-                            ", bytes=" + juce::String((int)cmd->data.size()));
+    // Validate transport initialized
+    if (!realtimeBuffer || !realtimeTransport || !nonRealtimeTransport) {
+        juce::Logger::writeToLog("ConnectionWorker: Transports not initialized");
+        return;
+    }
+
+    // Create juce::MidiMessage for classification
+    juce::MidiMessage msg(cmd->data.data(), static_cast<int>(cmd->data.size()));
+
+    // Classify message
+    MidiMessageClass msgClass = classifyMidiMessage(msg);
+
+    if (msgClass == MidiMessageClass::RealTime) {
+        // Real-time: Write to lock-free ring buffer
+        RealtimeMidiBuffer::MidiPacket packet;
+        packet.length = static_cast<uint8_t>(cmd->data.size());
+        std::memcpy(packet.data, cmd->data.data(), cmd->data.size());
+        packet.deviceId = cmd->deviceId;
+        packet.timestamp = static_cast<uint32_t>(juce::Time::getMillisecondCounterHiRes());
+
+        if (realtimeBuffer->write(packet)) {
+            // Successfully written to buffer
+            // RealtimeMidiTransport thread will send it
+            juce::Logger::writeToLog("ConnectionWorker: Real-time MIDI sent via UDP - deviceId=" +
+                                    juce::String(cmd->deviceId) +
+                                    ", bytes=" + juce::String(static_cast<int>(cmd->data.size())));
+        } else {
+            // Buffer full - message dropped (acceptable for real-time)
+            juce::Logger::writeToLog("ConnectionWorker: Real-time buffer full, message dropped");
+        }
+    } else {
+        // Non-real-time: Send via TCP with reliable delivery
+        nonRealtimeTransport->sendMessage(msg, cmd->deviceId);
+        juce::Logger::writeToLog("ConnectionWorker: Non-real-time MIDI sent via TCP - deviceId=" +
+                                juce::String(cmd->deviceId) +
+                                ", bytes=" + juce::String(static_cast<int>(cmd->data.size())));
+    }
 }
 
 void ConnectionWorker::handleGetStateQuery(Commands::GetStateQuery* query)
@@ -350,7 +438,7 @@ void ConnectionWorker::updateSnapshots()
     heartbeatSnapshot.store(lastHeartbeatTime);
 }
 
-void ConnectionWorker::handleUdpPacket(const void* data, int size,
+void ConnectionWorker::handleUdpPacket(const void* /* data */, int size,
                                       const juce::String& sender, int port)
 {
     // TODO: Implement UDP packet handling with MidiPacket protocol
@@ -362,6 +450,41 @@ void ConnectionWorker::handleUdpPacket(const void* data, int size,
     // Update heartbeat timestamp
     lastHeartbeatTime = juce::Time::getCurrentTime().toMilliseconds();
     heartbeatSnapshot.store(lastHeartbeatTime);
+}
+
+ConnectionWorker::TransportStats ConnectionWorker::getTransportStats() const
+{
+    TransportStats stats;
+
+    if (realtimeBuffer) {
+        auto bufStats = realtimeBuffer->getStats();
+        stats.realtimeBuffer.numReady = bufStats.numReady;
+        stats.realtimeBuffer.freeSpace = bufStats.freeSpace;
+        stats.realtimeBuffer.dropped = bufStats.dropped;
+        stats.realtimeBuffer.written = bufStats.written;
+        stats.realtimeBuffer.read = bufStats.read;
+        stats.realtimeBuffer.dropRate = bufStats.dropRate;
+    }
+
+    if (realtimeTransport) {
+        auto rtStats = realtimeTransport->getStats();
+        stats.realtimeTransport.packetsSent = rtStats.packetsSent;
+        stats.realtimeTransport.packetsReceived = rtStats.packetsReceived;
+        stats.realtimeTransport.sendFailures = rtStats.sendFailures;
+        stats.realtimeTransport.receiveErrors = rtStats.receiveErrors;
+    }
+
+    if (nonRealtimeTransport) {
+        auto nrtStats = nonRealtimeTransport->getStats();
+        stats.nonRealtimeTransport.messagesSent = nrtStats.messagesSent;
+        stats.nonRealtimeTransport.messagesReceived = nrtStats.messagesReceived;
+        stats.nonRealtimeTransport.fragmentsSent = nrtStats.fragmentsSent;
+        stats.nonRealtimeTransport.fragmentsReceived = nrtStats.fragmentsReceived;
+        stats.nonRealtimeTransport.retries = nrtStats.retries;
+        stats.nonRealtimeTransport.failures = nrtStats.failures;
+    }
+
+    return stats;
 }
 
 } // namespace NetworkMidi

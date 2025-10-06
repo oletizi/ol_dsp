@@ -17,6 +17,13 @@
 #include <memory>
 #include <vector>
 
+// Forward declarations for dual-transport MIDI infrastructure
+namespace NetworkMidi {
+    class RealtimeMidiBuffer;
+    class RealtimeMidiTransport;
+    class NonRealtimeMidiTransport;
+}
+
 namespace NetworkMidi {
 
 //==============================================================================
@@ -60,6 +67,41 @@ public:
      * Processes commands until shutdown requested.
      */
     void run() override;
+
+    /**
+     * Transport statistics for monitoring performance.
+     */
+    struct TransportStats {
+        struct {
+            int numReady{0};
+            int freeSpace{0};
+            uint64_t dropped{0};
+            uint64_t written{0};
+            uint64_t read{0};
+            float dropRate{0.0f};
+        } realtimeBuffer;
+
+        struct {
+            uint64_t packetsSent{0};
+            uint64_t packetsReceived{0};
+            uint64_t sendFailures{0};
+            uint64_t receiveErrors{0};
+        } realtimeTransport;
+
+        struct {
+            uint64_t messagesSent{0};
+            uint64_t messagesReceived{0};
+            uint64_t fragmentsSent{0};
+            uint64_t fragmentsReceived{0};
+            uint64_t retries{0};
+            uint64_t failures{0};
+        } nonRealtimeTransport;
+    };
+
+    /**
+     * Get transport statistics (thread-safe).
+     */
+    TransportStats getTransportStats() const;
 
 private:
     //==============================================================================
@@ -129,6 +171,11 @@ private:
     juce::String localUdpEndpoint;
     juce::String remoteUdpEndpoint;
     std::vector<MidiMessage> receivedMessages;
+
+    // Dual-transport MIDI infrastructure (Phase B.3)
+    std::unique_ptr<RealtimeMidiBuffer> realtimeBuffer;
+    std::unique_ptr<RealtimeMidiTransport> realtimeTransport;
+    std::unique_ptr<NonRealtimeMidiTransport> nonRealtimeTransport;
 
     // Atomic snapshots for fast lock-free queries from external threads
     std::atomic<NetworkConnection::State> stateSnapshot{NetworkConnection::State::Disconnected};
