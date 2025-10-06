@@ -270,3 +270,4 @@ An AI agent has successfully completed work when:
 - don't mock/stub modules; use dependency injection and a mock interface instead.
 - always document make targets in the Makefile itself to ensure it's self documenting
 - always use make targets instead of running ./scripts/* directly to ensure the make targets work properly. There should only be a single path to achieve a goal.
+- Don't mention "production-readiness" in documentation. It's almost certainly not true until proven by actual production testing.
