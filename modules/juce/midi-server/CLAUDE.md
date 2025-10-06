@@ -206,3 +206,4 @@ This module inherits guidelines from the parent OL_DSP project:
 - Test on actual MIDI hardware when possible
 - Prioritize thread safety and resource cleanup
 - Always document make/CMake targets for self-documenting build process
+- Don't mention "production-readiness" in documentation. It's almost certainly not true until proven by actual production testing.

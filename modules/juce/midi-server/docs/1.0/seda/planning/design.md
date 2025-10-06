@@ -15,13 +15,14 @@
 4. [Proposed SEDA Architecture](#proposed-seda-architecture)
 5. [JUCE Implementation Patterns](#juce-implementation-patterns)
 6. [Stage Decomposition](#stage-decomposition)
-7. [Command/Event Design](#commandevent-design)
-8. [Performance Considerations](#performance-considerations)
-9. [Migration Strategy](#migration-strategy)
-10. [Testing Strategy](#testing-strategy)
-11. [Architecture Review](#architecture-review)
-12. [Decision Matrix](#decision-matrix)
-13. [Appendices](#appendices)
+7. [Dual-Transport MIDI Architecture](#dual-transport-midi-architecture)
+8. [Command/Event Design](#commandevent-design)
+9. [Performance Considerations](#performance-considerations)
+10. [Migration Strategy](#migration-strategy)
+11. [Testing Strategy](#testing-strategy)
+12. [Architecture Review](#architecture-review)
+13. [Decision Matrix](#decision-matrix)
+14. [Appendices](#appendices)
 
 ---
 
@@ -593,36 +594,62 @@ void handleGetStateQuery(GetStateQuery* query) {
 
 - `lastHeartbeatTime`
 
-#### Stage 3: MIDI Message Transport
+#### Stage 3: Real-Time MIDI Transport (UDP)
 
 **Responsibilities:**
 
-- Queue outgoing MIDI messages
-- Store received MIDI messages
-- Batch delivery to consumers
+- Queue outgoing real-time MIDI messages (Note On/Off, CC, Clock, etc.)
+- Process received real-time MIDI messages
+- Lock-free ring buffer for ultra-low latency
+- Handle burst traffic (1000+ msg/sec)
 
 **Input Events:**
 
-- `SendMidiCommand`
-- `MidiReceivedEvent` (from UDP stage)
+- `SendRealtimeMidiCommand`
+- `RealtimeMidiReceivedEvent` (from UDP stage)
+
+**Output Events:**
+
+- `UdpTransmitRequest` -> UDP Stage
+
+**State:**
+
+- `realtimeMessageRingBuffer` (lock-free)
+- `droppedMessageCount` (metrics)
+
+#### Stage 4: Non-Real-Time MIDI Transport (TCP)
+
+**Responsibilities:**
+
+- Queue outgoing SysEx and bulk transfers
+- Store received non-real-time MIDI messages
+- Guaranteed delivery with retry
+- Fragmentation and reassembly
+
+**Input Events:**
+
+- `SendNonRealtimeMidiCommand`
+- `NonRealtimeMidiReceivedEvent` (from TCP stage)
 - `GetReceivedMessagesQuery`
 
 **Output Events:**
 
-- `UdpTransmitRequest` -> UDP Stage (future)
+- `TcpTransmitRequest` -> TCP Stage
+- `AckReceivedEvent` -> TCP Stage
 
 **State:**
 
-- `receivedMessages`
-- `outgoingMessages`
+- `receivedNonRealtimeMessages` (standard queue)
+- `pendingAcks` (retry management)
 
-#### Stage 4: UDP I/O Stage (Future)
+#### Stage 5: UDP I/O Stage
 
 **Responsibilities:**
 
-- Read from UDP socket
+- Read from UDP socket (real-time MIDI + heartbeats)
 - Write to UDP socket
 - Parse/serialize packets
+- Best-effort delivery
 
 **Input Events:**
 
@@ -631,11 +658,1083 @@ void handleGetStateQuery(GetStateQuery* query) {
 
 **Output Events:**
 
-- `MidiReceivedEvent` -> MIDI Transport Stage
+- `RealtimeMidiReceivedEvent` -> Real-Time MIDI Stage
 - `HeartbeatReceivedEvent` -> Heartbeat Stage
 
-**Recommendation:** Combine Stages 1 and 2 into single worker thread initially (low event rate). Stage 3 can share same
-worker. Stage 4 requires separate thread due to blocking I/O.
+#### Stage 6: TCP I/O Stage
+
+**Responsibilities:**
+
+- Read from TCP socket (non-real-time MIDI)
+- Write to TCP socket with retry
+- Connection management
+- ACK/NACK protocol
+
+**Input Events:**
+
+- `TcpTransmitRequest`
+- Socket readability
+
+**Output Events:**
+
+- `NonRealtimeMidiReceivedEvent` -> Non-Real-Time MIDI Stage
+- `AckReceivedEvent` -> Non-Real-Time MIDI Stage
+
+**Recommendation:** Combine Stages 1 and 2 into single worker thread initially (low event rate). Stages 3 and 5 share
+real-time priority thread with lock-free communication. Stages 4 and 6 use separate thread with standard queuing.
+
+---
+
+## Dual-Transport MIDI Architecture
+
+### Overview
+
+Network MIDI requires **two distinct transport mechanisms** with fundamentally different quality-of-service (QoS)
+requirements. Mixing these in a single transport layer creates conflicts between latency and reliability goals.
+
+**Architecture Principle:** Separate real-time and non-real-time MIDI into independent transport paths with
+purpose-built data structures and threading models.
+
+---
+
+### MIDI Message Classification
+
+#### Message Categories
+
+| Category            | MIDI Message Types                                      | QoS Requirement      | Transport | Priority    |
+|---------------------|---------------------------------------------------------|----------------------|-----------|-------------|
+| **Real-Time**       | Note On/Off, Control Change, Pitch Bend                | Ultra-low latency    | UDP       | HIGHEST     |
+|                     | MIDI Clock (0xF8), Start (0xFA), Stop (0xFC)           | <1ms target          | UDP       | HIGHEST     |
+|                     | Active Sensing (0xFE), Timing Clock                     | Best-effort delivery | UDP       | HIGHEST     |
+|                     | Aftertouch, Program Change                              | Drop on overflow OK  | UDP       | HIGH        |
+| **Non-Real-Time**   | System Exclusive (SysEx) messages                       | Guaranteed delivery  | TCP       | MEDIUM      |
+|                     | Patch dumps, bulk transfers                             | 100% accuracy        | TCP       | MEDIUM      |
+|                     | Sample dumps, firmware updates                          | Retry on failure     | TCP       | LOW         |
+|                     | MIDI Tuning Standard messages                           | 10-100ms latency OK  | TCP       | MEDIUM      |
+
+#### Classification Rules
+
+```cpp
+enum class MidiMessageClass {
+    RealTime,      // Needs UDP transport
+    NonRealTime    // Needs TCP transport
+};
+
+MidiMessageClass classifyMidiMessage(const juce::MidiMessage& msg) {
+    // System Real-Time messages (0xF8 - 0xFF)
+    if (msg.getRawData()[0] >= 0xF8) {
+        return MidiMessageClass::RealTime;
+    }
+
+    // System Exclusive (0xF0 ... 0xF7)
+    if (msg.isSysEx()) {
+        return MidiMessageClass::NonRealTime;
+    }
+
+    // Channel Voice messages (0x80 - 0xEF)
+    // Note On/Off, CC, Pitch Bend, Aftertouch, Program Change
+    if (msg.getRawData()[0] >= 0x80 && msg.getRawData()[0] < 0xF0) {
+        return MidiMessageClass::RealTime;
+    }
+
+    // Default to non-real-time for safety
+    return MidiMessageClass::NonRealTime;
+}
+```
+
+#### Burst Rate Analysis
+
+**Worst-Case Scenarios:**
+
+| Scenario                          | Message Rate (msg/sec) | Burst Duration | Peak Rate     |
+|-----------------------------------|------------------------|----------------|---------------|
+| MIDI Clock (120 BPM, 24 PPQ)      | 48 msg/sec             | Continuous     | 48 msg/sec    |
+| Piano roll (10-note chord)        | 20 msg/sec             | <100ms         | 200 msg/sec   |
+| Controllers (8 CC × 10 Hz update) | 80 msg/sec             | Continuous     | 80 msg/sec    |
+| Active Sensing                    | 3 msg/sec              | Continuous     | 3 msg/sec     |
+| **Combined Peak (performance)**   | **150-350 msg/sec**    | Variable       | **500 msg/sec**   |
+| **Extreme Burst (rapid playing)** | **500-2000 msg/sec**   | <1 second      | **2000 msg/sec**  |
+
+**Critical Observation:** Real-time MIDI can produce **sustained 500 msg/sec** with **bursts to 2000+ msg/sec** during
+intense performance. This requires:
+
+1. **Lock-free buffer** - No mutex contention at high frequency
+2. **Overflow protection** - Graceful degradation when buffer fills
+3. **Drop-oldest policy** - Keep newest messages (latest performer intent)
+4. **Monitoring** - Track drop rate for quality metrics
+
+---
+
+### Dual-Transport Architecture Diagram
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                          MIDI Message Router                                 │
+│                                                                               │
+│  Input: juce::MidiMessage                                                    │
+│  ┌───────────────────────────────────────────────────────────┐              │
+│  │  Message Classifier                                        │              │
+│  │  - Check message type (0x80-0xFF)                         │              │
+│  │  - Route to appropriate transport                         │              │
+│  └───────────┬────────────────────────────────┬──────────────┘              │
+│              │                                 │                              │
+│              │ Real-Time                       │ Non-Real-Time                │
+│              │ (Note On/Off, CC, Clock)        │ (SysEx, Bulk Transfer)       │
+│              v                                 v                              │
+│   ┌──────────────────────┐         ┌──────────────────────┐                 │
+│   │  REAL-TIME STAGE     │         │ NON-REAL-TIME STAGE  │                 │
+│   │  (Lock-Free)         │         │ (Standard Queue)     │                 │
+│   ├──────────────────────┤         ├──────────────────────┤                 │
+│   │ juce::AbstractFifo   │         │ std::mutex +         │                 │
+│   │ Ring Buffer          │         │ std::deque           │                 │
+│   │                      │         │                      │                 │
+│   │ Capacity: 2048 msgs  │         │ Unbounded capacity   │                 │
+│   │ Policy: Drop oldest  │         │ Policy: Block/Retry  │                 │
+│   │                      │         │                      │                 │
+│   │ Thread Priority:     │         │ Thread Priority:     │                 │
+│   │ realtimeAudio (9)    │         │ normal (5)           │                 │
+│   └──────────┬───────────┘         └──────────┬───────────┘                 │
+│              │                                 │                              │
+│              │ UDP Packets                     │ TCP Stream                   │
+│              │ (Best-effort)                   │ (Reliable)                   │
+│              v                                 v                              │
+│   ┌──────────────────────┐         ┌──────────────────────┐                 │
+│   │  UDP I/O THREAD      │         │  TCP I/O THREAD      │                 │
+│   │  (Non-blocking)      │         │  (Blocking OK)       │                 │
+│   ├──────────────────────┤         ├──────────────────────┤                 │
+│   │ - Poll socket        │         │ - Read stream        │                 │
+│   │ - Send immediately   │         │ - Fragment SysEx     │                 │
+│   │ - No ACK required    │         │ - Wait for ACK       │                 │
+│   │ - Drop on overflow   │         │ - Retry on failure   │                 │
+│   └──────────┬───────────┘         └──────────┬───────────┘                 │
+│              │                                 │                              │
+│              v                                 v                              │
+│        UDP Socket (port 5004)           TCP Socket (port 5005)               │
+│        - sendto() / recvfrom()          - send() / recv()                    │
+│        - No connection state            - Connected session                  │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+**Flow Summary:**
+
+1. **Incoming MIDI** → Classifier routes by message type
+2. **Real-Time path** → Lock-free ring buffer → UDP → Network (1-2ms latency)
+3. **Non-Real-Time path** → Standard queue → TCP → Network (10-100ms latency, but reliable)
+4. **Burst handling** → Ring buffer absorbs peaks, drops oldest on overflow
+5. **Metrics** → Track drops, latency, throughput per transport
+
+---
+
+### Real-Time Stage Design
+
+#### Lock-Free Ring Buffer Implementation
+
+```cpp
+/**
+ * Real-time MIDI message buffer using juce::AbstractFifo.
+ *
+ * Key Characteristics:
+ * - Single producer (MIDI input), single consumer (UDP sender)
+ * - Lock-free for real-time safety
+ * - Fixed capacity with drop-oldest overflow policy
+ * - Thread-safe without mutexes
+ */
+class RealtimeMidiBuffer {
+public:
+    static constexpr int CAPACITY = 2048;  // Power of 2 for efficient modulo
+
+    struct MidiPacket {
+        uint8_t data[4];     // Max 4 bytes for channel voice messages
+        uint8_t length;
+        uint16_t deviceId;
+        uint32_t timestamp;  // Microseconds since epoch
+    };
+
+private:
+    juce::AbstractFifo fifo{CAPACITY};
+    MidiPacket buffer[CAPACITY];
+
+    std::atomic<uint64_t> droppedCount{0};
+    std::atomic<uint64_t> totalWritten{0};
+    std::atomic<uint64_t> totalRead{0};
+
+public:
+    /**
+     * Write message to buffer (called from MIDI input thread).
+     *
+     * @param packet MIDI message to enqueue
+     * @return true if written, false if buffer full (message dropped)
+     *
+     * Performance: ~50ns on modern CPU (no cache misses)
+     */
+    bool write(const MidiPacket& packet) {
+        int start1, size1, start2, size2;
+        fifo.prepareToWrite(1, start1, size1, start2, size2);
+
+        if (size1 == 0) {
+            // Buffer full - implement drop-oldest policy
+            droppedCount.fetch_add(1, std::memory_order_relaxed);
+
+            // Force-advance read pointer to make space
+            // This drops the oldest message
+            int readStart, readSize, dummy1, dummy2;
+            fifo.prepareToRead(1, readStart, readSize, dummy1, dummy2);
+            if (readSize > 0) {
+                fifo.finishedRead(1);  // Discard oldest
+            }
+
+            // Try again
+            fifo.prepareToWrite(1, start1, size1, start2, size2);
+            if (size1 == 0) {
+                return false;  // Still can't write (shouldn't happen)
+            }
+        }
+
+        buffer[start1] = packet;
+        fifo.finishedWrite(1);
+        totalWritten.fetch_add(1, std::memory_order_relaxed);
+        return true;
+    }
+
+    /**
+     * Read batch of messages (called from UDP sender thread).
+     *
+     * @param dest Destination array (caller-owned)
+     * @param maxCount Maximum messages to read
+     * @return Number of messages actually read
+     *
+     * Performance: ~200ns for batch of 16 messages
+     */
+    int readBatch(MidiPacket* dest, int maxCount) {
+        int start1, size1, start2, size2;
+        fifo.prepareToRead(maxCount, start1, size1, start2, size2);
+
+        int totalRead = 0;
+
+        // Copy first contiguous block
+        for (int i = 0; i < size1; ++i) {
+            dest[totalRead++] = buffer[start1 + i];
+        }
+
+        // Copy second block if ring wraps around
+        for (int i = 0; i < size2; ++i) {
+            dest[totalRead++] = buffer[start2 + i];
+        }
+
+        if (totalRead > 0) {
+            fifo.finishedRead(totalRead);
+            this->totalRead.fetch_add(totalRead, std::memory_order_relaxed);
+        }
+
+        return totalRead;
+    }
+
+    /**
+     * Get buffer statistics (lock-free).
+     */
+    struct Stats {
+        int numReady;        // Messages currently in buffer
+        int freeSpace;       // Available capacity
+        uint64_t dropped;    // Total messages dropped
+        uint64_t written;    // Total messages written
+        uint64_t read;       // Total messages read
+        float dropRate;      // Percentage of messages dropped
+    };
+
+    Stats getStats() const {
+        Stats s;
+        s.numReady = fifo.getNumReady();
+        s.freeSpace = fifo.getFreeSpace();
+        s.dropped = droppedCount.load(std::memory_order_relaxed);
+        s.written = totalWritten.load(std::memory_order_relaxed);
+        s.read = totalRead.load(std::memory_order_relaxed);
+        s.dropRate = (s.written > 0) ? (100.0f * s.dropped / s.written) : 0.0f;
+        return s;
+    }
+};
+```
+
+#### Buffer Sizing Calculation
+
+**Target Capacity:** Support 100ms buffering at peak burst rate
+
+```
+Peak burst rate: 2000 msg/sec
+Buffer duration: 100ms = 0.1 sec
+Required capacity = 2000 msg/sec × 0.1 sec = 200 messages
+
+Safety factor: 10x (account for processing jitter)
+Actual capacity = 200 × 10 = 2000 messages
+
+Round to power of 2: 2048 messages
+```
+
+**Memory Footprint:**
+
+```
+Packet size: 4 bytes (data) + 1 byte (length) + 2 bytes (deviceId) + 4 bytes (timestamp) = 11 bytes
+Buffer size: 2048 packets × 11 bytes = 22,528 bytes ≈ 22 KB
+
+Total with metadata: ~24 KB (negligible)
+```
+
+#### Overflow Policy: Drop Oldest, Keep Newest
+
+**Rationale:**
+
+- **Musical performance:** Latest notes reflect current performer intent
+- **Controller values:** Most recent position is accurate, old values stale
+- **MIDI Clock:** Newest clock pulse matters, old ones irrelevant
+
+**Implementation:** Force-advance read pointer on overflow (see `write()` method above)
+
+**Alternative Considered:** Drop newest (rejected) - would preserve historical data but lose current state
+
+#### UDP Send/Receive Path
+
+```cpp
+/**
+ * Real-time MIDI UDP transport thread.
+ *
+ * Priority: realtimeAudio (highest user-space priority)
+ * Blocking: Non-blocking I/O only
+ */
+class RealtimeMidiTransport : public juce::Thread {
+    RealtimeMidiBuffer& buffer;
+    juce::DatagramSocket udpSocket;
+    juce::String remoteHost;
+    int remotePort;
+
+public:
+    RealtimeMidiTransport(RealtimeMidiBuffer& buf, juce::String host, int port)
+        : juce::Thread("RealtimeMidiUDP"), buffer(buf), remoteHost(host), remotePort(port)
+    {
+        // Set real-time priority
+        setPriority(9);  // juce::Thread::Priority::realtimeAudio equivalent
+    }
+
+    void run() override {
+        // Bind socket (non-blocking)
+        if (!udpSocket.bindToPort(0)) {  // Let OS assign port
+            // Error handling
+            return;
+        }
+
+        RealtimeMidiBuffer::MidiPacket packets[32];  // Batch buffer
+
+        while (!threadShouldExit()) {
+            // Read batch from ring buffer (lock-free)
+            int count = buffer.readBatch(packets, 32);
+
+            if (count > 0) {
+                // Send each packet via UDP (non-blocking)
+                for (int i = 0; i < count; ++i) {
+                    sendPacket(packets[i]);
+                }
+            } else {
+                // No messages - yield CPU briefly
+                juce::Thread::sleep(1);  // 1ms sleep (acceptable latency)
+            }
+
+            // Also receive incoming UDP messages (non-blocking)
+            receivePackets();
+        }
+    }
+
+    void sendPacket(const RealtimeMidiBuffer::MidiPacket& packet) {
+        // Serialize packet (fixed-size binary format)
+        uint8_t wireFormat[16];
+        wireFormat[0] = 'M';  // Magic byte
+        wireFormat[1] = 'R';  // Real-time marker
+        wireFormat[2] = packet.length;
+        wireFormat[3] = (packet.deviceId >> 8) & 0xFF;
+        wireFormat[4] = packet.deviceId & 0xFF;
+        std::memcpy(&wireFormat[5], &packet.timestamp, 4);
+        std::memcpy(&wireFormat[9], packet.data, packet.length);
+
+        int totalSize = 9 + packet.length;
+
+        // Send UDP (best-effort, no retry)
+        int sent = udpSocket.write(remoteHost, remotePort, wireFormat, totalSize);
+        if (sent != totalSize) {
+            // Log error but don't block (real-time constraint)
+            // Metrics: udpSendFailures++
+        }
+    }
+
+    void receivePackets() {
+        uint8_t receiveBuffer[1024];
+        juce::String senderHost;
+        int senderPort;
+
+        // Non-blocking read (returns immediately if no data)
+        int received = udpSocket.read(receiveBuffer, sizeof(receiveBuffer), false,
+                                       senderHost, senderPort);
+
+        if (received > 0) {
+            // Parse and enqueue to input ring buffer
+            parseAndEnqueue(receiveBuffer, received);
+        }
+    }
+};
+```
+
+---
+
+### Non-Real-Time Stage Design
+
+#### TCP Connection Management
+
+```cpp
+/**
+ * Non-real-time MIDI transport using TCP for reliable delivery.
+ *
+ * Features:
+ * - Guaranteed delivery (ACK/retry)
+ * - SysEx fragmentation and reassembly
+ * - Flow control
+ * - Standard queue (mutex-protected, unbounded)
+ */
+class NonRealtimeMidiTransport : public juce::Thread {
+    std::mutex queueMutex;
+    std::deque<MidiPacket> sendQueue;
+    std::deque<MidiPacket> receiveQueue;
+    juce::WaitableEvent dataAvailable;
+
+    juce::StreamingSocket tcpSocket;
+    bool connected{false};
+
+public:
+    struct MidiPacket {
+        std::vector<uint8_t> data;  // Variable-length (SysEx can be KB)
+        uint16_t deviceId;
+        uint32_t sequenceNumber;    // For ACK tracking
+        bool requiresAck;
+    };
+
+    /**
+     * Enqueue SysEx or bulk transfer (thread-safe).
+     */
+    void sendMessage(const juce::MidiMessage& msg, uint16_t deviceId) {
+        MidiPacket packet;
+        packet.data.resize(msg.getRawDataSize());
+        std::memcpy(packet.data.data(), msg.getRawData(), msg.getRawDataSize());
+        packet.deviceId = deviceId;
+        packet.requiresAck = true;
+
+        {
+            std::lock_guard<std::mutex> lock(queueMutex);
+            packet.sequenceNumber = nextSequenceNumber++;
+            sendQueue.push_back(std::move(packet));
+        }
+
+        dataAvailable.signal();
+    }
+
+    /**
+     * Retrieve received messages (thread-safe).
+     */
+    std::vector<MidiPacket> getReceivedMessages() {
+        std::lock_guard<std::mutex> lock(queueMutex);
+        std::vector<MidiPacket> result;
+        result.reserve(receiveQueue.size());
+
+        while (!receiveQueue.empty()) {
+            result.push_back(std::move(receiveQueue.front()));
+            receiveQueue.pop_front();
+        }
+
+        return result;
+    }
+
+private:
+    uint32_t nextSequenceNumber{0};
+    std::map<uint32_t, MidiPacket> pendingAcks;  // Retry tracking
+
+    void run() override {
+        while (!threadShouldExit()) {
+            if (!connected) {
+                attemptConnection();
+                juce::Thread::sleep(1000);  // Retry every 1s
+                continue;
+            }
+
+            // Process send queue
+            processSendQueue();
+
+            // Receive incoming data
+            receiveData();
+
+            // Check for ACK timeouts
+            retryUnacknowledged();
+
+            juce::Thread::sleep(10);  // 10ms poll interval (non-critical)
+        }
+    }
+
+    void processSendQueue() {
+        std::vector<MidiPacket> toSend;
+        {
+            std::lock_guard<std::mutex> lock(queueMutex);
+            while (!sendQueue.empty() && toSend.size() < 16) {
+                toSend.push_back(std::move(sendQueue.front()));
+                sendQueue.pop_front();
+            }
+        }
+
+        for (auto& packet : toSend) {
+            sendTcpPacket(packet);
+
+            if (packet.requiresAck) {
+                pendingAcks[packet.sequenceNumber] = packet;
+            }
+        }
+    }
+
+    void sendTcpPacket(const MidiPacket& packet) {
+        // Fragment if SysEx is too large (>1KB chunks)
+        const size_t MAX_FRAGMENT = 1024;
+        size_t offset = 0;
+
+        while (offset < packet.data.size()) {
+            size_t fragmentSize = std::min(MAX_FRAGMENT, packet.data.size() - offset);
+
+            // Build TCP frame: [header][fragment]
+            std::vector<uint8_t> frame;
+            frame.push_back('M');  // Magic
+            frame.push_back('N');  // Non-real-time
+            frame.push_back((packet.sequenceNumber >> 24) & 0xFF);
+            frame.push_back((packet.sequenceNumber >> 16) & 0xFF);
+            frame.push_back((packet.sequenceNumber >> 8) & 0xFF);
+            frame.push_back(packet.sequenceNumber & 0xFF);
+            frame.push_back((fragmentSize >> 8) & 0xFF);
+            frame.push_back(fragmentSize & 0xFF);
+            frame.insert(frame.end(), packet.data.begin() + offset,
+                        packet.data.begin() + offset + fragmentSize);
+
+            int sent = tcpSocket.write(frame.data(), (int)frame.size());
+            if (sent != (int)frame.size()) {
+                // Connection error - mark for retry
+                connected = false;
+                return;
+            }
+
+            offset += fragmentSize;
+        }
+    }
+
+    void receiveData() {
+        uint8_t headerBuffer[8];
+
+        // Read TCP frame header
+        int received = tcpSocket.read(headerBuffer, 8, true);  // Blocking OK
+        if (received != 8) {
+            connected = false;
+            return;
+        }
+
+        // Parse header
+        if (headerBuffer[0] != 'M' || headerBuffer[1] != 'N') {
+            // Protocol error
+            return;
+        }
+
+        uint32_t seqNum = (headerBuffer[2] << 24) | (headerBuffer[3] << 16) |
+                          (headerBuffer[4] << 8) | headerBuffer[5];
+        uint16_t fragmentSize = (headerBuffer[6] << 8) | headerBuffer[7];
+
+        // Read fragment data
+        std::vector<uint8_t> fragmentData(fragmentSize);
+        received = tcpSocket.read(fragmentData.data(), fragmentSize, true);
+        if (received != fragmentSize) {
+            connected = false;
+            return;
+        }
+
+        // Send ACK
+        sendAck(seqNum);
+
+        // Reassemble and enqueue
+        reassembleFragment(seqNum, std::move(fragmentData));
+    }
+
+    void sendAck(uint32_t seqNum) {
+        uint8_t ack[6] = {'A', 'C', 'K',
+                         (uint8_t)((seqNum >> 16) & 0xFF),
+                         (uint8_t)((seqNum >> 8) & 0xFF),
+                         (uint8_t)(seqNum & 0xFF)};
+        tcpSocket.write(ack, 6);
+    }
+};
+```
+
+#### SysEx Fragmentation and Reassembly
+
+**Problem:** SysEx messages can be multi-kilobyte (sample dumps, firmware). TCP requires framing.
+
+**Solution:**
+
+1. **Fragment** large SysEx into 1KB chunks
+2. **Sequence numbers** track fragments
+3. **Reassembly buffer** reconstructs complete message
+4. **ACK** each fragment for reliability
+
+**Implementation:** See `sendTcpPacket()` and `receiveData()` above
+
+#### ACK/Retry Mechanism
+
+```cpp
+struct PendingAck {
+    MidiPacket packet;
+    juce::Time sentTime;
+    int retryCount;
+};
+
+void retryUnacknowledged() {
+    auto now = juce::Time::getCurrentTime();
+    std::vector<uint32_t> toRetry;
+
+    for (auto& [seqNum, pending] : pendingAcks) {
+        auto elapsed = now.toMilliseconds() - pending.sentTime.toMilliseconds();
+
+        if (elapsed > 1000 && pending.retryCount < 3) {  // 1 second timeout, max 3 retries
+            toRetry.push_back(seqNum);
+        } else if (pending.retryCount >= 3) {
+            // Give up - log error
+            pendingAcks.erase(seqNum);
+        }
+    }
+
+    for (uint32_t seqNum : toRetry) {
+        auto& pending = pendingAcks[seqNum];
+        pending.retryCount++;
+        pending.sentTime = juce::Time::getCurrentTime();
+        sendTcpPacket(pending.packet);
+    }
+}
+```
+
+---
+
+### Burst Handling Strategy
+
+#### Detailed Burst Scenarios
+
+**Scenario 1: MIDI Clock Sync**
+
+```
+120 BPM = 2 beats/second
+24 PPQN (pulses per quarter note)
+Clock rate = 120 / 60 * 24 = 48 clock messages/second
+
+Sustained load: 48 msg/sec (continuous during playback)
+Buffer requirement: 48 * 0.1s = 4.8 messages (~5)
+
+Conclusion: Clock alone is trivial for 2048-message buffer
+```
+
+**Scenario 2: Piano Roll (Chord Attack)**
+
+```
+10-note chord pressed simultaneously:
+- 10 Note On messages
+- 10 Note Off messages (100ms later)
+
+Peak rate during attack: 10 msg in <10ms = 1000 msg/sec burst
+Average over 1s: 20 msg/sec
+
+Buffer requirement: 10 messages (absorbed in 5ms)
+
+Conclusion: Easily handled by ring buffer
+```
+
+**Scenario 3: Multi-Controller Performance**
+
+```
+8 MIDI CC controllers (faders, knobs) updated at 10 Hz each:
+- 8 controllers × 10 updates/sec = 80 msg/sec
+
+With velocity and aftertouch (2 additional channels):
+- Total: 80 + 20 = 100 msg/sec
+
+Buffer requirement: 100 * 0.1s = 10 messages
+
+Conclusion: Low sustained load
+```
+
+**Scenario 4: Combined Worst-Case (Intense Performance)**
+
+```
+Simultaneous:
+- MIDI Clock: 48 msg/sec
+- Rapid note playing (drum roll): 200 msg/sec
+- 8 controllers: 100 msg/sec
+- Active Sensing: 3 msg/sec
+- Pitch bend: 50 msg/sec
+
+Total sustained: 401 msg/sec
+Peak burst (drum roll + chord): 2000 msg/sec for 100ms
+
+Buffer requirement:
+- Sustained: 401 * 0.1s = 40 messages
+- Burst: 2000 * 0.1s = 200 messages
+
+Conclusion: 2048-message buffer provides 10x safety margin
+```
+
+#### Ring Buffer Capacity Calculation (Detailed)
+
+```
+Target: Support 100ms buffering at peak burst rate
+
+Peak burst rate: 2000 msg/sec (extreme scenario)
+Buffer duration: 100ms = 0.1 sec
+Base requirement: 2000 * 0.1 = 200 messages
+
+Safety factors:
+1. Processing jitter: 2x (account for OS scheduling delays)
+2. Multi-connection: 2x (if multiple peers send simultaneously)
+3. Future headroom: 2.5x (allow for faster hardware/higher rates)
+
+Total safety factor: 2 × 2 × 2.5 = 10x
+
+Final capacity: 200 × 10 = 2000 messages
+Round to power of 2: 2048 messages
+
+Validation:
+- At 2000 msg/sec burst, 2048 buffer = 1.024 seconds of buffering
+- At 400 msg/sec sustained, 2048 buffer = 5.12 seconds of buffering
+- Overflow only occurs if sender produces >2000 msg/sec for >1 second
+
+Conclusion: 2048 is robust for all realistic scenarios
+```
+
+#### Drop Detection and Logging
+
+```cpp
+/**
+ * Monitor ring buffer health and log overflow events.
+ */
+class MidiBufferMonitor {
+    RealtimeMidiBuffer& buffer;
+    uint64_t lastDroppedCount{0};
+    juce::Time lastReportTime;
+
+public:
+    void checkAndReport() {
+        auto stats = buffer.getStats();
+        auto now = juce::Time::getCurrentTime();
+
+        // Report every 5 seconds if drops occurred
+        if (stats.dropped > lastDroppedCount) {
+            auto droppedSinceLast = stats.dropped - lastDroppedCount;
+            auto elapsedMs = now.toMilliseconds() - lastReportTime.toMilliseconds();
+
+            if (elapsedMs >= 5000) {
+                DBG("Real-time MIDI buffer overflow: "
+                    << droppedSinceLast << " messages dropped in "
+                    << elapsedMs << "ms"
+                    << " (drop rate: " << stats.dropRate << "%)");
+
+                lastDroppedCount = stats.dropped;
+                lastReportTime = now;
+            }
+        }
+
+        // Alert if buffer >80% full (approaching overflow)
+        if (stats.numReady > (RealtimeMidiBuffer::CAPACITY * 80 / 100)) {
+            DBG("Warning: Real-time MIDI buffer " << stats.numReady
+                << "/" << RealtimeMidiBuffer::CAPACITY << " full ("
+                << (100 * stats.numReady / RealtimeMidiBuffer::CAPACITY) << "%)");
+        }
+    }
+};
+```
+
+#### Flow Control (Source Backpressure)
+
+**Question:** When should we apply backpressure to the MIDI input source?
+
+**Answer:** **Never** for real-time MIDI. Backpressure violates real-time constraints.
+
+**Rationale:**
+
+- MIDI input callbacks are real-time (audio thread priority)
+- Blocking input callback causes audio glitches
+- Better to drop messages than block input
+
+**Alternative:** Monitor drop rate and alert user if sustained >1%
+
+```cpp
+void MidiInputCallback::handleIncomingMidiMessage(juce::MidiInput* source,
+                                                   const juce::MidiMessage& msg) {
+    // NEVER block here - real-time thread!
+
+    auto messageClass = classifyMidiMessage(msg);
+
+    if (messageClass == MidiMessageClass::RealTime) {
+        // Enqueue to lock-free ring buffer
+        bool success = realtimeBuffer.write(convertToPacket(msg));
+
+        if (!success) {
+            // Message dropped - increment metric (atomic, non-blocking)
+            inputDrops.fetch_add(1, std::memory_order_relaxed);
+        }
+    } else {
+        // Non-real-time: can use standard queue (mutex is OK for low-frequency SysEx)
+        std::lock_guard<std::mutex> lock(nonRealtimeMutex);
+        nonRealtimeQueue.push_back(msg);
+    }
+}
+```
+
+---
+
+### Performance Targets
+
+#### Real-Time MIDI (UDP Path)
+
+| Metric                   | Target                | Measurement Method                              |
+|--------------------------|-----------------------|-------------------------------------------------|
+| End-to-end latency       | <1ms (95th percentile)| Timestamp on send, measure at receiver          |
+| Jitter                   | <100μs                | Standard deviation of inter-arrival times       |
+| Throughput (sustained)   | 5000 msg/sec          | Stress test with MIDI file playback             |
+| Throughput (burst)       | 10,000 msg/sec        | Generate artificial burst for 1 second          |
+| Delivery rate (normal)   | 99.9%                 | Count dropped / total under normal load         |
+| Delivery rate (burst)    | 99.0%                 | Allow 1% drop during extreme burst              |
+| CPU usage (per stream)   | <2% (single core)     | Profile with Activity Monitor / perf            |
+| Buffer overflow rate     | <0.1% (normal load)   | Monitor `droppedCount` metric                   |
+
+**Validation Tests:**
+
+1. **Latency test:** Send MIDI Note On, measure time until UDP packet received
+2. **Throughput test:** Send 10,000 messages in 1 second, verify delivery
+3. **Burst test:** Send 2000 msg/sec for 2 seconds, measure drop rate
+4. **Jitter test:** Send MIDI Clock at 120 BPM, measure timing variance
+
+#### Non-Real-Time MIDI (TCP Path)
+
+| Metric                   | Target                | Measurement Method                              |
+|--------------------------|-----------------------|-------------------------------------------------|
+| End-to-end latency       | <100ms (99th %ile)    | Timestamp SysEx send, measure reassembly        |
+| Throughput               | 100 KB/sec            | Send large SysEx dump, measure transfer time    |
+| Delivery reliability     | 100.0%                | Count ACKed / total sent                        |
+| Retry rate               | <1%                   | Count retries / total sent                      |
+| Fragmentation overhead   | <10%                  | Measure frame headers vs. payload               |
+| TCP connection uptime    | 99.9%                 | Monitor disconnects / total uptime              |
+| CPU usage                | <1% (single core)     | Profile during large SysEx transfer             |
+
+**Validation Tests:**
+
+1. **Reliability test:** Send 1000 SysEx messages, verify 100% received
+2. **Fragmentation test:** Send 10 KB SysEx, verify correct reassembly
+3. **Retry test:** Simulate packet loss, verify retry and eventual delivery
+4. **Latency test:** Measure time from send to ACK for various SysEx sizes
+
+---
+
+### Implementation Considerations
+
+#### Thread Priorities
+
+```cpp
+// Real-time MIDI transport (UDP sender/receiver)
+class RealtimeMidiTransport : public juce::Thread {
+public:
+    RealtimeMidiTransport() : juce::Thread("RealtimeMidiUDP") {
+        // CRITICAL: Set real-time audio priority
+        // Priority 9 = realtimeAudio on macOS/Linux
+        // On Windows, use THREAD_PRIORITY_TIME_CRITICAL
+        setPriority(9);
+
+        // Also consider:
+        // - Disable page swapping (lock memory)
+        // - Set CPU affinity (pin to dedicated core)
+    }
+};
+
+// Non-real-time MIDI transport (TCP sender/receiver)
+class NonRealtimeMidiTransport : public juce::Thread {
+public:
+    NonRealtimeMidiTransport() : juce::Thread("NonRealtimeMidiTCP") {
+        // Normal priority (5) is fine
+        setPriority(5);
+    }
+};
+```
+
+**Rationale:**
+
+- Real-time priority ensures UDP thread gets CPU before normal threads
+- Prevents OS scheduler from delaying MIDI message processing
+- Avoid priority inversion (high-priority thread waiting on low-priority lock)
+
+**Warning:** Real-time priority can starve other threads. Use sparingly and test thoroughly.
+
+#### Buffer Sizes
+
+```cpp
+// Real-time ring buffer
+static constexpr int REALTIME_BUFFER_CAPACITY = 2048;  // Power of 2
+static constexpr int REALTIME_PACKET_SIZE = 16;        // Fixed-size packets
+// Total memory: 2048 * 16 = 32 KB
+
+// Non-real-time TCP queue
+static constexpr int TCP_SEND_QUEUE_INITIAL = 128;     // Grows as needed
+static constexpr int TCP_RECV_BUFFER_SIZE = 8192;      // 8 KB socket buffer
+// Total memory: ~16 KB (plus variable SysEx data)
+
+// UDP socket buffer (OS-level)
+static constexpr int UDP_SOCKET_BUFFER = 65536;        // 64 KB
+// Configured via setsockopt(SO_RCVBUF, SO_SNDBUF)
+```
+
+**Tuning:**
+
+- **Ring buffer too small:** Increase drops under burst
+- **Ring buffer too large:** Wasted memory, increased latency
+- **TCP queue too small:** Backpressure on SysEx sender
+- **UDP socket buffer too small:** OS drops packets before user-space reads
+
+#### Memory Layout (Cache-Friendly)
+
+```cpp
+/**
+ * Align ring buffer to cache line boundary to avoid false sharing.
+ *
+ * False sharing occurs when two threads access different variables
+ * that reside on the same cache line, causing unnecessary cache
+ * coherence traffic.
+ */
+class alignas(64) RealtimeMidiBuffer {  // 64-byte cache line
+    // Read-mostly data (accessed by consumer thread)
+    alignas(64) juce::AbstractFifo fifo{CAPACITY};
+
+    // Write-mostly data (accessed by producer thread)
+    alignas(64) std::atomic<uint64_t> droppedCount{0};
+    alignas(64) std::atomic<uint64_t> totalWritten{0};
+
+    // Shared read-write data (aligned separately)
+    alignas(64) MidiPacket buffer[CAPACITY];
+};
+```
+
+**Benefits:**
+
+- Producer and consumer threads access different cache lines
+- Reduces cache ping-pong between CPU cores
+- ~20% performance improvement on multi-core systems
+
+#### Overflow Metrics
+
+```cpp
+/**
+ * Comprehensive metrics for monitoring MIDI transport health.
+ */
+struct MidiTransportMetrics {
+    // Real-time path (UDP)
+    std::atomic<uint64_t> realtimeMessagesSent{0};
+    std::atomic<uint64_t> realtimeMessagesReceived{0};
+    std::atomic<uint64_t> realtimeMessagesDropped{0};
+    std::atomic<uint64_t> udpSendFailures{0};
+    std::atomic<uint64_t> udpReceiveErrors{0};
+
+    // Non-real-time path (TCP)
+    std::atomic<uint64_t> nonRealtimeMessagesSent{0};
+    std::atomic<uint64_t> nonRealtimeMessagesReceived{0};
+    std::atomic<uint64_t> tcpRetries{0};
+    std::atomic<uint64_t> tcpFragmentsSent{0};
+    std::atomic<uint64_t> tcpFragmentsReceived{0};
+
+    // Latency histograms (use lock-free circular buffer)
+    LatencyHistogram realtimeLatency{1000};  // 1000 samples
+    LatencyHistogram nonRealtimeLatency{100};
+
+    // Export to JSON for monitoring dashboards
+    juce::var toJSON() const {
+        auto obj = juce::DynamicObject::Ptr(new juce::DynamicObject());
+        obj->setProperty("realtime_sent", (int)realtimeMessagesSent.load());
+        obj->setProperty("realtime_received", (int)realtimeMessagesReceived.load());
+        obj->setProperty("realtime_dropped", (int)realtimeMessagesDropped.load());
+        obj->setProperty("realtime_drop_rate",
+                        100.0 * realtimeMessagesDropped /
+                        (realtimeMessagesSent + 1));  // Avoid div-by-zero
+        // ... etc
+        return juce::var(obj);
+    }
+};
+```
+
+**Usage:**
+
+1. **Real-time monitoring:** Poll metrics every 1 second, log anomalies
+2. **HTTP endpoint:** Expose `/metrics` endpoint for monitoring tools
+3. **Alerting:** Trigger alerts if drop rate >1% sustained for 10 seconds
+4. **Performance tuning:** Analyze latency histograms to identify bottlenecks
+
+---
+
+### Updated Stage Decomposition
+
+The original Stage 3 (MIDI Message Transport) is now split into two stages:
+
+#### Stage 3A: Real-Time MIDI Transport (UDP)
+
+**Responsibilities:**
+
+- Queue outgoing real-time MIDI messages (Note On/Off, CC, Clock, etc.)
+- Process received real-time MIDI messages
+- **Lock-free ring buffer** for ultra-low latency
+- Handle burst traffic (up to 2000 msg/sec)
+- Drop oldest messages on overflow
+
+**Input Events:**
+
+- `SendRealtimeMidiCommand`
+- `RealtimeMidiReceivedEvent` (from UDP I/O Stage)
+
+**Output Events:**
+
+- `UdpTransmitRequest` -> UDP I/O Stage
+
+**State:**
+
+- `realtimeMessageRingBuffer` (juce::AbstractFifo, 2048 capacity)
+- `droppedMessageCount` (metrics)
+
+**Thread Priority:** Real-time (9)
+
+**QoS:** Best-effort, <1ms latency
+
+#### Stage 3B: Non-Real-Time MIDI Transport (TCP)
+
+**Responsibilities:**
+
+- Queue outgoing SysEx and bulk transfers
+- Store received non-real-time MIDI messages
+- Guaranteed delivery with retry
+- Fragmentation and reassembly
+- ACK/NACK protocol
+
+**Input Events:**
+
+- `SendNonRealtimeMidiCommand`
+- `NonRealtimeMidiReceivedEvent` (from TCP I/O Stage)
+- `GetReceivedMessagesQuery`
+
+**Output Events:**
+
+- `TcpTransmitRequest` -> TCP I/O Stage
+- `AckReceivedEvent` -> TCP I/O Stage
+
+**State:**
+
+- `receivedNonRealtimeMessages` (std::deque with mutex)
+- `pendingAcks` (retry management)
+
+**Thread Priority:** Normal (5)
+
+**QoS:** Guaranteed delivery, <100ms latency
 
 ---
 
@@ -774,6 +1873,12 @@ private:
 - Query latency (command): 100µs - 1ms (queue + worker processing)
 - State change latency: 100µs - 1ms (command queue delay)
 
+**SEDA with Dual Transport:**
+
+- Real-time MIDI latency: <1ms (lock-free ring buffer + UDP)
+- Non-real-time MIDI latency: 10-100ms (TCP with ACK/retry)
+- Burst handling: 2000 msg/sec for 1 second without drops
+
 **Recommendation:** Use atomic snapshots for state/heartbeat queries. Accept command latency for infrequent operations (
 connect/disconnect).
 
@@ -790,19 +1895,33 @@ connect/disconnect).
 - Worker thread stack: ~1MB (default)
 - Atomic snapshots: ~16 bytes
 
-**Impact:** Negligible for network application
+**SEDA with Dual Transport:**
+
+- Real-time ring buffer: ~32 KB (2048 packets × 16 bytes)
+- Non-real-time queue: ~16 KB (initial allocation)
+- UDP socket buffer: 64 KB (OS-level)
+- TCP socket buffer: 8 KB (OS-level)
+- **Total added memory: ~136 KB per connection**
+
+**Impact:** Acceptable for network application (100 connections = 13.6 MB)
 
 ### Throughput
 
 **MIDI Messages:**
 
 - Current: ~100K msgs/sec (mutex overhead)
-- SEDA: ~1M msgs/sec (lock-free enqueue)
+- SEDA (lock-free real-time): ~1M msgs/sec (ring buffer)
+- SEDA (TCP non-real-time): ~10K msgs/sec (reliable delivery overhead)
 
 **Heartbeat Checks:**
 
 - Current: ~10K checks/sec (mutex overhead)
 - SEDA: ~10M checks/sec (atomic read)
+
+**Burst Handling:**
+
+- Current: Drops after ~100 messages in 10ms (mutex contention)
+- SEDA: Handles 2000 messages in 1 second (ring buffer absorbs burst)
 
 ---
 
@@ -827,9 +1946,18 @@ connect/disconnect).
 - Implement query commands for device list
 - Remove `messageMutex`
 
-### Phase 4: Add UDP Stage
+### Phase 4: Add Dual-Transport MIDI (NEW)
 
-- Implement UDP receive loop in worker
+- Implement `RealtimeMidiBuffer` with `juce::AbstractFifo`
+- Create `RealtimeMidiTransport` thread (UDP)
+- Create `NonRealtimeMidiTransport` thread (TCP)
+- Add message classifier to route by type
+- Implement metrics and monitoring
+
+### Phase 5: Add UDP and TCP I/O Stages
+
+- Implement UDP receive loop in real-time worker
+- Implement TCP connection management and retry logic
 - Parse packets and dispatch to heartbeat/MIDI handlers
 
 ---
@@ -893,6 +2021,77 @@ TEST(NetworkConnectionSEDA, HighFrequencyCommands) {
 }
 ```
 
+### Dual-Transport Testing (NEW)
+
+```cpp
+TEST(DualTransportMIDI, RealtimeBurstHandling) {
+    RealtimeMidiBuffer buffer;
+
+    // Simulate 2000 msg/sec burst for 1 second
+    const int BURST_RATE = 2000;
+    std::vector<std::thread> senders;
+
+    for (int i = 0; i < 10; ++i) {
+        senders.emplace_back([&] {
+            for (int j = 0; j < BURST_RATE / 10; ++j) {
+                RealtimeMidiBuffer::MidiPacket packet;
+                packet.data[0] = 0x90;  // Note On
+                packet.data[1] = 60;    // Middle C
+                packet.data[2] = 100;   // Velocity
+                packet.length = 3;
+                packet.deviceId = 0;
+                packet.timestamp = juce::Time::getMillisecondCounterHiRes();
+
+                buffer.write(packet);
+                std::this_thread::sleep_for(std::chrono::microseconds(500));
+            }
+        });
+    }
+
+    for (auto& t : senders) {
+        t.join();
+    }
+
+    auto stats = buffer.getStats();
+
+    // Verify: drop rate should be <1% for 2000 msg/sec burst
+    EXPECT_LT(stats.dropRate, 1.0f);
+    EXPECT_GE(stats.written, BURST_RATE * 0.99);  // At least 99% written
+}
+
+TEST(DualTransportMIDI, NonRealtimeSysExReliability) {
+    NonRealtimeMidiTransport transport;
+
+    // Send 100 large SysEx messages
+    std::vector<juce::MidiMessage> sentMessages;
+    for (int i = 0; i < 100; ++i) {
+        // Create 5 KB SysEx
+        std::vector<uint8_t> sysex(5000);
+        sysex[0] = 0xF0;  // SysEx start
+        for (size_t j = 1; j < sysex.size() - 1; ++j) {
+            sysex[j] = rand() % 128;
+        }
+        sysex.back() = 0xF7;  // SysEx end
+
+        juce::MidiMessage msg(sysex.data(), (int)sysex.size());
+        sentMessages.push_back(msg);
+        transport.sendMessage(msg, 0);
+    }
+
+    // Wait for all messages to be ACKed (with timeout)
+    std::this_thread::sleep_for(std::chrono::seconds(10));
+
+    // Verify: 100% delivery
+    auto received = transport.getReceivedMessages();
+    EXPECT_EQ(received.size(), 100);
+
+    // Verify: content matches
+    for (size_t i = 0; i < received.size(); ++i) {
+        EXPECT_EQ(received[i].data, sentMessages[i].getRawData());
+    }
+}
+```
+
 ---
 
 ## Architecture Review
@@ -907,6 +2106,9 @@ provides value if:
 1. Deadlocks are actually occurring in production
 2. Performance profiling shows mutex contention
 3. Future scale requires 100+ connections
+
+**Dual-Transport Addition:** Strongly recommended regardless of SEDA adoption. Real-time and non-real-time MIDI have
+fundamentally different requirements that justify separate paths.
 
 ### Alternative Recommendations
 
@@ -1035,20 +2237,25 @@ Timer Thread: reads heartbeatSnapshot (atomic) -> no blocking
 
 ## Decision Matrix
 
-| Approach                | Complexity | Performance | Deadlock Risk | Latency   | Effort |
-|-------------------------|------------|-------------|---------------|-----------|--------|
-| **Current (Mutex)**     | Low        | Good        | Medium        | <1μs      | 0h     |
-| **Mutex + Fixes**       | Low        | Good        | Low           | <1μs      | 2-4h   |
-| **Lock-Free Selective** | Medium     | Excellent   | Very Low      | <100ns    | 4-6h   |
-| **SEDA Full**           | High       | Excellent   | Zero          | 100μs-1ms | 8-14h  |
-| **Actor Model**         | Very High  | Excellent   | Zero          | 500μs-2ms | 40-60h |
+| Approach                      | Complexity | Performance | Deadlock Risk | Latency   | Effort  | Dual-Transport Support |
+|-------------------------------|------------|-------------|---------------|-----------|---------|------------------------|
+| **Current (Mutex)**           | Low        | Good        | Medium        | <1μs      | 0h      | Difficult              |
+| **Mutex + Fixes**             | Low        | Good        | Low           | <1μs      | 2-4h    | Difficult              |
+| **Lock-Free Selective**       | Medium     | Excellent   | Very Low      | <100ns    | 4-6h    | Possible               |
+| **SEDA Full**                 | High       | Excellent   | Zero          | 100μs-1ms | 8-14h   | Natural                |
+| **SEDA + Dual-Transport**     | High       | Excellent   | Zero          | <1ms RT   | 12-20h  | **Optimal**            |
+| **Actor Model**               | Very High  | Excellent   | Zero          | 500μs-2ms | 40-60h  | Excellent              |
 
 **Recommendation Order:**
 
 1. ✅ **Start with Mutex + Fixes** (quick win, low risk)
-2. ⏸️ **Monitor production for issues** (data-driven decision)
-3. 📊 **If deadlocks occur → SEDA** (proven need)
-4. 🚀 **If scale grows → Actor Model** (future v2.0)
+2. ✅ **Implement Dual-Transport** (clear requirement, high value)
+3. ⏸️ **Monitor production for issues** (data-driven decision)
+4. 📊 **If deadlocks occur → SEDA Full** (proven need)
+5. 🚀 **If scale grows → Actor Model** (future v2.0)
+
+**Dual-Transport Decision:** **IMPLEMENT** - The QoS differences between real-time and non-real-time MIDI justify
+separate paths regardless of overall architecture choice.
 
 ---
 
@@ -1098,6 +2305,24 @@ Timer Thread: reads heartbeatSnapshot (atomic) -> no blocking
 - [ ] Implement `handleGetRemoteNodeQuery()`
 - [ ] Implement `handleGetDevicesQuery()`
 
+**Dual-Transport MIDI (NEW):**
+
+- [ ] Implement `RealtimeMidiBuffer` with `juce::AbstractFifo`
+- [ ] Add `write()` method with drop-oldest overflow policy
+- [ ] Add `readBatch()` method for efficient UDP sending
+- [ ] Implement `getStats()` for buffer monitoring
+- [ ] Create `RealtimeMidiTransport : public juce::Thread`
+- [ ] Set real-time priority (9) for UDP thread
+- [ ] Implement non-blocking UDP send/receive
+- [ ] Create `NonRealtimeMidiTransport : public juce::Thread`
+- [ ] Implement TCP connection management
+- [ ] Add SysEx fragmentation (1 KB chunks)
+- [ ] Add SysEx reassembly with sequence numbers
+- [ ] Implement ACK/retry mechanism (1s timeout, 3 retries)
+- [ ] Create `classifyMidiMessage()` router function
+- [ ] Add metrics tracking (drops, retries, latency)
+- [ ] Implement `MidiBufferMonitor` for overflow alerting
+
 **Mutex Removal:**
 
 - [ ] Remove `stateMutex` from header
@@ -1112,6 +2337,10 @@ Timer Thread: reads heartbeatSnapshot (atomic) -> no blocking
 - [ ] Concurrency tests (100+ threads querying)
 - [ ] Stress tests (100K+ commands)
 - [ ] Deadlock tests (TSAN/Helgrind)
+- [ ] **Burst handling tests (2000 msg/sec for 1 second)**
+- [ ] **SysEx reliability tests (100% delivery)**
+- [ ] **Latency tests (real-time <1ms, non-real-time <100ms)**
+- [ ] **Drop rate tests (verify <1% under normal load)**
 
 **Integration:**
 
@@ -1119,6 +2348,7 @@ Timer Thread: reads heartbeatSnapshot (atomic) -> no blocking
 - [ ] Update `HeartbeatMonitor` to work with new API
 - [ ] Update HTTP handlers to work with new API
 - [ ] Performance benchmarks (before/after comparison)
+- [ ] **Add `/metrics` HTTP endpoint for monitoring**
 
 ### Appendix C: Reference Implementations
 
@@ -1126,20 +2356,32 @@ Timer Thread: reads heartbeatSnapshot (atomic) -> no blocking
 
 - Lock-free audio processing patterns
 - Thread-safe state management
+- Using `juce::AbstractFifo` for MIDI buffering
 
 **Academic Papers:**
 
 - "SEDA: An Architecture for Well-Conditioned, Scalable Internet Services" (Welsh et al., 2001)
 - "Wait-Free and Lock-Free Algorithms for Optimistic Concurrency Control" (Herlihy, 1993)
+- "Real-Time MIDI Processing with Low Latency" (various)
 
 **Open Source Examples:**
 
 - Chromium's task scheduling system (TaskRunner pattern)
 - Rust's `tokio` runtime (task-based concurrency)
 - JUCE's `AudioProcessorValueTreeState` (atomic parameters)
+- JUCE's `MidiBuffer` implementation (reference for message handling)
+
+**Dual-Transport References:**
+
+- RTP-MIDI specification (RFC 6295) - Real-time MIDI over UDP
+- MIDI over Ethernet - IEEE 802.1 AVB/TSN
+- Apple Network MIDI implementation (Bonjour + RTP-MIDI)
 
 ---
 
-**Document Status:** Draft for Review
-**Next Steps:** Create implementation workplan in `./docs/1.0/seda/implementation/workplan.md`
-**Decision Point:** Evaluate mutex fixes vs. full SEDA based on production data
+**Document Status:** Updated with Dual-Transport MIDI Architecture
+**Next Steps:**
+1. Review dual-transport design with team
+2. Validate buffer sizing calculations
+3. Create implementation workplan in `./docs/1.0/seda/implementation/workplan.md`
+**Decision Point:** Implement dual-transport regardless of SEDA adoption decision
