@@ -123,7 +123,7 @@ export class LaunchControlXL3Converter implements CanonicalConverterInterface {
 
     const currentDate = new Date().toISOString().split('T')[0];
 
-    return {
+    const map: CanonicalMidiMap = {
       version: '1.0.0',
       device: {
         manufacturer: 'Novation',
@@ -133,13 +133,25 @@ export class LaunchControlXL3Converter implements CanonicalConverterInterface {
       metadata: {
         name: config.name,
         description: `Converted from LCXL3 custom mode: ${config.name}`,
-        date: currentDate,
-        tags: ['launch-control-xl3', 'auto-generated'],
+        tags: ['launch-control-xl3', 'auto-generated'] as string[],
       },
-      plugin: options.pluginInfo,
-      midi_channel: options.midiChannel,
       controls: this.mapControls(config.controls, options),
     };
+
+    // Add optional date if it exists
+    if (currentDate) {
+      map.metadata.date = currentDate;
+    }
+
+    // Add optional properties only if they exist
+    if (options.pluginInfo !== undefined) {
+      map.plugin = options.pluginInfo;
+    }
+    if (options.midiChannel !== undefined) {
+      map.midi_channel = options.midiChannel;
+    }
+
+    return map;
   }
 
   /**

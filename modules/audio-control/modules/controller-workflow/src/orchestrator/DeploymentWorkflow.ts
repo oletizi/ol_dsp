@@ -213,11 +213,17 @@ export class DeploymentWorkflow extends EventEmitter {
 
         try {
           // Build deployment options with proper type safety
-          const deploymentOptions = {
-            autoInstall: options.autoInstall ?? undefined,
-            outputPath: options.outputDir ? join(options.outputDir, target) : undefined,
-            dryRun: options.dryRun ?? undefined,
-          };
+          const deploymentOptions: any = {};
+
+          if (options.autoInstall !== undefined) {
+            deploymentOptions.autoInstall = options.autoInstall;
+          }
+          if (options.outputDir !== undefined) {
+            deploymentOptions.outputPath = join(options.outputDir, target);
+          }
+          if (options.dryRun !== undefined) {
+            deploymentOptions.dryRun = options.dryRun;
+          }
 
           const deploymentResult = await deployer.deploy(canonicalMap, deploymentOptions);
           deployments.push(deploymentResult);
@@ -248,27 +254,47 @@ export class DeploymentWorkflow extends EventEmitter {
         this.emitProgress(4, `Deployments completed with ${errors.length} error(s)`);
       }
 
-      return {
+      const result: WorkflowResult = {
         success: allDeploymentsSucceeded && errors.length === 0,
-        controllerConfig,
-        canonicalMap,
-        canonicalPath: canonicalPath ?? undefined,
         deployments,
         errors,
       };
+
+      // Only include optional properties if they exist
+      if (controllerConfig !== undefined) {
+        result.controllerConfig = controllerConfig;
+      }
+      if (canonicalMap !== undefined) {
+        result.canonicalMap = canonicalMap;
+      }
+      if (canonicalPath !== undefined) {
+        result.canonicalPath = canonicalPath;
+      }
+
+      return result;
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Unknown workflow error';
       errors.push(errorMsg);
       this.emit('error', new Error(errorMsg));
 
-      return {
+      const result: WorkflowResult = {
         success: false,
-        controllerConfig: controllerConfig ?? undefined,
-        canonicalMap: canonicalMap ?? undefined,
-        canonicalPath: canonicalPath ?? undefined,
         deployments,
         errors,
       };
+
+      // Only include optional properties if they exist
+      if (controllerConfig !== undefined) {
+        result.controllerConfig = controllerConfig;
+      }
+      if (canonicalMap !== undefined) {
+        result.canonicalMap = canonicalMap;
+      }
+      if (canonicalPath !== undefined) {
+        result.canonicalPath = canonicalPath;
+      }
+
+      return result;
     }
   }
 
@@ -390,10 +416,16 @@ export class DeploymentWorkflow extends EventEmitter {
 
     // Build conversion options with proper type safety for exactOptionalPropertyTypes
     const conversionOptions: ConversionOptions = {
-      pluginInfo: options.pluginInfo ?? undefined,
-      midiChannel: options.midiChannel ?? undefined,
       preserveLabels: options.preserveLabels ?? false,
     };
+
+    // Only add optional properties if they exist
+    if (options.pluginInfo !== undefined) {
+      conversionOptions.pluginInfo = options.pluginInfo;
+    }
+    if (options.midiChannel !== undefined) {
+      conversionOptions.midiChannel = options.midiChannel;
+    }
 
     return this.converter.convert(config, conversionOptions);
   }

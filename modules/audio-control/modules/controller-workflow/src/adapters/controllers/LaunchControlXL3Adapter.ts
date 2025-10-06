@@ -90,11 +90,15 @@ export class LaunchControlXL3Adapter implements ControllerAdapterInterface {
 
     for (let i = 0; i < 16; i++) {
       const mode = await this.device.readCustomMode(i);
-      slots.push({
+      const slot: ConfigurationSlot = {
         index: i,
-        name: mode?.name,
         isEmpty: mode === null,
-      });
+      };
+      // Only include name if it exists
+      if (mode?.name !== undefined) {
+        slot.name = mode.name;
+      }
+      slots.push(slot);
     }
 
     return slots;
@@ -200,14 +204,24 @@ export class LaunchControlXL3Adapter implements ControllerAdapterInterface {
     // Map LCXL3 control type to generic ControlType
     const type = this.mapControlType(control.type ?? control.controlType);
 
-    return {
+    const mapping: ControlMapping = {
       id: controlId,
-      name: control.name,
       type,
-      cc,
-      channel,
       range: [minValue, maxValue],
     };
+
+    // Only add optional properties if they exist
+    if (control.name !== undefined) {
+      mapping.name = control.name;
+    }
+    if (cc !== undefined) {
+      mapping.cc = cc;
+    }
+    if (channel !== undefined) {
+      mapping.channel = channel;
+    }
+
+    return mapping;
   }
 
   /**
@@ -222,11 +236,17 @@ export class LaunchControlXL3Adapter implements ControllerAdapterInterface {
       controls[control.id] = lcxl3Control;
     }
 
-    return {
+    const mode: LCXL3CustomMode = {
       name: config.name.substring(0, 8), // LCXL3 mode names are max 8 chars
       controls,
-      metadata: config.metadata,
     };
+
+    // Only include metadata if it exists
+    if (config.metadata !== undefined) {
+      mode.metadata = config.metadata;
+    }
+
+    return mode;
   }
 
   /**
@@ -235,15 +255,25 @@ export class LaunchControlXL3Adapter implements ControllerAdapterInterface {
   private convertControlToLCXL3(control: ControlMapping): LCXL3ControlMapping {
     const [minValue, maxValue] = control.range ?? [0, 127];
 
-    return {
-      name: control.name,
-      type: this.mapControlType(control.type),
-      cc: control.cc,
-      channel: control.channel,
+    const lcxl3Control: LCXL3ControlMapping = {
+      type: this.mapControlType(control.type) as any,
       minValue,
       maxValue,
       behavior: 'absolute', // Default behavior
     };
+
+    // Only add optional properties if they exist
+    if (control.name !== undefined) {
+      lcxl3Control.name = control.name;
+    }
+    if (control.cc !== undefined) {
+      lcxl3Control.cc = control.cc;
+    }
+    if (control.channel !== undefined) {
+      lcxl3Control.channel = control.channel;
+    }
+
+    return lcxl3Control;
   }
 
   /**
