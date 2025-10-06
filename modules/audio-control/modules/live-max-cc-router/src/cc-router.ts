@@ -90,8 +90,9 @@ export class CCRouter {
    */
   private findMapping(ccNumber: number): ParameterMapping | null {
     for (let i = 0; i < this.mappings.length; i++) {
-      if (this.mappings[i].ccNumber === ccNumber) {
-        return this.mappings[i];
+      const mapping = this.mappings[i];
+      if (mapping && mapping.ccNumber === ccNumber) {
+        return mapping;
       }
     }
     return null;
@@ -279,7 +280,8 @@ export class CCRouter {
       const canonicalMapping = getPluginMapping(this.selectedController, deviceName);
 
       if (canonicalMapping) {
-        logger.info("Found canonical mapping for " + canonicalMapping.controller.model + " + " + canonicalMapping.pluginName);
+        const controllerModel = canonicalMapping.controller.model || 'Unknown';
+        logger.info("Found canonical mapping for " + controllerModel + " + " + canonicalMapping.pluginName);
 
         // Clear existing mappings
         this.mappings = [];
@@ -287,16 +289,21 @@ export class CCRouter {
         // Apply canonical mappings
         const mappingKeys = Object.keys(canonicalMapping.mappings);
         for (let i = 0; i < mappingKeys.length; i++) {
-          const ccNumber = parseInt(mappingKeys[i], 10);
-          const mapping = canonicalMapping.mappings[ccNumber];
+          const ccNumberStr = mappingKeys[i];
+          if (!ccNumberStr) continue;
 
-          this.setMapping(
-            ccNumber,
-            mapping.deviceIndex,
-            mapping.parameterIndex,
-            mapping.parameterName,
-            mapping.curve
-          );
+          const ccNumber = parseInt(ccNumberStr, 10);
+          const mapping = canonicalMapping.mappings[ccNumberStr];
+
+          if (mapping) {
+            this.setMapping(
+              ccNumber,
+              mapping.deviceIndex,
+              mapping.parameterIndex,
+              mapping.parameterName,
+              mapping.curve
+            );
+          }
         }
 
         logger.info("Applied " + mappingKeys.length + " canonical mappings for " + canonicalMapping.pluginName);
@@ -405,7 +412,9 @@ export class CCRouter {
 
     for (let i = 0; i < this.mappings.length; i++) {
       const m = this.mappings[i];
-      logger.info("  CC " + m.ccNumber + " -> Device " + m.deviceIndex + " Param " + m.parameterIndex + " (" + m.curve + ")");
+      if (m) {
+        logger.info("  CC " + m.ccNumber + " -> Device " + m.deviceIndex + " Param " + m.parameterIndex + " (" + m.curve + ")");
+      }
     }
 
     const trackInfo = this.getSelectedTrackInfo();

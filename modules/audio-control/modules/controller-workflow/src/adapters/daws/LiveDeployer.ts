@@ -2,7 +2,7 @@
  * Ableton Live DAW Deployer
  *
  * Converts canonical MIDI maps to Max for Live cc-router format.
- * Updates the canonical-plugin-maps.ts file used by the M4L device.
+ * Updates the plugin-mappings.json data file used by the M4L device.
  *
  * @module adapters/daws/LiveDeployer
  */
@@ -61,7 +61,7 @@ export class LiveDeployer implements DAWDeployerInterface {
    *
    * @param canonicalMap - Canonical MIDI map
    * @param options - Deployment options
-   * @returns Deployment result with path to updated canonical-plugin-maps.ts
+   * @returns Deployment result with path to updated plugin-mappings.json
    */
   async deploy(canonicalMap: CanonicalMidiMap, options: DeploymentOptions): Promise<DeploymentResult> {
     try {
@@ -70,33 +70,42 @@ export class LiveDeployer implements DAWDeployerInterface {
 
       // Get path to live-max-cc-router module
       const ccRouterPath = this.getCCRouterPath();
-      const canonicalMapsFile = join(ccRouterPath, 'src', 'canonical-plugin-maps.ts');
+      const jsonMappingsFile = join(ccRouterPath, 'data', 'plugin-mappings.json');
 
       if (options.dryRun) {
         const result: DeploymentResult = {
           success: true,
           dawName: this.dawName,
-          outputPath: canonicalMapsFile,
+          outputPath: jsonMappingsFile,
           installed: false,
         };
         return result;
       }
 
-      // Read existing canonical-plugin-maps.ts
-      const existingContent = await readFile(canonicalMapsFile, 'utf-8');
+      // Read existing plugin-mappings.json (or create empty database)
+      let existingMappings: Record<string, PluginMapping> = {};
+      try {
+        const existingContent = await readFile(jsonMappingsFile, 'utf-8');
+        existingMappings = JSON.parse(existingContent);
+      } catch (error) {
+        // File doesn't exist yet, start with empty mappings
+        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+          throw error; // Re-throw if it's not a "file not found" error
+        }
+      }
 
       // Update with new mapping
-      const updatedContent = await this.updateCanonicalMaps(existingContent, pluginMapping, canonicalMap);
+      const updatedMappings = await this.updateCanonicalMaps(existingMappings, pluginMapping, canonicalMap);
 
-      // Write back to file
-      await writeFile(canonicalMapsFile, updatedContent, 'utf-8');
+      // Write back to file with 2-space indentation
+      await writeFile(jsonMappingsFile, JSON.stringify(updatedMappings, null, 2) + '\n', 'utf-8');
 
       return {
         success: true,
         dawName: this.dawName,
-        outputPath: canonicalMapsFile,
+        outputPath: jsonMappingsFile,
         installed: true,
-        message: `Updated ${canonicalMapsFile}. Rebuild cc-router with: cd ${ccRouterPath} && npm run build`,
+        message: `Updated ${jsonMappingsFile}. Reload cc-router mapping with: cd ${ccRouterPath} && npm run build`,
       };
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
@@ -171,47 +180,23 @@ export class LiveDeployer implements DAWDeployerInterface {
   }
 
   /**
-   * Update canonical-plugin-maps.ts with new mapping
+   * Update plugin mappings database with new mapping
    */
   private async updateCanonicalMaps(
-    existingContent: string,
+    existingMappings: Record<string, PluginMapping>,
     newMapping: PluginMapping,
     canonicalMap: CanonicalMidiMap
-  ): Promise<string> {
+  ): Promise<Record<string, PluginMapping>> {
     // Generate mapping key from controller and plugin name
     const mappingKey = this.generateMappingKey(canonicalMap);
 
-    // Convert mapping to TypeScript object literal
-    const mappingString = this.serializePluginMapping(newMapping);
+    // Add or update mapping in the database
+    const updatedMappings = {
+      ...existingMappings,
+      [mappingKey]: newMapping,
+    };
 
-    // Check if mapping already exists
-    const keyPattern = new RegExp(`"${mappingKey}"\\s*:\\s*{`, 'g');
-
-    if (keyPattern.test(existingContent)) {
-      // Replace existing mapping
-      const replacePattern = new RegExp(
-        `"${mappingKey}"\\s*:\\s*{[\\s\\S]*?^  },`,
-        'gm'
-      );
-      return existingContent.replace(replacePattern, `"${mappingKey}": ${mappingString},`);
-    } else {
-      // Add new mapping
-      // Find the closing of CANONICAL_PLUGIN_MAPS object
-      const closingBraceIndex = existingContent.lastIndexOf('};');
-      if (closingBraceIndex === -1) {
-        throw new Error('Could not find CANONICAL_PLUGIN_MAPS object closing brace');
-      }
-
-      // Insert before closing brace
-      const before = existingContent.substring(0, closingBraceIndex);
-      const after = existingContent.substring(closingBraceIndex);
-
-      // Add comma after last entry if needed
-      const needsComma = !before.trimEnd().endsWith(',');
-      const comma = needsComma ? ',' : '';
-
-      return `${before}${comma}\n  "${mappingKey}": ${mappingString}\n${after}`;
-    }
+    return updatedMappings;
   }
 
   /**
@@ -225,64 +210,6 @@ export class LiveDeployer implements DAWDeployerInterface {
     return `${controller}_${plugin}`;
   }
 
-  /**
-   * Serialize PluginMapping to TypeScript object literal string
-   */
-  private serializePluginMapping(mapping: PluginMapping): string {
-    const lines: string[] = ['{'];
-
-    // Controller
-    lines.push('    "controller": {');
-    if (mapping.controller.manufacturer) {
-      lines.push(`      "manufacturer": "${mapping.controller.manufacturer}",`);
-    }
-    if (mapping.controller.model) {
-      lines.push(`      "model": "${mapping.controller.model}"`);
-    }
-    lines.push('    },');
-
-    // Plugin info
-    lines.push(`    "pluginName": "${mapping.pluginName}",`);
-    lines.push(`    "pluginManufacturer": "${mapping.pluginManufacturer}",`);
-
-    // Mappings
-    lines.push('    "mappings": {');
-    const ccNumbers = Object.keys(mapping.mappings).sort((a, b) => parseInt(a) - parseInt(b));
-    ccNumbers.forEach((ccStr, index) => {
-      const cc = parseInt(ccStr);
-      const m = mapping.mappings[cc];
-      if (!m) {
-        throw new Error(`Missing mapping for CC ${cc}`);
-      }
-      const comma = index < ccNumbers.length - 1 ? ',' : '';
-      lines.push(`      "${cc}": {`);
-      lines.push(`        "deviceIndex": ${m.deviceIndex},`);
-      lines.push(`        "parameterIndex": ${m.parameterIndex},`);
-      lines.push(`        "parameterName": "${m.parameterName}",`);
-      lines.push(`        "curve": "${m.curve}"`);
-      lines.push(`      }${comma}`);
-    });
-    lines.push('    },');
-
-    // Metadata
-    lines.push('    "metadata": {');
-    const metadataLines: string[] = [];
-    if (mapping.metadata.name) {
-      metadataLines.push(`      "name": "${mapping.metadata.name}"`);
-    }
-    if (mapping.metadata.description) {
-      metadataLines.push(`      "description": "${mapping.metadata.description}"`);
-    }
-    if (mapping.metadata.version) {
-      metadataLines.push(`      "version": "${mapping.metadata.version}"`);
-    }
-    lines.push(metadataLines.join(',\n'));
-    lines.push('    }');
-
-    lines.push('  }');
-
-    return lines.join('\n');
-  }
 
   /**
    * Check if Ableton Live is installed

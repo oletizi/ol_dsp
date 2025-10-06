@@ -76,7 +76,10 @@ function initializeRouter(): void {
   const devices = ccRouter.getSelectedTrackDevices();
   if (devices.length > 0) {
     for (let i = 0; i < devices.length; i++) {
-      logger.info("Device " + i + ": " + devices[i].name + " (" + devices[i].parameterCount + " params)");
+      const device = devices[i];
+      if (device) {
+        logger.info("Device " + i + ": " + device.name + " (" + device.parameterCount + " params)");
+      }
     }
   } else {
     logger.info("No devices found on track");
@@ -168,7 +171,9 @@ function trackinfo(): void {
     const devices = ccRouter.getSelectedTrackDevices();
     for (let i = 0; i < devices.length; i++) {
       const device = devices[i];
-      logger.info("  Device " + device.index + ": " + device.name + " (" + device.parameterCount + " parameters)");
+      if (device) {
+        logger.info("  Device " + device.index + ": " + device.name + " (" + device.parameterCount + " parameters)");
+      }
     }
   } else {
     logger.info("No track selected");
@@ -210,7 +215,10 @@ function listcontrollers(): void {
   const controllers = ccRouter.getControllers();
   logger.info("=== Available Controllers ===");
   for (let i = 0; i < controllers.length; i++) {
-    logger.info(controllers[i].manufacturer + " " + controllers[i].model);
+    const controller = controllers[i];
+    if (controller) {
+      logger.info(controller.manufacturer + " " + controller.model);
+    }
   }
   logger.info("===========================");
 }
