@@ -614,32 +614,51 @@ private:
 
         // Network mesh status
         server->Get("/network/mesh", [this](const httplib::Request&, httplib::Response& res) {
-            JsonBuilder json;
-            json.startObject();
+            try {
+                std::cerr << "DEBUG: /network/mesh: Starting" << std::endl;
+                JsonBuilder json;
+                json.startObject();
 
-            if (meshManager) {
-                auto stats = meshManager->getStatistics();
-                json.key("connected_nodes").value((int)stats.connectedNodes)
-                    .key("total_nodes").value((int)stats.totalNodes)
-                    .key("total_devices").value(stats.totalDevices);
+                if (meshManager) {
+                    std::cerr << "DEBUG: /network/mesh: Getting statistics" << std::endl;
+                    auto stats = meshManager->getStatistics();
+                    std::cerr << "DEBUG: /network/mesh: Got statistics" << std::endl;
+                    json.key("connected_nodes").value((int)stats.connectedNodes)
+                        .key("total_nodes").value((int)stats.totalNodes)
+                        .key("total_devices").value(stats.totalDevices);
 
-                json.key("nodes").startArray();
-                auto nodes = meshManager->getConnectedNodes();
-                for (const auto& node : nodes) {
-                    json.startObject()
-                        .key("uuid").value(node.uuid.toString().toStdString())
-                        .key("name").value(node.name.toStdString())
-                        .key("ip").value(node.ipAddress.toStdString())
-                        .key("http_port").value(node.httpPort)
-                        .key("udp_port").value(node.udpPort)
-                        .key("devices").value(node.deviceCount)
-                        .endObject();
+                    std::cerr << "DEBUG: /network/mesh: Getting connected nodes" << std::endl;
+                    json.key("nodes").startArray();
+                    auto nodes = meshManager->getConnectedNodes();
+                    std::cerr << "DEBUG: /network/mesh: Got " << nodes.size() << " nodes" << std::endl;
+                    for (const auto& node : nodes) {
+                        std::cerr << "DEBUG: /network/mesh: Processing node " << node.name.toStdString() << std::endl;
+                        json.startObject()
+                            .key("uuid").value(node.uuid.toString().toStdString())
+                            .key("name").value(node.name.toStdString())
+                            .key("ip").value(node.ipAddress.toStdString())
+                            .key("http_port").value(node.httpPort)
+                            .key("udp_port").value(node.udpPort)
+                            .key("devices").value(node.deviceCount)
+                            .endObject();
+                        std::cerr << "DEBUG: /network/mesh: Finished node " << node.name.toStdString() << std::endl;
+                    }
+                    json.endArray();
+                } else {
+                    json.key("error").value(std::string("Mesh manager not initialized"));
                 }
-                json.endArray();
-            }
 
-            json.endObject();
-            res.set_content(json.toString(), "application/json");
+                std::cerr << "DEBUG: /network/mesh: Building JSON" << std::endl;
+                json.endObject();
+                std::cerr << "DEBUG: /network/mesh: Sending response" << std::endl;
+                res.set_content(json.toString(), "application/json");
+                res.status = 200;
+                std::cerr << "DEBUG: /network/mesh: Done" << std::endl;
+            } catch (const std::exception& e) {
+                std::cerr << "Error in /network/mesh: " << e.what() << std::endl;
+                res.set_content(std::string("Error: ") + e.what(), "text/plain");
+                res.status = 500;
+            }
         });
 
         // Router statistics
@@ -666,6 +685,88 @@ private:
 
             json.endObject();
             res.set_content(json.toString(), "application/json");
+        });
+
+        // Network handshake endpoint (for mesh connection establishment)
+        server->Post("/network/handshake", [this](const httplib::Request& req, httplib::Response& res) {
+            try {
+                // Parse incoming handshake request
+                // Expected format: {"node_id":"...", "node_name":"...", "udp_endpoint":"...", "version":"..."}
+
+                std::string nodeIdStr, nodeName, udpEndpoint, version;
+
+                // Simple JSON parsing (extract values)
+                auto body = req.body;
+                size_t pos;
+
+                // Extract node_id
+                pos = body.find("\"node_id\":\"");
+                if (pos != std::string::npos) {
+                    size_t start = pos + 11;
+                    size_t end = body.find("\"", start);
+                    nodeIdStr = body.substr(start, end - start);
+                }
+
+                // Extract node_name
+                pos = body.find("\"node_name\":\"");
+                if (pos != std::string::npos) {
+                    size_t start = pos + 13;
+                    size_t end = body.find("\"", start);
+                    nodeName = body.substr(start, end - start);
+                }
+
+                // Extract udp_endpoint
+                pos = body.find("\"udp_endpoint\":\"");
+                if (pos != std::string::npos) {
+                    size_t start = pos + 16;
+                    size_t end = body.find("\"", start);
+                    udpEndpoint = body.substr(start, end - start);
+                }
+
+                // Extract version
+                pos = body.find("\"version\":\"");
+                if (pos != std::string::npos) {
+                    size_t start = pos + 11;
+                    size_t end = body.find("\"", start);
+                    version = body.substr(start, end - start);
+                }
+
+                std::cout << "Handshake request from: " << nodeName
+                          << " (UUID: " << nodeIdStr << ")"
+                          << " UDP: " << udpEndpoint << std::endl;
+
+                // Build handshake response with our node info and device list
+                JsonBuilder json;
+                json.startObject()
+                    .key("node_id").value(identity.getNodeId().toString().toStdString())
+                    .key("node_name").value(identity.getNodeName().toStdString())
+                    .key("udp_endpoint").value(std::to_string(udpPort))
+                    .key("version").value(std::string("1.0"));
+
+                // Add device list
+                if (deviceRegistry) {
+                    auto devices = deviceRegistry->getLocalDevices();
+                    json.key("devices").startArray();
+                    for (const auto& device : devices) {
+                        json.startObject()
+                            .key("id").value((int)device.id)
+                            .key("name").value(device.name.toStdString())
+                            .key("type").value(device.type.toStdString())
+                            .endObject();
+                    }
+                    json.endArray();
+                }
+
+                json.endObject();
+
+                res.set_content(json.toString(), "application/json");
+                res.status = 200;
+
+            } catch (const std::exception& e) {
+                std::cerr << "Handshake error: " << e.what() << std::endl;
+                res.set_content(std::string("Handshake failed: ") + e.what(), "text/plain");
+                res.status = 500;
+            }
         });
     }
 

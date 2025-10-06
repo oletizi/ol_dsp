@@ -90,7 +90,8 @@ NodeInfo NetworkConnection::getRemoteNode() const
 //==============================================================================
 std::vector<DeviceInfo> NetworkConnection::getRemoteDevices() const
 {
-    std::lock_guard<std::mutex> lock(stateMutex);
+    // No mutex needed: remoteDevices is only written once during handshake
+    // and this is a read-only copy operation
     return remoteDevices;
 }
 

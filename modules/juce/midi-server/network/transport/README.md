@@ -296,7 +296,7 @@ Offset | Size | Field              | Description
 
 ## References
 
-- [Workplan: Network MIDI Mesh](../../docs/1.0/implementation/mesh/workplan.md)
+- [Workplan: Network MIDI Mesh](../../docs/1.0/mesh/implementation/workplan.md)
 - [Phase 4 Implementation Report](PHASE4_REPORT.md)
 - [JUCE DatagramSocket Documentation](https://docs.juce.com/master/classDatagramSocket.html)
 
