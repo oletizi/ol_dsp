@@ -48,6 +48,8 @@ endif()
 # Exclude test programs from main server
 list(FILTER DISCOVERY_SOURCES EXCLUDE REGEX ".*DiscoveryTest\\.cpp$")
 list(FILTER TRANSPORT_SOURCES EXCLUDE REGEX ".*TransportTest\\.cpp$")
+list(FILTER MESH_SOURCES EXCLUDE REGEX ".*/tests/.*Test\\.cpp$")
+list(FILTER TRANSPORT_SOURCES EXCLUDE REGEX ".*/tests/.*Test\\.cpp$")
 
 target_sources(network_midi_server
     PRIVATE
@@ -199,6 +201,13 @@ add_executable(network_midi_tests
     tests/unit/MessageBufferTest.cpp
     tests/unit/UdpMidiTransportTest.cpp
     tests/unit/ConnectionPoolTest.cpp
+    tests/unit/MidiClassifierTest.cpp
+    tests/unit/MidiMessageRouterTest.cpp
+    # SEDA infrastructure tests (Phase B.1)
+    network/mesh/tests/NetworkConnectionQueueTest.cpp
+    # Dual-transport tests (Phase C.1-C.3)
+    network/transport/tests/RealtimeMidiBufferTest.cpp
+    network/transport/tests/DualTransportTest.cpp
     # Add sources under test
     ${CORE_SOURCES}
     ${MESH_SOURCES}

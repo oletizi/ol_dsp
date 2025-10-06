@@ -8,6 +8,12 @@
  * Disconnected -> Connecting -> Connected -> Disconnected
  *                      |             |
  *                   Failed <---------+
+ *
+ * SEDA Architecture (Phase B.2 Complete):
+ * - All mutable state owned by ConnectionWorker thread
+ * - Commands sent via lock-free queue
+ * - No mutexes needed (single-threaded worker)
+ * - Query commands use blocking WaitableEvent for synchronous results
  */
 
 #pragma once
@@ -18,16 +24,14 @@
 #include <atomic>
 #include <functional>
 #include <memory>
-#include <mutex>
 #include <string>
 #include <vector>
 
-// Forward declarations
-namespace httplib {
-    class Client;
-}
-
 namespace NetworkMidi {
+
+// Forward declarations for SEDA infrastructure
+class NetworkConnectionQueue;
+class ConnectionWorker;
 
 //==============================================================================
 // Node information structure
@@ -87,10 +91,16 @@ struct MidiMessage {
  * - HTTP handshake to exchange UDP endpoints and device lists
  * - UDP-based MIDI message transport
  * - Connection health monitoring via heartbeat
- * - Thread-safe message queuing
+ * - Thread-safe command queuing
+ *
+ * SEDA Architecture:
+ * - All state owned by ConnectionWorker thread (no mutexes)
+ * - Commands sent via lock-free queue
+ * - Queries use blocking WaitableEvent pattern
+ * - Callbacks invoked from worker thread
  *
  * Thread Safety:
- * All public methods are thread-safe. Internal state protected by mutex.
+ * All public methods are thread-safe (use command queue internally).
  */
 class NetworkConnection {
 public:
@@ -133,19 +143,19 @@ public:
 
     /**
      * Returns current connection state.
-     * Thread-safe.
+     * Thread-safe via query command.
      */
     State getState() const;
 
     /**
      * Returns information about the remote node.
-     * Thread-safe.
+     * Thread-safe via query command.
      */
     NodeInfo getRemoteNode() const;
 
     /**
      * Returns list of devices advertised by remote node.
-     * Thread-safe.
+     * Thread-safe via query command.
      */
     std::vector<DeviceInfo> getRemoteDevices() const;
 
@@ -158,18 +168,9 @@ public:
      *
      * @param deviceId Remote device identifier
      * @param data MIDI message bytes (1-N bytes)
-     * @throws std::runtime_error if not connected
+     * @throws std::invalid_argument if data is empty
      */
     void sendMidiMessage(uint16_t deviceId, const std::vector<uint8_t>& data);
-
-    /**
-     * Retrieves received MIDI messages from remote node.
-     * Clears internal receive queue.
-     * Thread-safe.
-     *
-     * @return Vector of received MIDI messages
-     */
-    std::vector<MidiMessage> getReceivedMessages();
 
     //==============================================================================
     // Connection health
@@ -193,61 +194,17 @@ public:
 
 private:
     //==============================================================================
-    // Internal methods
-
-    /**
-     * Performs HTTP handshake with remote node.
-     * Exchanges UDP endpoints and device lists.
-     * Updates state based on success/failure.
-     */
-    void performHandshake();
-
-    /**
-     * Changes connection state and notifies listeners.
-     * Must be called with stateMutex locked.
-     */
-    void setState(State newState);
-
-    /**
-     * Handles received UDP packet.
-     * Parses and routes MIDI messages or heartbeat packets.
-     */
-    void handleUdpPacket(const void* data, int size,
-                        const juce::String& senderAddress, int senderPort);
-
-    /**
-     * Sends heartbeat packet to remote node.
-     */
-    void sendHeartbeat();
-
-    /**
-     * Updates last heartbeat timestamp.
-     */
-    void notifyHeartbeatReceived();
-
-    //==============================================================================
     // Member variables
 
+    // Read-only node info (initialized in constructor)
     NodeInfo remoteNodeInfo;
-    std::vector<DeviceInfo> remoteDevices;
 
-    std::atomic<State> currentState{State::Disconnected};
+    //==============================================================================
+    // SEDA Infrastructure
+    // All mutable state is owned by ConnectionWorker thread
 
-    std::unique_ptr<httplib::Client> httpClient;
-    std::unique_ptr<juce::DatagramSocket> udpSocket;
-
-    juce::String localUdpEndpoint;
-    juce::String remoteUdpEndpoint;
-
-    std::vector<MidiMessage> receivedMessages;
-    mutable std::mutex messageMutex;
-
-    mutable std::mutex stateMutex;
-
-    juce::int64 lastHeartbeatTime{0};
-    mutable std::mutex heartbeatMutex;
-
-    std::atomic<bool> running{false};
+    std::unique_ptr<NetworkConnectionQueue> commandQueue;
+    std::unique_ptr<ConnectionWorker> worker;
 
     static constexpr int64_t HEARTBEAT_TIMEOUT_MS = 3000;  // 3 seconds
 
