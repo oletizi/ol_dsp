@@ -9,22 +9,22 @@
   <Binding channel="0" ctl="18" uri="/plugins/parameter/control_21" encoder="yes"/>
   <Binding channel="0" ctl="19" uri="/plugins/parameter/control_22" encoder="yes"/>
   <Binding channel="0" ctl="20" uri="/plugins/parameter/control_23" encoder="yes"/>
-  <Binding channel="0" ctl="29" uri="/plugins/parameter/control_24" encoder="yes"/>
-  <Binding channel="0" ctl="30" uri="/plugins/parameter/control_25" encoder="yes"/>
-  <Binding channel="0" ctl="31" uri="/plugins/parameter/control_26" encoder="yes"/>
-  <Binding channel="0" ctl="32" uri="/plugins/parameter/control_27" encoder="yes"/>
-  <Binding channel="0" ctl="33" uri="/plugins/parameter/control_28" encoder="yes"/>
-  <Binding channel="0" ctl="34" uri="/plugins/parameter/control_29" encoder="yes"/>
-  <Binding channel="0" ctl="35" uri="/plugins/parameter/control_30" encoder="yes"/>
-  <Binding channel="0" ctl="36" uri="/plugins/parameter/control_31" encoder="yes"/>
-  <Binding channel="0" ctl="22" uri="/plugins/parameter/control_32"/>
-  <Binding channel="0" ctl="23" uri="/plugins/parameter/control_33"/>
-  <Binding channel="0" ctl="24" uri="/plugins/parameter/control_34"/>
-  <Binding channel="0" ctl="25" uri="/plugins/parameter/control_35"/>
-  <Binding channel="0" ctl="26" uri="/plugins/parameter/control_36"/>
-  <Binding channel="0" ctl="27" uri="/plugins/parameter/control_37"/>
-  <Binding channel="0" ctl="28" uri="/plugins/parameter/control_38"/>
-  <Binding channel="0" ctl="53" uri="/plugins/parameter/control_39"/>
+  <Binding channel="0" ctl="53" uri="/plugins/parameter/control_24" encoder="yes"/>
+  <Binding channel="0" ctl="22" uri="/plugins/parameter/control_25" encoder="yes"/>
+  <Binding channel="0" ctl="23" uri="/plugins/parameter/control_26" encoder="yes"/>
+  <Binding channel="0" ctl="24" uri="/plugins/parameter/control_27" encoder="yes"/>
+  <Binding channel="0" ctl="25" uri="/plugins/parameter/control_28" encoder="yes"/>
+  <Binding channel="0" ctl="26" uri="/plugins/parameter/control_29" encoder="yes"/>
+  <Binding channel="0" ctl="27" uri="/plugins/parameter/control_30" encoder="yes"/>
+  <Binding channel="0" ctl="28" uri="/plugins/parameter/control_31" encoder="yes"/>
+  <Binding channel="0" ctl="29" uri="/plugins/parameter/control_32"/>
+  <Binding channel="0" ctl="30" uri="/plugins/parameter/control_33"/>
+  <Binding channel="0" ctl="31" uri="/plugins/parameter/control_34"/>
+  <Binding channel="0" ctl="32" uri="/plugins/parameter/control_35"/>
+  <Binding channel="0" ctl="33" uri="/plugins/parameter/control_36"/>
+  <Binding channel="0" ctl="34" uri="/plugins/parameter/control_37"/>
+  <Binding channel="0" ctl="35" uri="/plugins/parameter/control_38"/>
+  <Binding channel="0" ctl="36" uri="/plugins/parameter/control_39"/>
   <Binding channel="0" ctl="5" uri="/plugins/parameter/control_40" encoder="yes"/>
   <Binding channel="0" ctl="6" uri="/plugins/parameter/control_41" encoder="yes"/>
   <Binding channel="0" ctl="7" uri="/plugins/parameter/control_42" encoder="yes"/>
@@ -33,22 +33,4 @@
   <Binding channel="0" ctl="10" uri="/plugins/parameter/control_45" encoder="yes"/>
   <Binding channel="0" ctl="11" uri="/plugins/parameter/control_46" encoder="yes"/>
   <Binding channel="0" ctl="12" uri="/plugins/parameter/control_47" encoder="yes"/>
-
-  <!-- MIDI Channel 1: Novation Launch Control XL 3 -->
-  <Binding channel="1" note="41" uri="/plugins/parameter/control_48"/>
-  <Binding channel="1" note="42" uri="/plugins/parameter/control_49"/>
-  <Binding channel="1" note="43" uri="/plugins/parameter/control_50"/>
-  <Binding channel="1" note="44" uri="/plugins/parameter/control_51"/>
-  <Binding channel="1" note="45" uri="/plugins/parameter/control_52"/>
-  <Binding channel="1" note="46" uri="/plugins/parameter/control_53"/>
-  <Binding channel="1" note="47" uri="/plugins/parameter/control_54"/>
-  <Binding channel="1" note="48" uri="/plugins/parameter/control_55"/>
-  <Binding channel="1" note="37" uri="/plugins/parameter/control_56"/>
-  <Binding channel="1" note="38" uri="/plugins/parameter/control_57"/>
-  <Binding channel="1" note="39" uri="/plugins/parameter/control_58"/>
-  <Binding channel="1" note="40" uri="/plugins/parameter/control_59"/>
-  <Binding channel="1" note="49" uri="/plugins/parameter/control_60"/>
-  <Binding channel="1" note="50" uri="/plugins/parameter/control_61"/>
-  <Binding channel="1" note="51" uri="/plugins/parameter/control_62"/>
-  <Binding channel="1" note="52" uri="/plugins/parameter/control_63"/>
 </ArdourMIDIBindings>

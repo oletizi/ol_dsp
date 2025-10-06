@@ -71,4 +71,6 @@ export interface DeploymentResult {
   installed?: boolean;
   /** List of errors that occurred during deployment */
   errors?: string[];
+  /** Optional informational message about deployment */
+  message?: string;
 }
