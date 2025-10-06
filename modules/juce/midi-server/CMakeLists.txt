@@ -150,6 +150,41 @@ elseif(WIN32)
     # Windows - Bonjour (when implemented)
 endif()
 
+# Performance Benchmarks - Measure Network MIDI Mesh performance
+juce_add_console_app(network_midi_benchmarks
+    PRODUCT_NAME "Network MIDI Benchmarks"
+)
+
+target_sources(network_midi_benchmarks
+    PRIVATE
+    network/benchmarks/PerformanceBenchmark.cpp
+    ${CORE_SOURCES}
+    ${MESH_SOURCES}
+    ${TRANSPORT_SOURCES}
+    ${ROUTING_SOURCES}
+)
+
+target_compile_definitions(network_midi_benchmarks
+    PRIVATE
+    JUCE_WEB_BROWSER=0
+    JUCE_USE_CURL=0
+)
+
+target_include_directories(network_midi_benchmarks
+    PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
+target_link_libraries(network_midi_benchmarks
+    PRIVATE
+    juce::juce_core
+    juce::juce_audio_devices
+    juce::juce_events
+    PUBLIC
+    juce::juce_recommended_config_flags
+    juce::juce_recommended_warning_flags
+)
+
 # Unit Tests with Google Test and Coverage
 # Note: Google Test is already configured in the parent project's test/ directory
 # No need to fetch it again - just use the existing targets
