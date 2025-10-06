@@ -144,24 +144,16 @@ std::vector<NodeInfo> MeshManager::getConnectedNodes() const
 //==============================================================================
 int MeshManager::getTotalDeviceCount() const
 {
-    std::cerr << "DEBUG: MeshManager::getTotalDeviceCount: Starting" << std::endl;
     int total = 0;
 
-    std::cerr << "DEBUG: MeshManager::getTotalDeviceCount: Getting all connections" << std::endl;
     auto connections = connectionPool.getAllConnections();
-    std::cerr << "DEBUG: MeshManager::getTotalDeviceCount: Got " << connections.size() << " connections" << std::endl;
 
-    for (size_t i = 0; i < connections.size(); ++i) {
-        auto* connection = connections[i];
-        std::cerr << "DEBUG: MeshManager::getTotalDeviceCount: Checking connection " << i << std::endl;
+    for (auto* connection : connections) {
         if (connection && connection->getState() == NetworkConnection::State::Connected) {
-            std::cerr << "DEBUG: MeshManager::getTotalDeviceCount: Getting remote devices for connection " << i << std::endl;
-            total += (int)connection->getRemoteDevices().size();
-            std::cerr << "DEBUG: MeshManager::getTotalDeviceCount: Got remote devices for connection " << i << std::endl;
+            total += static_cast<int>(connection->getRemoteDevices().size());
         }
     }
 
-    std::cerr << "DEBUG: MeshManager::getTotalDeviceCount: Returning " << total << std::endl;
     return total;
 }
 
@@ -186,25 +178,18 @@ NetworkConnection* MeshManager::getConnection(const juce::Uuid& nodeId) const
 //==============================================================================
 MeshManager::MeshStatistics MeshManager::getStatistics() const
 {
-    std::cerr << "DEBUG: MeshManager::getStatistics: Starting" << std::endl;
     MeshStatistics stats;
 
-    std::cerr << "DEBUG: MeshManager::getStatistics: Getting pool stats" << std::endl;
     auto poolStats = connectionPool.getStatistics();
-    std::cerr << "DEBUG: MeshManager::getStatistics: Got pool stats" << std::endl;
     stats.totalNodes = poolStats.totalConnections;
     stats.connectedNodes = poolStats.connectedCount;
     stats.connectingNodes = poolStats.connectingCount;
     stats.failedNodes = poolStats.failedCount;
 
-    std::cerr << "DEBUG: MeshManager::getStatistics: Getting heartbeat stats" << std::endl;
     stats.heartbeatsSent = heartbeatMonitor->getHeartbeatsSent();
     stats.timeoutsDetected = heartbeatMonitor->getTimeoutsDetected();
-    std::cerr << "DEBUG: MeshManager::getStatistics: Got heartbeat stats" << std::endl;
 
-    std::cerr << "DEBUG: MeshManager::getStatistics: Getting total device count" << std::endl;
     stats.totalDevices = getTotalDeviceCount();
-    std::cerr << "DEBUG: MeshManager::getStatistics: Got total device count" << std::endl;
 
     return stats;
 }
@@ -233,9 +218,9 @@ void MeshManager::createConnection(const NodeInfo& node)
             }
         };
 
-        connection->onDevicesReceived = [this, nodeInfo = node]
+        connection->onDevicesReceived = [nodeInfo = node]
             (const std::vector<DeviceInfo>& devices) {
-            juce::Logger::writeToLog("Received " + juce::String((int)devices.size()) +
+            juce::Logger::writeToLog("Received " + juce::String(static_cast<int>(devices.size())) +
                                     " devices from " + nodeInfo.name);
         };
 
@@ -243,7 +228,7 @@ void MeshManager::createConnection(const NodeInfo& node)
             // TODO: Route to local MIDI system
             juce::Logger::writeToLog("Received MIDI message: device=" +
                                     juce::String(msg.deviceId) +
-                                    ", bytes=" + juce::String((int)msg.data.size()));
+                                    ", bytes=" + juce::String(static_cast<int>(msg.data.size())));
         };
 
         // Add to pool

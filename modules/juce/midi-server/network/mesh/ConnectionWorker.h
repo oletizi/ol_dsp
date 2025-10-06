@@ -128,6 +128,7 @@ private:
     void handleGetStateQuery(Commands::GetStateQuery* query);
     void handleGetRemoteNodeQuery(Commands::GetRemoteNodeQuery* query);
     void handleGetDevicesQuery(Commands::GetDevicesQuery* query);
+    void handleGetHeartbeatQuery(Commands::GetHeartbeatQuery* query);
 
     //==============================================================================
     // Helper methods

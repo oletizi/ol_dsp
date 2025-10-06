@@ -91,6 +91,10 @@ void ConnectionWorker::processCommand(std::unique_ptr<Commands::Command> cmd)
             handleGetDevicesQuery(static_cast<Commands::GetDevicesQuery*>(cmd.get()));
             break;
 
+        case Commands::Command::GetHeartbeat:
+            handleGetHeartbeatQuery(static_cast<Commands::GetHeartbeatQuery*>(cmd.get()));
+            break;
+
         case Commands::Command::Shutdown:
             juce::Logger::writeToLog("ConnectionWorker: Shutdown command received");
             signalThreadShouldExit();
@@ -401,6 +405,18 @@ void ConnectionWorker::handleGetDevicesQuery(Commands::GetDevicesQuery* query)
 
     // Return device list
     query->result = remoteDevices;
+
+    // Signal response ready
+    query->responseReady.signal();
+}
+
+void ConnectionWorker::handleGetHeartbeatQuery(Commands::GetHeartbeatQuery* query)
+{
+    jassert(query != nullptr);
+
+    // Calculate time since last heartbeat
+    juce::int64 currentTime = juce::Time::getCurrentTime().toMilliseconds();
+    query->timeSinceLastHeartbeat = currentTime - lastHeartbeatTime;
 
     // Signal response ready
     query->responseReady.signal();

@@ -137,19 +137,20 @@ void NetworkConnection::sendMidiMessage(uint16_t deviceId,
 //==============================================================================
 int64_t NetworkConnection::getTimeSinceLastHeartbeat() const
 {
-    // For now, we need to add a query command for this
-    // or use atomic snapshot from worker
-    // TODO: Add GetHeartbeatQuery command or expose atomic snapshot
+    // Use GetHeartbeatQuery command for accurate timing from worker thread
+    auto query = std::make_unique<Commands::GetHeartbeatQuery>();
+    auto* queryPtr = query.get();
 
-    // As a temporary solution, we'll check if we're connected
-    State state = getState();
-    if (state != State::Connected) {
-        return HEARTBEAT_TIMEOUT_MS + 1;  // Return value > timeout if not connected
+    commandQueue->pushCommand(std::move(query));
+
+    // Wait for response (with timeout)
+    if (queryPtr->responseReady.wait(1000)) {
+        return queryPtr->timeSinceLastHeartbeat;
     }
 
-    // Return 0 for now (heartbeat OK)
-    // This will be properly implemented with atomic snapshot or query command
-    return 0;
+    // Timeout - assume disconnected (return value > timeout threshold)
+    juce::Logger::writeToLog("NetworkConnection::getTimeSinceLastHeartbeat() - Query timeout");
+    return HEARTBEAT_TIMEOUT_MS + 1;
 }
 
 //==============================================================================

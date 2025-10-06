@@ -30,6 +30,7 @@ struct Command {
         GetState,
         GetRemoteNode,
         GetDevices,
+        GetHeartbeat,  // New command for heartbeat timing query
         Shutdown
     };
 
@@ -97,6 +98,17 @@ struct GetDevicesQuery : Command {
     std::vector<DeviceInfo> result;
 
     GetDevicesQuery() : Command(GetDevices) {}
+};
+
+/**
+ * Query command for retrieving time since last heartbeat.
+ * Provides accurate timing information from worker thread.
+ */
+struct GetHeartbeatQuery : Command {
+    juce::WaitableEvent responseReady;
+    int64_t timeSinceLastHeartbeat{0};
+
+    GetHeartbeatQuery() : Command(GetHeartbeat) {}
 };
 
 } // namespace Commands
