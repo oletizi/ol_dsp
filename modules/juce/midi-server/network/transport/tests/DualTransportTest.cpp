@@ -2,6 +2,8 @@
 #include "../RealtimeMidiBuffer.h"
 #include "../RealtimeMidiTransport.h"
 #include "../NonRealtimeMidiTransport.h"
+#include <juce_core/juce_core.h>
+#include <juce_events/juce_events.h>
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <thread>
 #include <chrono>
@@ -21,10 +23,7 @@ using namespace NetworkMidi;
 class DualTransportTest : public ::testing::Test {
 protected:
     void SetUp() override {
-        // Initialize JUCE message manager for thread operations
-        if (juce::MessageManager::getInstance() == nullptr) {
-            juce::MessageManager::getInstance();
-        }
+        // Note: MessageManager not used in headless test environment
     }
 
     void TearDown() override {
