@@ -15,20 +15,28 @@ namespace NetworkMidi {
 /**
  * Manages unique node identity for the MIDI mesh network.
  *
- * On first startup, generates a random UUID and persists it to disk.
- * On subsequent startups, loads the existing UUID from disk.
+ * Each server instance gets a unique UUID, allowing multiple instances
+ * on the same machine. The UUID can optionally be persisted to support
+ * stable identity across restarts for production deployments.
  *
- * This ensures that a node maintains the same identity across restarts,
- * which is important for stable mesh topology and device routing.
+ * For multi-instance scenarios (testing, development), each instance
+ * generates a fresh UUID automatically.
  */
 class NodeIdentity
 {
 public:
     /**
-     * Get the singleton instance.
-     * Creates and initializes the identity on first access.
+     * Create a new node identity with a fresh UUID.
+     * This allows multiple instances on the same machine.
      */
-    static NodeIdentity& getInstance();
+    NodeIdentity();
+
+    /**
+     * Create a node identity with persistence.
+     * If configDir is provided, loads/saves UUID from configDir/node-id.
+     * If configDir is empty, generates a fresh UUID (no persistence).
+     */
+    explicit NodeIdentity(const juce::String& configDir);
 
     /**
      * Get the unique node UUID.
@@ -59,13 +67,9 @@ public:
      */
     juce::Uuid regenerateId();
 
-private:
-    NodeIdentity();
     ~NodeIdentity() = default;
 
-    // Prevent copying
-    NodeIdentity(const NodeIdentity&) = delete;
-    NodeIdentity& operator=(const NodeIdentity&) = delete;
+private:
 
     /**
      * Load existing UUID from disk, or create new one if not found.

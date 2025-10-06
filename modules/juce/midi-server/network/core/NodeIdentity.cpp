@@ -4,27 +4,16 @@
 
 #include "NodeIdentity.h"
 #include <iostream>
+#include <cstring>
+#include <cstdlib>
 
 namespace NetworkMidi {
 
-NodeIdentity& NodeIdentity::getInstance()
-{
-    static NodeIdentity instance;
-    return instance;
-}
-
+// Default constructor - generates fresh UUID (no persistence)
 NodeIdentity::NodeIdentity()
 {
-    // Determine storage location: ~/.midi-network/node-id
-    juce::File homeDir = juce::File::getSpecialLocation(juce::File::userHomeDirectory);
-    juce::File configDir = homeDir.getChildFile(".midi-network");
-
-    // Create directory if it doesn't exist
-    if (!configDir.exists()) {
-        configDir.createDirectory();
-    }
-
-    idFile = configDir.getChildFile("node-id");
+    // Generate fresh UUID for this instance
+    nodeId = juce::Uuid();
 
     // Get system hostname
     hostname = juce::SystemStats::getComputerName();
@@ -32,11 +21,43 @@ NodeIdentity::NodeIdentity()
         hostname = "unknown-host";
     }
 
-    // Load or create node ID
-    nodeId = loadOrCreateId();
     nodeName = generateNodeName(nodeId);
 
-    std::cout << "Node Identity initialized:" << std::endl;
+    std::cout << "Node Identity initialized (ephemeral):" << std::endl;
+    std::cout << "  UUID: " << nodeId.toString().toStdString() << std::endl;
+    std::cout << "  Name: " << nodeName.toStdString() << std::endl;
+    std::cout << "  Hostname: " << hostname.toStdString() << std::endl;
+}
+
+// Constructor with persistence support
+NodeIdentity::NodeIdentity(const juce::String& configPath)
+{
+    if (configPath.isEmpty()) {
+        // No persistence - same as default constructor
+        nodeId = juce::Uuid();
+    } else {
+        // Use persistent storage
+        juce::File configDir(configPath);
+
+        // Create directory if it doesn't exist
+        if (!configDir.exists()) {
+            configDir.createDirectory();
+        }
+
+        idFile = configDir.getChildFile("node-id");
+        nodeId = loadOrCreateId();
+        std::cout << "Loaded existing node ID from: " << idFile.getFullPathName() << std::endl;
+    }
+
+    // Get system hostname
+    hostname = juce::SystemStats::getComputerName();
+    if (hostname.isEmpty()) {
+        hostname = "unknown-host";
+    }
+
+    nodeName = generateNodeName(nodeId);
+
+    std::cout << "Node Identity initialized (persistent):" << std::endl;
     std::cout << "  UUID: " << nodeId.toString().toStdString() << std::endl;
     std::cout << "  Name: " << nodeName.toStdString() << std::endl;
     std::cout << "  Hostname: " << hostname.toStdString() << std::endl;

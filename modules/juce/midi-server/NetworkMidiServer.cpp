@@ -262,8 +262,8 @@ private:
 class NetworkMidiServer
 {
 public:
-    NetworkMidiServer(int port = 0)
-        : requestedPort(port), actualPort(0) {}
+    NetworkMidiServer(const NetworkMidi::NodeIdentity& nodeIdentity, int port = 0)
+        : identity(nodeIdentity), requestedPort(port), actualPort(0) {}
 
     ~NetworkMidiServer() {
         stopServer();
@@ -330,8 +330,6 @@ private:
 
         // Node information endpoint
         server->Get("/node/info", [this](const httplib::Request&, httplib::Response& res) {
-            auto& identity = NetworkMidi::NodeIdentity::getInstance();
-
             JsonBuilder json;
             json.startObject()
                 .key("uuid").value(identity.getNodeId().toString().toStdString())
@@ -528,6 +526,7 @@ private:
         });
     }
 
+    const NetworkMidi::NodeIdentity& identity;
     int requestedPort;
     int actualPort;
     std::unique_ptr<httplib::Server> server;
@@ -545,8 +544,8 @@ int main(int argc, char* argv[])
     std::cout << "\nNetwork MIDI Server v1.0" << std::endl;
     std::cout << "========================" << std::endl;
 
-    // Initialize node identity
-    auto& identity = NetworkMidi::NodeIdentity::getInstance();
+    // Initialize node identity (each instance gets a unique UUID)
+    NetworkMidi::NodeIdentity identity;
 
     // Initialize instance manager (creates lock file and temp directory)
     std::unique_ptr<NetworkMidi::InstanceManager> instanceManager;
@@ -554,7 +553,7 @@ int main(int argc, char* argv[])
         instanceManager = std::make_unique<NetworkMidi::InstanceManager>(identity.getNodeId());
     } catch (const std::exception& e) {
         std::cerr << "\nError: " << e.what() << std::endl;
-        std::cerr << "Cannot start - another instance is already running with this UUID." << std::endl;
+        std::cerr << "Unexpected error during instance initialization." << std::endl;
         return 1;
     }
 
@@ -571,7 +570,7 @@ int main(int argc, char* argv[])
         std::cout << "  Port: " << port << std::endl;
     }
 
-    NetworkMidiServer server(port);
+    NetworkMidiServer server(identity, port);
     server.startServer();
 
     int actualPort = server.getActualPort();
