@@ -875,6 +875,245 @@ network/routing/VirtualMidiPort.cpp
 
 ---
 
+## Phase 6: Main Server Integration
+
+### Objective
+Wire all implemented components into NetworkMidiServer to enable end-to-end MIDI routing between instances.
+
+### Current State (2025-10-05)
+All Phase 1-5 components are implemented and unit tested, but **NOT integrated into the main server**:
+- ✅ Components exist as standalone classes
+- ✅ Unit tests verify each component works in isolation
+- ❌ NetworkMidiServer.cpp only uses NodeIdentity and InstanceManager
+- ❌ No service discovery in main server
+- ❌ No MIDI routing in main server
+- ❌ No network transport in main server
+
+**Result:** Server instances can start with unique UUIDs/ports, but cannot discover each other or route MIDI.
+
+### Integration Tasks
+
+#### A. Add Component Members to NetworkMidiServer Class
+
+**Add to class definition:**
+```cpp
+class NetworkMidiServer {
+public:
+    NetworkMidiServer(const NodeIdentity& identity, int httpPort = 0);
+    // ... existing methods ...
+
+private:
+    // Existing
+    const NodeIdentity& identity;
+
+    // NEW: Network components
+    std::unique_ptr<NetworkMidi::ServiceDiscovery> serviceDiscovery;
+    std::unique_ptr<NetworkMidi::UdpMidiTransport> udpTransport;
+    std::unique_ptr<NetworkMidi::DeviceRegistry> deviceRegistry;
+    std::unique_ptr<NetworkMidi::RoutingTable> routingTable;
+    std::unique_ptr<NetworkMidi::MidiRouter> midiRouter;
+    std::unique_ptr<NetworkMidi::MeshManager> meshManager;
+
+    // Local MIDI device connections
+    std::vector<std::unique_ptr<juce::MidiInput>> midiInputs;
+    std::vector<std::unique_ptr<juce::MidiOutput>> midiOutputs;
+
+    int udpPort;
+};
+```
+
+#### B. Initialize Components in Constructor/startServer()
+
+**Initialization order (dependencies matter):**
+```cpp
+void NetworkMidiServer::startServer() {
+    // 1. Create UDP transport (auto-assign port)
+    udpTransport = std::make_unique<UdpMidiTransport>(0);
+    udpTransport->start();
+    udpPort = udpTransport->getPort();
+
+    // 2. Create routing infrastructure
+    deviceRegistry = std::make_unique<DeviceRegistry>();
+    routingTable = std::make_unique<RoutingTable>();
+
+    // 3. Enumerate and register local MIDI devices
+    registerLocalMidiDevices();
+
+    // 4. Create MIDI router (connects registry, routing, transport)
+    midiRouter = std::make_unique<MidiRouter>(
+        *deviceRegistry, *routingTable, *udpTransport);
+
+    // 5. Create service discovery (advertise this node)
+    serviceDiscovery = std::make_unique<ServiceDiscovery>(
+        identity.getNodeName(), actualPort, udpPort);
+    serviceDiscovery->startAdvertising();
+    serviceDiscovery->startBrowsing();
+
+    // 6. Create mesh manager (handle peer connections)
+    meshManager = std::make_unique<MeshManager>(
+        identity, *serviceDiscovery, *deviceRegistry, *routingTable);
+    meshManager->start();
+
+    // 7. Start HTTP server (existing code)
+    // ...
+}
+```
+
+#### C. Register Local MIDI Devices
+
+**Implementation:**
+```cpp
+void NetworkMidiServer::registerLocalMidiDevices() {
+    uint16_t deviceId = 0;
+
+    // Register MIDI inputs
+    auto inputs = juce::MidiInput::getAvailableDevices();
+    for (const auto& deviceInfo : inputs) {
+        deviceRegistry->addLocalDevice(
+            deviceId++,
+            deviceInfo.name,
+            "input",
+            deviceInfo.identifier
+        );
+
+        // Open MIDI input and set callback
+        auto input = juce::MidiInput::openDevice(
+            deviceInfo.identifier,
+            this  // MidiInputCallback
+        );
+        if (input) {
+            input->start();
+            midiInputs.push_back(std::move(input));
+        }
+    }
+
+    // Register MIDI outputs
+    auto outputs = juce::MidiOutput::getAvailableDevices();
+    for (const auto& deviceInfo : outputs) {
+        deviceRegistry->addLocalDevice(
+            deviceId++,
+            deviceInfo.name,
+            "output",
+            deviceInfo.identifier
+        );
+
+        auto output = juce::MidiOutput::openDevice(deviceInfo.identifier);
+        if (output) {
+            midiOutputs.push_back(std::move(output));
+        }
+    }
+}
+```
+
+#### D. Wire MIDI Callbacks
+
+**Implement MidiInputCallback:**
+```cpp
+class NetworkMidiServer : public juce::MidiInputCallback {
+    // ...
+
+    void handleIncomingMidiMessage(
+        juce::MidiInput* source,
+        const juce::MidiMessage& message) override
+    {
+        // Route incoming MIDI through MidiRouter
+        std::vector<uint8_t> data(
+            message.getRawData(),
+            message.getRawData() + message.getRawDataSize()
+        );
+
+        // Find device ID for this input
+        uint16_t deviceId = getDeviceIdForInput(source);
+
+        // Route to network (MidiRouter decides local vs remote)
+        midiRouter->routeMessage(deviceId, data);
+    }
+};
+```
+
+#### E. Update HTTP API Endpoints
+
+**Connect endpoints to actual data:**
+```cpp
+// /midi/devices - query DeviceRegistry
+server->Get("/midi/devices", [this](auto&, auto& res) {
+    auto devices = deviceRegistry->getAllDevices();
+    JsonBuilder json;
+    // ... build JSON from devices ...
+    res.set_content(json.toString(), "application/json");
+});
+
+// /network/mesh - query MeshManager
+server->Get("/network/mesh", [this](auto&, auto& res) {
+    auto peers = meshManager->getConnectedPeers();
+    // ... build JSON from peers ...
+});
+
+// /node/info - include UDP port
+server->Get("/node/info", [this](auto&, auto& res) {
+    json.startObject()
+        .key("uuid").value(identity.getNodeId().toString())
+        .key("http_port").value(actualPort)
+        .key("udp_port").value(udpPort)  // NEW
+        .key("devices").value(deviceRegistry->getTotalDeviceCount())  // NEW
+        .endObject();
+});
+```
+
+#### F. Wire Discovery Callbacks
+
+**Mesh formation on peer discovery:**
+```cpp
+void NetworkMidiServer::setupDiscoveryCallbacks() {
+    serviceDiscovery->onPeerDiscovered = [this](const PeerInfo& peer) {
+        std::cout << "Discovered peer: " << peer.name
+                  << " at " << peer.ipAddress << ":" << peer.httpPort
+                  << std::endl;
+
+        // MeshManager handles connection
+        meshManager->onPeerDiscovered(peer);
+    };
+
+    serviceDiscovery->onPeerLost = [this](const juce::Uuid& peerId) {
+        std::cout << "Lost peer: " << peerId.toString() << std::endl;
+        meshManager->onPeerLost(peerId);
+    };
+}
+```
+
+### Files to Modify
+
+**NetworkMidiServer.cpp:**
+- Add component includes
+- Add member variables
+- Update constructor
+- Implement `registerLocalMidiDevices()`
+- Implement `handleIncomingMidiMessage()`
+- Update HTTP endpoints
+- Add discovery callbacks
+
+**Estimated LOC:** +300-400 lines
+
+### Testing Strategy
+
+**Manual Integration Test:**
+1. Start instance 1
+2. Start instance 2
+3. Verify: instances discover each other (check logs)
+4. Verify: mesh connection established
+5. Verify: device lists merged (via `/network/devices`)
+6. Send MIDI to instance 1's local device
+7. Verify: instance 2 receives via network
+8. Verify: instance 2 routes to its local device
+
+**Success Criteria:**
+- ✅ Both instances appear in each other's `/network/mesh`
+- ✅ Both instances show combined device list
+- ✅ MIDI sent to local device appears on remote instance
+- ✅ End-to-end latency <10ms on localhost
+
+---
+
 ## API Design
 
 ### New Network Endpoints
@@ -1174,62 +1413,70 @@ $ ./NetworkMidiServer
 
 ## Implementation Status (Updated 2025-10-05)
 
-**All 5 phases have been implemented by multi-agent workflow**
+**Component Implementation: COMPLETE**
+**Integration: IN PROGRESS**
 
-- ✅ Phase 1: Auto-Configuration Foundation - COMPLETE
-- ✅ Phase 2: Service Discovery (mDNS/Bonjour) - COMPLETE
-- ✅ Phase 3: Auto-Mesh Formation - COMPLETE
-- ✅ Phase 4: Network MIDI Transport - COMPLETE
-- ✅ Phase 5: MIDI Routing & Virtual Bus - COMPLETE
-- ✅ Unit Tests: 187 test cases, 84% average coverage (meets 80% requirement)
-- ⚠️ Build Status: Compilation errors in transport layer (Timer inheritance issues)
+- ✅ Phase 1: Auto-Configuration Foundation - Components implemented and tested
+- ✅ Phase 2: Service Discovery (mDNS/Bonjour) - Components implemented and tested
+- ✅ Phase 3: Auto-Mesh Formation - Components implemented and tested
+- ✅ Phase 4: Network MIDI Transport - Components implemented and tested
+- ✅ Phase 5: MIDI Routing & Virtual Bus - Components implemented and tested
+- ❌ **Phase 6: Main Server Integration - NOT STARTED**
+- ✅ Unit Tests: 195 test cases, 98.97% pass rate, ~93% coverage on core components
+- ✅ Build Status: All components compile cleanly
+- ⚠️ **End-to-End Testing: BLOCKED until Phase 6 integration complete**
 
-See `implementation-complete.md` for detailed implementation report.
+**Current Reality:**
+- All building blocks exist and work in isolation
+- Main server can start multiple instances with unique UUIDs
+- **Server instances CANNOT discover each other or route MIDI yet**
+- Integration work (Phase 6) required to wire components together
 
-## Success Criteria
+See `implementation-complete.md` for component implementation details.
 
-### Code Cleanup
+## Success Criteria (Phase 6 Integration)
+
+### Code Cleanup (DONE)
 - ✅ `MidiHttpServer.cpp` deleted
 - ✅ `MidiHttpServer2.cpp` renamed to `NetworkMidiServer.cpp`
 - ✅ CMakeLists.txt updated (single HTTP server target)
 
-### Zero-Config
-- ✅ No config files required
-- ✅ No command-line arguments required (defaults work)
-- ✅ Auto port allocation (no hardcoded ports)
-- ✅ Unique node IDs (no UUID collisions)
-
-### Multi-Instance
-- ✅ Run 10+ instances on same host without conflicts
-- ✅ Each instance gets unique HTTP/UDP ports
+### Multi-Instance Support (DONE)
+- ✅ Run multiple instances on same host without conflicts
+- ✅ Each instance gets unique UUID (no singleton)
+- ✅ Each instance gets unique HTTP/UDP ports (auto-assigned)
 - ✅ Each instance has isolated temp directory
 
-### Auto-Discovery
-- ✅ Nodes discover each other via mDNS within 2 seconds
-- ✅ Works across different hosts on same LAN
-- ✅ Fallback discovery when mDNS unavailable
+### Component Implementation (DONE)
+- ✅ All Phase 1-5 components implemented
+- ✅ Unit tests: 195 tests, 98.97% pass rate
+- ✅ Core components: ~93% code coverage
+- ✅ All components compile cleanly
 
-### Auto-Mesh
-- ✅ All discovered nodes automatically connect (full mesh)
-- ✅ Bidirectional connections (A↔B)
-- ✅ Heartbeat monitoring (detect node failures)
-- ✅ Auto-reconnect when failed node reappears
+### Phase 6 Integration (TODO)
+- ❌ Wire components into NetworkMidiServer
+- ❌ Register local MIDI devices
+- ❌ Enable service discovery in main server
+- ❌ Enable mesh formation in main server
+- ❌ Enable MIDI routing in main server
+- ❌ Update HTTP endpoints with real data
 
-### Transparent Routing
-- ✅ All MIDI devices (local + remote) appear on single virtual bus
-- ✅ Send/receive to any device via unified API
-- ✅ Low latency (< 5ms round-trip on LAN)
+### End-to-End Testing (BLOCKED - needs Phase 6)
+- ⏸️ Two instances discover each other via mDNS
+- ⏸️ Nodes automatically form mesh connection
+- ⏸️ MIDI sent to local device routes over network
+- ⏸️ Remote MIDI appears on peer's local device
+- ⏸️ Latency <10ms on localhost
+- ⏸️ Devices from both nodes visible via API
 
-### Resilience
-- ✅ Gracefully handle node failures
-- ✅ Detect and recover from network disruptions
-- ✅ Clean shutdown (remove from mesh, cleanup resources)
-
-### Cross-Platform
-- ✅ macOS build (Bonjour)
-- ✅ Linux build (Avahi)
-- ✅ Windows build (Bonjour for Windows)
-- ✅ Same binary behavior on all platforms
+### Production Readiness (FUTURE)
+After Phase 6 proves end-to-end functionality:
+- Cross-platform testing (Linux/Windows)
+- Multi-machine testing (not just localhost)
+- Performance profiling under load
+- Error recovery testing
+- Network disruption testing
+- Long-running stability testing
 
 ---
 
