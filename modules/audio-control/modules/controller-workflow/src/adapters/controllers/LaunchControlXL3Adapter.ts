@@ -7,7 +7,7 @@
  * @module adapters/controllers/LaunchControlXL3Adapter
  */
 
-import { LaunchControlXL3 } from '@oletizi/launch-control-xl3';
+import { LaunchControlXL3, JuceMidiBackend } from '@oletizi/launch-control-xl3/node';
 import type {
   CustomMode as LCXL3CustomMode,
   ControlMapping as LCXL3ControlMapping,
@@ -34,7 +34,7 @@ export class LaunchControlXL3Adapter implements ControllerAdapterInterface {
   readonly model = 'Launch Control XL 3';
   readonly capabilities: ControllerCapabilities = {
     supportsCustomModes: true,
-    maxConfigSlots: 16,
+    maxConfigSlots: 15, // Slots 0-14 are user-programmable, slot 15 is factory
     supportsRead: true,
     supportsWrite: true,
     supportedControlTypes: ['encoder', 'slider', 'button'],
@@ -49,7 +49,12 @@ export class LaunchControlXL3Adapter implements ControllerAdapterInterface {
    * @throws Error if device connection fails
    */
   static async create(): Promise<LaunchControlXL3Adapter> {
-    const device = new LaunchControlXL3({ enableCustomModes: true });
+    // Create JUCE MIDI backend for Node.js environment
+    const backend = new JuceMidiBackend({ host: 'localhost', port: 7777 });
+    const device = new LaunchControlXL3({
+      enableCustomModes: true,
+      midiBackend: backend
+    });
     await device.connect();
     return new LaunchControlXL3Adapter(device);
   }
@@ -82,13 +87,14 @@ export class LaunchControlXL3Adapter implements ControllerAdapterInterface {
   /**
    * List all configuration slots
    *
-   * Reads all 16 custom mode slots from the device and returns
-   * their status (empty or populated with mode name).
+   * Reads slots 0-14 from the device (slot 15 is reserved for factory content).
+   * Returns their status (empty or populated with mode name).
    */
   async listConfigurations(): Promise<ConfigurationSlot[]> {
     const slots: ConfigurationSlot[] = [];
 
-    for (let i = 0; i < 16; i++) {
+    // Only read slots 0-14; slot 15 is factory-only
+    for (let i = 0; i < 15; i++) {
       const mode = await this.device.readCustomMode(i);
       const slot: ConfigurationSlot = {
         index: i,
@@ -237,7 +243,7 @@ export class LaunchControlXL3Adapter implements ControllerAdapterInterface {
     }
 
     const mode: LCXL3CustomMode = {
-      name: config.name.substring(0, 8), // LCXL3 mode names are max 8 chars
+      name: this.truncateName(config.name, 8), // LCXL3 mode names are max 8 chars
       controls,
     };
 
@@ -247,6 +253,19 @@ export class LaunchControlXL3Adapter implements ControllerAdapterInterface {
     }
 
     return mode;
+  }
+
+  /**
+   * Truncate name to specified length, ensuring clean truncation
+   * @param name - Name to truncate
+   * @param maxLength - Maximum length
+   * @returns Truncated name
+   */
+  private truncateName(name: string, maxLength: number): string {
+    if (name.length <= maxLength) {
+      return name;
+    }
+    return name.substring(0, maxLength);
   }
 
   /**

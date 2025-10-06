@@ -14,6 +14,7 @@ export default defineConfig({
     lib: {
       entry: {
         index: resolve(__dirname, 'src/index.ts'),
+        node: resolve(__dirname, 'src/node.ts'),
         cli: resolve(__dirname, 'src/cli/index.ts')
       },
       formats: ['es']
@@ -36,7 +37,8 @@ export default defineConfig({
         'os',
         'stream',
         'buffer',
-        'process'
+        'process',
+        'events'
       ],
       output: {
         preserveModules: false,

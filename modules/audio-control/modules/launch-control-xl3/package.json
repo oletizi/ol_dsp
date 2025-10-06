@@ -16,6 +16,12 @@
       "import": "./dist/index.js",
       "default": "./dist/index.js"
     },
+    "./node": {
+      "types": "./dist/node.d.ts",
+      "node": "./dist/node.js",
+      "import": "./dist/node.js",
+      "default": "./dist/node.js"
+    },
     "./cli": {
       "types": "./dist/cli/index.d.ts",
       "node": "./dist/cli/index.js",

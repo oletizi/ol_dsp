@@ -12,11 +12,11 @@ import { Command } from 'commander';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { stringify as yamlStringify } from 'yaml';
-import { LaunchControlXL3Adapter } from '@/adapters/controllers/LaunchControlXL3Adapter.js';
-import { LaunchControlXL3Converter } from '@/converters/LaunchControlXL3Converter.js';
-import { ArdourDeployer } from '@/adapters/daws/ArdourDeployer.js';
-import type { ControllerAdapterInterface } from '@/types/controller-adapter.js';
-import type { DAWDeployerInterface } from '@/types/daw-deployer.js';
+import { LaunchControlXL3Adapter } from '../adapters/controllers/LaunchControlXL3Adapter.js';
+import { LaunchControlXL3Converter } from '../converters/LaunchControlXL3Converter.js';
+import { ArdourDeployer } from '../adapters/daws/ArdourDeployer.js';
+import type { ControllerAdapterInterface } from '../types/controller-adapter.js';
+import type { DAWDeployerInterface } from '../types/daw-deployer.js';
 import type { CanonicalMidiMap, PluginDefinition } from '@oletizi/canonical-midi-maps';
 
 /**
