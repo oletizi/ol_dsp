@@ -10,6 +10,7 @@ benefits of TypeScript development (types, IntelliSense, refactoring) while prod
 - ✅ **Live Reload** - File watching for instant updates
 - ✅ **Track-Aware Routing** - CC messages only affect the selected track
 - ✅ **Plugin Presets** - Built-in mappings for common Ableton devices
+- ✅ **Dual-Pipeline Mappings** - Canonical defaults + runtime user customizations
 - ✅ **Debug Mode** - Detailed logging for development
 - ✅ **No External Dependencies** - Pure Max for Live integration
 
@@ -43,6 +44,44 @@ TypeScript Source → Compiled JavaScript → Max for Live → Ableton Live
      (src/)            (dist/)           (js object)    (parameters)
 ```
 
+### Mapping Sources
+
+The cc-router uses a **dual-pipeline mapping architecture** combining curated defaults with user customization:
+
+- **Tier 1: Canonical Mappings** (Build-time) - Curated YAML sources → TypeScript constants
+- **Tier 2: Runtime Mappings** (Runtime) - Device-extracted JSON → Runtime overrides
+
+See [Mapping Sources Architecture](./docs/architecture/mapping-sources.md) for complete documentation.
+
+#### Quick Overview
+
+**Canonical Mappings (Tier 1):**
+- Source: YAML files in `canonical-midi-maps` package
+- Build: `npm run convert-maps` generates TypeScript
+- Purpose: Curated defaults for popular plugins
+- Updates: Through PR/commit workflow
+
+**Runtime Mappings (Tier 2):**
+- Source: `data/plugin-mappings.json`
+- Tool: Extracted via `controller-workflow` LiveDeployer
+- Purpose: User-specific customizations from Live
+- Updates: One-click device extraction
+
+**Merge Strategy:** Runtime mappings override canonical defaults.
+
+### User Workflow: Device Extraction
+
+1. Configure Launch Control XL3 in Novation Components for your plugin
+2. Save configuration to a device slot
+3. Extract to JSON:
+   ```bash
+   cd modules/controller-workflow
+   npx controller-deploy deploy --slot 0 --daw live --plugin "My Plugin"
+   ```
+4. Reload cc-router in Max for Live - your mappings are now active!
+
+For complete workflow details, see [controller-workflow README](../controller-workflow/README.md#live-deployment).
+
 ## Project Structure
 
 ```
@@ -50,11 +89,20 @@ cc-router/
 ├── src/
 │   ├── types.ts              # TypeScript definitions
 │   ├── cc-router.ts          # Core routing logic
-│   └── max-integration.ts    # Max for Live interface
+│   ├── max-integration.ts    # Max for Live interface
+│   ├── canonical-plugin-maps.ts  # Build-time canonical mappings (auto-gen)
+│   ├── runtime-loader.ts     # Runtime JSON loader
+│   └── mapping-registry.ts   # Dual-pipeline merge logic
+├── data/
+│   └── plugin-mappings.json  # User runtime mappings (git-ignored)
+├── docs/
+│   └── architecture/
+│       └── mapping-sources.md # Dual-pipeline architecture
 ├── dist/                     # Compiled JavaScript
 ├── scripts/
 │   ├── setup.js             # Initial setup
-│   └── deploy.js            # Deploy to Max for Live
+│   ├── deploy.js            # Deploy to Max for Live
+│   └── convert-canonical-maps.cjs  # YAML → TypeScript converter
 └── package.json             # Dependencies and scripts
 ```
 
@@ -142,14 +190,7 @@ npm run deploy  # Copy latest compiled JS to Max projects
 Set min/max values in parameter mappings:
 
 ```javascript
-setmapping
-13
-0
-1
-"Filter Freq"
-exponential
-0.2
-0.8
+setmapping 13 0 1 "Filter Freq" exponential 0.2 0.8
 // CC 13 now maps from 20% to 80% of parameter range
 ```
 
@@ -177,28 +218,12 @@ Map different CC ranges to different devices:
 
 ```javascript
 // Device 0 (first in chain)
-setmapping
-13
-0
-0
-"Device 1 Param 1"
-setmapping
-14
-0
-1
-"Device 1 Param 2"
+setmapping 13 0 0 "Device 1 Param 1"
+setmapping 14 0 1 "Device 1 Param 2"
 
-// Device 1 (second in chain)  
-setmapping
-21
-1
-0
-"Device 2 Param 1"
-setmapping
-22
-1
-1
-"Device 2 Param 2"
+// Device 1 (second in chain)
+setmapping 21 1 0 "Device 2 Param 1"
+setmapping 22 1 1 "Device 2 Param 2"
 ```
 
 ## TypeScript Benefits
@@ -231,11 +256,12 @@ interface ParameterMapping {
 
 ```bash
 npm run build      # Compile TypeScript to JavaScript
-npm run watch      # Auto-compile on file changes  
+npm run watch      # Auto-compile on file changes
 npm run dev        # Watch mode with notifications
 npm run deploy     # Deploy compiled JS to Max for Live
 npm run setup      # Initial project setup
 npm run clean      # Clean dist folder
+npm run convert-maps  # Convert YAML canonical mappings to TypeScript
 ```
 
 ## Troubleshooting
@@ -266,6 +292,18 @@ npm run clean      # Clean dist folder
 - Verify CC numbers 13-20 for top knobs
 - Check MIDI channel (default: channel 1)
 - Test with external MIDI monitor first
+
+### Mapping Issues
+
+- Check if runtime mapping exists: `cat data/plugin-mappings.json`
+- Verify canonical mapping in `src/canonical-plugin-maps.ts`
+- Enable debug mode to see which tier is active
+- See [Mapping Sources Architecture](./docs/architecture/mapping-sources.md) for troubleshooting guide
+
+## Documentation
+
+- [Mapping Sources Architecture](./docs/architecture/mapping-sources.md) - Dual-pipeline mapping system
+- [Controller Workflow](../controller-workflow/README.md) - Device extraction and deployment
 
 ## Acknowledgements
 

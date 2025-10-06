@@ -4,7 +4,8 @@
  */
 
 import { ParameterMapping, LiveAPIObject, TrackInfo, DeviceInfo } from '@/types';
-import { CANONICAL_PLUGIN_MAPS, getPluginMapping, getAvailableControllers, Controller } from '@/canonical-plugin-maps';
+import { Controller, PluginMapping } from '@/types/plugin-mappings';
+import { createMappingRegistry, MappingRegistry } from '@/mapping-registry';
 import { logger, LogLevel } from '@/logger';
 
 export class CCRouter {
@@ -12,8 +13,12 @@ export class CCRouter {
   private selectedTrackId: number = -1;
   private liveAPI: LiveAPIObject | null = null;
   private selectedController: string = 'Launch Control XL 3'; // Default controller
+  private readonly mappingRegistry: MappingRegistry;
 
-  constructor() {
+  constructor(runtimeMappingsPath?: string) {
+    // Initialize the mapping registry with optional runtime mappings path
+    this.mappingRegistry = createMappingRegistry(runtimeMappingsPath);
+
     this.initializeDefaultMappings();
     // Don't call setupLiveAPI in constructor - causes crash
     // Call it explicitly from loadbang() instead
@@ -191,7 +196,7 @@ export class CCRouter {
   private transformValue(midiValue: number, mapping: ParameterMapping): number {
     // Normalize to 0-1
     let normalized = midiValue / 127.0;
-    
+
     // Apply curve
     switch (mapping.curve) {
       case 'exponential':
@@ -205,12 +210,12 @@ export class CCRouter {
         // No transformation needed
         break;
     }
-    
+
     // Apply min/max range if specified
     if (mapping.minValue !== undefined && mapping.maxValue !== undefined) {
       normalized = mapping.minValue + (normalized * (mapping.maxValue - mapping.minValue));
     }
-    
+
     return normalized;
   }
 
@@ -219,7 +224,7 @@ export class CCRouter {
    */
   public setMapping(ccNumber: number, deviceIndex: number, parameterIndex: number, parameterName?: string, curve?: 'linear' | 'exponential' | 'logarithmic'): void {
     const existingIndex = this.mappings.findIndex(m => m.ccNumber === ccNumber);
-    
+
     const mapping: ParameterMapping = {
       ccNumber: ccNumber,
       deviceIndex: deviceIndex,
@@ -276,24 +281,25 @@ export class CCRouter {
       logger.info("Detected plugin: " + deviceName);
       logger.info("Using controller: " + this.selectedController);
 
-      // Try to find canonical mapping for this controller + plugin combination
-      const canonicalMapping = getPluginMapping(this.selectedController, deviceName);
+      // Try to find mapping for this controller + plugin combination (canonical or runtime)
+      const pluginMapping = this.mappingRegistry.getPluginMapping(this.selectedController, deviceName);
 
-      if (canonicalMapping) {
-        const controllerModel = canonicalMapping.controller.model || 'Unknown';
-        logger.info("Found canonical mapping for " + controllerModel + " + " + canonicalMapping.pluginName);
+      if (pluginMapping) {
+        const controllerModel = pluginMapping.controller.model || 'Unknown';
+        const source = pluginMapping.metadata.source || 'unknown';
+        logger.info("Found " + source + " mapping for " + controllerModel + " + " + pluginMapping.pluginName);
 
         // Clear existing mappings
         this.mappings = [];
 
-        // Apply canonical mappings
-        const mappingKeys = Object.keys(canonicalMapping.mappings);
+        // Apply mappings
+        const mappingKeys = Object.keys(pluginMapping.mappings);
         for (let i = 0; i < mappingKeys.length; i++) {
           const ccNumberStr = mappingKeys[i];
           if (!ccNumberStr) continue;
 
           const ccNumber = parseInt(ccNumberStr, 10);
-          const mapping = canonicalMapping.mappings[ccNumberStr];
+          const mapping = pluginMapping.mappings[ccNumberStr];
 
           if (mapping) {
             this.setMapping(
@@ -306,13 +312,100 @@ export class CCRouter {
           }
         }
 
-        logger.info("Applied " + mappingKeys.length + " canonical mappings for " + canonicalMapping.pluginName);
+        logger.info("Applied " + mappingKeys.length + " mappings for " + pluginMapping.pluginName);
       } else {
-        logger.warn("No canonical mapping found for " + this.selectedController + " + " + deviceName);
-        logger.debug("Available mappings: " + Object.keys(CANONICAL_PLUGIN_MAPS).join(", "));
+        logger.warn("No mapping found for " + this.selectedController + " + " + deviceName);
       }
     } catch (err) {
       logger.error("Error auto-applying canonical mapping - " + err);
+    }
+  }
+
+  /**
+   * Export current mappings as a PluginMapping with device-extracted metadata.
+   * This generates JSON structure compatible with plugin-mappings.json.
+   *
+   * @param deviceIndex - The device index to extract plugin info from (default: 1)
+   * @param controllerSlot - Optional controller slot number for tracking hardware position
+   * @returns JSON string of the PluginMapping, or error message
+   */
+  public exportCurrentMapping(deviceIndex?: number, controllerSlot?: number): string {
+    try {
+      const selectedTrack = new LiveAPI("live_set view selected_track");
+
+      if (!selectedTrack || selectedTrack.id === "0") {
+        return "ERROR: No track selected";
+      }
+
+      const devices = selectedTrack.get("devices");
+      const targetDeviceIndex = deviceIndex !== undefined ? deviceIndex : 1;
+
+      if (targetDeviceIndex >= devices.length) {
+        return "ERROR: Device index " + targetDeviceIndex + " not found (only " + devices.length + " devices)";
+      }
+
+      // Get device information
+      const devicePath = "live_set view selected_track devices " + targetDeviceIndex;
+      const device = new LiveAPI(devicePath);
+      const deviceNameRaw = device.get("name");
+      const deviceName = Array.isArray(deviceNameRaw) ? String(deviceNameRaw[0]) : String(deviceNameRaw);
+
+      // Build mappings object
+      const mappingsObj: { [ccNumber: string]: any } = {};
+      for (let i = 0; i < this.mappings.length; i++) {
+        const m = this.mappings[i];
+        if (m) {
+          mappingsObj[String(m.ccNumber)] = {
+            deviceIndex: m.deviceIndex,
+            parameterIndex: m.parameterIndex,
+            parameterName: m.parameterName,
+            curve: m.curve
+          };
+        }
+      }
+
+      // Get controller info
+      const controllers = this.mappingRegistry.getControllers();
+      let controllerInfo = { model: this.selectedController };
+
+      // Try to find full controller info
+      for (let i = 0; i < controllers.length; i++) {
+        const c = controllers[i];
+        if (c && c.model === this.selectedController) {
+          controllerInfo = c;
+          break;
+        }
+      }
+
+      // Build PluginMapping structure with device-extracted metadata
+      const pluginMapping: PluginMapping = {
+        controller: controllerInfo,
+        pluginName: deviceName,
+        pluginManufacturer: "Unknown", // Could be extracted from device metadata if available
+        mappings: mappingsObj,
+        metadata: {
+          name: this.selectedController + " + " + deviceName + " (Extracted)",
+          description: "Device-extracted mapping from Live session",
+          version: "1.0.0",
+          source: "device-extracted",
+          extractedAt: new Date().toISOString()
+        }
+      };
+
+      // Add controllerSlot if provided
+      if (controllerSlot !== undefined) {
+        pluginMapping.metadata.controllerSlot = controllerSlot;
+      }
+
+      const jsonString = JSON.stringify(pluginMapping, null, 2);
+
+      logger.info("Exported mapping for " + deviceName);
+      logger.info("Mappings count: " + this.mappings.length);
+      logger.info("Use this JSON to add to plugin-mappings.json as a runtime override");
+
+      return jsonString;
+    } catch (err) {
+      return "ERROR: Failed to export mapping - " + err;
     }
   }
 
@@ -328,7 +421,7 @@ export class CCRouter {
    * Get list of available controllers
    */
   public getControllers(): Controller[] {
-    return getAvailableControllers();
+    return this.mappingRegistry.getControllers();
   }
 
   /**
@@ -355,7 +448,7 @@ export class CCRouter {
   public getSelectedTrackInfo(): TrackInfo | null {
     try {
       const selectedTrack = new LiveAPI("live_set view selected_track");
-      
+
       if (!selectedTrack || selectedTrack.id === "0") {
         return null;
       }
@@ -377,7 +470,7 @@ export class CCRouter {
   public getSelectedTrackDevices(): DeviceInfo[] {
     try {
       const selectedTrack = new LiveAPI("live_set view selected_track");
-      
+
       if (!selectedTrack || selectedTrack.id === "0") {
         return [];
       }
@@ -388,7 +481,7 @@ export class CCRouter {
       for (let i = 0; i < devices.length; i++) {
         const device = new LiveAPI("live_set view selected_track devices " + i);
         const parameters = device.get("parameters");
-        
+
         deviceInfo.push({
           index: i,
           name: device.get("name"),

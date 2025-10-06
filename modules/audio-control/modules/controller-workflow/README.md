@@ -138,7 +138,90 @@ The `DeploymentWorkflow` class orchestrates the complete workflow:
 | DAW | Status | Deployer | Format |
 |-----|--------|----------|--------|
 | Ardour 8.0+ | ✅ Complete | `ArdourDeployer` | `.map` XML |
-| Ableton Live 11.0+ | 🔜 Planned | - | Control Surface Script |
+| Ableton Live 11.0+ | ✅ Complete | `LiveDeployer` | Runtime JSON |
+
+## Live Deployment
+
+### Overview
+
+The `LiveDeployer` extracts controller configurations and deploys them as **runtime mappings** to the `live-max-cc-router` Max for Live device. Unlike Ardour's static `.map` files, Live deployments create JSON data files that are loaded at runtime.
+
+### Architecture
+
+Live deployment uses a **dual-pipeline mapping system**:
+
+- **Tier 1: Canonical Mappings** - Build-time YAML → TypeScript constants (curated defaults)
+- **Tier 2: Runtime Mappings** - Device-extracted JSON (user customizations)
+
+Runtime mappings **override** canonical defaults, allowing users to customize mappings without rebuilding the module.
+
+See [live-max-cc-router Mapping Architecture](../live-max-cc-router/docs/architecture/mapping-sources.md) for complete documentation.
+
+### Deployment Workflow
+
+1. **Configure controller** in Novation Components (or controller-specific editor)
+2. **Save to device slot** with meaningful name (e.g., "TAL-Filter")
+3. **Run deployment:**
+   ```bash
+   controller-deploy deploy --slot 0 --daw live --plugin "TAL-Filter" --install
+   ```
+4. **Result:** JSON file written to `live-max-cc-router/data/plugin-mappings.json`
+
+### File Locations
+
+| File | Purpose | Edit? |
+|------|---------|-------|
+| `live-max-cc-router/data/plugin-mappings.json` | Runtime user mappings | ✅ Yes |
+| `live-max-cc-router/src/canonical-plugin-maps.ts` | Build-time canonical mappings | ❌ Auto-generated |
+
+### Runtime Override Behavior
+
+```typescript
+// Live deployment writes to:
+live-max-cc-router/data/plugin-mappings.json
+
+// cc-router merges at runtime:
+const merged = {
+  ...CANONICAL_PLUGIN_MAPS,  // Tier 1: Build-time defaults
+  ...runtimeMappings          // Tier 2: Runtime overrides (wins!)
+};
+```
+
+### Live Deployment Options
+
+```bash
+# Basic Live deployment
+controller-deploy deploy --slot 0 --daw live
+
+# With plugin name and auto-install
+controller-deploy deploy --slot 0 --daw live --plugin "My Plugin" --install
+
+# Multiple DAWs (Live + Ardour)
+controller-deploy deploy --slot 0 --daw live ardour --install
+```
+
+### Integration with live-max-cc-router
+
+After deployment:
+
+1. **Open Live** and load `cc-router` Max for Live device
+2. **Reload device** if already running (to pick up new JSON)
+3. **Test mappings** - CC controls should map to plugin parameters
+4. **Check debug output** in Max console to see which tier is active
+
+### Removing Runtime Overrides
+
+To revert to canonical defaults:
+
+```bash
+# Remove specific mapping from JSON file
+code live-max-cc-router/data/plugin-mappings.json
+
+# Or delete entire file
+rm live-max-cc-router/data/plugin-mappings.json
+```
+
+Then reload cc-router device in Live.
 
 ## CLI Reference
 
@@ -189,6 +272,9 @@ controller-deploy deploy --slot 0 --daw ardour
 
 # With plugin name and auto-install
 controller-deploy deploy -s 2 -d ardour -p "TAL-Filter" --install
+
+# Deploy to Live (runtime JSON)
+controller-deploy deploy -s 0 -d live -p "My Plugin" --install
 
 # Multiple DAWs
 controller-deploy deploy -s 0 -d ardour live --install
@@ -243,6 +329,7 @@ pnpm test
 - [Architecture Guide](./docs/ARCHITECTURE.md) - System design and component overview
 - [Adding Controllers](./docs/ADDING_CONTROLLERS.md) - Step-by-step guide for controller integration
 - [API Reference](./docs/API.md) - Complete API documentation
+- [Live Mapping Architecture](../live-max-cc-router/docs/architecture/mapping-sources.md) - Dual-pipeline mapping system
 
 ## Examples
 
@@ -259,3 +346,4 @@ Apache-2.0
 - [@oletizi/launch-control-xl3](../launch-control-xl3) - Launch Control XL3 device library
 - [@oletizi/canonical-midi-maps](../canonical-midi-maps) - Canonical MIDI map format
 - [@oletizi/ardour-midi-maps](../ardour-midi-maps) - Ardour MIDI map utilities
+- [@oletizi/live-max-cc-router](../live-max-cc-router) - Max for Live CC router with dual-pipeline mappings

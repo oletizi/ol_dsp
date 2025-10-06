@@ -223,6 +223,33 @@ function listcontrollers(): void {
   logger.info("===========================");
 }
 
+/**
+ * Export current mappings as JSON for adding to plugin-mappings.json
+ * Usage: exportmapping [deviceIndex] [controllerSlot]
+ *
+ * This generates a JSON structure with 'device-extracted' metadata that can be
+ * added to data/plugin-mappings.json as a runtime override. Runtime mappings
+ * take precedence over canonical mappings for the same controller+plugin combo.
+ */
+function exportmapping(deviceIndex?: number, controllerSlot?: number): void {
+  if (!ccRouter) {
+    logger.warn("Not initialized");
+    return;
+  }
+
+  const jsonOutput = ccRouter.exportCurrentMapping(deviceIndex, controllerSlot);
+
+  // Log the JSON to Max console
+  logger.info("=== Exported Mapping JSON ===");
+  post(jsonOutput + "\n");
+  logger.info("===========================");
+  logger.info("Copy the JSON above and add it to data/plugin-mappings.json");
+  logger.info("Runtime mappings override canonical mappings with the same key");
+
+  // Send to outlet for potential external processing
+  outlet(2, "exportmapping", jsonOutput);
+}
+
 function setupfor(pluginType: string): void {
   // ...
 }

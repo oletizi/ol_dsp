@@ -120,6 +120,27 @@ export interface PluginMapping {
      * Recommended format: semver (e.g., "1.0.0")
      */
     version?: string;
+
+    /**
+     * Source type indicating where this mapping originated.
+     * - 'canonical': Pre-defined mappings shipped with the application
+     * - 'device-extracted': Mappings extracted from Live device state
+     * - 'user-custom': User-created or manually edited mappings
+     */
+    source?: 'canonical' | 'device-extracted' | 'user-custom';
+
+    /**
+     * ISO 8601 timestamp of when this mapping was extracted from a device.
+     * Only present when source is 'device-extracted'.
+     */
+    extractedAt?: string;
+
+    /**
+     * The controller slot number from which this mapping was extracted.
+     * Only present when source is 'device-extracted'.
+     * Useful for tracking which physical controller position was used.
+     */
+    controllerSlot?: number;
   };
 }
 
