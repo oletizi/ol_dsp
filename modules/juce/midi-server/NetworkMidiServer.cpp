@@ -14,6 +14,12 @@
 #include "httplib.h"
 #include "network/core/NodeIdentity.h"
 #include "network/core/InstanceManager.h"
+#include "network/discovery/ServiceDiscovery.h"
+#include "network/mesh/MeshManager.h"
+#include "network/routing/MidiRouter.h"
+#include "network/routing/DeviceRegistry.h"
+#include "network/routing/RoutingTable.h"
+#include "network/transport/UdpMidiTransport.h"
 
 #include <iostream>
 #include <map>
@@ -100,84 +106,36 @@ private:
 };
 
 //==============================================================================
-// MIDI Port wrapper with message queuing
-class MidiPort : public juce::MidiInputCallback
+// JUCE MIDI port wrapper implementing MidiPortInterface
+class JuceMidiPort : public NetworkMidi::MidiPortInterface
 {
 public:
-    MidiPort(const std::string& id, const std::string& name, bool isInput)
-        : portId(id), portName(name), isInputPort(isInput) {}
+    JuceMidiPort(const juce::String& deviceName, bool isInputPort)
+        : name(deviceName), inputPort(isInputPort) {}
 
-    ~MidiPort() override { close(); }
-
-    bool open() {
-        if (isInputPort) {
-            auto devices = juce::MidiInput::getAvailableDevices();
-            for (const auto& device : devices) {
-                if (device.name.toStdString().find(portName) != std::string::npos) {
-                    input = juce::MidiInput::openDevice(device.identifier, this);
-                    if (input) {
-                        input->start();
-                        return true;
-                    }
-                }
-            }
-        } else {
-            auto devices = juce::MidiOutput::getAvailableDevices();
-            for (const auto& device : devices) {
-                if (device.name.toStdString().find(portName) != std::string::npos) {
-                    output = juce::MidiOutput::openDevice(device.identifier);
-                    return output != nullptr;
-                }
-            }
-        }
-        return false;
-    }
-
-    void close() {
-        if (input) {
-            input->stop();
-            input.reset();
-        }
-        output.reset();
-    }
-
-    void sendMessage(const std::vector<uint8_t>& data) {
-        if (!output) return;
-
-        // Validate message has data
-        if (data.empty()) {
-            std::cerr << "Warning: Attempted to send empty MIDI message\n";
-            return;
-        }
+    void sendMessage(const std::vector<uint8_t>& data) override {
+        if (!output || data.empty()) return;
 
         if (data[0] == 0xF0) {
-            // For SysEx messages, validate they end with 0xF7
-            if (data.back() != 0xF7) {
-                std::cerr << "Warning: Invalid SysEx message (missing 0xF7)\n";
+            // SysEx message
+            if (data.back() != 0xF7 || data.size() <= 2) {
+                std::cerr << "Warning: Invalid SysEx message\n";
                 return;
             }
-
-            // createSysExMessage expects the data WITHOUT F0/F7 wrappers
-            // So we need to pass just the middle part
-            if (data.size() > 2) {
-                output->sendMessageNow(
-                    juce::MidiMessage::createSysExMessage(
-                        data.data() + 1,  // Skip F0
-                        (int)data.size() - 2  // Exclude F0 and F7
-                    )
-                );
-            }
+            output->sendMessageNow(
+                juce::MidiMessage::createSysExMessage(
+                    data.data() + 1,
+                    (int)data.size() - 2
+                )
+            );
         } else if (data.size() >= 1 && data.size() <= 3) {
-            // Valid short MIDI message (1-3 bytes)
             output->sendMessageNow(
                 juce::MidiMessage(data.data(), (int)data.size())
             );
-        } else {
-            std::cerr << "Warning: Invalid MIDI message length: " << data.size() << " bytes\n";
         }
     }
 
-    std::vector<std::vector<uint8_t>> getMessages() {
+    std::vector<std::vector<uint8_t>> getMessages() override {
         std::lock_guard<std::mutex> lock(queueMutex);
         std::vector<std::vector<uint8_t>> result;
         while (!messageQueue.empty()) {
@@ -187,83 +145,89 @@ public:
         return result;
     }
 
-    // MidiInputCallback interface
-    void handleIncomingMidiMessage(juce::MidiInput* /*source*/,
-                                  const juce::MidiMessage& message) override {
-        std::vector<uint8_t> data;
-        auto rawData = message.getRawData();
-        auto size = message.getRawDataSize();
+    juce::String getName() const override { return name; }
+    bool isInput() const override { return inputPort; }
+    bool isOutput() const override { return !inputPort; }
 
+    void setMidiInput(std::unique_ptr<juce::MidiInput> in) {
+        input = std::move(in);
+    }
+
+    void setMidiOutput(std::unique_ptr<juce::MidiOutput> out) {
+        output = std::move(out);
+    }
+
+    void queueMessage(const std::vector<uint8_t>& data) {
         std::lock_guard<std::mutex> lock(queueMutex);
-
-        // Check if this is a SysEx fragment
-        bool startsWithF0 = (size > 0 && rawData[0] == 0xF0);
-        bool endsWithF7 = (size > 0 && rawData[size - 1] == 0xF7);
-        bool isSysExRelated = message.isSysEx() || startsWithF0 ||
-                              (sysexBuffering && size > 0);
-
-        if (isSysExRelated) {
-            // Handle SysEx message or fragment
-            if (startsWithF0) {
-                // Start of new SysEx - initialize buffer
-                sysexBuffer.clear();
-                sysexBuffer.insert(sysexBuffer.end(), rawData, rawData + size);
-                sysexBuffering = true;
-
-                // Check if it's a complete SysEx in one message
-                if (endsWithF7) {
-                    messageQueue.push(sysexBuffer);
-                    sysexBuffer.clear();
-                    sysexBuffering = false;
-                }
-            } else if (sysexBuffering) {
-                // Continuation or end of SysEx
-                sysexBuffer.insert(sysexBuffer.end(), rawData, rawData + size);
-
-                if (endsWithF7) {
-                    // Complete SysEx received
-                    messageQueue.push(sysexBuffer);
-                    sysexBuffer.clear();
-                    sysexBuffering = false;
-                }
-                // Otherwise keep buffering
-            } else if (message.isSysEx()) {
-                // JUCE already assembled complete SysEx
-                auto sysexData = message.getSysExData();
-                auto sysexSize = message.getSysExDataSize();
-                data.push_back(0xF0);
-                data.insert(data.end(), sysexData, sysexData + sysexSize);
-                data.push_back(0xF7);
-                messageQueue.push(data);
-            }
-        } else {
-            // Regular MIDI message (non-SysEx)
-            data.insert(data.end(), rawData, rawData + size);
-            messageQueue.push(data);
-        }
+        messageQueue.push(data);
     }
 
 private:
-    std::string portId;
-    std::string portName;
-    bool isInputPort;
+    juce::String name;
+    bool inputPort;
     std::unique_ptr<juce::MidiInput> input;
     std::unique_ptr<juce::MidiOutput> output;
     std::queue<std::vector<uint8_t>> messageQueue;
     std::mutex queueMutex;
-
-    // SysEx buffering for fragmented messages
-    std::vector<uint8_t> sysexBuffer;
-    bool sysexBuffering = false;
 };
 
 //==============================================================================
-// Network MIDI Server class
-class NetworkMidiServer
+// Network transport adapter for MidiRouter
+class NetworkTransportAdapter : public NetworkMidi::NetworkTransport
+{
+public:
+    NetworkTransportAdapter(NetworkMidi::UdpMidiTransport& transport)
+        : udpTransport(transport) {}
+
+    void sendMidiMessage(const juce::Uuid& destNode,
+                        uint16_t deviceId,
+                        const std::vector<uint8_t>& midiData) override {
+        // Get destination node info from mesh manager
+        if (meshManager) {
+            auto nodeInfo = meshManager->getNodeInfo(destNode);
+            if (nodeInfo.isValid()) {
+                udpTransport.sendMessage(
+                    destNode,
+                    nodeInfo.ipAddress,
+                    nodeInfo.udpPort,
+                    deviceId,
+                    midiData
+                );
+            }
+        }
+    }
+
+    void setMeshManager(NetworkMidi::MeshManager* manager) {
+        meshManager = manager;
+    }
+
+private:
+    NetworkMidi::UdpMidiTransport& udpTransport;
+    NetworkMidi::MeshManager* meshManager = nullptr;
+};
+
+//==============================================================================
+// Helper to convert between NodeInfo types (ServiceDiscovery vs NetworkMidi)
+NetworkMidi::NodeInfo convertToMeshNodeInfo(const ::NodeInfo& discoveryNode) {
+    NetworkMidi::NodeInfo meshNode;
+    meshNode.uuid = discoveryNode.uuid;
+    meshNode.name = discoveryNode.name;
+    meshNode.hostname = discoveryNode.hostname;
+    meshNode.ipAddress = discoveryNode.ipAddress;
+    meshNode.httpPort = discoveryNode.httpPort;
+    meshNode.udpPort = discoveryNode.udpPort;
+    meshNode.version = discoveryNode.version;
+    meshNode.deviceCount = discoveryNode.deviceCount;
+    return meshNode;
+}
+
+//==============================================================================
+// Network MIDI Server class with full mesh integration
+class NetworkMidiServer : public juce::MidiInputCallback
 {
 public:
     NetworkMidiServer(const NetworkMidi::NodeIdentity& nodeIdentity, int port = 0)
-        : identity(nodeIdentity), requestedPort(port), actualPort(0) {}
+        : identity(nodeIdentity), requestedPort(port), actualPort(0), udpPort(0) {}
 
     ~NetworkMidiServer() {
         stopServer();
@@ -273,23 +237,51 @@ public:
         return actualPort;
     }
 
-    void startServer() {
-        server = std::make_unique<httplib::Server>();
+    int getUdpPort() const {
+        return udpPort;
+    }
 
-        // Set up routes
+    void startServer() {
+        // 1. Create UDP transport (auto-assign port)
+        udpTransport = std::make_unique<NetworkMidi::UdpMidiTransport>(0);
+        udpTransport->setNodeId(identity.getNodeId());
+        udpTransport->start();
+        udpPort = udpTransport->getPort();
+
+        std::cout << "UDP transport started on port " << udpPort << std::endl;
+
+        // 2. Create routing infrastructure
+        deviceRegistry = std::make_unique<NetworkMidi::DeviceRegistry>();
+        routingTable = std::make_unique<NetworkMidi::RoutingTable>();
+
+        // 3. Create MIDI router BEFORE registering devices
+        midiRouter = std::make_unique<NetworkMidi::MidiRouter>(*deviceRegistry, *routingTable);
+        networkAdapter = std::make_unique<NetworkTransportAdapter>(*udpTransport);
+        midiRouter->setNetworkTransport(networkAdapter.get());
+
+        // 4. Enumerate and register local MIDI devices (now that router exists)
+        registerLocalMidiDevices();
+
+        // Set up UDP packet reception callback
+        udpTransport->onPacketReceived = [this](const NetworkMidi::MidiPacket& packet,
+                                                const juce::String& /*sourceAddr*/,
+                                                int /*sourcePort*/) {
+            handleNetworkPacket(packet);
+        };
+
+        // 5. Create HTTP server
+        server = std::make_unique<httplib::Server>();
         setupRoutes();
 
-        // Start server in a separate thread
+        // Start HTTP server in a separate thread
         serverThread = std::thread([this]() {
             if (requestedPort == 0) {
-                // Auto port allocation - bind to port 0 and get assigned port
                 actualPort = server->bind_to_any_port("0.0.0.0");
                 if (actualPort < 0) {
                     std::cerr << "Failed to bind to any port" << std::endl;
                     return;
                 }
             } else {
-                // Specific port requested
                 if (!server->bind_to_port("0.0.0.0", requestedPort)) {
                     std::cerr << "Failed to bind to port " << requestedPort << std::endl;
                     return;
@@ -298,15 +290,71 @@ public:
             }
 
             std::cout << "HTTP Server bound to port " << actualPort << std::endl;
-
             server->listen_after_bind();
         });
 
-        // Wait a bit for server to start and get actual port
+        // Wait for HTTP server to start
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+        // 6. Create service discovery (advertise this node)
+        int deviceCount = deviceRegistry->getLocalDeviceCount();
+        serviceDiscovery = std::make_unique<ServiceDiscovery>(
+            identity.getNodeId(),
+            identity.getNodeName(),
+            actualPort,
+            udpPort,
+            deviceCount
+        );
+
+        // Set up discovery callbacks
+        setupDiscoveryCallbacks();
+
+        serviceDiscovery->advertise();
+        std::cout << "Started mDNS advertising" << std::endl;
+
+        // 7. Create mesh manager (handle peer connections)
+        meshManager = std::make_unique<NetworkMidi::MeshManager>(
+            identity.getNodeId(),
+            actualPort,
+            udpPort
+        );
+
+        // Wire mesh callbacks
+        setupMeshCallbacks();
+
+        meshManager->start();
+        std::cout << "Mesh manager started" << std::endl;
+
+        // Connect network adapter to mesh manager
+        networkAdapter->setMeshManager(meshManager.get());
+
+        // 8. NOW start MIDI inputs (after everything is fully initialized)
+        startMidiInputs();
     }
 
     void stopServer() {
+        // Stop MIDI inputs first
+        for (auto& input : midiInputs) {
+            if (input) {
+                input->stop();
+            }
+        }
+
+        // Stop mesh and discovery
+        if (meshManager) {
+            meshManager->stop();
+        }
+        if (serviceDiscovery) {
+            serviceDiscovery->stopAdvertising();
+            serviceDiscovery->stopBrowsing();
+        }
+
+        // Stop UDP transport
+        if (udpTransport) {
+            udpTransport->stop();
+        }
+
+        // Stop HTTP server
         if (server) {
             server->stop();
         }
@@ -314,12 +362,207 @@ public:
             serverThread.join();
         }
 
-        // Clean up ports
-        std::lock_guard<std::mutex> lock(portsMutex);
-        ports.clear();
+        // Clean up MIDI ports
+        if (midiRouter) {
+            midiRouter->clearLocalPorts();
+        }
+        midiInputs.clear();
+        midiOutputs.clear();
+    }
+
+    // MidiInputCallback interface
+    void handleIncomingMidiMessage(juce::MidiInput* source,
+                                   const juce::MidiMessage& message) override {
+        // Convert JUCE message to raw bytes
+        std::vector<uint8_t> data(
+            message.getRawData(),
+            message.getRawData() + message.getRawDataSize()
+        );
+
+        // Find device ID for this input
+        auto deviceId = getDeviceIdForInput(source);
+        if (deviceId != 0xFFFF && midiRouter) {
+            // Route through MidiRouter (handles local and network delivery)
+            midiRouter->sendMessage(deviceId, data);
+        }
     }
 
 private:
+    void registerLocalMidiDevices() {
+        uint16_t deviceId = 1;  // Start at 1 (0 reserved)
+
+        // Register MIDI inputs (but don't start them yet)
+        auto inputs = juce::MidiInput::getAvailableDevices();
+        for (const auto& deviceInfo : inputs) {
+            // Add to device registry
+            deviceRegistry->addLocalDevice(
+                deviceId,
+                deviceInfo.name,
+                "input",
+                deviceInfo.identifier
+            );
+
+            // Add to routing table (local route has null UUID)
+            routingTable->addRoute(
+                deviceId,
+                juce::Uuid(),
+                deviceInfo.name,
+                "input"
+            );
+
+            // Open MIDI input but DON'T start it yet
+            auto input = juce::MidiInput::openDevice(
+                deviceInfo.identifier,
+                this  // MidiInputCallback
+            );
+            if (input) {
+                // Create port wrapper
+                auto port = std::make_unique<JuceMidiPort>(deviceInfo.name, true);
+                port->setMidiInput(std::move(input));
+
+                // Store reference for device lookup
+                inputDeviceMap[deviceInfo.identifier] = deviceId;
+
+                // Register with router
+                midiRouter->registerLocalPort(deviceId, std::move(port));
+            }
+            deviceId++;
+        }
+
+        // Register MIDI outputs
+        auto outputs = juce::MidiOutput::getAvailableDevices();
+        for (const auto& deviceInfo : outputs) {
+            // Add to device registry
+            deviceRegistry->addLocalDevice(
+                deviceId,
+                deviceInfo.name,
+                "output",
+                deviceInfo.identifier
+            );
+
+            // Add to routing table
+            routingTable->addRoute(
+                deviceId,
+                juce::Uuid(),
+                deviceInfo.name,
+                "output"
+            );
+
+            // Open MIDI output
+            auto output = juce::MidiOutput::openDevice(deviceInfo.identifier);
+            if (output) {
+                // Create port wrapper
+                auto port = std::make_unique<JuceMidiPort>(deviceInfo.name, false);
+                port->setMidiOutput(std::move(output));
+
+                // Register with router
+                midiRouter->registerLocalPort(deviceId, std::move(port));
+            }
+            deviceId++;
+        }
+
+        std::cout << "Registered " << deviceRegistry->getLocalDeviceCount()
+                  << " local MIDI devices" << std::endl;
+    }
+
+    void startMidiInputs() {
+        // Start all MIDI inputs now that everything is initialized
+        auto localDevices = deviceRegistry->getLocalDevices();
+        for (const auto& device : localDevices) {
+            if (device.type == "input") {
+                // Find the corresponding MIDI input by device ID
+                // This requires storing the inputs separately
+                // For now, we can iterate through available devices again
+                auto inputs = juce::MidiInput::getAvailableDevices();
+                for (const auto& deviceInfo : inputs) {
+                    if (inputDeviceMap.count(deviceInfo.identifier) > 0 &&
+                        inputDeviceMap[deviceInfo.identifier] == device.id) {
+                        // Re-open and start the input
+                        auto input = juce::MidiInput::openDevice(
+                            deviceInfo.identifier,
+                            this
+                        );
+                        if (input) {
+                            input->start();
+                            midiInputs.push_back(std::move(input));
+                        }
+                    }
+                }
+            }
+        }
+        std::cout << "Started " << midiInputs.size() << " MIDI inputs" << std::endl;
+    }
+
+    uint16_t getDeviceIdForInput(juce::MidiInput* source) {
+        if (!source) return 0xFFFF;
+
+        auto identifier = source->getIdentifier();
+        auto it = inputDeviceMap.find(identifier);
+        if (it != inputDeviceMap.end()) {
+            return it->second;
+        }
+        return 0xFFFF;
+    }
+
+    void setupDiscoveryCallbacks() {
+        serviceDiscovery->startBrowsing(
+            [this](const ::NodeInfo& node) {
+                std::cout << "Discovered peer: " << node.name.toStdString()
+                          << " (UUID: " << node.uuid.toString().toStdString() << ")"
+                          << " at " << node.ipAddress.toStdString()
+                          << ":" << node.httpPort
+                          << " (UDP: " << node.udpPort << ")"
+                          << std::endl;
+
+                // Convert to mesh NodeInfo and notify mesh manager
+                if (meshManager) {
+                    auto meshNode = convertToMeshNodeInfo(node);
+                    meshManager->onNodeDiscovered(meshNode);
+                }
+            },
+            [this](const juce::Uuid& nodeId) {
+                std::cout << "Lost peer: " << nodeId.toString().toStdString() << std::endl;
+
+                // Notify mesh manager
+                if (meshManager) {
+                    meshManager->onNodeRemoved(nodeId);
+                }
+            }
+        );
+    }
+
+    void setupMeshCallbacks() {
+        meshManager->onNodeConnected = [this](const NetworkMidi::NodeInfo& node) {
+            std::cout << "Connected to node: " << node.name.toStdString()
+                      << " (" << node.deviceCount << " devices)" << std::endl;
+        };
+
+        meshManager->onNodeDisconnected = [this](const juce::Uuid& nodeId,
+                                                  const juce::String& reason) {
+            std::cout << "Disconnected from node: " << nodeId.toString().toStdString()
+                      << " - " << reason.toStdString() << std::endl;
+        };
+
+        meshManager->onConnectionFailed = [this](const NetworkMidi::NodeInfo& node,
+                                                 const juce::String& error) {
+            std::cerr << "Connection failed to " << node.name.toStdString()
+                      << ": " << error.toStdString() << std::endl;
+        };
+    }
+
+    void handleNetworkPacket(const NetworkMidi::MidiPacket& packet) {
+        // Route received network MIDI to appropriate local device
+        if (midiRouter) {
+            // Use getter methods to access packet fields
+            auto midiData = packet.getMidiData();
+            midiRouter->onNetworkPacketReceived(
+                packet.getSourceNode(),
+                packet.getDeviceId(),
+                midiData
+            );
+        }
+    }
+
     void setupRoutes() {
         // Health check endpoint
         server->Get("/health", [](const httplib::Request&, httplib::Response& res) {
@@ -336,192 +579,92 @@ private:
                 .key("name").value(identity.getNodeName().toStdString())
                 .key("hostname").value(identity.getHostname().toStdString())
                 .key("http_port").value(actualPort)
+                .key("udp_port").value(udpPort)
+                .key("local_devices").value(deviceRegistry ? deviceRegistry->getLocalDeviceCount() : 0)
+                .key("total_devices").value(deviceRegistry ? deviceRegistry->getTotalDeviceCount() : 0)
                 .endObject();
 
             res.set_content(json.toString(), "application/json");
         });
 
-        // List available MIDI ports
-        server->Get("/ports", [](const httplib::Request&, httplib::Response& res) {
+        // List MIDI devices (integrated with device registry)
+        server->Get("/midi/devices", [this](const httplib::Request&, httplib::Response& res) {
             JsonBuilder json;
             json.startObject();
 
-            // List inputs
-            json.key("inputs").startArray();
-            auto inputs = juce::MidiInput::getAvailableDevices();
-            for (const auto& device : inputs) {
-                json.arrayValue(device.name.toStdString());
-            }
-            json.endArray();
+            if (deviceRegistry) {
+                auto devices = deviceRegistry->getAllDevices();
 
-            // List outputs
-            json.key("outputs").startArray();
-            auto outputs = juce::MidiOutput::getAvailableDevices();
-            for (const auto& device : outputs) {
-                json.arrayValue(device.name.toStdString());
-            }
-            json.endArray();
-
-            json.endObject();
-
-            res.set_content(json.toString(), "application/json");
-        });
-
-        // Open MIDI port
-        server->Post("/port/:portId", [this](const httplib::Request& req, httplib::Response& res) {
-            std::string portId = req.path_params.at("portId");
-
-            try {
-                // Parse JSON body (simple parsing)
-                std::string name, type;
-
-                size_t namePos = req.body.find("\"name\":\"");
-                if (namePos != std::string::npos) {
-                    namePos += 8;
-                    size_t endPos = req.body.find("\"", namePos);
-                    name = req.body.substr(namePos, endPos - namePos);
-                }
-
-                size_t typePos = req.body.find("\"type\":\"");
-                if (typePos != std::string::npos) {
-                    typePos += 8;
-                    size_t endPos = req.body.find("\"", typePos);
-                    type = req.body.substr(typePos, endPos - typePos);
-                }
-
-                bool isInput = (type == "input");
-                auto port = std::make_unique<MidiPort>(portId, name, isInput);
-                bool success = port->open();
-
-                if (success) {
-                    std::lock_guard<std::mutex> lock(portsMutex);
-                    ports[portId] = std::move(port);
-                }
-
-                JsonBuilder json;
-                json.startObject().key("success").value(success).endObject();
-                res.set_content(json.toString(), "application/json");
-            } catch (const std::exception& e) {
-                JsonBuilder json;
-                json.startObject().key("error").value(e.what()).endObject();
-                res.status = 400;
-                res.set_content(json.toString(), "application/json");
-            }
-        });
-
-        // Close MIDI port
-        server->Delete("/port/:portId", [this](const httplib::Request& req, httplib::Response& res) {
-            std::string portId = req.path_params.at("portId");
-
-            std::lock_guard<std::mutex> lock(portsMutex);
-            bool success = ports.erase(portId) > 0;
-
-            JsonBuilder json;
-            json.startObject().key("success").value(success).endObject();
-            res.set_content(json.toString(), "application/json");
-        });
-
-        // Send MIDI message
-        server->Post("/port/:portId/send", [this](const httplib::Request& req, httplib::Response& res) {
-            std::string portId = req.path_params.at("portId");
-
-            std::lock_guard<std::mutex> lock(portsMutex);
-            auto it = ports.find(portId);
-            if (it == ports.end()) {
-                JsonBuilder json;
-                json.startObject().key("error").value(std::string("Port not found")).endObject();
-                res.status = 404;
-                res.set_content(json.toString(), "application/json");
-                return;
-            }
-
-            try {
-                // Parse message array from JSON
-                std::vector<uint8_t> message;
-                size_t msgPos = req.body.find("\"message\":[");
-                if (msgPos != std::string::npos) {
-                    msgPos += 11;
-                    size_t endPos = req.body.find("]", msgPos);
-                    std::string msgStr = req.body.substr(msgPos, endPos - msgPos);
-
-                    std::istringstream iss(msgStr);
-                    std::string token;
-                    while (std::getline(iss, token, ',')) {
-                        // Handle empty tokens (from trailing commas or empty arrays)
-                        if (!token.empty()) {
-                            message.push_back((uint8_t)std::stoi(token));
-                        }
-                    }
-                }
-
-                // Validate message before sending
-                if (message.empty()) {
-                    JsonBuilder json;
+                json.key("devices").startArray();
+                for (const auto& device : devices) {
                     json.startObject()
-                        .key("error").value(std::string("Invalid MIDI message: empty message"))
-                        .key("success").value(false)
+                        .key("id").value((int)device.id)
+                        .key("name").value(device.name.toStdString())
+                        .key("type").value(device.type.toStdString())
+                        .key("is_local").value(device.isLocal)
+                        .key("owner_node").value(device.ownerNode.toString().toStdString())
                         .endObject();
-                    res.status = 400;
-                    res.set_content(json.toString(), "application/json");
-                    std::cerr << "Rejected empty MIDI message\n";
-                    return;
-                }
-
-                // Reject incomplete SysEx (single 0xF0 byte)
-                if (message.size() == 1 && message[0] == 0xF0) {
-                    JsonBuilder json;
-                    json.startObject()
-                        .key("error").value(std::string("Invalid MIDI message: incomplete SysEx (0xF0 without 0xF7)"))
-                        .key("success").value(false)
-                        .endObject();
-                    res.status = 400;
-                    res.set_content(json.toString(), "application/json");
-                    std::cerr << "Rejected incomplete SysEx (single 0xF0)\n";
-                    return;
-                }
-
-                it->second->sendMessage(message);
-
-                JsonBuilder json;
-                json.startObject().key("success").value(true).endObject();
-                res.set_content(json.toString(), "application/json");
-            } catch (const std::exception& e) {
-                JsonBuilder json;
-                json.startObject().key("error").value(e.what()).endObject();
-                res.status = 400;
-                res.set_content(json.toString(), "application/json");
-            }
-        });
-
-        // Receive MIDI messages
-        server->Get("/port/:portId/messages", [this](const httplib::Request& req, httplib::Response& res) {
-            std::string portId = req.path_params.at("portId");
-
-            std::lock_guard<std::mutex> lock(portsMutex);
-            auto it = ports.find(portId);
-            if (it == ports.end()) {
-                JsonBuilder json;
-                json.startObject().key("error").value(std::string("Port not found")).endObject();
-                res.status = 404;
-                res.set_content(json.toString(), "application/json");
-                return;
-            }
-
-            auto messages = it->second->getMessages();
-
-            JsonBuilder json;
-            json.startObject().key("messages").startArray();
-
-            for (const auto& msg : messages) {
-                json.startArray();
-                for (uint8_t byte : msg) {
-                    json.arrayValue((int)byte);
                 }
                 json.endArray();
             }
 
-            json.endArray().endObject();
+            json.endObject();
+            res.set_content(json.toString(), "application/json");
+        });
 
+        // Network mesh status
+        server->Get("/network/mesh", [this](const httplib::Request&, httplib::Response& res) {
+            JsonBuilder json;
+            json.startObject();
+
+            if (meshManager) {
+                auto stats = meshManager->getStatistics();
+                json.key("connected_nodes").value((int)stats.connectedNodes)
+                    .key("total_nodes").value((int)stats.totalNodes)
+                    .key("total_devices").value(stats.totalDevices);
+
+                json.key("nodes").startArray();
+                auto nodes = meshManager->getConnectedNodes();
+                for (const auto& node : nodes) {
+                    json.startObject()
+                        .key("uuid").value(node.uuid.toString().toStdString())
+                        .key("name").value(node.name.toStdString())
+                        .key("ip").value(node.ipAddress.toStdString())
+                        .key("http_port").value(node.httpPort)
+                        .key("udp_port").value(node.udpPort)
+                        .key("devices").value(node.deviceCount)
+                        .endObject();
+                }
+                json.endArray();
+            }
+
+            json.endObject();
+            res.set_content(json.toString(), "application/json");
+        });
+
+        // Router statistics
+        server->Get("/network/stats", [this](const httplib::Request&, httplib::Response& res) {
+            JsonBuilder json;
+            json.startObject();
+
+            if (midiRouter) {
+                auto stats = midiRouter->getStatistics();
+                json.key("local_sent").value((int)stats.localMessagesSent)
+                    .key("local_received").value((int)stats.localMessagesReceived)
+                    .key("network_sent").value((int)stats.networkMessagesSent)
+                    .key("network_received").value((int)stats.networkMessagesReceived)
+                    .key("routing_errors").value((int)stats.routingErrors);
+            }
+
+            if (udpTransport) {
+                auto stats = udpTransport->getStatistics();
+                json.key("packets_sent").value((int)stats.packetsSent)
+                    .key("packets_received").value((int)stats.packetsReceived)
+                    .key("bytes_sent").value((int)stats.bytesSent)
+                    .key("bytes_received").value((int)stats.bytesReceived);
+            }
+
+            json.endObject();
             res.set_content(json.toString(), "application/json");
         });
     }
@@ -529,10 +672,25 @@ private:
     const NetworkMidi::NodeIdentity& identity;
     int requestedPort;
     int actualPort;
+    int udpPort;
+
+    // Network components
+    std::unique_ptr<ServiceDiscovery> serviceDiscovery;
+    std::unique_ptr<NetworkMidi::UdpMidiTransport> udpTransport;
+    std::unique_ptr<NetworkMidi::DeviceRegistry> deviceRegistry;
+    std::unique_ptr<NetworkMidi::RoutingTable> routingTable;
+    std::unique_ptr<NetworkMidi::MidiRouter> midiRouter;
+    std::unique_ptr<NetworkMidi::MeshManager> meshManager;
+    std::unique_ptr<NetworkTransportAdapter> networkAdapter;
+
+    // HTTP server
     std::unique_ptr<httplib::Server> server;
     std::thread serverThread;
-    std::map<std::string, std::unique_ptr<MidiPort>> ports;
-    std::mutex portsMutex;
+
+    // Local MIDI device tracking
+    std::vector<std::unique_ptr<juce::MidiInput>> midiInputs;
+    std::vector<std::unique_ptr<juce::MidiOutput>> midiOutputs;
+    std::map<juce::String, uint16_t> inputDeviceMap;
 };
 
 //==============================================================================
@@ -541,8 +699,8 @@ int main(int argc, char* argv[])
     // Initialize JUCE
     juce::ScopedJuceInitialiser_GUI juceInit;
 
-    std::cout << "\nNetwork MIDI Server v1.0" << std::endl;
-    std::cout << "========================" << std::endl;
+    std::cout << "\nNetwork MIDI Server v1.0 - Full Mesh Integration" << std::endl;
+    std::cout << "=================================================" << std::endl;
 
     // Initialize node identity (each instance gets a unique UUID)
     NetworkMidi::NodeIdentity identity;
@@ -565,25 +723,31 @@ int main(int argc, char* argv[])
 
     std::cout << "\nStarting server..." << std::endl;
     if (port == 0) {
-        std::cout << "  Port: auto-assigned (bind to port 0)" << std::endl;
+        std::cout << "  HTTP Port: auto-assigned" << std::endl;
     } else {
-        std::cout << "  Port: " << port << std::endl;
+        std::cout << "  HTTP Port: " << port << std::endl;
     }
 
     NetworkMidiServer server(identity, port);
     server.startServer();
 
     int actualPort = server.getActualPort();
-    std::cout << "\nServer running on port " << actualPort << std::endl;
-    std::cout << "Node: " << identity.getNodeName().toStdString() << std::endl;
-    std::cout << "UUID: " << identity.getNodeId().toString().toStdString() << std::endl;
-    std::cout << "Instance dir: " << instanceManager->getInstanceDirectory()
+    int udpPort = server.getUdpPort();
+
+    std::cout << "\nServer running:" << std::endl;
+    std::cout << "  HTTP Port: " << actualPort << std::endl;
+    std::cout << "  UDP Port: " << udpPort << std::endl;
+    std::cout << "  Node: " << identity.getNodeName().toStdString() << std::endl;
+    std::cout << "  UUID: " << identity.getNodeId().toString().toStdString() << std::endl;
+    std::cout << "  Instance dir: " << instanceManager->getInstanceDirectory()
                                        .getFullPathName().toStdString() << std::endl;
 
-    // List local MIDI devices
-    auto inputs = juce::MidiInput::getAvailableDevices();
-    auto outputs = juce::MidiOutput::getAvailableDevices();
-    std::cout << "\nLocal MIDI devices: " << (inputs.size() + outputs.size()) << std::endl;
+    std::cout << "\nEndpoints:" << std::endl;
+    std::cout << "  GET  /health          - Health check" << std::endl;
+    std::cout << "  GET  /node/info       - Node information" << std::endl;
+    std::cout << "  GET  /midi/devices    - List all MIDI devices (local + remote)" << std::endl;
+    std::cout << "  GET  /network/mesh    - Network mesh status" << std::endl;
+    std::cout << "  GET  /network/stats   - Network statistics" << std::endl;
 
     std::cout << "\nReady. Press Ctrl+C to stop..." << std::endl;
 
