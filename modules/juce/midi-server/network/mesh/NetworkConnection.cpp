@@ -10,6 +10,7 @@
 #include "ConnectionWorker.h"
 #include "Commands.h"
 #include "../routing/MidiRouter.h"
+#include "../core/MidiPacket.h"
 #include <iostream>
 
 namespace NetworkMidi {
@@ -213,6 +214,15 @@ void NetworkConnection::sendMidiMessage(uint16_t deviceId,
 
     commandQueue->pushCommand(
         std::make_unique<Commands::SendMidiCommand>(deviceId, data)
+    );
+}
+
+//==============================================================================
+void NetworkConnection::sendPacket(const MidiPacket& packet)
+{
+    // Phase 4: Send full packet with context via SEDA command queue
+    commandQueue->pushCommand(
+        std::make_unique<Commands::SendPacketCommand>(packet)
     );
 }
 

@@ -123,6 +123,7 @@ private:
     void handleCheckHeartbeatCommand();
     void handleNotifyHeartbeatCommand();
     void handleSendMidiCommand(Commands::SendMidiCommand* cmd);
+    void handleSendPacketCommand(Commands::SendPacketCommand* cmd);  // Phase 4
 
     // Query handlers
     void handleGetStateQuery(Commands::GetStateQuery* query);

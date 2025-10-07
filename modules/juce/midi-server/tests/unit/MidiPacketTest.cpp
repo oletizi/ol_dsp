@@ -3,16 +3,38 @@
  *
  * Unit tests for MidiPacket
  * Tests: packet serialization/deserialization, flags, UUID hashing, validation
+ * Phase 4: Forwarding context serialization/deserialization
  *
  * Coverage Target: 80%+
  */
 
 #include "network/core/MidiPacket.h"
+#include "network/routing/UuidRegistry.h"
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
 
 using namespace NetworkMidi;
 using namespace testing;
+
+// Mock UuidRegistry for Phase 4 testing
+class MockUuidRegistry : public UuidRegistry {
+public:
+    std::optional<juce::Uuid> lookupFromHash(uint32_t hash) const {
+        auto it = hashToUuid.find(hash);
+        if (it != hashToUuid.end()) {
+            return it->second;
+        }
+        return std::nullopt;
+    }
+
+    void registerNode(const juce::Uuid& uuid) {
+        uint32_t hash = MidiPacket::hashUuid(uuid);
+        hashToUuid[hash] = uuid;
+    }
+
+private:
+    mutable std::map<uint32_t, juce::Uuid> hashToUuid;
+};
 
 class MidiPacketTest : public ::testing::Test {
 protected:
@@ -21,12 +43,18 @@ protected:
         destNode = juce::Uuid();
         deviceId = 42;
         sequence = 100;
+
+        // Setup mock registry for Phase 4 tests
+        mockRegistry = std::make_unique<MockUuidRegistry>();
+        mockRegistry->registerNode(sourceNode);
+        mockRegistry->registerNode(destNode);
     }
 
     juce::Uuid sourceNode;
     juce::Uuid destNode;
     uint16_t deviceId;
     uint16_t sequence;
+    std::unique_ptr<MockUuidRegistry> mockRegistry;
 };
 
 // Test default constructor
@@ -408,4 +436,294 @@ TEST_F(MidiPacketTest, MagicConstant) {
 // Test version constant
 TEST_F(MidiPacketTest, VersionConstant) {
     EXPECT_EQ(0x01, MidiPacket::VERSION);
+}
+
+//=============================================================================
+// Phase 4: Forwarding Context Tests
+//=============================================================================
+
+// Test: Empty context (hopCount=0, no devices)
+TEST_F(MidiPacketTest, Phase4_SerializeEmptyContext) {
+    MidiPacket packet = MidiPacket::createDataPacket(
+        sourceNode, destNode, deviceId, {0x90, 0x3C, 0x64}, sequence
+    );
+
+    ForwardingContext ctx;
+    ctx.hopCount = 0;
+    // visitedDevices is empty
+
+    packet.setForwardingContext(ctx);
+
+    EXPECT_TRUE(packet.hasForwardingContext());
+    EXPECT_TRUE(packet.hasFlag(MidiPacket::HasContext));
+
+    // Context size: Type(1) + Length(1) + HopCount(1) + DeviceCount(1) = 4 bytes
+    size_t expectedSize = MidiPacket::HEADER_SIZE + 3 + 4; // header + MIDI + context
+    EXPECT_EQ(expectedSize, packet.getTotalSize());
+}
+
+// Test: Context with 1 device
+TEST_F(MidiPacketTest, Phase4_SerializeContextWithOneDevice) {
+    MidiPacket packet = MidiPacket::createDataPacket(
+        sourceNode, destNode, deviceId, {0x90, 0x3C, 0x64}, sequence
+    );
+
+    ForwardingContext ctx;
+    ctx.hopCount = 1;
+    ctx.visitedDevices.insert(DeviceKey(sourceNode, 1));
+
+    packet.setForwardingContext(ctx);
+
+    EXPECT_TRUE(packet.hasForwardingContext());
+
+    // Context size: Type(1) + Length(1) + HopCount(1) + DeviceCount(1) + Device(6) = 10 bytes
+    size_t expectedSize = MidiPacket::HEADER_SIZE + 3 + 10; // header + MIDI + context
+    EXPECT_EQ(expectedSize, packet.getTotalSize());
+}
+
+// Test: Context with 4 devices
+TEST_F(MidiPacketTest, Phase4_SerializeContextWithFourDevices) {
+    MidiPacket packet = MidiPacket::createDataPacket(
+        sourceNode, destNode, deviceId, {0x90, 0x3C, 0x64}, sequence
+    );
+
+    ForwardingContext ctx;
+    ctx.hopCount = 4;
+
+    juce::Uuid node1, node2, node3, node4;
+    mockRegistry->registerNode(node1);
+    mockRegistry->registerNode(node2);
+    mockRegistry->registerNode(node3);
+    mockRegistry->registerNode(node4);
+
+    ctx.visitedDevices.insert(DeviceKey(node1, 1));
+    ctx.visitedDevices.insert(DeviceKey(node2, 2));
+    ctx.visitedDevices.insert(DeviceKey(node3, 3));
+    ctx.visitedDevices.insert(DeviceKey(node4, 4));
+
+    packet.setForwardingContext(ctx);
+
+    EXPECT_TRUE(packet.hasForwardingContext());
+
+    // Context size: 4 + (4 devices * 6) = 28 bytes
+    size_t expectedSize = MidiPacket::HEADER_SIZE + 3 + 28;
+    EXPECT_EQ(expectedSize, packet.getTotalSize());
+}
+
+// Test: Context with 8 devices (MAX_HOPS)
+TEST_F(MidiPacketTest, Phase4_SerializeContextWithMaxDevices) {
+    MidiPacket packet = MidiPacket::createDataPacket(
+        sourceNode, destNode, deviceId, {0x90, 0x3C, 0x64}, sequence
+    );
+
+    ForwardingContext ctx;
+    ctx.hopCount = 8;
+
+    // Add 8 devices
+    for (int i = 0; i < 8; ++i) {
+        juce::Uuid nodeId;
+        mockRegistry->registerNode(nodeId);
+        ctx.visitedDevices.insert(DeviceKey(nodeId, static_cast<uint16_t>(i + 1)));
+    }
+
+    packet.setForwardingContext(ctx);
+
+    EXPECT_TRUE(packet.hasForwardingContext());
+
+    // Context size: 4 + (8 devices * 6) = 52 bytes
+    size_t expectedSize = MidiPacket::HEADER_SIZE + 3 + 52;
+    EXPECT_EQ(expectedSize, packet.getTotalSize());
+}
+
+// Test: Round-trip context preservation
+TEST_F(MidiPacketTest, Phase4_RoundTripContextPreservation) {
+    MidiPacket original = MidiPacket::createDataPacket(
+        sourceNode, destNode, deviceId, {0x90, 0x3C, 0x64}, sequence
+    );
+
+    ForwardingContext originalCtx;
+    originalCtx.hopCount = 3;
+
+    juce::Uuid node1, node2;
+    mockRegistry->registerNode(node1);
+    mockRegistry->registerNode(node2);
+
+    originalCtx.visitedDevices.insert(DeviceKey(node1, 10));
+    originalCtx.visitedDevices.insert(DeviceKey(node2, 20));
+
+    original.setForwardingContext(originalCtx);
+
+    // Serialize and deserialize
+    std::vector<uint8_t> serialized = original.serialize();
+    MidiPacket deserialized = MidiPacket::deserialize(serialized.data(), serialized.size());
+
+    EXPECT_TRUE(deserialized.hasForwardingContext());
+
+    // Extract context using registry
+    auto extractedCtxOpt = deserialized.getForwardingContext(*mockRegistry);
+    ASSERT_TRUE(extractedCtxOpt.has_value());
+
+    ForwardingContext extractedCtx = extractedCtxOpt.value();
+    EXPECT_EQ(originalCtx.hopCount, extractedCtx.hopCount);
+    EXPECT_EQ(originalCtx.visitedDevices.size(), extractedCtx.visitedDevices.size());
+
+    // Verify visited devices
+    for (const auto& devKey : originalCtx.visitedDevices) {
+        EXPECT_TRUE(extractedCtx.visitedDevices.count(devKey) > 0);
+    }
+}
+
+// Test: Backward compatibility - Phase 3 packet (no context)
+TEST_F(MidiPacketTest, Phase4_BackwardCompatibilityPhase3Packet) {
+    MidiPacket packet = MidiPacket::createDataPacket(
+        sourceNode, destNode, deviceId, {0x90, 0x3C, 0x64}, sequence
+    );
+
+    // Don't set context - this is a Phase 3 packet
+    EXPECT_FALSE(packet.hasForwardingContext());
+    EXPECT_FALSE(packet.hasFlag(MidiPacket::HasContext));
+
+    // Serialize and deserialize
+    std::vector<uint8_t> serialized = packet.serialize();
+    MidiPacket deserialized = MidiPacket::deserialize(serialized.data(), serialized.size());
+
+    EXPECT_FALSE(deserialized.hasForwardingContext());
+
+    auto ctxOpt = deserialized.getForwardingContext(*mockRegistry);
+    EXPECT_FALSE(ctxOpt.has_value());
+}
+
+// Test: Clear forwarding context
+TEST_F(MidiPacketTest, Phase4_ClearForwardingContext) {
+    MidiPacket packet = MidiPacket::createDataPacket(
+        sourceNode, destNode, deviceId, {0x90, 0x3C, 0x64}, sequence
+    );
+
+    ForwardingContext ctx;
+    ctx.hopCount = 2;
+    ctx.visitedDevices.insert(DeviceKey(sourceNode, 1));
+
+    packet.setForwardingContext(ctx);
+    EXPECT_TRUE(packet.hasForwardingContext());
+
+    packet.clearForwardingContext();
+    EXPECT_FALSE(packet.hasForwardingContext());
+    EXPECT_FALSE(packet.hasFlag(MidiPacket::HasContext));
+}
+
+// Test: Invalid context data handling
+TEST_F(MidiPacketTest, Phase4_InvalidContextDataReturnsNullopt) {
+    MidiPacket packet = MidiPacket::createDataPacket(
+        sourceNode, destNode, deviceId, {0x90, 0x3C, 0x64}, sequence
+    );
+
+    // Manually set corrupted context extension
+    packet.addFlag(MidiPacket::HasContext);
+    // contextExtension is empty or corrupted
+
+    auto ctxOpt = packet.getForwardingContext(*mockRegistry);
+    EXPECT_FALSE(ctxOpt.has_value());
+}
+
+// Test: Unknown node hash in context
+TEST_F(MidiPacketTest, Phase4_UnknownNodeHashThrows) {
+    MidiPacket original = MidiPacket::createDataPacket(
+        sourceNode, destNode, deviceId, {0x90, 0x3C, 0x64}, sequence
+    );
+
+    ForwardingContext ctx;
+    ctx.hopCount = 1;
+
+    // Add device with node NOT in registry
+    juce::Uuid unknownNode;
+    // Don't register this node!
+    ctx.visitedDevices.insert(DeviceKey(unknownNode, 99));
+
+    original.setForwardingContext(ctx);
+
+    // Serialize
+    std::vector<uint8_t> serialized = original.serialize();
+    MidiPacket deserialized = MidiPacket::deserialize(serialized.data(), serialized.size());
+
+    // Attempt to extract context - should fail because unknownNode is not registered
+    auto ctxOpt = deserialized.getForwardingContext(*mockRegistry);
+    EXPECT_FALSE(ctxOpt.has_value());  // Should return nullopt on error
+}
+
+// Test: Packet size calculations with context
+TEST_F(MidiPacketTest, Phase4_PacketSizeWithContext) {
+    std::vector<uint8_t> midiData = {0x90, 0x3C, 0x64};
+    MidiPacket packet = MidiPacket::createDataPacket(
+        sourceNode, destNode, deviceId, midiData, sequence
+    );
+
+    // No context
+    size_t sizeWithoutContext = packet.getTotalSize();
+    EXPECT_EQ(MidiPacket::HEADER_SIZE + 3, sizeWithoutContext);
+
+    // Add context with 2 devices
+    ForwardingContext ctx;
+    ctx.hopCount = 2;
+
+    juce::Uuid node1, node2;
+    ctx.visitedDevices.insert(DeviceKey(node1, 1));
+    ctx.visitedDevices.insert(DeviceKey(node2, 2));
+
+    packet.setForwardingContext(ctx);
+
+    // Context size: 4 + (2 * 6) = 16 bytes
+    size_t sizeWithContext = packet.getTotalSize();
+    EXPECT_EQ(MidiPacket::HEADER_SIZE + 3 + 16, sizeWithContext);
+}
+
+// Test: serializeInto with context
+TEST_F(MidiPacketTest, Phase4_SerializeIntoWithContext) {
+    MidiPacket packet = MidiPacket::createDataPacket(
+        sourceNode, destNode, deviceId, {0x90, 0x3C, 0x64}, sequence
+    );
+
+    ForwardingContext ctx;
+    ctx.hopCount = 1;
+    ctx.visitedDevices.insert(DeviceKey(sourceNode, 1));
+    packet.setForwardingContext(ctx);
+
+    uint8_t buffer[256];
+    size_t bytesWritten = 0;
+
+    bool success = packet.serializeInto(buffer, sizeof(buffer), bytesWritten);
+
+    EXPECT_TRUE(success);
+    EXPECT_EQ(packet.getTotalSize(), bytesWritten);
+}
+
+// Test: Context extension type constant
+TEST_F(MidiPacketTest, Phase4_ContextExtensionTypeConstant) {
+    EXPECT_EQ(0x01, MidiPacket::CONTEXT_EXTENSION_TYPE);
+}
+
+// Test: HasContext flag bit
+TEST_F(MidiPacketTest, Phase4_HasContextFlagBit) {
+    EXPECT_EQ(1 << 3, MidiPacket::HasContext);
+}
+
+// Test: Maximum packet size with max context
+TEST_F(MidiPacketTest, Phase4_MaximumPacketSize) {
+    // Max MIDI data (say 3 bytes) + max context (8 devices)
+    std::vector<uint8_t> midiData = {0x90, 0x3C, 0x64};
+    MidiPacket packet = MidiPacket::createDataPacket(
+        sourceNode, destNode, deviceId, midiData, sequence
+    );
+
+    ForwardingContext ctx;
+    ctx.hopCount = 8;
+
+    for (int i = 0; i < 8; ++i) {
+        juce::Uuid nodeId;
+        ctx.visitedDevices.insert(DeviceKey(nodeId, static_cast<uint16_t>(i)));
+    }
+
+    packet.setForwardingContext(ctx);
+
+    // Total: 20 (header) + 3 (MIDI) + 52 (context with 8 devices) = 75 bytes
+    EXPECT_EQ(75u, packet.getTotalSize());
 }

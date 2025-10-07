@@ -8,6 +8,7 @@
 #pragma once
 
 #include "NetworkConnection.h"
+#include "../core/MidiPacket.h"
 #include <juce_core/juce_core.h>
 #include <memory>
 #include <vector>
@@ -30,6 +31,7 @@ struct Command {
         CheckHeartbeat,
         NotifyHeartbeat,
         SendMidi,
+        SendPacket,         // NEW: Phase 4 - send full packet with context
         GetState,
         GetRemoteNode,
         GetDevices,
@@ -76,6 +78,17 @@ struct SendMidiCommand : Command {
 
     SendMidiCommand(uint16_t id, std::vector<uint8_t> msgData)
         : Command(SendMidi), deviceId(id), data(std::move(msgData)) {}
+};
+
+/**
+ * Phase 4: Send full MidiPacket with forwarding context.
+ * Replaces legacy SendMidiCommand for context-aware routing.
+ */
+struct SendPacketCommand : Command {
+    MidiPacket packet;
+
+    explicit SendPacketCommand(const MidiPacket& pkt)
+        : Command(SendPacket), packet(pkt) {}
 };
 
 //==============================================================================

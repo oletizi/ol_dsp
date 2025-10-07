@@ -10,6 +10,7 @@
 #include "network/routing/MidiRouter.h"
 #include "network/routing/RouteManager.h"
 #include "network/routing/DeviceRegistry.h"
+#include "network/core/MidiPacket.h"
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
 #include <thread>
@@ -36,6 +37,17 @@ public:
     {
         std::lock_guard<std::mutex> lock(mutex);
         sentMessages.push_back({destNode, deviceId, midiData});
+    }
+
+    // Phase 4.4: sendPacket() implementation
+    void sendPacket(const MidiPacket& packet) override
+    {
+        std::lock_guard<std::mutex> lock(mutex);
+        sentMessages.push_back({
+            packet.getDestNode(),
+            packet.getDeviceId(),
+            packet.getMidiData()
+        });
     }
 
     std::vector<SentMessage> getSentMessages() const {

@@ -31,6 +31,9 @@ MeshManager::MeshManager(const juce::Uuid& localNodeId, int httpPort, int udpPor
         handleConnectionLost(nodeId, reason);
     };
 
+    // Phase 4.5: Register self in UUID registry for context deserialization
+    uuidRegistry.registerNode(myNodeId);
+
     juce::Logger::writeToLog("MeshManager created for node " + localNodeId.toString());
 }
 
@@ -110,6 +113,9 @@ void MeshManager::onNodeDiscovered(const NodeInfo& node)
 void MeshManager::onNodeRemoved(const juce::Uuid& nodeId)
 {
     juce::Logger::writeToLog("MeshManager: Node removed: " + nodeId.toString());
+
+    // Phase 4.5: Unregister node from UUID registry
+    uuidRegistry.unregisterNode(nodeId);
 
     // Remove connection if exists
     bool removed = connectionPool.removeConnection(nodeId);
@@ -293,12 +299,18 @@ void MeshManager::handleConnectionStateChange(const juce::Uuid& nodeId,
     }
 
     if (newState == NetworkConnection::State::Connected) {
+        // Phase 4.5: Register node in UUID registry for context deserialization
+        uuidRegistry.registerNode(nodeId);
+
         // Connection established successfully
         if (onNodeConnected) {
             onNodeConnected(connection->getRemoteNode());
         }
 
     } else if (newState == NetworkConnection::State::Failed) {
+        // Phase 4.5: Unregister node from UUID registry on failure
+        uuidRegistry.unregisterNode(nodeId);
+
         // Connection failed - will be cleaned up by heartbeat monitor
         if (onConnectionFailed) {
             onConnectionFailed(connection->getRemoteNode(), "Connection failed");
@@ -312,6 +324,9 @@ void MeshManager::handleConnectionLost(const juce::Uuid& nodeId,
 {
     juce::Logger::writeToLog("MeshManager: Connection lost to " + nodeId.toString() +
                             " - " + reason);
+
+    // Phase 4.5: Unregister node from UUID registry
+    uuidRegistry.unregisterNode(nodeId);
 
     if (onNodeDisconnected) {
         onNodeDisconnected(nodeId, reason);

@@ -7,12 +7,15 @@
 
 #pragma once
 
+#include "../core/MidiPacket.h"  // For ForwardingContext
 #include <juce_core/juce_core.h>
 #include <vector>
 #include <memory>
 #include <atomic>
 #include <chrono>
 #include <cstdint>
+#include <optional>
+#include <set>
 
 namespace NetworkMidi {
 
@@ -21,6 +24,7 @@ class MidiRouter;
 class MidiPortInterface;
 class RouteManager;
 class NetworkTransport;
+class UuidRegistry;
 
 namespace MidiRouterCommands {
 
@@ -52,7 +56,9 @@ struct Command {
         GetStatistics,
         ResetStatistics,
         SetRouteManager,
-        SetNetworkTransport
+        SetNetworkTransport,
+        SetUuidRegistry,
+        SetNodeId
     };
 
     Type type;
@@ -68,18 +74,23 @@ protected:
 /**
  * Forward MIDI message according to routing rules.
  * This is the hot path - called for every MIDI message.
+ *
+ * Phase 4.3: Now includes optional incoming context for multi-hop routing.
  */
 struct ForwardMessageCommand : Command {
     juce::Uuid sourceNode;
     uint16_t sourceDevice;
     std::vector<uint8_t> midiData;
+    std::optional<ForwardingContext> incomingContext;
 
     ForwardMessageCommand(const juce::Uuid& node, uint16_t dev,
-                          const std::vector<uint8_t>& data)
+                          const std::vector<uint8_t>& data,
+                          std::optional<ForwardingContext> ctx = std::nullopt)
         : Command(ForwardMessage)
         , sourceNode(node)
         , sourceDevice(dev)
         , midiData(data)
+        , incomingContext(std::move(ctx))
     {}
 };
 
@@ -211,6 +222,32 @@ struct SetNetworkTransportCommand : Command {
     explicit SetNetworkTransportCommand(NetworkTransport* t)
         : Command(SetNetworkTransport)
         , transport(t)
+    {}
+};
+
+/**
+ * Set UuidRegistry pointer for context deserialization.
+ * Phase 4.3: Required for multi-hop routing with context preservation.
+ */
+struct SetUuidRegistryCommand : Command {
+    UuidRegistry* registry;
+
+    explicit SetUuidRegistryCommand(UuidRegistry* reg)
+        : Command(SetUuidRegistry)
+        , registry(reg)
+    {}
+};
+
+/**
+ * Set node ID for packet creation.
+ * Phase 4.5: Required for MidiRouter to create packets with source node ID.
+ */
+struct SetNodeIdCommand : Command {
+    juce::Uuid nodeId;
+
+    explicit SetNodeIdCommand(const juce::Uuid& id)
+        : Command(SetNodeId)
+        , nodeId(id)
     {}
 };
 

@@ -198,20 +198,6 @@ public:
         }
     }
 
-    void sendPacket(const NetworkMidi::MidiPacket& packet) override {
-        // Phase 4.5: Send packet with full context via UDP
-        if (meshManager) {
-            auto nodeInfo = meshManager->getNodeInfo(packet.getDestNode());
-            if (nodeInfo.isValid()) {
-                udpTransport.sendPacket(
-                    packet,
-                    nodeInfo.ipAddress,
-                    nodeInfo.udpPort
-                );
-            }
-        }
-    }
-
     void setMeshManager(NetworkMidi::MeshManager* manager) {
         meshManager = manager;
     }
@@ -352,12 +338,6 @@ public:
 
         // Connect network adapter to mesh manager
         networkAdapter->setMeshManager(meshManager.get());
-
-        // Phase 4.5: Inject UuidRegistry and node ID into MidiRouter
-        if (midiRouter) {
-            midiRouter->setNodeId(identity.getNodeId());
-            midiRouter->setUuidRegistry(&meshManager->getUuidRegistry());
-        }
 
         // 9. NOW start MIDI inputs (after everything is fully initialized)
         startMidiInputs();

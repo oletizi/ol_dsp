@@ -8,6 +8,8 @@
 #include "RouteManager.h"
 #include "ForwardingRule.h"
 #include "MidiRouterCommands.h"
+#include "UuidRegistry.h"
+#include "../core/MidiPacket.h"
 #include <algorithm>
 
 namespace NetworkMidi {
@@ -41,6 +43,9 @@ MidiRouter::MidiRouter(DeviceRegistry& registry, RoutingTable& routes)
     , routingTable(routes)
     , networkTransport(nullptr)
     , routeManager(nullptr)
+    , uuidRegistry(nullptr)
+    , myNodeId(juce::Uuid())  // Will be set by caller
+    , nextSequence(0)
 {
     // Start worker thread
     workerThread = std::make_unique<WorkerThread>(*this);
@@ -72,7 +77,13 @@ void MidiRouter::processCommand(std::unique_ptr<MidiRouterCommands::Command> cmd
     switch (cmd->type) {
         case Command::ForwardMessage: {
             auto* fwdCmd = static_cast<ForwardMessageCommand*>(cmd.get());
+
+            // Phase 4.3: Use incoming context if present, otherwise create fresh
             ForwardingContext context;
+            if (fwdCmd->incomingContext.has_value()) {
+                context = fwdCmd->incomingContext.value();
+            }
+
             forwardMessageInternal(fwdCmd->sourceNode, fwdCmd->sourceDevice,
                                    fwdCmd->midiData, context);
             break;
@@ -80,8 +91,10 @@ void MidiRouter::processCommand(std::unique_ptr<MidiRouterCommands::Command> cmd
 
         case Command::DirectSend: {
             auto* sendCmd = static_cast<DirectSendCommand*>(cmd.get());
+            // Create fresh context for direct send
+            ForwardingContext context;
             forwardToDestination(sendCmd->destNode, sendCmd->destDevice,
-                                 sendCmd->midiData);
+                                 sendCmd->midiData, context);
             break;
         }
 
@@ -136,6 +149,18 @@ void MidiRouter::processCommand(std::unique_ptr<MidiRouterCommands::Command> cmd
             setNetworkTransportInternal(ntCmd->transport);
             break;
         }
+
+        case Command::SetUuidRegistry: {
+            auto* regCmd = static_cast<SetUuidRegistryCommand*>(cmd.get());
+            setUuidRegistryInternal(regCmd->registry);
+            break;
+        }
+
+        case Command::SetNodeId: {
+            auto* nodeIdCmd = static_cast<SetNodeIdCommand*>(cmd.get());
+            setNodeIdInternal(nodeIdCmd->nodeId);
+            break;
+        }
     }
 }
 
@@ -154,6 +179,24 @@ void MidiRouter::setNetworkTransport(NetworkTransport* transport)
 void MidiRouter::setRouteManager(RouteManager* manager)
 {
     auto cmd = std::make_unique<MidiRouterCommands::SetRouteManagerCommand>(manager);
+    commandQueue.push(std::move(cmd));
+}
+
+//==============================================================================
+// Public API - UuidRegistry integration
+
+void MidiRouter::setUuidRegistry(UuidRegistry* registry)
+{
+    auto cmd = std::make_unique<MidiRouterCommands::SetUuidRegistryCommand>(registry);
+    commandQueue.push(std::move(cmd));
+}
+
+//==============================================================================
+// Public API - Node ID configuration (Phase 4.5)
+
+void MidiRouter::setNodeId(const juce::Uuid& nodeId)
+{
+    auto cmd = std::make_unique<MidiRouterCommands::SetNodeIdCommand>(nodeId);
     commandQueue.push(std::move(cmd));
 }
 
@@ -251,7 +294,7 @@ void MidiRouter::clearMessages(uint16_t deviceId)
 }
 
 //==============================================================================
-// Public API - Network packet handling
+// Public API - Network packet handling (legacy interface)
 
 void MidiRouter::onNetworkPacketReceived(const juce::Uuid& sourceNode,
                                          uint16_t deviceId,
@@ -273,6 +316,46 @@ void MidiRouter::onNetworkPacketReceived(const juce::Uuid& sourceNode,
 
     // Queue for consumption by local applications
     auto cmd = std::make_unique<MidiRouterCommands::QueueMessageCommand>(deviceId, midiData);
+    commandQueue.push(std::move(cmd));
+}
+
+//==============================================================================
+// Public API - Network packet handling (Phase 4.3: with MidiPacket)
+
+void MidiRouter::onNetworkPacketReceived(const MidiPacket& packet)
+{
+    const auto& midiData = packet.getMidiData();
+
+    if (midiData.empty()) {
+        reportError("Received empty network MIDI packet from " +
+                    packet.getSourceNode().toString());
+        return;
+    }
+
+    // Extract context from packet if present
+    std::optional<NetworkMidi::ForwardingContext> contextOpt;
+    if (packet.hasForwardingContext() && uuidRegistry) {
+        contextOpt = packet.getForwardingContext(*uuidRegistry);
+
+        if (!contextOpt.has_value() && packet.hasForwardingContext()) {
+            reportError("Failed to deserialize forwarding context from packet - "
+                       "UuidRegistry may be missing node mappings");
+        }
+    }
+
+    // Convert NetworkMidi::ForwardingContext to MidiRouter::ForwardingContext
+    std::optional<MidiRouterCommands::ForwardingContext> routerContextOpt;
+    if (contextOpt.has_value()) {
+        MidiRouterCommands::ForwardingContext routerCtx;
+        routerCtx.visitedDevices = contextOpt->visitedDevices;
+        routerCtx.hopCount = contextOpt->hopCount;
+        routerContextOpt = routerCtx;
+    }
+
+    // Create command with context
+    auto cmd = std::make_unique<MidiRouterCommands::ForwardMessageCommand>(
+        packet.getSourceNode(), packet.getDeviceId(), midiData, routerContextOpt);
+
     commandQueue.push(std::move(cmd));
 }
 
@@ -491,10 +574,11 @@ void MidiRouter::forwardMessageInternal(const juce::Uuid& sourceNode,
             continue;
         }
 
-        // Forward to destination
+        // Forward to destination (pass context for embedding in packet)
         forwardToDestination(rule.destinationNodeId(),
                             rule.destinationDeviceId(),
-                            midiData);
+                            midiData,
+                            context);
 
         // Update statistics
         routeManager->updateRuleStatistics(rule.ruleId.toStdString(), true);
@@ -530,16 +614,45 @@ bool MidiRouter::matchesFilters(const ForwardingRule& rule,
 
 void MidiRouter::forwardToDestination(const juce::Uuid& destNode,
                                       uint16_t destDevice,
-                                      const std::vector<uint8_t>& midiData)
+                                      const std::vector<uint8_t>& midiData,
+                                      const ForwardingContext& context)
 {
     // Check if destination is local (local devices have null UUID in RoutingTable)
     if (destNode.isNull()) {
-        // Forward to local device
+        // Forward to local device (no context needed)
         routeLocalMessage(destDevice, midiData);
     }
     else {
-        // Forward to remote device
-        routeNetworkMessage(destNode, destDevice, midiData);
+        // Forward to remote device - create packet with context
+        if (!networkTransport) {
+            reportError("Network transport not configured - cannot route message");
+            stats.routingErrors++;
+            return;
+        }
+
+        try {
+            // Create MidiPacket with MIDI data
+            MidiPacket packet = MidiPacket::createDataPacket(
+                myNodeId, destNode, destDevice, midiData, nextSequence++
+            );
+
+            // Convert MidiRouter::ForwardingContext to NetworkMidi::ForwardingContext
+            NetworkMidi::ForwardingContext netContext;
+            netContext.visitedDevices = context.visitedDevices;
+            netContext.hopCount = context.hopCount;
+
+            // Embed context in packet
+            packet.setForwardingContext(netContext);
+
+            // Send via network transport (Phase 4.4 integration)
+            networkTransport->sendPacket(packet);
+            stats.networkMessagesSent++;
+        }
+        catch (const std::exception& e) {
+            reportError("Error sending network MIDI message with context: " +
+                        juce::String(e.what()));
+            stats.routingErrors++;
+        }
     }
 }
 
@@ -623,6 +736,16 @@ void MidiRouter::setRouteManagerInternal(RouteManager* manager)
 void MidiRouter::setNetworkTransportInternal(NetworkTransport* transport)
 {
     networkTransport = transport;
+}
+
+void MidiRouter::setUuidRegistryInternal(UuidRegistry* registry)
+{
+    uuidRegistry = registry;
+}
+
+void MidiRouter::setNodeIdInternal(const juce::Uuid& nodeId)
+{
+    myNodeId = nodeId;
 }
 
 } // namespace NetworkMidi

@@ -33,6 +33,7 @@ namespace NetworkMidi {
 class NetworkConnectionQueue;
 class ConnectionWorker;
 class MidiRouter;
+struct MidiPacket;
 
 //==============================================================================
 // Node information structure
@@ -172,6 +173,14 @@ public:
      * @throws std::invalid_argument if data is empty
      */
     void sendMidiMessage(uint16_t deviceId, const std::vector<uint8_t>& data);
+
+    /**
+     * Phase 4: Send full packet with context.
+     * Non-blocking - packet queued for UDP transmission via SEDA.
+     *
+     * @param packet MidiPacket with optional forwarding context
+     */
+    void sendPacket(const MidiPacket& packet);
 
     //==============================================================================
     // Connection health

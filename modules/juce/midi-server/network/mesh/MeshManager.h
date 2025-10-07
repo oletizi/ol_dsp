@@ -17,6 +17,7 @@
 #include "ConnectionPool.h"
 #include "HeartbeatMonitor.h"
 #include "NetworkConnection.h"
+#include "../routing/UuidRegistry.h"
 
 #include <juce_core/juce_core.h>
 
@@ -42,6 +43,7 @@ namespace NetworkMidi {
  * - Works with ServiceDiscovery (Phase 2) for node discovery
  * - Uses ConnectionPool to manage active connections
  * - Uses HeartbeatMonitor for health monitoring
+ * - Maintains UuidRegistry for multi-hop routing (Phase 4)
  *
  * Thread Safety:
  * All public methods are thread-safe.
@@ -157,6 +159,21 @@ public:
 
     MeshStatistics getStatistics() const;
 
+    //==============================================================================
+    // Phase 4.5: UUID Registry Access
+
+    /**
+     * Returns reference to the UUID registry.
+     * Used by MidiRouter for context deserialization during multi-hop routing.
+     *
+     * The registry maps 32-bit UUID hashes to full juce::Uuid objects,
+     * enabling efficient network transmission while preserving full
+     * UUID resolution capability.
+     *
+     * @return Reference to the UUID registry
+     */
+    UuidRegistry& getUuidRegistry() { return uuidRegistry; }
+
 private:
     //==============================================================================
     // Connection lifecycle handlers
@@ -187,6 +204,9 @@ private:
 
     ConnectionPool connectionPool;
     std::unique_ptr<HeartbeatMonitor> heartbeatMonitor;
+
+    // Phase 4.5: UUID Registry for multi-hop routing
+    UuidRegistry uuidRegistry;
 
     std::atomic<bool> running{false};
 

@@ -26,6 +26,7 @@ namespace NetworkMidi {
 // Forward declarations
 struct MidiPacket;
 class RouteManager;
+class UuidRegistry;
 
 /**
  * Callback interface for network message transmission
@@ -35,9 +36,13 @@ class NetworkTransport {
 public:
     virtual ~NetworkTransport() = default;
 
+    // Legacy method (Phase 3 compatibility)
     virtual void sendMidiMessage(const juce::Uuid& destNode,
                                  uint16_t deviceId,
                                  const std::vector<uint8_t>& midiData) = 0;
+
+    // NEW: Send full packet with context (Phase 4)
+    virtual void sendPacket(const MidiPacket& packet) = 0;
 };
 
 /**
@@ -175,7 +180,7 @@ public:
  * ────────────────
  * - Max hops: 8 (prevents infinite chains)
  * - Visited devices: Tracked per message (prevents cycles)
- * - Context: Currently single-node (Phase 4 will add network-wide context)
+ * - Context: Phase 4 adds network-wide context forwarding
  *
  * ERROR HANDLING:
  * ───────────────
@@ -206,6 +211,12 @@ public:
     // RouteManager integration (Phase 3.1)
     void setRouteManager(RouteManager* manager);
 
+    // UuidRegistry integration (Phase 4.3)
+    void setUuidRegistry(UuidRegistry* registry);
+
+    // Phase 4.5: Set node ID for packet creation
+    void setNodeId(const juce::Uuid& nodeId);
+
     // Local port management
     void registerLocalPort(uint16_t deviceId,
                            std::unique_ptr<MidiPortInterface> port);
@@ -229,6 +240,9 @@ public:
     void onNetworkPacketReceived(const juce::Uuid& sourceNode,
                                  uint16_t deviceId,
                                  const std::vector<uint8_t>& midiData);
+
+    // Phase 4.3: New method for receiving full packets with context
+    void onNetworkPacketReceived(const MidiPacket& packet);
 
     // Message forwarding (Phase 3.1)
     void forwardMessage(const juce::Uuid& sourceNode,
@@ -278,6 +292,10 @@ private:
      * Prevents infinite forwarding loops via:
      * - Hop count limiting (max 8 hops)
      * - Visited device tracking (prevents A → B → A cycles)
+     *
+     * NOTE: This is for local tracking within MidiRouter.
+     * The network-wide ForwardingContext is defined in MidiPacket.h
+     * and is used for serialization/deserialization across the network.
      */
     struct ForwardingContext {
         std::set<DeviceKey> visitedDevices;
@@ -342,6 +360,9 @@ private:
     // Route manager (Phase 3.1)
     RouteManager* routeManager;
 
+    // UUID registry (Phase 4.3)
+    UuidRegistry* uuidRegistry;
+
     // Local MIDI ports
     std::map<uint16_t, std::unique_ptr<MidiPortInterface>> localPorts;
 
@@ -353,6 +374,10 @@ private:
 
     // Error handling
     ErrorCallback errorCallback;
+
+    // Node identity (for Phase 4 packet creation)
+    juce::Uuid myNodeId;
+    uint16_t nextSequence = 0;
 
     //==========================================================================
     // Internal Methods (called only by worker thread)
@@ -387,7 +412,8 @@ private:
 
     void forwardToDestination(const juce::Uuid& destNode,
                               uint16_t destDevice,
-                              const std::vector<uint8_t>& midiData);
+                              const std::vector<uint8_t>& midiData,
+                              const ForwardingContext& context);
 
     uint8_t extractMidiChannel(const std::vector<uint8_t>& midiData) const;
     MidiMessageType getMidiMessageType(const std::vector<uint8_t>& midiData) const;
@@ -399,6 +425,8 @@ private:
     // Configuration (internal)
     void setRouteManagerInternal(RouteManager* manager);
     void setNetworkTransportInternal(NetworkTransport* transport);
+    void setUuidRegistryInternal(UuidRegistry* registry);
+    void setNodeIdInternal(const juce::Uuid& nodeId);
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MidiRouter)
 };

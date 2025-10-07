@@ -9,6 +9,7 @@
 #include "../transport/RealtimeMidiBuffer.h"
 #include "../transport/RealtimeMidiTransport.h"
 #include "../transport/NonRealtimeMidiTransport.h"
+#include "../core/MidiPacket.h"
 #include <juce_core/juce_core.h>
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <sstream>
@@ -77,6 +78,10 @@ void ConnectionWorker::processCommand(std::unique_ptr<Commands::Command> cmd)
 
         case Commands::Command::SendMidi:
             handleSendMidiCommand(static_cast<Commands::SendMidiCommand*>(cmd.get()));
+            break;
+
+        case Commands::Command::SendPacket:
+            handleSendPacketCommand(static_cast<Commands::SendPacketCommand*>(cmd.get()));
             break;
 
         case Commands::Command::GetState:
@@ -427,6 +432,49 @@ void ConnectionWorker::handleSendMidiCommand(Commands::SendMidiCommand* cmd)
                                 juce::String(cmd->deviceId) +
                                 ", bytes=" + juce::String(static_cast<int>(cmd->data.size())));
     }
+}
+
+void ConnectionWorker::handleSendPacketCommand(Commands::SendPacketCommand* cmd)
+{
+    jassert(cmd != nullptr);
+
+    // Validate connection state
+    if (currentState != NetworkConnection::State::Connected) {
+        juce::Logger::writeToLog("ConnectionWorker: Cannot send packet - not connected");
+        return;
+    }
+
+    // Validate transport initialized
+    if (!realtimeTransport) {
+        juce::Logger::writeToLog("ConnectionWorker: Cannot send packet - realtime transport not available");
+        return;
+    }
+
+    // Serialize packet to buffer
+    std::vector<uint8_t> buffer = cmd->packet.serialize();
+
+    // Extract remote host and UDP port from remoteUdpEndpoint
+    // remoteUdpEndpoint format: "10.0.0.1:12345"
+    juce::String remoteHost;
+    int remoteUdpPort = 0;
+    int colonPos = remoteUdpEndpoint.lastIndexOf(":");
+    if (colonPos > 0) {
+        remoteHost = remoteUdpEndpoint.substring(0, colonPos);
+        remoteUdpPort = remoteUdpEndpoint.substring(colonPos + 1).getIntValue();
+    }
+
+    if (remoteHost.isEmpty() || remoteUdpPort == 0) {
+        juce::Logger::writeToLog("ConnectionWorker: Invalid remote UDP endpoint: " + remoteUdpEndpoint);
+        return;
+    }
+
+    // Send via UDP transport
+    realtimeTransport->sendPacket(buffer.data(), buffer.size(), remoteHost, remoteUdpPort);
+
+    juce::Logger::writeToLog("ConnectionWorker: Sent MidiPacket via UDP - " +
+                            juce::String(buffer.size()) + " bytes to " +
+                            remoteHost + ":" + juce::String(remoteUdpPort) +
+                            (cmd->packet.hasForwardingContext() ? " (with context)" : ""));
 }
 
 void ConnectionWorker::handleGetStateQuery(Commands::GetStateQuery* query)

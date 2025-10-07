@@ -1,10 +1,23 @@
 #pragma once
 
+#include "../routing/DeviceRegistry.h"  // For DeviceKey
 #include <juce_core/juce_core.h>
 #include <cstdint>
 #include <vector>
+#include <optional>
+#include <set>
 
 namespace NetworkMidi {
+
+// Forward declaration for UuidRegistry (to be implemented in Task 4.2)
+class UuidRegistry;
+
+// Forwarding context for loop prevention (uses DeviceKey from DeviceRegistry.h)
+struct ForwardingContext {
+    std::set<DeviceKey> visitedDevices;
+    uint8_t hopCount = 0;
+    static constexpr uint8_t MAX_HOPS = 8;
+};
 
 /**
  * UDP packet format for network MIDI transport.
@@ -12,13 +25,14 @@ namespace NetworkMidi {
  * Packet Structure (20-byte header + variable payload):
  * - Magic: 0x4D49 ("MI") - 2 bytes
  * - Version: 0x01 - 1 byte
- * - Flags: [SysEx|Reliable|Fragment|Reserved] - 1 byte
+ * - Flags: [SysEx|Reliable|Fragment|HasContext|Reserved...] - 1 byte
  * - Source Node UUID (hash) - 4 bytes
  * - Dest Node UUID (hash) - 4 bytes
  * - Sequence Number - 2 bytes
  * - Timestamp (microseconds) - 4 bytes
  * - Device ID - 2 bytes
  * - MIDI Data (variable length)
+ * - Context Extension (optional, if HasContext flag set)
  */
 class MidiPacket {
 public:
@@ -36,8 +50,8 @@ public:
         SysEx = 1 << 0,      // Bit 0: SysEx message
         Reliable = 1 << 1,   // Bit 1: Reliable delivery required (ACK expected)
         Fragment = 1 << 2,   // Bit 2: Fragmented message (part of larger SysEx)
-        Reserved3 = 1 << 3,  // Bits 3-7: Reserved for future use
-        Reserved4 = 1 << 4,
+        HasContext = 1 << 3, // Bit 3: Forwarding context extension present (Phase 4)
+        Reserved4 = 1 << 4,  // Bits 4-7: Reserved for future use
         Reserved5 = 1 << 5,
         Reserved6 = 1 << 6,
         Reserved7 = 1 << 7
@@ -47,6 +61,11 @@ public:
     static constexpr uint16_t MAGIC = 0x4D49;  // "MI"
     static constexpr uint8_t VERSION = 0x01;
     static constexpr size_t HEADER_SIZE = 20;
+
+    // Context extension constants
+    static constexpr uint8_t CONTEXT_EXTENSION_TYPE = 0x01;
+    static constexpr size_t CONTEXT_HEADER_SIZE = 4;  // Type(1) + Length(1) + HopCount(1) + DeviceCount(1)
+    static constexpr size_t VISITED_DEVICE_SIZE = 6;  // NodeIdHash(4) + DeviceId(2)
 
     // Constructor
     MidiPacket();
@@ -119,9 +138,36 @@ public:
     bool isReliable() const { return hasFlag(Reliable); }
     bool isFragment() const { return hasFlag(Fragment); }
 
+    // Phase 4: Forwarding context support
+    /**
+     * Set forwarding context to be serialized with this packet.
+     * Automatically sets the HasContext flag.
+     */
+    void setForwardingContext(const ForwardingContext& ctx);
+
+    /**
+     * Extract forwarding context from packet (if present).
+     * Requires UuidRegistry to reverse lookup node UUIDs from hashes.
+     * Returns std::nullopt if no context present or deserialization fails.
+     */
+    std::optional<ForwardingContext> getForwardingContext(const UuidRegistry& registry) const;
+
+    /**
+     * Check if packet has forwarding context extension.
+     */
+    bool hasForwardingContext() const { return hasFlag(HasContext); }
+
+    /**
+     * Clear forwarding context and remove HasContext flag.
+     */
+    void clearForwardingContext();
+
     // Utility
-    size_t getTotalSize() const { return HEADER_SIZE + midiData.size(); }
+    size_t getTotalSize() const;
     void updateTimestamp();  // Sets timestamp to current time in microseconds
+
+    // Helper for UUID hashing (public for UuidRegistry)
+    static uint32_t hashUuid(const juce::Uuid& uuid);
 
 private:
     // Header fields
@@ -137,13 +183,20 @@ private:
     // Payload
     std::vector<uint8_t> midiData;
 
+    // Phase 4: Context extension (optional)
+    std::vector<uint8_t> contextExtension;
+
     // Packet type (not serialized, derived from context)
     PacketType packetType;
 
     // Helper functions
-    static uint32_t hashUuid(const juce::Uuid& uuid);
     static juce::Uuid unhashUuid(uint32_t hash, const juce::Uuid& original);
     static uint64_t getCurrentTimeMicros();
+
+    // Context serialization/deserialization helpers
+    static std::vector<uint8_t> serializeContext(const ForwardingContext& ctx);
+    static ForwardingContext deserializeContext(const uint8_t* data, size_t length,
+                                                 const UuidRegistry& registry);
 };
 
 } // namespace NetworkMidi

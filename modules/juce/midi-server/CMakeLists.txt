@@ -216,6 +216,42 @@ target_link_libraries(network_midi_benchmarks
     juce::juce_recommended_warning_flags
 )
 
+#==============================================================================
+# Phase 4 Context Performance Benchmark
+#==============================================================================
+
+juce_add_console_app(context_performance_test
+    PRODUCT_NAME "Context Performance Test"
+)
+
+target_sources(context_performance_test
+    PRIVATE
+    tests/performance/context_performance_test.cpp
+    ${CORE_SOURCES}
+    ${ROUTING_SOURCES}
+)
+
+target_compile_definitions(context_performance_test
+    PRIVATE
+    JUCE_WEB_BROWSER=0
+    JUCE_USE_CURL=0
+)
+
+target_include_directories(context_performance_test
+    PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
+target_link_libraries(context_performance_test
+    PRIVATE
+    juce::juce_core
+    juce::juce_audio_devices
+    juce::juce_events
+    PUBLIC
+    juce::juce_recommended_config_flags
+    juce::juce_recommended_warning_flags
+)
+
 # Unit Tests with Google Test and Coverage
 # Note: Google Test is already configured in the parent project's test/ directory
 # No need to fetch it again - just use the existing targets
@@ -235,6 +271,9 @@ add_executable(network_midi_tests
     tests/unit/ConnectionPoolTest.cpp
     tests/unit/MidiClassifierTest.cpp
     tests/unit/MidiMessageRouterTest.cpp
+    tests/unit/UuidRegistryTest.cpp
+    # Phase 4.6: MidiRouter context tests
+    tests/unit/MidiRouterContextTest.cpp
     # SEDA infrastructure tests (Phase B.1)
     network/mesh/tests/NetworkConnectionQueueTest.cpp
     # Dual-transport tests (Phase C.1-C.3)

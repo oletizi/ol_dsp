@@ -198,20 +198,6 @@ public:
         }
     }
 
-    void sendPacket(const NetworkMidi::MidiPacket& packet) override {
-        // Phase 4.5: Send packet with full context via UDP
-        if (meshManager) {
-            auto nodeInfo = meshManager->getNodeInfo(packet.getDestNode());
-            if (nodeInfo.isValid()) {
-                udpTransport.sendPacket(
-                    packet,
-                    nodeInfo.ipAddress,
-                    nodeInfo.udpPort
-                );
-            }
-        }
-    }
-
     void setMeshManager(NetworkMidi::MeshManager* manager) {
         meshManager = manager;
     }
