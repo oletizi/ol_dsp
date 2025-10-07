@@ -1274,6 +1274,78 @@ private:
 };
 
 //==============================================================================
+// Command-line argument parsing structure
+struct CommandLineOptions
+{
+    juce::String nodeId;
+    int port = 0;
+    bool showHelp = false;
+    bool hasError = false;
+    juce::String errorMessage;
+
+    bool parseArguments(int argc, char* argv[]) {
+        for (int i = 1; i < argc; ++i) {
+            juce::String arg(argv[i]);
+
+            if (arg == "--help" || arg == "-h") {
+                showHelp = true;
+                return true;
+            }
+
+            if (arg.startsWith("--node-id=")) {
+                nodeId = arg.substring(10);
+                if (nodeId.isEmpty()) {
+                    hasError = true;
+                    errorMessage = "Error: --node-id argument requires a UUID value";
+                    return false;
+                }
+                // Validate UUID format
+                juce::Uuid testUuid(nodeId);
+                if (testUuid.isNull()) {
+                    hasError = true;
+                    errorMessage = "Error: Invalid UUID format for --node-id: " + nodeId;
+                    return false;
+                }
+            }
+            else if (arg.startsWith("--port=")) {
+                juce::String portStr = arg.substring(7);
+                if (portStr.isEmpty()) {
+                    hasError = true;
+                    errorMessage = "Error: --port argument requires a numeric value";
+                    return false;
+                }
+
+                port = portStr.getIntValue();
+                if (port < 1024 || port > 65535) {
+                    hasError = true;
+                    errorMessage = "Error: Port must be in range 1024-65535, got: " + juce::String(port);
+                    return false;
+                }
+            }
+            else {
+                hasError = true;
+                errorMessage = "Error: Unknown argument: " + arg;
+                return false;
+            }
+        }
+        return true;
+    }
+
+    void printUsage() const {
+        std::cout << "\nUsage: network_midi_server [OPTIONS]\n\n";
+        std::cout << "Options:\n";
+        std::cout << "  --node-id=<uuid>    Override auto-generated node UUID\n";
+        std::cout << "                      Example: --node-id=\"a1b2c3d4-e5f6-7890-1234-567890abcdef\"\n";
+        std::cout << "  --port=<number>     Use specific HTTP port (1024-65535)\n";
+        std::cout << "                      Example: --port=8001\n";
+        std::cout << "  --help, -h          Show this help message\n\n";
+        std::cout << "If no arguments are provided, the server will:\n";
+        std::cout << "  - Auto-generate a unique node UUID\n";
+        std::cout << "  - Auto-assign an available HTTP port\n\n";
+    }
+};
+
+//==============================================================================
 int main(int argc, char* argv[])
 {
     // Initialize JUCE
@@ -1282,8 +1354,28 @@ int main(int argc, char* argv[])
     std::cout << "\nNetwork MIDI Server v1.0 - Full Mesh Integration" << std::endl;
     std::cout << "=================================================" << std::endl;
 
-    // Initialize node identity (each instance gets a unique UUID)
+    // Parse command-line arguments
+    CommandLineOptions options;
+    if (!options.parseArguments(argc, argv)) {
+        std::cerr << "\n" << options.errorMessage.toStdString() << "\n";
+        options.printUsage();
+        return 1;
+    }
+
+    if (options.showHelp) {
+        options.printUsage();
+        return 0;
+    }
+
+    // Initialize node identity
     NetworkMidi::NodeIdentity identity;
+
+    // Override node ID if specified via CLI
+    if (options.nodeId.isNotEmpty()) {
+        juce::Uuid customUuid(options.nodeId);
+        std::cout << "\nUsing CLI-specified node ID: " << customUuid.toString().toStdString() << std::endl;
+        identity = NetworkMidi::NodeIdentity::createWithUuid(customUuid);
+    }
 
     // Initialize instance manager (creates lock file and temp directory)
     std::unique_ptr<NetworkMidi::InstanceManager> instanceManager;
@@ -1295,30 +1387,32 @@ int main(int argc, char* argv[])
         return 1;
     }
 
-    // Parse port from command line (0 = auto-assign)
-    int port = 0;
-    if (argc > 1) {
-        port = std::atoi(argv[1]);
-    }
-
     std::cout << "\nStarting server..." << std::endl;
-    if (port == 0) {
+    if (options.port == 0) {
         std::cout << "  HTTP Port: auto-assigned" << std::endl;
     } else {
-        std::cout << "  HTTP Port: " << port << std::endl;
+        std::cout << "  HTTP Port: " << options.port << " (CLI-specified)" << std::endl;
     }
 
-    NetworkMidiServer server(identity, instanceManager.get(), port);
+    NetworkMidiServer server(identity, instanceManager.get(), options.port);
     server.startServer();
 
     int actualPort = server.getActualPort();
     int udpPort = server.getUdpPort();
 
     std::cout << "\nServer running:" << std::endl;
-    std::cout << "  HTTP Port: " << actualPort << std::endl;
+    std::cout << "  HTTP Port: " << actualPort;
+    if (options.port != 0) {
+        std::cout << " (CLI-specified)";
+    }
+    std::cout << std::endl;
     std::cout << "  UDP Port: " << udpPort << std::endl;
     std::cout << "  Node: " << identity.getNodeName().toStdString() << std::endl;
-    std::cout << "  UUID: " << identity.getNodeId().toString().toStdString() << std::endl;
+    std::cout << "  UUID: " << identity.getNodeId().toString().toStdString();
+    if (options.nodeId.isNotEmpty()) {
+        std::cout << " (CLI-specified)";
+    }
+    std::cout << std::endl;
     std::cout << "  Instance dir: " << instanceManager->getInstanceDirectory()
                                        .getFullPathName().toStdString() << std::endl;
 

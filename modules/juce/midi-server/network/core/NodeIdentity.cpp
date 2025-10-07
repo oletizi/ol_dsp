@@ -63,6 +63,30 @@ NodeIdentity::NodeIdentity(const juce::String& configPath)
     std::cout << "  Hostname: " << hostname.toStdString() << std::endl;
 }
 
+// Private constructor for custom UUID
+NodeIdentity::NodeIdentity(const juce::Uuid& customUuid, bool /*tag*/)
+    : nodeId(customUuid)
+{
+    // Get system hostname
+    hostname = juce::SystemStats::getComputerName();
+    if (hostname.isEmpty()) {
+        hostname = "unknown-host";
+    }
+
+    nodeName = generateNodeName(nodeId);
+
+    std::cout << "Node Identity initialized (custom UUID):" << std::endl;
+    std::cout << "  UUID: " << nodeId.toString().toStdString() << std::endl;
+    std::cout << "  Name: " << nodeName.toStdString() << std::endl;
+    std::cout << "  Hostname: " << hostname.toStdString() << std::endl;
+}
+
+// Static factory method for custom UUID
+NodeIdentity NodeIdentity::createWithUuid(const juce::Uuid& customUuid)
+{
+    return NodeIdentity(customUuid, true);
+}
+
 juce::Uuid NodeIdentity::getNodeId() const
 {
     return nodeId;

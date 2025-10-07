@@ -39,6 +39,13 @@ public:
     explicit NodeIdentity(const juce::String& configDir);
 
     /**
+     * Create a node identity with a specific UUID.
+     * Used for testing and integration scenarios where the UUID
+     * must be controlled externally.
+     */
+    static NodeIdentity createWithUuid(const juce::Uuid& customUuid);
+
+    /**
      * Get the unique node UUID.
      * This UUID is persistent across restarts.
      */
@@ -70,6 +77,10 @@ public:
     ~NodeIdentity() = default;
 
 private:
+    /**
+     * Private constructor for creating identity with custom UUID.
+     */
+    NodeIdentity(const juce::Uuid& customUuid, bool /*tag*/);
 
     /**
      * Load existing UUID from disk, or create new one if not found.
