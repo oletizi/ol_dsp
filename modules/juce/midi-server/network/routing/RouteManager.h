@@ -222,9 +222,22 @@ private:
     mutable std::mutex rulesMutex;
     std::map<std::string, ForwardingRule> rules;
 
+    // Performance optimization: Indexed lookup cache for fast destination queries
+    // Maps source DeviceKey to vector of enabled rules, pre-sorted by priority
+    // Rebuilt whenever rules are added/removed/updated
+    // Trade-off: More memory, slower writes, much faster reads (O(log N) vs O(N))
+    std::map<DeviceKey, std::vector<ForwardingRule>> sourceIndex;
+
     // Helper methods
     bool validateRuleInternal(const ForwardingRule& rule, std::string& errorMsg) const;
     std::string generateRuleId() const;
+
+    /**
+     * Rebuild the source device index for fast lookups
+     * Called after any rule modification (add/remove/update)
+     * Time complexity: O(N log N) where N = number of rules
+     */
+    void rebuildSourceIndex();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(RouteManager)
 };

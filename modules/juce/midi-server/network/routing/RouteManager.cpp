@@ -49,6 +49,9 @@ std::string RouteManager::addRule(const ForwardingRule& rule)
     // Add the rule
     rules[newRule.ruleId.toStdString()] = newRule;
 
+    // Rebuild index for optimized lookups
+    rebuildSourceIndex();
+
     return newRule.ruleId.toStdString();
 }
 
@@ -62,6 +65,10 @@ bool RouteManager::removeRule(const std::string& ruleId)
     }
 
     rules.erase(it);
+
+    // Rebuild index for optimized lookups
+    rebuildSourceIndex();
+
     return true;
 }
 
@@ -90,6 +97,9 @@ bool RouteManager::updateRule(const std::string& ruleId, const ForwardingRule& r
 
     // Update the rule
     it->second = updatedRule;
+
+    // Rebuild index for optimized lookups
+    rebuildSourceIndex();
 
     return true;
 }
@@ -124,6 +134,7 @@ void RouteManager::clearAllRules()
 {
     std::lock_guard<std::mutex> lock(rulesMutex);
     rules.clear();
+    sourceIndex.clear();
 }
 
 //==============================================================================
@@ -134,23 +145,17 @@ std::vector<ForwardingRule> RouteManager::getDestinations(const juce::Uuid& sour
 {
     std::lock_guard<std::mutex> lock(rulesMutex);
 
-    std::vector<ForwardingRule> result;
     DeviceKey sourceKey(sourceNodeId, sourceDeviceId);
 
-    // Find all rules with matching source
-    for (const auto& pair : rules) {
-        if (pair.second.sourceDevice == sourceKey && pair.second.enabled) {
-            result.push_back(pair.second);
-        }
+    // Use indexed lookup for O(log N) performance instead of O(N) scan
+    auto it = sourceIndex.find(sourceKey);
+    if (it != sourceIndex.end()) {
+        // Index already contains enabled rules sorted by priority
+        return it->second;
     }
 
-    // Sort by priority (highest first)
-    std::sort(result.begin(), result.end(),
-              [](const ForwardingRule& a, const ForwardingRule& b) {
-                  return a.priority > b.priority;  // Higher priority first
-              });
-
-    return result;
+    // No rules found for this source device
+    return {};
 }
 
 std::vector<ForwardingRule> RouteManager::getSourceRules(const juce::Uuid& nodeId,
@@ -325,6 +330,9 @@ bool RouteManager::loadFromFile(const juce::File& file)
             rules[rule.ruleId.toStdString()] = rule;
         }
 
+        // Rebuild index for optimized lookups
+        rebuildSourceIndex();
+
         return true;
     } catch (...) {
         return false;
@@ -410,6 +418,27 @@ void RouteManager::updateRuleStatistics(const std::string& ruleId, bool forwarde
 std::string RouteManager::generateRuleId() const
 {
     return juce::Uuid().toString().toStdString();
+}
+
+void RouteManager::rebuildSourceIndex()
+{
+    // Clear existing index
+    sourceIndex.clear();
+
+    // Build index: group enabled rules by source device
+    for (const auto& [ruleId, rule] : rules) {
+        if (rule.enabled) {
+            sourceIndex[rule.sourceDevice].push_back(rule);
+        }
+    }
+
+    // Sort each source device's rules by priority (highest first)
+    for (auto& [sourceKey, ruleList] : sourceIndex) {
+        std::sort(ruleList.begin(), ruleList.end(),
+                  [](const ForwardingRule& a, const ForwardingRule& b) {
+                      return a.priority > b.priority;  // Higher priority first
+                  });
+    }
 }
 
 } // namespace NetworkMidi

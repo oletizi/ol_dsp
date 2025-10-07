@@ -15,6 +15,7 @@
 #include <juce_audio_devices/juce_audio_devices.h>
 #include <vector>
 #include <map>
+#include <set>
 #include <queue>
 #include <mutex>
 #include <functional>
@@ -118,6 +119,7 @@ public:
         uint64_t routingErrors = 0;
         uint64_t messagesForwarded = 0;      // Phase 3.1
         uint64_t messagesDropped = 0;        // Phase 3.1
+        uint64_t loopsDetected = 0;          // Loop prevention
     };
 
     Statistics getStatistics() const;
@@ -128,6 +130,38 @@ public:
     void setErrorCallback(ErrorCallback callback);
 
 private:
+    /**
+     * Context for tracking message forwarding to prevent loops
+     *
+     * Prevents infinite forwarding loops via:
+     * - Hop count limiting (max 8 hops)
+     * - Visited device tracking (prevents A → B → A cycles)
+     */
+    struct ForwardingContext {
+        std::set<DeviceKey> visitedDevices;
+        uint8_t hopCount = 0;
+        static constexpr uint8_t MAX_HOPS = 8;
+
+        /**
+         * Check if we should forward from this device
+         * Returns false if:
+         * - Hop count exceeds MAX_HOPS
+         * - Device has already been visited (loop detected)
+         */
+        bool shouldForward(const DeviceKey& device) const {
+            if (hopCount >= MAX_HOPS) return false;
+            if (visitedDevices.count(device) > 0) return false;
+            return true;
+        }
+
+        /**
+         * Mark device as visited in the forwarding path
+         */
+        void recordVisit(const DeviceKey& device) {
+            visitedDevices.insert(device);
+        }
+    };
+
     // References to routing infrastructure
     DeviceRegistry& deviceRegistry;
     RoutingTable& routingTable;
@@ -167,6 +201,11 @@ private:
     void reportError(const juce::String& error);
 
     // Phase 3.1 forwarding helpers
+    void forwardMessageInternal(const juce::Uuid& sourceNode,
+                                uint16_t sourceDevice,
+                                const std::vector<uint8_t>& midiData,
+                                ForwardingContext& context);
+
     bool matchesFilters(const ForwardingRule& rule,
                         const std::vector<uint8_t>& midiData) const;
 

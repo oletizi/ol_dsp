@@ -186,6 +186,7 @@ protected:
         // Create mock network transport
         mockTransport = std::make_unique<MockNetworkTransport>();
         midiRouter->setNetworkTransport(mockTransport.get());
+        midiRouter->setRouteManager(routeManager.get());
 
         // Setup test node IDs
         localNode = juce::Uuid::null();
@@ -197,6 +198,8 @@ protected:
         deviceRegistry->addLocalDevice(1, "Local Input 1", "input", "TestVendor");
         deviceRegistry->addLocalDevice(2, "Local Output 1", "output", "TestVendor");
         deviceRegistry->addLocalDevice(3, "Local Output 2", "output", "TestVendor");
+        deviceRegistry->addLocalDevice(4, "Local Input 2", "input", "TestVendor");
+        deviceRegistry->addLocalDevice(5, "Local Input 3", "input", "TestVendor");
 
         deviceRegistry->addRemoteDevice(remoteNode1, 10, "Remote Output 1", "output", "RemoteVendor");
         deviceRegistry->addRemoteDevice(remoteNode1, 11, "Remote Input 1", "input", "RemoteVendor");
@@ -207,6 +210,8 @@ protected:
         routingTable->addRoute(localNode, 1, "Local Input 1", "input");
         routingTable->addRoute(localNode, 2, "Local Output 1", "output");
         routingTable->addRoute(localNode, 3, "Local Output 2", "output");
+        routingTable->addRoute(localNode, 4, "Local Input 2", "input");
+        routingTable->addRoute(localNode, 5, "Local Input 3", "input");
         routingTable->addRoute(remoteNode1, 10, "Remote Output 1", "output");
         routingTable->addRoute(remoteNode1, 11, "Remote Output 2", "output");
         routingTable->addRoute(remoteNode2, 20, "Remote Output 3", "output");
@@ -239,33 +244,12 @@ protected:
         return routeManager->addRule(rule);
     }
 
-    // Helper to forward a message using RouteManager rules
+    // Helper to forward a message using MidiRouter's forwardMessage method
     void forwardMessage(const juce::Uuid& srcNode, uint16_t srcDev,
                        const std::vector<uint8_t>& midiData) {
-        // Get destinations from RouteManager
-        auto destinations = routeManager->getDestinations(srcNode, srcDev);
-
-        // Forward to each destination
-        for (const auto& rule : destinations) {
-            if (!rule.enabled) continue;
-
-            // Apply filters
-            uint8_t channel = getMidiChannel(midiData);
-            MidiMessageType msgType = getMidiMessageType(midiData);
-
-            if (!rule.shouldForward(channel, msgType)) {
-                routeManager->updateRuleStatistics(rule.ruleId.toStdString(), false);
-                continue;
-            }
-
-            // Forward the message
-            midiRouter->sendMessageToNode(rule.destinationNodeId(),
-                                         rule.destinationDeviceId(),
-                                         midiData);
-
-            // Update statistics
-            routeManager->updateRuleStatistics(rule.ruleId.toStdString(), true);
-        }
+        // Use MidiRouter's built-in forwarding logic which properly handles
+        // local vs remote routing, filters, and statistics
+        midiRouter->forwardMessage(srcNode, srcDev, midiData);
     }
 
     // Test infrastructure
@@ -564,9 +548,10 @@ TEST_F(MidiMessageForwardingTest, AggregateStatistics) {
 //==============================================================================
 
 TEST_F(MidiMessageForwardingTest, MultiHopForwarding) {
-    // Setup chain: Local Input 1 → Remote Output 1 → Remote Output 2
+    // Setup chain: Local Input 1 → Remote Output 1 (on node1)
+    //              Remote Input 1 (on node1) → Remote Output 2 (on node2)
     addRule(localNode, 1, remoteNode1, 10);
-    addRule(remoteNode1, 10, remoteNode2, 20);
+    addRule(remoteNode1, 11, remoteNode2, 20);  // Use input device 11 as source
 
     // Send message from local node
     auto noteOn = createNoteOn(1, 60, 100);
@@ -575,9 +560,9 @@ TEST_F(MidiMessageForwardingTest, MultiHopForwarding) {
     // First hop: Local → Remote1
     EXPECT_EQ(1, mockTransport->getSentMessageCount());
 
-    // Simulate Remote1 receiving and forwarding
+    // Simulate Remote1 receiving on its input and forwarding
     mockTransport->clearSentMessages();
-    forwardMessage(remoteNode1, 10, noteOn);
+    forwardMessage(remoteNode1, 11, noteOn);  // Message comes in on input device 11
 
     // Second hop: Remote1 → Remote2
     EXPECT_EQ(1, mockTransport->getSentMessageCount());
@@ -733,15 +718,15 @@ TEST_F(MidiMessageForwardingTest, HandlesHighMessageThroughput) {
 }
 
 TEST_F(MidiMessageForwardingTest, HandlesMultipleConcurrentSources) {
-    // Add rules from multiple sources
+    // Add rules from multiple sources (all input devices)
     addRule(localNode, 1, remoteNode1, 10);
-    addRule(localNode, 2, remoteNode1, 10);
-    addRule(localNode, 3, remoteNode1, 10);
+    addRule(localNode, 4, remoteNode1, 10);
+    addRule(localNode, 5, remoteNode1, 10);
 
     // Send from multiple sources
     forwardMessage(localNode, 1, createNoteOn(1, 60, 100));
-    forwardMessage(localNode, 2, createNoteOn(2, 64, 100));
-    forwardMessage(localNode, 3, createNoteOn(3, 67, 100));
+    forwardMessage(localNode, 4, createNoteOn(2, 64, 100));
+    forwardMessage(localNode, 5, createNoteOn(3, 67, 100));
 
     // All messages should be forwarded
     EXPECT_EQ(3, mockTransport->getSentMessageCount());

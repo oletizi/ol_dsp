@@ -313,6 +313,42 @@ void MidiRouter::forwardMessage(const juce::Uuid& sourceNode,
         return;
     }
 
+    // Create fresh forwarding context for this message
+    ForwardingContext context;
+
+    // Delegate to internal implementation with loop prevention
+    forwardMessageInternal(sourceNode, sourceDevice, midiData, context);
+}
+
+void MidiRouter::forwardMessageInternal(const juce::Uuid& sourceNode,
+                                        uint16_t sourceDevice,
+                                        const std::vector<uint8_t>& midiData,
+                                        ForwardingContext& context)
+{
+    // Create device key for source
+    DeviceKey sourceKey(sourceNode, sourceDevice);
+
+    // Check if we should forward from this source (loop prevention)
+    if (!context.shouldForward(sourceKey)) {
+        // Loop detected - either hop count exceeded or device already visited
+        std::lock_guard<std::mutex> lock(statsMutex);
+        stats.loopsDetected++;
+
+        if (context.hopCount >= ForwardingContext::MAX_HOPS) {
+            reportError("Maximum hop count exceeded for message from node " +
+                        sourceNode.toString() + " device " + juce::String(sourceDevice));
+        } else {
+            reportError("Forwarding loop detected for message from node " +
+                        sourceNode.toString() + " device " + juce::String(sourceDevice));
+        }
+
+        return;
+    }
+
+    // Mark this device as visited in the forwarding path
+    context.recordVisit(sourceKey);
+    context.hopCount++;
+
     // Query RouteManager for destination rules (already sorted by priority, filtered to enabled only)
     auto rules = routeManager->getDestinations(sourceNode, sourceDevice);
 
