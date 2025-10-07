@@ -22,19 +22,20 @@ RoutingTable::~RoutingTable()
 //==============================================================================
 // Route management
 
-void RoutingTable::addRoute(uint16_t deviceId,
-                            const juce::Uuid& nodeId,
+void RoutingTable::addRoute(const juce::Uuid& nodeId,
+                            uint16_t deviceId,
                             const juce::String& deviceName,
                             const juce::String& deviceType)
 {
-    Route route(deviceId, nodeId, deviceName, deviceType);
+    Route route(nodeId, deviceId, deviceName, deviceType);
     addRouteInternal(route);
 }
 
-void RoutingTable::removeRoute(uint16_t deviceId)
+void RoutingTable::removeRoute(const juce::Uuid& nodeId, uint16_t deviceId)
 {
     std::lock_guard<std::mutex> lock(routeMutex);
-    routes.erase(deviceId);
+    RouteKey key(nodeId, deviceId);
+    routes.erase(key);
 }
 
 void RoutingTable::removeNodeRoutes(const juce::Uuid& nodeId)
@@ -44,7 +45,7 @@ void RoutingTable::removeNodeRoutes(const juce::Uuid& nodeId)
     // Remove all routes for specified node
     auto it = routes.begin();
     while (it != routes.end()) {
-        if (it->second.nodeId == nodeId) {
+        if (it->second.key.nodeId == nodeId) {
             it = routes.erase(it);
         } else {
             ++it;
@@ -61,16 +62,23 @@ void RoutingTable::clearAllRoutes()
 //==============================================================================
 // Route queries
 
-std::optional<Route> RoutingTable::getRoute(uint16_t deviceId) const
+std::optional<Route> RoutingTable::getRoute(const juce::Uuid& nodeId,
+                                            uint16_t deviceId) const
 {
     std::lock_guard<std::mutex> lock(routeMutex);
 
-    auto it = routes.find(deviceId);
+    RouteKey key(nodeId, deviceId);
+    auto it = routes.find(key);
     if (it != routes.end()) {
         return it->second;
     }
 
     return std::nullopt;
+}
+
+std::optional<Route> RoutingTable::getLocalRoute(uint16_t deviceId) const
+{
+    return getRoute(juce::Uuid::null(), deviceId);
 }
 
 std::vector<Route> RoutingTable::getAllRoutes() const
@@ -124,7 +132,7 @@ std::vector<Route> RoutingTable::getNodeRoutes(const juce::Uuid& nodeId) const
     std::vector<Route> result;
 
     for (const auto& pair : routes) {
-        if (pair.second.nodeId == nodeId) {
+        if (pair.second.key.nodeId == nodeId) {
             result.push_back(pair.second);
         }
     }
@@ -135,17 +143,24 @@ std::vector<Route> RoutingTable::getNodeRoutes(const juce::Uuid& nodeId) const
 //==============================================================================
 // Route checks
 
-bool RoutingTable::hasRoute(uint16_t deviceId) const
+bool RoutingTable::hasRoute(const juce::Uuid& nodeId, uint16_t deviceId) const
 {
     std::lock_guard<std::mutex> lock(routeMutex);
-    return routes.find(deviceId) != routes.end();
+    RouteKey key(nodeId, deviceId);
+    return routes.find(key) != routes.end();
 }
 
-bool RoutingTable::isLocalDevice(uint16_t deviceId) const
+bool RoutingTable::hasLocalRoute(uint16_t deviceId) const
+{
+    return hasRoute(juce::Uuid::null(), deviceId);
+}
+
+bool RoutingTable::isLocalDevice(const juce::Uuid& nodeId, uint16_t deviceId) const
 {
     std::lock_guard<std::mutex> lock(routeMutex);
 
-    auto it = routes.find(deviceId);
+    RouteKey key(nodeId, deviceId);
+    auto it = routes.find(key);
     if (it != routes.end()) {
         return it->second.isLocal();
     }
@@ -153,11 +168,12 @@ bool RoutingTable::isLocalDevice(uint16_t deviceId) const
     return false;
 }
 
-bool RoutingTable::isRemoteDevice(uint16_t deviceId) const
+bool RoutingTable::isRemoteDevice(const juce::Uuid& nodeId, uint16_t deviceId) const
 {
     std::lock_guard<std::mutex> lock(routeMutex);
 
-    auto it = routes.find(deviceId);
+    RouteKey key(nodeId, deviceId);
+    auto it = routes.find(key);
     if (it != routes.end()) {
         return !it->second.isLocal();
     }
@@ -208,7 +224,7 @@ int RoutingTable::getNodeRouteCount(const juce::Uuid& nodeId) const
 
     int count = 0;
     for (const auto& pair : routes) {
-        if (pair.second.nodeId == nodeId) {
+        if (pair.second.key.nodeId == nodeId) {
             ++count;
         }
     }
@@ -224,7 +240,7 @@ void RoutingTable::addRoutes(const std::vector<Route>& routeList)
     std::lock_guard<std::mutex> lock(routeMutex);
 
     for (const auto& route : routeList) {
-        routes[route.deviceId] = route;
+        routes[route.key] = route;
     }
 }
 
@@ -236,7 +252,7 @@ void RoutingTable::replaceNodeRoutes(const juce::Uuid& nodeId,
     // First, remove all existing routes for this node
     auto it = routes.begin();
     while (it != routes.end()) {
-        if (it->second.nodeId == nodeId) {
+        if (it->second.key.nodeId == nodeId) {
             it = routes.erase(it);
         } else {
             ++it;
@@ -245,7 +261,7 @@ void RoutingTable::replaceNodeRoutes(const juce::Uuid& nodeId,
 
     // Then add the new routes
     for (const auto& route : routeList) {
-        routes[route.deviceId] = route;
+        routes[route.key] = route;
     }
 }
 
@@ -255,7 +271,7 @@ void RoutingTable::replaceNodeRoutes(const juce::Uuid& nodeId,
 void RoutingTable::addRouteInternal(const Route& route)
 {
     std::lock_guard<std::mutex> lock(routeMutex);
-    routes[route.deviceId] = route;
+    routes[route.key] = route;
 }
 
 } // namespace NetworkMidi

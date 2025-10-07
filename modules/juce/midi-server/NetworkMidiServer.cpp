@@ -404,8 +404,8 @@ private:
 
             // Add to routing table (local route has null UUID)
             routingTable->addRoute(
+                juce::Uuid(),  // Local devices use null UUID
                 deviceId,
-                juce::Uuid(),
                 deviceInfo.name,
                 "input"
             );
@@ -442,8 +442,8 @@ private:
 
             // Add to routing table
             routingTable->addRoute(
+                juce::Uuid(),  // Local devices use null UUID
                 deviceId,
-                juce::Uuid(),
                 deviceInfo.name,
                 "output"
             );
@@ -569,8 +569,8 @@ private:
 
                 // Add route to routing table
                 routingTable->addRoute(
+                    nodeId,  // Remote node UUID
                     remoteDeviceId,
-                    nodeId,  // Route to remote node
                     device.name,
                     device.type
                 );

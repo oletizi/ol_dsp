@@ -70,21 +70,17 @@ void MidiRouter::sendMessage(uint16_t deviceId,
         return;
     }
 
-    // Look up route
-    auto route = routingTable.getRoute(deviceId);
+    // Look up local route (backward compatibility - assumes local device)
+    auto route = routingTable.getLocalRoute(deviceId);
     if (!route.has_value()) {
-        reportError("No route found for device " + juce::String(deviceId));
+        reportError("No local route found for device " + juce::String(deviceId));
         std::lock_guard<std::mutex> lock(statsMutex);
         stats.routingErrors++;
         return;
     }
 
-    // Route based on destination
-    if (route->isLocal()) {
-        routeLocalMessage(deviceId, midiData);
-    } else {
-        routeNetworkMessage(route->nodeId, deviceId, midiData);
-    }
+    // Route to local device
+    routeLocalMessage(deviceId, midiData);
 }
 
 void MidiRouter::sendMessageToNode(const juce::Uuid& nodeId,
@@ -159,11 +155,11 @@ void MidiRouter::onNetworkPacketReceived(const juce::Uuid& sourceNode,
         return;
     }
 
-    // Verify device exists in routing table
-    auto route = routingTable.getRoute(deviceId);
+    // Verify device exists in routing table (use composite key with source node)
+    auto route = routingTable.getRoute(sourceNode, deviceId);
     if (!route.has_value()) {
         reportError("Received network message for unknown device " +
-                    juce::String(deviceId));
+                    juce::String(deviceId) + " from node " + sourceNode.toString());
         std::lock_guard<std::mutex> lock(statsMutex);
         stats.routingErrors++;
         return;

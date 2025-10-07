@@ -28,14 +28,15 @@ void DeviceRegistry::addLocalDevice(uint16_t deviceId,
                                     const juce::String& type,
                                     const juce::String& manufacturer)
 {
-    MidiDevice device(deviceId, name, type, true, juce::Uuid::null());
+    MidiDevice device(juce::Uuid::null(), deviceId, name, type);
     device.manufacturer = manufacturer;
     addDeviceInternal(device);
 }
 
 void DeviceRegistry::removeLocalDevice(uint16_t deviceId)
 {
-    removeDeviceInternal(deviceId);
+    DeviceKey key(juce::Uuid::null(), deviceId);
+    removeDeviceInternal(key);
 }
 
 void DeviceRegistry::clearLocalDevices()
@@ -45,7 +46,7 @@ void DeviceRegistry::clearLocalDevices()
     // Remove all local devices
     auto it = devices.begin();
     while (it != devices.end()) {
-        if (it->second.isLocal) {
+        if (it->second.isLocal()) {
             it = devices.erase(it);
         } else {
             ++it;
@@ -62,14 +63,15 @@ void DeviceRegistry::addRemoteDevice(const juce::Uuid& nodeId,
                                      const juce::String& type,
                                      const juce::String& manufacturer)
 {
-    MidiDevice device(deviceId, name, type, false, nodeId);
+    MidiDevice device(nodeId, deviceId, name, type);
     device.manufacturer = manufacturer;
     addDeviceInternal(device);
 }
 
-void DeviceRegistry::removeRemoteDevice(uint16_t deviceId)
+void DeviceRegistry::removeRemoteDevice(const juce::Uuid& nodeId, uint16_t deviceId)
 {
-    removeDeviceInternal(deviceId);
+    DeviceKey key(nodeId, deviceId);
+    removeDeviceInternal(key);
 }
 
 void DeviceRegistry::removeNodeDevices(const juce::Uuid& nodeId)
@@ -79,7 +81,7 @@ void DeviceRegistry::removeNodeDevices(const juce::Uuid& nodeId)
     // Remove all devices owned by specified node
     auto it = devices.begin();
     while (it != devices.end()) {
-        if (!it->second.isLocal && it->second.ownerNode == nodeId) {
+        if (!it->second.isLocal() && it->second.key.ownerNode == nodeId) {
             it = devices.erase(it);
         } else {
             ++it;
@@ -89,6 +91,25 @@ void DeviceRegistry::removeNodeDevices(const juce::Uuid& nodeId)
 
 //==============================================================================
 // Device queries
+
+std::optional<MidiDevice> DeviceRegistry::getDevice(const juce::Uuid& ownerNode,
+                                                     uint16_t deviceId) const
+{
+    std::lock_guard<std::mutex> lock(deviceMutex);
+
+    DeviceKey key(ownerNode, deviceId);
+    auto it = devices.find(key);
+    if (it != devices.end()) {
+        return it->second;
+    }
+
+    return std::nullopt;
+}
+
+std::optional<MidiDevice> DeviceRegistry::getLocalDevice(uint16_t deviceId) const
+{
+    return getDevice(juce::Uuid::null(), deviceId);
+}
 
 std::vector<MidiDevice> DeviceRegistry::getAllDevices() const
 {
@@ -111,7 +132,7 @@ std::vector<MidiDevice> DeviceRegistry::getLocalDevices() const
     std::vector<MidiDevice> result;
 
     for (const auto& pair : devices) {
-        if (pair.second.isLocal) {
+        if (pair.second.isLocal()) {
             result.push_back(pair.second);
         }
     }
@@ -126,7 +147,7 @@ std::vector<MidiDevice> DeviceRegistry::getRemoteDevices() const
     std::vector<MidiDevice> result;
 
     for (const auto& pair : devices) {
-        if (!pair.second.isLocal) {
+        if (!pair.second.isLocal()) {
             result.push_back(pair.second);
         }
     }
@@ -141,7 +162,7 @@ std::vector<MidiDevice> DeviceRegistry::getNodeDevices(const juce::Uuid& nodeId)
     std::vector<MidiDevice> result;
 
     for (const auto& pair : devices) {
-        if (!pair.second.isLocal && pair.second.ownerNode == nodeId) {
+        if (!pair.second.isLocal() && pair.second.key.ownerNode == nodeId) {
             result.push_back(pair.second);
         }
     }
@@ -149,16 +170,16 @@ std::vector<MidiDevice> DeviceRegistry::getNodeDevices(const juce::Uuid& nodeId)
     return result;
 }
 
-std::optional<MidiDevice> DeviceRegistry::getDevice(uint16_t deviceId) const
+bool DeviceRegistry::hasDevice(const juce::Uuid& ownerNode, uint16_t deviceId) const
 {
     std::lock_guard<std::mutex> lock(deviceMutex);
+    DeviceKey key(ownerNode, deviceId);
+    return devices.find(key) != devices.end();
+}
 
-    auto it = devices.find(deviceId);
-    if (it != devices.end()) {
-        return it->second;
-    }
-
-    return std::nullopt;
+bool DeviceRegistry::hasLocalDevice(uint16_t deviceId) const
+{
+    return hasDevice(juce::Uuid::null(), deviceId);
 }
 
 //==============================================================================
@@ -176,7 +197,7 @@ int DeviceRegistry::getLocalDeviceCount() const
 
     int count = 0;
     for (const auto& pair : devices) {
-        if (pair.second.isLocal) {
+        if (pair.second.isLocal()) {
             ++count;
         }
     }
@@ -190,7 +211,7 @@ int DeviceRegistry::getRemoteDeviceCount() const
 
     int count = 0;
     for (const auto& pair : devices) {
-        if (!pair.second.isLocal) {
+        if (!pair.second.isLocal()) {
             ++count;
         }
     }
@@ -204,7 +225,7 @@ int DeviceRegistry::getNodeDeviceCount(const juce::Uuid& nodeId) const
 
     int count = 0;
     for (const auto& pair : devices) {
-        if (!pair.second.isLocal && pair.second.ownerNode == nodeId) {
+        if (!pair.second.isLocal() && pair.second.key.ownerNode == nodeId) {
             ++count;
         }
     }
@@ -245,26 +266,26 @@ void DeviceRegistry::addDeviceInternal(const MidiDevice& device)
 {
     std::lock_guard<std::mutex> lock(deviceMutex);
 
-    // Check for duplicate ID
-    auto it = devices.find(device.id);
+    // Check for duplicate key
+    auto it = devices.find(device.key);
     if (it != devices.end()) {
         // Update existing device
         it->second = device;
     } else {
         // Add new device
-        devices[device.id] = device;
+        devices[device.key] = device;
 
-        // Update next ID if this ID is >= current next
-        if (device.id >= nextDeviceId) {
-            nextDeviceId = device.id + 1;
+        // Update next ID if this ID is >= current next (only for local devices)
+        if (device.isLocal() && device.key.deviceId >= nextDeviceId) {
+            nextDeviceId = device.key.deviceId + 1;
         }
     }
 }
 
-void DeviceRegistry::removeDeviceInternal(uint16_t deviceId)
+void DeviceRegistry::removeDeviceInternal(const DeviceKey& key)
 {
     std::lock_guard<std::mutex> lock(deviceMutex);
-    devices.erase(deviceId);
+    devices.erase(key);
 }
 
 } // namespace NetworkMidi
