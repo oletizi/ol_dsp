@@ -55,6 +55,8 @@ public:
         onNodeDisconnected;
     std::function<void(const NodeInfo& node, const juce::String& error)>
         onConnectionFailed;
+    std::function<void(const juce::Uuid& nodeId, const std::vector<DeviceInfo>& devices)>
+        onRemoteDevicesDiscovered;
 
     //==============================================================================
     // Constructor/Destructor

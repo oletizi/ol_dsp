@@ -176,15 +176,67 @@ void ConnectionWorker::handleConnectCommand()
             throw std::runtime_error("Handshake response missing udp_endpoint");
         }
 
-        // Parse devices array (basic parsing for now)
+        // Parse devices array
+        remoteDevices.clear();
         size_t devicesPos = responseBody.find("\"devices\":[");
         if (devicesPos != std::string::npos) {
-            // TODO: Implement proper JSON parsing for device list
-            juce::Logger::writeToLog("Received device list from " + remoteNodeInfo.name);
+            size_t arrayStart = devicesPos + 11; // strlen("\"devices\":[")
+            size_t arrayEnd = responseBody.find("]", arrayStart);
 
-            // Notify callback if devices were received
-            if (onDevicesReceived) {
-                onDevicesReceived(remoteDevices);
+            if (arrayEnd != std::string::npos) {
+                std::string devicesJson = responseBody.substr(arrayStart, arrayEnd - arrayStart);
+
+                // Parse each device object (simple approach)
+                size_t pos = 0;
+                while ((pos = devicesJson.find("{", pos)) != std::string::npos) {
+                    size_t objEnd = devicesJson.find("}", pos);
+                    if (objEnd == std::string::npos) break;
+
+                    std::string deviceObj = devicesJson.substr(pos, objEnd - pos + 1);
+
+                    // Extract id
+                    uint16_t id = 0;
+                    size_t idPos = deviceObj.find("\"id\":");
+                    if (idPos != std::string::npos) {
+                        id = std::stoi(deviceObj.substr(idPos + 5));
+                    }
+
+                    // Extract name
+                    juce::String name;
+                    size_t namePos = deviceObj.find("\"name\":\"");
+                    if (namePos != std::string::npos) {
+                        size_t nameStart = namePos + 8;
+                        size_t nameEnd = deviceObj.find("\"", nameStart);
+                        if (nameEnd != std::string::npos) {
+                            name = juce::String(deviceObj.substr(nameStart, nameEnd - nameStart));
+                        }
+                    }
+
+                    // Extract type
+                    juce::String type;
+                    size_t typePos = deviceObj.find("\"type\":\"");
+                    if (typePos != std::string::npos) {
+                        size_t typeStart = typePos + 8;
+                        size_t typeEnd = deviceObj.find("\"", typeStart);
+                        if (typeEnd != std::string::npos) {
+                            type = juce::String(deviceObj.substr(typeStart, typeEnd - typeStart));
+                        }
+                    }
+
+                    if (id > 0 && name.isNotEmpty()) {
+                        remoteDevices.push_back({id, name, type});
+                    }
+
+                    pos = objEnd + 1;
+                }
+
+                juce::Logger::writeToLog("Received " + juce::String(static_cast<int>(remoteDevices.size())) +
+                                        " devices from " + remoteNodeInfo.name);
+
+                // Notify callback if devices were received
+                if (onDevicesReceived) {
+                    onDevicesReceived(remoteDevices);
+                }
             }
         }
 
@@ -385,7 +437,7 @@ void ConnectionWorker::handleGetStateQuery(Commands::GetStateQuery* query)
     query->result = currentState;
 
     // Signal response ready
-    query->responseReady.signal();
+    query->signal();
 }
 
 void ConnectionWorker::handleGetRemoteNodeQuery(Commands::GetRemoteNodeQuery* query)
@@ -396,7 +448,7 @@ void ConnectionWorker::handleGetRemoteNodeQuery(Commands::GetRemoteNodeQuery* qu
     query->result = remoteNodeInfo;
 
     // Signal response ready
-    query->responseReady.signal();
+    query->signal();
 }
 
 void ConnectionWorker::handleGetDevicesQuery(Commands::GetDevicesQuery* query)
@@ -407,7 +459,7 @@ void ConnectionWorker::handleGetDevicesQuery(Commands::GetDevicesQuery* query)
     query->result = remoteDevices;
 
     // Signal response ready
-    query->responseReady.signal();
+    query->signal();
 }
 
 void ConnectionWorker::handleGetHeartbeatQuery(Commands::GetHeartbeatQuery* query)
@@ -419,7 +471,7 @@ void ConnectionWorker::handleGetHeartbeatQuery(Commands::GetHeartbeatQuery* quer
     query->timeSinceLastHeartbeat = currentTime - lastHeartbeatTime;
 
     // Signal response ready
-    query->responseReady.signal();
+    query->signal();
 }
 
 //==============================================================================

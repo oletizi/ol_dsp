@@ -203,7 +203,7 @@ TEST(NetworkConnectionQueueTest, QueryCommandWithResponse) {
         // Process query
         auto* query = static_cast<Commands::GetStateQuery*>(cmd.get());
         query->result = NetworkConnection::State::Connected;
-        query->responseReady.signal();
+        query->signal();
     });
 
     // Main thread sends query and waits for response
@@ -213,7 +213,7 @@ TEST(NetworkConnectionQueueTest, QueryCommandWithResponse) {
     queue.pushCommand(std::move(query));
 
     // Wait for response (with timeout)
-    bool gotResponse = queryPtr->responseReady.wait(1000);
+    bool gotResponse = queryPtr->wait(1000);
     EXPECT_TRUE(gotResponse);
     EXPECT_EQ(queryPtr->result, NetworkConnection::State::Connected);
 
@@ -236,7 +236,7 @@ TEST(NetworkConnectionQueueTest, MultipleQueriesConcurrent) {
                 query->result.name = "TestNode";
                 query->result.uuid = juce::Uuid();
 
-                query->responseReady.signal();
+                query->signal();
                 queriesProcessed.fetch_add(1, std::memory_order_relaxed);
             }
         }
@@ -251,7 +251,7 @@ TEST(NetworkConnectionQueueTest, MultipleQueriesConcurrent) {
 
             queue.pushCommand(std::move(query));
 
-            bool gotResponse = queryPtr->responseReady.wait(2000);
+            bool gotResponse = queryPtr->wait(2000);
             EXPECT_TRUE(gotResponse);
             EXPECT_EQ(queryPtr->result.name, "TestNode");
         });

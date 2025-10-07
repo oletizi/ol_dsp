@@ -8,9 +8,12 @@
 #pragma once
 
 #include "NetworkConnection.h"
-#include <juce_events/juce_events.h>
+#include <juce_core/juce_core.h>
 #include <memory>
 #include <vector>
+#include <mutex>
+#include <condition_variable>
+#include <atomic>
 
 namespace NetworkMidi {
 namespace Commands {
@@ -77,27 +80,81 @@ struct SendMidiCommand : Command {
 
 //==============================================================================
 // Query commands with synchronous response mechanism
-// Uses juce::WaitableEvent to block caller until worker responds
+// Uses std::condition_variable for reliable cross-platform synchronization
 
 struct GetStateQuery : Command {
-    juce::WaitableEvent responseReady;
+    std::atomic<bool> ready{false};
     NetworkConnection::State result{NetworkConnection::State::Disconnected};
 
     GetStateQuery() : Command(GetState) {}
+
+    void signal() {
+        ready.store(true);
+    }
+
+    bool wait(int timeoutMs) {
+        // WORKAROUND: Use polling instead of condition_variable to avoid macOS libc++ bug
+        auto startTime = std::chrono::steady_clock::now();
+        auto timeout = std::chrono::milliseconds(timeoutMs);
+
+        while (std::chrono::steady_clock::now() - startTime < timeout) {
+            if (ready.load()) {
+                return true;
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        }
+        return false;
+    }
 };
 
 struct GetRemoteNodeQuery : Command {
-    juce::WaitableEvent responseReady;
+    std::atomic<bool> ready{false};
     NodeInfo result;
 
     GetRemoteNodeQuery() : Command(GetRemoteNode) {}
+
+    void signal() {
+        ready.store(true);
+    }
+
+    bool wait(int timeoutMs) {
+        // WORKAROUND: Use polling instead of condition_variable to avoid macOS libc++ bug
+        auto startTime = std::chrono::steady_clock::now();
+        auto timeout = std::chrono::milliseconds(timeoutMs);
+
+        while (std::chrono::steady_clock::now() - startTime < timeout) {
+            if (ready.load()) {
+                return true;
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        }
+        return false;
+    }
 };
 
 struct GetDevicesQuery : Command {
-    juce::WaitableEvent responseReady;
+    std::atomic<bool> ready{false};
     std::vector<DeviceInfo> result;
 
     GetDevicesQuery() : Command(GetDevices) {}
+
+    void signal() {
+        ready.store(true);
+    }
+
+    bool wait(int timeoutMs) {
+        // WORKAROUND: Use polling instead of condition_variable to avoid macOS libc++ bug
+        auto startTime = std::chrono::steady_clock::now();
+        auto timeout = std::chrono::milliseconds(timeoutMs);
+
+        while (std::chrono::steady_clock::now() - startTime < timeout) {
+            if (ready.load()) {
+                return true;
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        }
+        return false;
+    }
 };
 
 /**
@@ -105,10 +162,28 @@ struct GetDevicesQuery : Command {
  * Provides accurate timing information from worker thread.
  */
 struct GetHeartbeatQuery : Command {
-    juce::WaitableEvent responseReady;
+    std::atomic<bool> ready{false};
     int64_t timeSinceLastHeartbeat{0};
 
     GetHeartbeatQuery() : Command(GetHeartbeat) {}
+
+    void signal() {
+        ready.store(true);
+    }
+
+    bool wait(int timeoutMs) {
+        // WORKAROUND: Use polling instead of condition_variable to avoid macOS libc++ bug
+        auto startTime = std::chrono::steady_clock::now();
+        auto timeout = std::chrono::milliseconds(timeoutMs);
+
+        while (std::chrono::steady_clock::now() - startTime < timeout) {
+            if (ready.load()) {
+                return true;
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        }
+        return false;
+    }
 };
 
 } // namespace Commands

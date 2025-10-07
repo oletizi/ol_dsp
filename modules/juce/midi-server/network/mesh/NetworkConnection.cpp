@@ -71,15 +71,34 @@ void NetworkConnection::disconnect()
 //==============================================================================
 NetworkConnection::State NetworkConnection::getState() const
 {
+    // SAFETY CHECK 1: Verify worker thread is running
+    if (!worker || !worker->isThreadRunning()) {
+        juce::Logger::writeToLog("NetworkConnection::getState() - Worker thread not running");
+        return State::Disconnected;
+    }
+
     // Use query command for thread-safe state access
     auto query = std::make_unique<Commands::GetStateQuery>();
     auto* queryPtr = query.get();
 
     commandQueue->pushCommand(std::move(query));
 
-    // Wait for response (with timeout)
-    if (queryPtr->responseReady.wait(1000)) {
-        return queryPtr->result;
+    // SAFETY CHECK 2: Validate timeout value (1ms - 60s range)
+    int timeoutMs = 1000;
+    if (timeoutMs <= 0 || timeoutMs > 60000) {
+        juce::Logger::writeToLog("NetworkConnection::getState() - Invalid timeout value");
+        return State::Disconnected;
+    }
+
+    // SAFETY CHECK 3: Wrap wait() in try-catch to handle exceptions
+    try {
+        if (queryPtr->wait(timeoutMs)) {
+            return queryPtr->result;
+        }
+    } catch (const std::exception& e) {
+        juce::Logger::writeToLog("NetworkConnection::getState() - WaitableEvent exception: " +
+                                juce::String(e.what()));
+        return State::Disconnected;
     }
 
     // Timeout - return Disconnected as safe default
@@ -90,13 +109,33 @@ NetworkConnection::State NetworkConnection::getState() const
 //==============================================================================
 NodeInfo NetworkConnection::getRemoteNode() const
 {
+    // SAFETY CHECK 1: Verify worker thread is running
+    if (!worker || !worker->isThreadRunning()) {
+        juce::Logger::writeToLog("NetworkConnection::getRemoteNode() - Worker thread not running");
+        return remoteNodeInfo;
+    }
+
     auto query = std::make_unique<Commands::GetRemoteNodeQuery>();
     auto* queryPtr = query.get();
 
     commandQueue->pushCommand(std::move(query));
 
-    if (queryPtr->responseReady.wait(1000)) {
-        return queryPtr->result;
+    // SAFETY CHECK 2: Validate timeout value
+    int timeoutMs = 1000;
+    if (timeoutMs <= 0 || timeoutMs > 60000) {
+        juce::Logger::writeToLog("NetworkConnection::getRemoteNode() - Invalid timeout value");
+        return remoteNodeInfo;
+    }
+
+    // SAFETY CHECK 3: Wrap wait() in try-catch
+    try {
+        if (queryPtr->wait(timeoutMs)) {
+            return queryPtr->result;
+        }
+    } catch (const std::exception& e) {
+        juce::Logger::writeToLog("NetworkConnection::getRemoteNode() - WaitableEvent exception: " +
+                                juce::String(e.what()));
+        return remoteNodeInfo;
     }
 
     // Timeout - return initial node info
@@ -107,13 +146,33 @@ NodeInfo NetworkConnection::getRemoteNode() const
 //==============================================================================
 std::vector<DeviceInfo> NetworkConnection::getRemoteDevices() const
 {
+    // SAFETY CHECK 1: Verify worker thread is running
+    if (!worker || !worker->isThreadRunning()) {
+        juce::Logger::writeToLog("NetworkConnection::getRemoteDevices() - Worker thread not running");
+        return {};
+    }
+
     auto query = std::make_unique<Commands::GetDevicesQuery>();
     auto* queryPtr = query.get();
 
     commandQueue->pushCommand(std::move(query));
 
-    if (queryPtr->responseReady.wait(1000)) {
-        return queryPtr->result;
+    // SAFETY CHECK 2: Validate timeout value
+    int timeoutMs = 1000;
+    if (timeoutMs <= 0 || timeoutMs > 60000) {
+        juce::Logger::writeToLog("NetworkConnection::getRemoteDevices() - Invalid timeout value");
+        return {};
+    }
+
+    // SAFETY CHECK 3: Wrap wait() in try-catch
+    try {
+        if (queryPtr->wait(timeoutMs)) {
+            return queryPtr->result;
+        }
+    } catch (const std::exception& e) {
+        juce::Logger::writeToLog("NetworkConnection::getRemoteDevices() - WaitableEvent exception: " +
+                                juce::String(e.what()));
+        return {};
     }
 
     // Timeout - return empty vector
@@ -137,15 +196,34 @@ void NetworkConnection::sendMidiMessage(uint16_t deviceId,
 //==============================================================================
 int64_t NetworkConnection::getTimeSinceLastHeartbeat() const
 {
+    // SAFETY CHECK 1: Verify worker thread is running
+    if (!worker || !worker->isThreadRunning()) {
+        juce::Logger::writeToLog("NetworkConnection::getTimeSinceLastHeartbeat() - Worker thread not running");
+        return HEARTBEAT_TIMEOUT_MS + 1;  // Return value indicating disconnected
+    }
+
     // Use GetHeartbeatQuery command for accurate timing from worker thread
     auto query = std::make_unique<Commands::GetHeartbeatQuery>();
     auto* queryPtr = query.get();
 
     commandQueue->pushCommand(std::move(query));
 
-    // Wait for response (with timeout)
-    if (queryPtr->responseReady.wait(1000)) {
-        return queryPtr->timeSinceLastHeartbeat;
+    // SAFETY CHECK 2: Validate timeout value
+    int timeoutMs = 1000;
+    if (timeoutMs <= 0 || timeoutMs > 60000) {
+        juce::Logger::writeToLog("NetworkConnection::getTimeSinceLastHeartbeat() - Invalid timeout value");
+        return HEARTBEAT_TIMEOUT_MS + 1;
+    }
+
+    // SAFETY CHECK 3: Wrap wait() in try-catch
+    try {
+        if (queryPtr->wait(timeoutMs)) {
+            return queryPtr->timeSinceLastHeartbeat;
+        }
+    } catch (const std::exception& e) {
+        juce::Logger::writeToLog("NetworkConnection::getTimeSinceLastHeartbeat() - WaitableEvent exception: " +
+                                juce::String(e.what()));
+        return HEARTBEAT_TIMEOUT_MS + 1;
     }
 
     // Timeout - assume disconnected (return value > timeout threshold)

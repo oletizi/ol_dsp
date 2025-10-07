@@ -8,16 +8,17 @@
 #pragma once
 
 #include "Commands.h"
-#include <juce_events/juce_events.h>
+#include <juce_core/juce_core.h>
 #include <deque>
 #include <memory>
 #include <mutex>
+#include <condition_variable>
 
 namespace NetworkMidi {
 
 //==============================================================================
 /**
- * Thread-safe command queue using juce::WaitableEvent for blocking operations.
+ * Thread-safe command queue using std::condition_variable for blocking operations.
  *
  * Design:
  * - Multi-producer safe: Any thread can push commands
@@ -61,8 +62,8 @@ public:
 
 private:
     mutable std::mutex queueMutex;
+    std::condition_variable queueCondition;
     std::deque<std::unique_ptr<Commands::Command>> commandQueue;
-    juce::WaitableEvent queueEvent;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(NetworkConnectionQueue)
 };

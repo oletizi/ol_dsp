@@ -218,10 +218,30 @@ void MeshManager::createConnection(const NodeInfo& node)
             }
         };
 
-        connection->onDevicesReceived = [nodeInfo = node]
+        connection->onDevicesReceived = [this, nodeId = node.uuid, nodeInfo = node]
             (const std::vector<DeviceInfo>& devices) {
-            juce::Logger::writeToLog("Received " + juce::String(static_cast<int>(devices.size())) +
-                                    " devices from " + nodeInfo.name);
+            std::cout << "===== DEBUG: Lambda invoked, devices.size()=" << devices.size() << " =====" << std::endl << std::flush;
+            try {
+                std::cout << "DEBUG: About to call juce::Logger" << std::endl << std::flush;
+                juce::Logger::writeToLog("Received " + juce::String(static_cast<int>(devices.size())) +
+                                        " devices from " + nodeInfo.name);
+                std::cout << "DEBUG: juce::Logger returned" << std::endl << std::flush;
+
+                // Notify server to register remote devices
+                std::cout << "DEBUG: About to check onRemoteDevicesDiscovered callback, is null: "
+                          << (onRemoteDevicesDiscovered ? "false" : "true") << std::endl << std::flush;
+                if (onRemoteDevicesDiscovered) {
+                    std::cout << "DEBUG: Invoking onRemoteDevicesDiscovered callback" << std::endl;
+                    onRemoteDevicesDiscovered(nodeId, devices);
+                    std::cout << "DEBUG: Callback invoked" << std::endl;
+                } else {
+                    std::cout << "DEBUG: Callback was null!" << std::endl;
+                }
+            } catch (const std::exception& e) {
+                std::cout << "EXCEPTION in onDevicesReceived: " << e.what() << std::endl;
+            } catch (...) {
+                std::cout << "UNKNOWN EXCEPTION in onDevicesReceived" << std::endl;
+            }
         };
 
         connection->onMidiMessageReceived = [](const MidiMessage& msg) {

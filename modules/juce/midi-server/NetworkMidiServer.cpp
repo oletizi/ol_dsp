@@ -548,6 +548,38 @@ private:
             std::cerr << "Connection failed to " << node.name.toStdString()
                       << ": " << error.toStdString() << std::endl;
         };
+
+        // Register remote devices when they are discovered
+        meshManager->onRemoteDevicesDiscovered = [this](const juce::Uuid& nodeId,
+                                                        const std::vector<NetworkMidi::DeviceInfo>& devices) {
+            std::cout << "Registering " << devices.size() << " remote devices from node "
+                      << nodeId.toString().toStdString() << std::endl;
+
+            // Add each remote device to registry and routing table
+            for (const auto& device : devices) {
+                uint16_t remoteDeviceId = device.id;
+
+                // Add to device registry as remote device
+                deviceRegistry->addRemoteDevice(
+                    nodeId,
+                    remoteDeviceId,
+                    device.name,
+                    device.type
+                );
+
+                // Add route to routing table
+                routingTable->addRoute(
+                    remoteDeviceId,
+                    nodeId,  // Route to remote node
+                    device.name,
+                    device.type
+                );
+
+                std::cout << "  Registered remote device: " << device.name.toStdString()
+                          << " (ID: " << remoteDeviceId << ", type: " << device.type.toStdString() << ")"
+                          << std::endl;
+            }
+        };
     }
 
     void handleNetworkPacket(const NetworkMidi::MidiPacket& packet) {
