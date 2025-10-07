@@ -200,9 +200,12 @@ MeshManager::MeshStatistics MeshManager::getStatistics() const
 
 void MeshManager::createConnection(const NodeInfo& node)
 {
+    std::cout << "===== MeshManager::createConnection called for " << node.name.toStdString() << " =====" << std::endl << std::flush;
     try {
+        std::cout << "===== About to create NetworkConnection =====" << std::endl << std::flush;
         // Create new connection
         auto connection = std::make_unique<NetworkConnection>(node);
+        std::cout << "===== NetworkConnection created =====" << std::endl << std::flush;
 
         // Set up callbacks
         connection->onStateChanged = [this, nodeId = node.uuid]
@@ -218,6 +221,7 @@ void MeshManager::createConnection(const NodeInfo& node)
             }
         };
 
+        std::cout << "===== About to set onDevicesReceived callback =====" << std::endl << std::flush;
         connection->onDevicesReceived = [this, nodeId = node.uuid, nodeInfo = node]
             (const std::vector<DeviceInfo>& devices) {
             std::cout << "===== DEBUG: Lambda invoked, devices.size()=" << devices.size() << " =====" << std::endl << std::flush;

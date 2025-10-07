@@ -9,6 +9,7 @@
 #include "NetworkConnectionQueue.h"
 #include "ConnectionWorker.h"
 #include "Commands.h"
+#include <iostream>
 
 namespace NetworkMidi {
 
@@ -20,21 +21,10 @@ NetworkConnection::NetworkConnection(const NodeInfo& remoteNode)
         throw std::invalid_argument("Invalid NodeInfo provided to NetworkConnection");
     }
 
-    // Initialize SEDA infrastructure
+    // Initialize command queue (worker created lazily in connect())
     commandQueue = std::make_unique<NetworkConnectionQueue>();
-    worker = std::make_unique<ConnectionWorker>(
-        *commandQueue,
-        remoteNode,
-        onStateChanged,
-        onDevicesReceived,
-        onMidiMessageReceived,
-        onError
-    );
 
-    // Start worker thread
-    worker->startThread();
-
-    juce::Logger::writeToLog("NetworkConnection: SEDA infrastructure initialized for " +
+    juce::Logger::writeToLog("NetworkConnection: Infrastructure initialized for " +
                             remoteNode.name);
 }
 
@@ -57,6 +47,24 @@ NetworkConnection::~NetworkConnection()
 //==============================================================================
 void NetworkConnection::connect()
 {
+    // Create worker thread if not already created (lazy initialization)
+    // This allows callbacks to be set before worker is created
+    if (!worker) {
+        std::cout << "===== Creating ConnectionWorker with callbacks =====" << std::endl << std::flush;
+        worker = std::make_unique<ConnectionWorker>(
+            *commandQueue,
+            remoteNodeInfo,
+            onStateChanged,
+            onDevicesReceived,
+            onMidiMessageReceived,
+            onError
+        );
+        worker->startThread();
+        std::cout << "===== ConnectionWorker created and started =====" << std::endl << std::flush;
+        juce::Logger::writeToLog("NetworkConnection: SEDA worker thread started for " +
+                                remoteNodeInfo.name);
+    }
+
     juce::Logger::writeToLog("NetworkConnection::connect() - Queuing connect command");
     commandQueue->pushCommand(std::make_unique<Commands::ConnectCommand>());
 }
