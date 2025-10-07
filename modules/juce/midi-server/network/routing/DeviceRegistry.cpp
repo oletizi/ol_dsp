@@ -240,14 +240,16 @@ uint16_t DeviceRegistry::getNextAvailableId() const
 {
     std::lock_guard<std::mutex> lock(deviceMutex);
 
-    // Find first available ID
+    // Find first available ID for local devices (null UUID)
     uint16_t candidateId = nextDeviceId;
+    DeviceKey localKey(juce::Uuid::null(), candidateId);
 
-    while (devices.find(candidateId) != devices.end()) {
+    while (devices.find(localKey) != devices.end()) {
         candidateId++;
         if (candidateId == 0) {
             throw std::runtime_error("Device ID space exhausted");
         }
+        localKey = DeviceKey(juce::Uuid::null(), candidateId);
     }
 
     return candidateId;
@@ -256,7 +258,9 @@ uint16_t DeviceRegistry::getNextAvailableId() const
 bool DeviceRegistry::isDeviceIdAvailable(uint16_t deviceId) const
 {
     std::lock_guard<std::mutex> lock(deviceMutex);
-    return devices.find(deviceId) == devices.end();
+    // Check if a local device with this ID exists
+    DeviceKey localKey(juce::Uuid::null(), deviceId);
+    return devices.find(localKey) == devices.end();
 }
 
 //==============================================================================

@@ -476,7 +476,7 @@ private:
                 auto inputs = juce::MidiInput::getAvailableDevices();
                 for (const auto& deviceInfo : inputs) {
                     if (inputDeviceMap.count(deviceInfo.identifier) > 0 &&
-                        inputDeviceMap[deviceInfo.identifier] == device.id) {
+                        inputDeviceMap[deviceInfo.identifier] == device.id()) {
                         // Re-open and start the input
                         auto input = juce::MidiInput::openDevice(
                             deviceInfo.identifier,
@@ -630,11 +630,11 @@ private:
                 json.key("devices").startArray();
                 for (const auto& device : devices) {
                     json.startObject()
-                        .key("id").value((int)device.id)
+                        .key("id").value((int)device.id())
                         .key("name").value(device.name.toStdString())
                         .key("type").value(device.type.toStdString())
-                        .key("is_local").value(device.isLocal)
-                        .key("owner_node").value(device.ownerNode.toString().toStdString())
+                        .key("is_local").value(device.isLocal())
+                        .key("owner_node").value(device.ownerNode().toString().toStdString())
                         .endObject();
                 }
                 json.endArray();
@@ -781,7 +781,7 @@ private:
                     json.key("devices").startArray();
                     for (const auto& device : devices) {
                         json.startObject()
-                            .key("id").value((int)device.id)
+                            .key("id").value((int)device.id())
                             .key("name").value(device.name.toStdString())
                             .key("type").value(device.type.toStdString())
                             .endObject();

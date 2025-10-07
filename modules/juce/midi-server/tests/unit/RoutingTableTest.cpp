@@ -32,12 +32,12 @@ protected:
 
 // Test add local route
 TEST_F(RoutingTableTest, AddsLocalRoute) {
-    table->addRoute(1, localNode, "Local Device", "input");
+    table->addRoute(localNode, 1, "Local Device", "input");
 
-    auto route = table->getRoute(1);
+    auto route = table->getLocalRoute(1);
 
     ASSERT_TRUE(route.has_value());
-    EXPECT_EQ(1, route->deviceId);
+    EXPECT_EQ(1, route->deviceId());
     EXPECT_TRUE(route->isLocal());
     EXPECT_EQ(juce::String("Local Device"), route->deviceName);
     EXPECT_EQ(juce::String("input"), route->deviceType);
@@ -45,56 +45,56 @@ TEST_F(RoutingTableTest, AddsLocalRoute) {
 
 // Test add remote route
 TEST_F(RoutingTableTest, AddsRemoteRoute) {
-    table->addRoute(2, remoteNode1, "Remote Device", "output");
+    table->addRoute(remoteNode1, 2, "Remote Device", "output");
 
-    auto route = table->getRoute(2);
+    auto route = table->getRoute(remoteNode1, 2);
 
     ASSERT_TRUE(route.has_value());
-    EXPECT_EQ(2, route->deviceId);
+    EXPECT_EQ(2, route->deviceId());
     EXPECT_FALSE(route->isLocal());
-    EXPECT_EQ(remoteNode1, route->nodeId);
+    EXPECT_EQ(remoteNode1, route->nodeId());
     EXPECT_EQ(juce::String("Remote Device"), route->deviceName);
 }
 
 // Test remove route
 TEST_F(RoutingTableTest, RemovesRoute) {
-    table->addRoute(1, localNode, "Device", "input");
+    table->addRoute(localNode, 1, "Device", "input");
 
-    table->removeRoute(1);
+    table->removeRoute(localNode, 1);
 
-    auto route = table->getRoute(1);
+    auto route = table->getLocalRoute(1);
     EXPECT_FALSE(route.has_value());
 }
 
 // Test remove node routes
 TEST_F(RoutingTableTest, RemovesNodeRoutes) {
-    table->addRoute(1, remoteNode1, "Node1 Device1", "input");
-    table->addRoute(2, remoteNode1, "Node1 Device2", "output");
-    table->addRoute(3, remoteNode2, "Node2 Device", "input");
+    table->addRoute(remoteNode1, 1, "Node1 Device1", "input");
+    table->addRoute(remoteNode1, 2, "Node1 Device2", "output");
+    table->addRoute(remoteNode2, 3, "Node2 Device", "input");
 
     table->removeNodeRoutes(remoteNode1);
 
-    EXPECT_FALSE(table->getRoute(1).has_value());
-    EXPECT_FALSE(table->getRoute(2).has_value());
-    EXPECT_TRUE(table->getRoute(3).has_value());
+    EXPECT_FALSE(table->getRoute(remoteNode1, 1).has_value());
+    EXPECT_FALSE(table->getRoute(remoteNode1, 2).has_value());
+    EXPECT_TRUE(table->getRoute(remoteNode2, 3).has_value());
 }
 
 // Test clear all routes
 TEST_F(RoutingTableTest, ClearsAllRoutes) {
-    table->addRoute(1, localNode, "Local", "input");
-    table->addRoute(2, remoteNode1, "Remote", "output");
+    table->addRoute(localNode, 1, "Local", "input");
+    table->addRoute(remoteNode1, 2, "Remote", "output");
 
     table->clearAllRoutes();
 
-    EXPECT_FALSE(table->getRoute(1).has_value());
-    EXPECT_FALSE(table->getRoute(2).has_value());
+    EXPECT_FALSE(table->getLocalRoute(1).has_value());
+    EXPECT_FALSE(table->getRoute(remoteNode1, 2).has_value());
     EXPECT_EQ(0, table->getTotalRouteCount());
 }
 
 // Test get all routes
 TEST_F(RoutingTableTest, GetsAllRoutes) {
-    table->addRoute(1, localNode, "Local", "input");
-    table->addRoute(2, remoteNode1, "Remote", "output");
+    table->addRoute(localNode, 1, "Local", "input");
+    table->addRoute(remoteNode1, 2, "Remote", "output");
 
     auto routes = table->getAllRoutes();
 
@@ -103,9 +103,9 @@ TEST_F(RoutingTableTest, GetsAllRoutes) {
 
 // Test get local routes
 TEST_F(RoutingTableTest, GetsLocalRoutes) {
-    table->addRoute(1, localNode, "Local 1", "input");
-    table->addRoute(2, localNode, "Local 2", "output");
-    table->addRoute(3, remoteNode1, "Remote", "input");
+    table->addRoute(localNode, 1, "Local 1", "input");
+    table->addRoute(localNode, 2, "Local 2", "output");
+    table->addRoute(remoteNode1, 3, "Remote", "input");
 
     auto routes = table->getLocalRoutes();
 
@@ -117,9 +117,9 @@ TEST_F(RoutingTableTest, GetsLocalRoutes) {
 
 // Test get remote routes
 TEST_F(RoutingTableTest, GetsRemoteRoutes) {
-    table->addRoute(1, localNode, "Local", "input");
-    table->addRoute(2, remoteNode1, "Remote 1", "output");
-    table->addRoute(3, remoteNode2, "Remote 2", "input");
+    table->addRoute(localNode, 1, "Local", "input");
+    table->addRoute(remoteNode1, 2, "Remote 1", "output");
+    table->addRoute(remoteNode2, 3, "Remote 2", "input");
 
     auto routes = table->getRemoteRoutes();
 
@@ -131,77 +131,77 @@ TEST_F(RoutingTableTest, GetsRemoteRoutes) {
 
 // Test get node routes
 TEST_F(RoutingTableTest, GetsNodeRoutes) {
-    table->addRoute(1, remoteNode1, "Node1 Device1", "input");
-    table->addRoute(2, remoteNode1, "Node1 Device2", "output");
-    table->addRoute(3, remoteNode2, "Node2 Device", "input");
+    table->addRoute(remoteNode1, 1, "Node1 Device1", "input");
+    table->addRoute(remoteNode1, 2, "Node1 Device2", "output");
+    table->addRoute(remoteNode2, 3, "Node2 Device", "input");
 
     auto routes = table->getNodeRoutes(remoteNode1);
 
     EXPECT_EQ(2u, routes.size());
     for (const auto& route : routes) {
-        EXPECT_EQ(remoteNode1, route.nodeId);
+        EXPECT_EQ(remoteNode1, route.nodeId());
     }
 }
 
 // Test has route
 TEST_F(RoutingTableTest, ChecksRouteExists) {
-    table->addRoute(1, localNode, "Device", "input");
+    table->addRoute(localNode, 1, "Device", "input");
 
-    EXPECT_TRUE(table->hasRoute(1));
-    EXPECT_FALSE(table->hasRoute(999));
+    EXPECT_TRUE(table->hasLocalRoute(1));
+    EXPECT_FALSE(table->hasLocalRoute(999));
 }
 
 // Test is local device
 TEST_F(RoutingTableTest, ChecksIsLocalDevice) {
-    table->addRoute(1, localNode, "Local", "input");
-    table->addRoute(2, remoteNode1, "Remote", "output");
+    table->addRoute(localNode, 1, "Local", "input");
+    table->addRoute(remoteNode1, 2, "Remote", "output");
 
-    EXPECT_TRUE(table->isLocalDevice(1));
-    EXPECT_FALSE(table->isLocalDevice(2));
-    EXPECT_FALSE(table->isLocalDevice(999));  // Non-existent
+    EXPECT_TRUE(table->isLocalDevice(localNode, 1));
+    EXPECT_FALSE(table->isLocalDevice(remoteNode1, 2));
+    EXPECT_FALSE(table->isLocalDevice(localNode, 999));  // Non-existent
 }
 
 // Test is remote device
 TEST_F(RoutingTableTest, ChecksIsRemoteDevice) {
-    table->addRoute(1, localNode, "Local", "input");
-    table->addRoute(2, remoteNode1, "Remote", "output");
+    table->addRoute(localNode, 1, "Local", "input");
+    table->addRoute(remoteNode1, 2, "Remote", "output");
 
-    EXPECT_FALSE(table->isRemoteDevice(1));
-    EXPECT_TRUE(table->isRemoteDevice(2));
-    EXPECT_FALSE(table->isRemoteDevice(999));  // Non-existent
+    EXPECT_FALSE(table->isRemoteDevice(localNode, 1));
+    EXPECT_TRUE(table->isRemoteDevice(remoteNode1, 2));
+    EXPECT_FALSE(table->isRemoteDevice(localNode, 999));  // Non-existent
 }
 
 // Test total route count
 TEST_F(RoutingTableTest, GetsTotalRouteCount) {
-    table->addRoute(1, localNode, "Local", "input");
-    table->addRoute(2, remoteNode1, "Remote", "output");
+    table->addRoute(localNode, 1, "Local", "input");
+    table->addRoute(remoteNode1, 2, "Remote", "output");
 
     EXPECT_EQ(2, table->getTotalRouteCount());
 }
 
 // Test local route count
 TEST_F(RoutingTableTest, GetsLocalRouteCount) {
-    table->addRoute(1, localNode, "Local 1", "input");
-    table->addRoute(2, localNode, "Local 2", "output");
-    table->addRoute(3, remoteNode1, "Remote", "input");
+    table->addRoute(localNode, 1, "Local 1", "input");
+    table->addRoute(localNode, 2, "Local 2", "output");
+    table->addRoute(remoteNode1, 3, "Remote", "input");
 
     EXPECT_EQ(2, table->getLocalRouteCount());
 }
 
 // Test remote route count
 TEST_F(RoutingTableTest, GetsRemoteRouteCount) {
-    table->addRoute(1, localNode, "Local", "input");
-    table->addRoute(2, remoteNode1, "Remote 1", "output");
-    table->addRoute(3, remoteNode2, "Remote 2", "input");
+    table->addRoute(localNode, 1, "Local", "input");
+    table->addRoute(remoteNode1, 2, "Remote 1", "output");
+    table->addRoute(remoteNode2, 3, "Remote 2", "input");
 
     EXPECT_EQ(2, table->getRemoteRouteCount());
 }
 
 // Test node route count
 TEST_F(RoutingTableTest, GetsNodeRouteCount) {
-    table->addRoute(1, remoteNode1, "Node1 Device1", "input");
-    table->addRoute(2, remoteNode1, "Node1 Device2", "output");
-    table->addRoute(3, remoteNode2, "Node2 Device", "input");
+    table->addRoute(remoteNode1, 1, "Node1 Device1", "input");
+    table->addRoute(remoteNode1, 2, "Node1 Device2", "output");
+    table->addRoute(remoteNode2, 3, "Node2 Device", "input");
 
     EXPECT_EQ(2, table->getNodeRouteCount(remoteNode1));
     EXPECT_EQ(1, table->getNodeRouteCount(remoteNode2));
@@ -210,49 +210,49 @@ TEST_F(RoutingTableTest, GetsNodeRouteCount) {
 // Test add routes bulk
 TEST_F(RoutingTableTest, AddsBulkRoutes) {
     std::vector<Route> routes;
-    routes.push_back(Route(1, localNode, "Device 1", "input"));
-    routes.push_back(Route(2, remoteNode1, "Device 2", "output"));
-    routes.push_back(Route(3, remoteNode1, "Device 3", "input"));
+    routes.push_back(Route(localNode, 1, "Device 1", "input"));
+    routes.push_back(Route(remoteNode1, 2, "Device 2", "output"));
+    routes.push_back(Route(remoteNode1, 3, "Device 3", "input"));
 
     table->addRoutes(routes);
 
     EXPECT_EQ(3, table->getTotalRouteCount());
-    EXPECT_TRUE(table->hasRoute(1));
-    EXPECT_TRUE(table->hasRoute(2));
-    EXPECT_TRUE(table->hasRoute(3));
+    EXPECT_TRUE(table->hasLocalRoute(1));
+    EXPECT_TRUE(table->hasRoute(remoteNode1, 2));
+    EXPECT_TRUE(table->hasRoute(remoteNode1, 3));
 }
 
 // Test replace node routes
 TEST_F(RoutingTableTest, ReplacesNodeRoutes) {
-    table->addRoute(1, remoteNode1, "Old Device 1", "input");
-    table->addRoute(2, remoteNode1, "Old Device 2", "output");
+    table->addRoute(remoteNode1, 1, "Old Device 1", "input");
+    table->addRoute(remoteNode1, 2, "Old Device 2", "output");
 
     std::vector<Route> newRoutes;
-    newRoutes.push_back(Route(3, remoteNode1, "New Device 1", "input"));
-    newRoutes.push_back(Route(4, remoteNode1, "New Device 2", "output"));
+    newRoutes.push_back(Route(remoteNode1, 3, "New Device 1", "input"));
+    newRoutes.push_back(Route(remoteNode1, 4, "New Device 2", "output"));
 
     table->replaceNodeRoutes(remoteNode1, newRoutes);
 
-    EXPECT_FALSE(table->hasRoute(1));
-    EXPECT_FALSE(table->hasRoute(2));
-    EXPECT_TRUE(table->hasRoute(3));
-    EXPECT_TRUE(table->hasRoute(4));
+    EXPECT_FALSE(table->hasRoute(remoteNode1, 1));
+    EXPECT_FALSE(table->hasRoute(remoteNode1, 2));
+    EXPECT_TRUE(table->hasRoute(remoteNode1, 3));
+    EXPECT_TRUE(table->hasRoute(remoteNode1, 4));
     EXPECT_EQ(2, table->getNodeRouteCount(remoteNode1));
 }
 
 // Test update existing route
 TEST_F(RoutingTableTest, UpdatesExistingRoute) {
-    table->addRoute(1, localNode, "Original Name", "input");
+    table->addRoute(localNode, 1, "Original Name", "input");
 
-    table->addRoute(1, remoteNode1, "Updated Name", "output");
+    table->addRoute(localNode, 1, "Updated Name", "output");
 
-    auto route = table->getRoute(1);
+    auto route = table->getLocalRoute(1);
 
     ASSERT_TRUE(route.has_value());
     EXPECT_EQ(juce::String("Updated Name"), route->deviceName);
     EXPECT_EQ(juce::String("output"), route->deviceType);
-    EXPECT_FALSE(route->isLocal());
-    EXPECT_EQ(remoteNode1, route->nodeId);
+    EXPECT_TRUE(route->isLocal());
+    EXPECT_EQ(localNode, route->nodeId());
 }
 
 // Test empty table
@@ -267,18 +267,18 @@ TEST_F(RoutingTableTest, EmptyTable) {
 
 // Test route equality
 TEST_F(RoutingTableTest, RouteEquality) {
-    Route route1(1, localNode, "Device", "input");
-    Route route2(1, remoteNode1, "Different", "output");
-    Route route3(2, localNode, "Device", "input");
+    Route route1(localNode, 1, "Device", "input");
+    Route route2(remoteNode1, 1, "Different", "output");
+    Route route3(localNode, 2, "Device", "input");
 
-    EXPECT_TRUE(route1 == route2);  // Same device ID
+    EXPECT_FALSE(route1 == route2);  // Different node ID
     EXPECT_FALSE(route1 == route3);  // Different device ID
 }
 
 // Test route isLocal
 TEST_F(RoutingTableTest, RouteIsLocal) {
-    Route localRoute(1, juce::Uuid::null(), "Local", "input");
-    Route remoteRoute(2, remoteNode1, "Remote", "output");
+    Route localRoute(juce::Uuid::null(), 1, "Local", "input");
+    Route remoteRoute(remoteNode1, 2, "Remote", "output");
 
     EXPECT_TRUE(localRoute.isLocal());
     EXPECT_FALSE(remoteRoute.isLocal());
@@ -290,7 +290,7 @@ TEST_F(RoutingTableTest, HandlesConcurrentAddition) {
 
     for (int i = 0; i < 10; ++i) {
         threads.emplace_back([this, i]() {
-            table->addRoute(i, remoteNode1, "Device " + juce::String(i), "input");
+            table->addRoute(remoteNode1, i, "Device " + juce::String(i), "input");
         });
     }
 
@@ -305,7 +305,7 @@ TEST_F(RoutingTableTest, HandlesConcurrentAddition) {
 TEST_F(RoutingTableTest, HandlesConcurrentRemoval) {
     // Add routes
     for (int i = 0; i < 10; ++i) {
-        table->addRoute(i, remoteNode1, "Device " + juce::String(i), "input");
+        table->addRoute(remoteNode1, i, "Device " + juce::String(i), "input");
     }
 
     // Remove concurrently
@@ -313,7 +313,7 @@ TEST_F(RoutingTableTest, HandlesConcurrentRemoval) {
 
     for (int i = 0; i < 10; ++i) {
         threads.emplace_back([this, i]() {
-            table->removeRoute(i);
+            table->removeRoute(remoteNode1, i);
         });
     }
 
@@ -333,7 +333,7 @@ TEST_F(RoutingTableTest, HandlesConcurrentReadWrite) {
     threads.emplace_back([this, &running]() {
         uint16_t id = 0;
         while (running) {
-            table->addRoute(id++, remoteNode1, "Device", "input");
+            table->addRoute(remoteNode1, id++, "Device", "input");
             std::this_thread::sleep_for(std::chrono::milliseconds(1));
         }
     });
@@ -360,7 +360,7 @@ TEST_F(RoutingTableTest, HandlesConcurrentReadWrite) {
 
 // Test get non-existent route
 TEST_F(RoutingTableTest, GetNonExistentRoute) {
-    auto route = table->getRoute(999);
+    auto route = table->getLocalRoute(999);
 
     EXPECT_FALSE(route.has_value());
 }
@@ -376,8 +376,8 @@ TEST_F(RoutingTableTest, HandlesEmptyBulkAdd) {
 
 // Test replace with empty routes
 TEST_F(RoutingTableTest, ReplacesWithEmptyRoutes) {
-    table->addRoute(1, remoteNode1, "Device 1", "input");
-    table->addRoute(2, remoteNode1, "Device 2", "output");
+    table->addRoute(remoteNode1, 1, "Device 1", "input");
+    table->addRoute(remoteNode1, 2, "Device 2", "output");
 
     std::vector<Route> emptyRoutes;
     table->replaceNodeRoutes(remoteNode1, emptyRoutes);
@@ -387,19 +387,19 @@ TEST_F(RoutingTableTest, ReplacesWithEmptyRoutes) {
 
 // Test local node identification
 TEST_F(RoutingTableTest, IdentifiesLocalNode) {
-    Route route(1, juce::Uuid::null(), "Device", "input");
+    Route route(juce::Uuid::null(), 1, "Device", "input");
 
-    EXPECT_TRUE(route.nodeId.isNull());
+    EXPECT_TRUE(route.nodeId().isNull());
     EXPECT_TRUE(route.isLocal());
 }
 
 // Test device type preservation
 TEST_F(RoutingTableTest, PreservesDeviceType) {
-    table->addRoute(1, localNode, "Input Device", "input");
-    table->addRoute(2, localNode, "Output Device", "output");
+    table->addRoute(localNode, 1, "Input Device", "input");
+    table->addRoute(localNode, 2, "Output Device", "output");
 
-    auto inputRoute = table->getRoute(1);
-    auto outputRoute = table->getRoute(2);
+    auto inputRoute = table->getLocalRoute(1);
+    auto outputRoute = table->getLocalRoute(2);
 
     ASSERT_TRUE(inputRoute.has_value());
     ASSERT_TRUE(outputRoute.has_value());
@@ -418,8 +418,8 @@ TEST_F(RoutingTableTest, GetsEmptyNodeRoutes) {
 
 // Test mixed local and remote routes
 TEST_F(RoutingTableTest, HandlesMixedRoutes) {
-    table->addRoute(1, localNode, "Local", "input");
-    table->addRoute(2, remoteNode1, "Remote", "output");
+    table->addRoute(localNode, 1, "Local", "input");
+    table->addRoute(remoteNode1, 2, "Remote", "output");
 
     EXPECT_EQ(2, table->getTotalRouteCount());
     EXPECT_EQ(1, table->getLocalRouteCount());

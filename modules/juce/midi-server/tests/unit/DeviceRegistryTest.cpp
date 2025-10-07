@@ -34,13 +34,13 @@ protected:
 TEST_F(DeviceRegistryTest, AddsLocalDevice) {
     registry->addLocalDevice(1, "Test Input", "input", "Manufacturer");
 
-    auto device = registry->getDevice(1);
+    auto device = registry->getLocalDevice(1);
 
     ASSERT_TRUE(device.has_value());
-    EXPECT_EQ(1, device->id);
+    EXPECT_EQ(1, device->id());
     EXPECT_EQ(juce::String("Test Input"), device->name);
     EXPECT_EQ(juce::String("input"), device->type);
-    EXPECT_TRUE(device->isLocal);
+    EXPECT_TRUE(device->isLocal());
     EXPECT_EQ(juce::String("Manufacturer"), device->manufacturer);
 }
 
@@ -48,14 +48,14 @@ TEST_F(DeviceRegistryTest, AddsLocalDevice) {
 TEST_F(DeviceRegistryTest, AddsRemoteDevice) {
     registry->addRemoteDevice(remoteNode1, 2, "Remote Output", "output", "Vendor");
 
-    auto device = registry->getDevice(2);
+    auto device = registry->getDevice(remoteNode1, 2);
 
     ASSERT_TRUE(device.has_value());
-    EXPECT_EQ(2, device->id);
+    EXPECT_EQ(2, device->id());
     EXPECT_EQ(juce::String("Remote Output"), device->name);
     EXPECT_EQ(juce::String("output"), device->type);
-    EXPECT_FALSE(device->isLocal);
-    EXPECT_EQ(remoteNode1, device->ownerNode);
+    EXPECT_FALSE(device->isLocal());
+    EXPECT_EQ(remoteNode1, device->ownerNode());
     EXPECT_EQ(juce::String("Vendor"), device->manufacturer);
 }
 
@@ -65,7 +65,7 @@ TEST_F(DeviceRegistryTest, RemovesLocalDevice) {
 
     registry->removeLocalDevice(1);
 
-    auto device = registry->getDevice(1);
+    auto device = registry->getLocalDevice(1);
     EXPECT_FALSE(device.has_value());
 }
 
@@ -73,9 +73,9 @@ TEST_F(DeviceRegistryTest, RemovesLocalDevice) {
 TEST_F(DeviceRegistryTest, RemovesRemoteDevice) {
     registry->addRemoteDevice(remoteNode1, 2, "Remote Device", "output");
 
-    registry->removeRemoteDevice(2);
+    registry->removeRemoteDevice(remoteNode1, 2);
 
-    auto device = registry->getDevice(2);
+    auto device = registry->getDevice(remoteNode1, 2);
     EXPECT_FALSE(device.has_value());
 }
 
@@ -87,9 +87,9 @@ TEST_F(DeviceRegistryTest, ClearsLocalDevices) {
 
     registry->clearLocalDevices();
 
-    EXPECT_FALSE(registry->getDevice(1).has_value());
-    EXPECT_FALSE(registry->getDevice(2).has_value());
-    EXPECT_TRUE(registry->getDevice(3).has_value());  // Remote should remain
+    EXPECT_FALSE(registry->getLocalDevice(1).has_value());
+    EXPECT_FALSE(registry->getLocalDevice(2).has_value());
+    EXPECT_TRUE(registry->getDevice(remoteNode1, 3).has_value());  // Remote should remain
 }
 
 // Test remove node devices
@@ -100,9 +100,9 @@ TEST_F(DeviceRegistryTest, RemovesNodeDevices) {
 
     registry->removeNodeDevices(remoteNode1);
 
-    EXPECT_FALSE(registry->getDevice(1).has_value());
-    EXPECT_FALSE(registry->getDevice(2).has_value());
-    EXPECT_TRUE(registry->getDevice(3).has_value());  // Different node
+    EXPECT_FALSE(registry->getDevice(remoteNode1, 1).has_value());
+    EXPECT_FALSE(registry->getDevice(remoteNode1, 2).has_value());
+    EXPECT_TRUE(registry->getDevice(remoteNode2, 3).has_value());  // Different node
 }
 
 // Test get all devices
@@ -125,7 +125,7 @@ TEST_F(DeviceRegistryTest, GetsLocalDevices) {
 
     EXPECT_EQ(2u, devices.size());
     for (const auto& device : devices) {
-        EXPECT_TRUE(device.isLocal);
+        EXPECT_TRUE(device.isLocal());
     }
 }
 
@@ -139,7 +139,7 @@ TEST_F(DeviceRegistryTest, GetsRemoteDevices) {
 
     EXPECT_EQ(2u, devices.size());
     for (const auto& device : devices) {
-        EXPECT_FALSE(device.isLocal);
+        EXPECT_FALSE(device.isLocal());
     }
 }
 
@@ -153,13 +153,13 @@ TEST_F(DeviceRegistryTest, GetsNodeDevices) {
 
     EXPECT_EQ(2u, devices.size());
     for (const auto& device : devices) {
-        EXPECT_EQ(remoteNode1, device.ownerNode);
+        EXPECT_EQ(remoteNode1, device.ownerNode());
     }
 }
 
 // Test get non-existent device
 TEST_F(DeviceRegistryTest, GetNonExistentDevice) {
-    auto device = registry->getDevice(999);
+    auto device = registry->getLocalDevice(999);
 
     EXPECT_FALSE(device.has_value());
 }
@@ -224,7 +224,7 @@ TEST_F(DeviceRegistryTest, UpdatesExistingDevice) {
 
     registry->addLocalDevice(1, "Updated Name", "output", "Vendor B");
 
-    auto device = registry->getDevice(1);
+    auto device = registry->getLocalDevice(1);
 
     ASSERT_TRUE(device.has_value());
     EXPECT_EQ(juce::String("Updated Name"), device->name);
@@ -318,11 +318,11 @@ TEST_F(DeviceRegistryTest, HandlesConcurrentReadWrite) {
 
 // Test device equality
 TEST_F(DeviceRegistryTest, DeviceEquality) {
-    MidiDevice device1(1, "Device", "input", true, localNode);
-    MidiDevice device2(1, "Different Name", "output", false, remoteNode1);
-    MidiDevice device3(2, "Device", "input", true, localNode);
+    MidiDevice device1(localNode, 1, "Device", "input");
+    MidiDevice device2(remoteNode1, 1, "Different Name", "output");
+    MidiDevice device3(localNode, 2, "Device", "input");
 
-    EXPECT_TRUE(device1 == device2);  // Same ID
+    EXPECT_FALSE(device1 == device2);  // Different owner node
     EXPECT_FALSE(device1 == device3);  // Different ID
 }
 
@@ -331,8 +331,8 @@ TEST_F(DeviceRegistryTest, StoresDeviceTypes) {
     registry->addLocalDevice(1, "Input Device", "input");
     registry->addLocalDevice(2, "Output Device", "output");
 
-    auto inputDevice = registry->getDevice(1);
-    auto outputDevice = registry->getDevice(2);
+    auto inputDevice = registry->getLocalDevice(1);
+    auto outputDevice = registry->getLocalDevice(2);
 
     ASSERT_TRUE(inputDevice.has_value());
     ASSERT_TRUE(outputDevice.has_value());
@@ -344,7 +344,7 @@ TEST_F(DeviceRegistryTest, StoresDeviceTypes) {
 TEST_F(DeviceRegistryTest, StoresManufacturer) {
     registry->addLocalDevice(1, "Device", "input", "ACME Corp");
 
-    auto device = registry->getDevice(1);
+    auto device = registry->getLocalDevice(1);
 
     ASSERT_TRUE(device.has_value());
     EXPECT_EQ(juce::String("ACME Corp"), device->manufacturer);
@@ -354,7 +354,7 @@ TEST_F(DeviceRegistryTest, StoresManufacturer) {
 TEST_F(DeviceRegistryTest, HandlesEmptyManufacturer) {
     registry->addLocalDevice(1, "Device", "input", "");
 
-    auto device = registry->getDevice(1);
+    auto device = registry->getLocalDevice(1);
 
     ASSERT_TRUE(device.has_value());
     EXPECT_TRUE(device->manufacturer.isEmpty());

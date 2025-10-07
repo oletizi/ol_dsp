@@ -143,7 +143,7 @@ std::unique_ptr<VirtualMidiPort>
 VirtualMidiPortFactory::createForRemoteDevice(const MidiDevice& remoteDevice,
                                               NetworkTransport* transport)
 {
-    if (remoteDevice.isLocal) {
+    if (remoteDevice.isLocal()) {
         throw std::invalid_argument("Cannot create virtual port for local device");
     }
 
@@ -151,8 +151,8 @@ VirtualMidiPortFactory::createForRemoteDevice(const MidiDevice& remoteDevice,
 
     return std::make_unique<VirtualMidiPort>(
         remoteDevice.name,
-        remoteDevice.ownerNode,
-        remoteDevice.id,
+        remoteDevice.ownerNode(),
+        remoteDevice.id(),
         transport,
         isInput);
 }
