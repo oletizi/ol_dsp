@@ -11,13 +11,13 @@
 #include "DeviceRegistry.h"
 #include "RoutingTable.h"
 #include "ForwardingRule.h"
+#include "MidiRouterQueue.h"
 #include <juce_core/juce_core.h>
 #include <juce_audio_devices/juce_audio_devices.h>
 #include <vector>
 #include <map>
 #include <set>
 #include <queue>
-#include <mutex>
 #include <functional>
 #include <memory>
 
@@ -100,11 +100,12 @@ public:
  *   {
  *       router.forwardMessage(sourceNode, sourceDevice, midiData);
  *       // MidiRouter will:
- *       //   1. Query RouteManager for destination rules
- *       //   2. Apply channel and message type filters
- *       //   3. Route to local ports or network nodes
- *       //   4. Update statistics
- *       //   5. Prevent loops (hop count & visited devices)
+ *       //   1. Queue command to worker thread
+ *       //   2. Worker queries RouteManager for destination rules
+ *       //   3. Apply channel and message type filters
+ *       //   4. Route to local ports or network nodes
+ *       //   5. Update statistics
+ *       //   6. Prevent loops (hop count & visited devices)
  *   }
  *
  * USAGE EXAMPLE 3: Monitoring Statistics
@@ -151,8 +152,24 @@ public:
  * - Destination lookup: O(log N) where N = number of rules (indexed)
  * - Filter matching: O(1) per rule
  * - Loop prevention: O(log H) where H = hop count (std::set lookup)
- * - Thread contention: Minimal (short critical sections)
+ * - Command dispatch: Lock-free queue push (async, non-blocking)
  * - Memory: ~50 bytes overhead per forwarded message (transient)
+ *
+ * CONCURRENCY MODEL (SEDA):
+ * ─────────────────────────
+ * - Command queue: All operations dispatched as commands
+ * - Worker thread: Single thread processes commands sequentially
+ * - Lock-free: No deadlocks possible (no mutexes in router logic)
+ * - Async execution: Public methods return immediately after queueing command
+ * - Query commands: Block caller until worker responds (via atomic flag + polling)
+ *
+ * SEDA ARCHITECTURE:
+ * ──────────────────
+ * - Matches NetworkConnection pattern (architectural consistency)
+ * - Commands inherit from MidiRouterCommands::Command
+ * - Worker thread processes commands from MidiRouterQueue
+ * - State accessed only by worker thread (no synchronization needed)
+ * - Benefits: Zero deadlock risk, simpler reasoning, better scalability
  *
  * LOOP PREVENTION:
  * ────────────────
@@ -225,9 +242,9 @@ public:
         uint64_t networkMessagesSent = 0;
         uint64_t networkMessagesReceived = 0;
         uint64_t routingErrors = 0;
-        uint64_t messagesForwarded = 0;      // Phase 3.1
-        uint64_t messagesDropped = 0;        // Phase 3.1
-        uint64_t loopsDetected = 0;          // Loop prevention
+        uint64_t messagesForwarded = 0;
+        uint64_t messagesDropped = 0;
+        uint64_t loopsDetected = 0;
     };
 
     Statistics getStatistics() const;
@@ -239,32 +256,19 @@ public:
 
 private:
     //==========================================================================
-    // Thread Safety & Mutex Ordering Convention
+    // SEDA Architecture - Command Queue & Worker Thread
     //
-    // This class uses three mutexes for thread safety. To prevent deadlocks,
-    // always acquire mutexes in this order:
+    // All public methods dispatch commands to a queue processed by a single
+    // worker thread. This eliminates all mutex-based synchronization and
+    // provides:
     //
-    //   1. portMutex (highest priority - protects local MIDI ports)
-    //   2. messageMutex (medium priority - protects message queues)
-    //   3. statsMutex (lowest priority - protects statistics)
+    // - Zero deadlock risk (no mutexes in router logic)
+    // - Sequential execution (commands processed one at a time)
+    // - Async operation (callers don't block)
+    // - Architectural consistency (matches NetworkConnection pattern)
     //
-    // RULE: Never acquire a higher-numbered mutex while holding a
-    //       lower-numbered one.
-    //
-    // Example (CORRECT):
-    //   std::lock_guard<std::mutex> portLock(portMutex);      // Lock 1
-    //   doSomething();
-    //   std::lock_guard<std::mutex> statsLock(statsMutex);    // Lock 3
-    //                                                          // (OK: 1→3)
-    //
-    // Example (INCORRECT - DEADLOCK RISK):
-    //   std::lock_guard<std::mutex> statsLock(statsMutex);    // Lock 3
-    //   doSomething();
-    //   std::lock_guard<std::mutex> portLock(portMutex);      // Lock 1
-    //                                                          // (BAD: 3→1)
-    //
-    // If you need multiple locks simultaneously, use std::scoped_lock:
-    //   std::scoped_lock lock(portMutex, messageMutex, statsMutex);
+    // Query commands (e.g., getStatistics) block the caller until the worker
+    // thread processes the command and sets the result via atomic flag.
     //
     //==========================================================================
 
@@ -300,6 +304,34 @@ private:
         }
     };
 
+    //==========================================================================
+    // Worker Thread
+    //==========================================================================
+
+    class WorkerThread : public juce::Thread {
+    public:
+        explicit WorkerThread(MidiRouter& r);
+        void run() override;
+
+    private:
+        MidiRouter& router;
+    };
+
+    std::unique_ptr<WorkerThread> workerThread;
+    std::atomic<bool> shouldStop{false};
+
+    //==========================================================================
+    // Command Processing
+    //==========================================================================
+
+    MidiRouterQueue commandQueue;
+
+    void processCommand(std::unique_ptr<MidiRouterCommands::Command> cmd);
+
+    //==========================================================================
+    // Internal State (accessed only by worker thread)
+    //==========================================================================
+
     // References to routing infrastructure
     DeviceRegistry& deviceRegistry;
     RoutingTable& routingTable;
@@ -309,11 +341,6 @@ private:
 
     // Route manager (Phase 3.1)
     RouteManager* routeManager;
-
-    // Thread synchronization (acquire in this order to prevent deadlocks)
-    mutable std::mutex portMutex;        // 1. Protects localPorts map
-    mutable std::mutex messageMutex;     // 2. Protects messageQueues map
-    mutable std::mutex statsMutex;       // 3. Protects stats structure
 
     // Local MIDI ports
     std::map<uint16_t, std::unique_ptr<MidiPortInterface>> localPorts;
@@ -327,7 +354,16 @@ private:
     // Error handling
     ErrorCallback errorCallback;
 
-    // Helper methods
+    //==========================================================================
+    // Internal Methods (called only by worker thread)
+    //==========================================================================
+
+    // Port management
+    void registerLocalPortInternal(uint16_t deviceId,
+                                    std::unique_ptr<MidiPortInterface> port);
+    void unregisterLocalPortInternal(uint16_t deviceId);
+
+    // Message routing
     void routeLocalMessage(uint16_t deviceId,
                            const std::vector<uint8_t>& midiData);
 
@@ -335,10 +371,10 @@ private:
                              uint16_t deviceId,
                              const std::vector<uint8_t>& midiData);
 
-    void queueReceivedMessage(uint16_t deviceId,
-                              const std::vector<uint8_t>& midiData);
+    void queueReceivedMessageInternal(uint16_t deviceId,
+                                      const std::vector<uint8_t>& midiData);
 
-    void reportError(const juce::String& error);
+    void reportError(const juce::String& error) const;
 
     // Phase 3.1 forwarding helpers
     void forwardMessageInternal(const juce::Uuid& sourceNode,
@@ -355,6 +391,14 @@ private:
 
     uint8_t extractMidiChannel(const std::vector<uint8_t>& midiData) const;
     MidiMessageType getMidiMessageType(const std::vector<uint8_t>& midiData) const;
+
+    // Statistics (internal)
+    Statistics getStatisticsInternal() const;
+    void resetStatisticsInternal();
+
+    // Configuration (internal)
+    void setRouteManagerInternal(RouteManager* manager);
+    void setNetworkTransportInternal(NetworkTransport* transport);
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MidiRouter)
 };

@@ -224,6 +224,9 @@ protected:
         mockPort3 = port3.get();
         midiRouter->registerLocalPort(2, std::move(port2));
         midiRouter->registerLocalPort(3, std::move(port3));
+
+        // SEDA: Wait for port registration commands to be processed
+        waitForCommands();
     }
 
     void TearDown() override {
@@ -250,6 +253,15 @@ protected:
         // Use MidiRouter's built-in forwarding logic which properly handles
         // local vs remote routing, filters, and statistics
         midiRouter->forwardMessage(srcNode, srcDev, midiData);
+
+        // SEDA: Wait for command to be processed (async execution)
+        waitForCommands();
+    }
+
+    // Helper to wait for pending SEDA commands to be processed
+    void waitForCommands(int timeoutMs = 50) {
+        // Give worker thread time to process queued commands
+        std::this_thread::sleep_for(std::chrono::milliseconds(timeoutMs));
     }
 
     // Helper to create additional remote nodes for loop prevention testing
@@ -660,12 +672,14 @@ TEST_F(MidiMessageForwardingTest, InvalidMidiDataHandling) {
 TEST_F(MidiMessageForwardingTest, NullNetworkTransportHandling) {
     // Remove network transport
     midiRouter->setNetworkTransport(nullptr);
+    waitForCommands();  // SEDA: Wait for command to be processed
 
     addRule(localNode, 1, remoteNode1, 10);
 
     // Try to forward (should fail gracefully)
     auto noteOn = createNoteOn(1, 60, 100);
     midiRouter->sendMessageToNode(remoteNode1, 10, noteOn);
+    waitForCommands();  // SEDA: Wait for forward attempt to be processed
 
     // Check router statistics show error
     auto stats = midiRouter->getStatistics();
