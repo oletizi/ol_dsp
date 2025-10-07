@@ -19,6 +19,7 @@
 #include "network/routing/MidiRouter.h"
 #include "network/routing/DeviceRegistry.h"
 #include "network/routing/RoutingTable.h"
+#include "network/routing/RouteManager.h"
 #include "network/transport/UdpMidiTransport.h"
 
 #include <iostream>
@@ -226,8 +227,14 @@ NetworkMidi::NodeInfo convertToMeshNodeInfo(const ::NodeInfo& discoveryNode) {
 class NetworkMidiServer : public juce::MidiInputCallback
 {
 public:
-    NetworkMidiServer(const NetworkMidi::NodeIdentity& nodeIdentity, int port = 0)
-        : identity(nodeIdentity), requestedPort(port), actualPort(0), udpPort(0) {}
+    NetworkMidiServer(const NetworkMidi::NodeIdentity& nodeIdentity,
+                     NetworkMidi::InstanceManager* instanceMgr,
+                     int port = 0)
+        : identity(nodeIdentity)
+        , instanceManager(instanceMgr)
+        , requestedPort(port)
+        , actualPort(0)
+        , udpPort(0) {}
 
     ~NetworkMidiServer() {
         stopServer();
@@ -253,6 +260,7 @@ public:
         // 2. Create routing infrastructure
         deviceRegistry = std::make_unique<NetworkMidi::DeviceRegistry>();
         routingTable = std::make_unique<NetworkMidi::RoutingTable>();
+        routeManager = std::make_unique<NetworkMidi::RouteManager>(*deviceRegistry);
 
         // 3. Create MIDI router BEFORE registering devices
         midiRouter = std::make_unique<NetworkMidi::MidiRouter>(*deviceRegistry, *routingTable);
@@ -262,6 +270,9 @@ public:
         // 4. Enumerate and register local MIDI devices (now that router exists)
         registerLocalMidiDevices();
 
+        // 5. Load persisted routes (after devices are registered)
+        loadRoutes();
+
         // Set up UDP packet reception callback
         udpTransport->onPacketReceived = [this](const NetworkMidi::MidiPacket& packet,
                                                 const juce::String& /*sourceAddr*/,
@@ -269,7 +280,7 @@ public:
             handleNetworkPacket(packet);
         };
 
-        // 5. Create HTTP server
+        // 6. Create HTTP server
         server = std::make_unique<httplib::Server>();
         setupRoutes();
 
@@ -296,7 +307,7 @@ public:
         // Wait for HTTP server to start
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
-        // 6. Create service discovery (advertise this node)
+        // 7. Create service discovery (advertise this node)
         int deviceCount = deviceRegistry->getLocalDeviceCount();
         serviceDiscovery = std::make_unique<ServiceDiscovery>(
             identity.getNodeId(),
@@ -312,7 +323,7 @@ public:
         serviceDiscovery->advertise();
         std::cout << "Started mDNS advertising" << std::endl;
 
-        // 7. Create mesh manager (handle peer connections)
+        // 8. Create mesh manager (handle peer connections)
         meshManager = std::make_unique<NetworkMidi::MeshManager>(
             identity.getNodeId(),
             actualPort,
@@ -328,11 +339,14 @@ public:
         // Connect network adapter to mesh manager
         networkAdapter->setMeshManager(meshManager.get());
 
-        // 8. NOW start MIDI inputs (after everything is fully initialized)
+        // 9. NOW start MIDI inputs (after everything is fully initialized)
         startMidiInputs();
     }
 
     void stopServer() {
+        // Save routes before shutdown
+        saveRoutes();
+
         // Stop MIDI inputs first
         for (auto& input : midiInputs) {
             if (input) {
@@ -595,6 +609,40 @@ private:
         }
     }
 
+    void loadRoutes() {
+        if (!routeManager || !instanceManager) {
+            return;
+        }
+
+        auto routesFile = instanceManager->getStateFile("routes.json");
+        if (routesFile.existsAsFile()) {
+            std::cout << "Loading routes from " << routesFile.getFullPathName().toStdString() << std::endl;
+            if (routeManager->loadFromFile(routesFile)) {
+                int count = routeManager->getRuleCount();
+                std::cout << "Loaded " << count << " routing rule(s)" << std::endl;
+            } else {
+                std::cerr << "Warning: Failed to load routes from file" << std::endl;
+            }
+        } else {
+            std::cout << "No routes file found, starting with empty routing table" << std::endl;
+        }
+    }
+
+    void saveRoutes() {
+        if (!routeManager || !instanceManager) {
+            return;
+        }
+
+        auto routesFile = instanceManager->getStateFile("routes.json");
+        std::cout << "Saving routes to " << routesFile.getFullPathName().toStdString() << std::endl;
+        if (routeManager->saveToFile(routesFile)) {
+            int count = routeManager->getRuleCount();
+            std::cout << "Saved " << count << " routing rule(s)" << std::endl;
+        } else {
+            std::cerr << "Warning: Failed to save routes to file" << std::endl;
+        }
+    }
+
     void setupRoutes() {
         // Health check endpoint
         server->Get("/health", [](const httplib::Request&, httplib::Response& res) {
@@ -800,9 +848,387 @@ private:
                 res.status = 500;
             }
         });
+
+        //=================================================================================
+        // MIDI Routing Configuration API (Phase 2)
+        //=================================================================================
+
+        // Helper to parse node ID from string ("local" -> null UUID)
+        auto parseNodeId = [](const std::string& str) -> juce::Uuid {
+            if (str == "local" || str.empty()) {
+                return juce::Uuid();
+            }
+            return juce::Uuid(str);
+        };
+
+        // 1. GET /routing/routes - List all routing rules
+        server->Get("/routing/routes", [this](const httplib::Request&, httplib::Response& res) {
+            try {
+                if (!routeManager) {
+                    res.set_content("{\"error\":\"Route manager not initialized\"}", "application/json");
+                    res.status = 500;
+                    return;
+                }
+
+                auto rules = routeManager->getAllRules();
+                auto stats = routeManager->getStatistics();
+
+                JsonBuilder json;
+                json.startObject();
+
+                // Build routes array
+                json.key("routes").startArray();
+                for (const auto& rule : rules) {
+                    json.startObject()
+                        .key("route_id").value(rule.ruleId.toStdString())
+                        .key("enabled").value(rule.enabled)
+                        .key("priority").value(rule.priority);
+
+                    // Source device
+                    json.key("source").startObject()
+                        .key("node_id").value(rule.sourceNodeId().toString().toStdString())
+                        .key("device_id").value((int)rule.sourceDeviceId())
+                        .endObject();
+
+                    // Destination device
+                    json.key("destination").startObject()
+                        .key("node_id").value(rule.destinationNodeId().toString().toStdString())
+                        .key("device_id").value((int)rule.destinationDeviceId())
+                        .endObject();
+
+                    // Statistics
+                    json.key("messages_forwarded").value((int)rule.statistics.messagesForwarded)
+                        .key("messages_dropped").value((int)rule.statistics.messagesDropped)
+                        .endObject();
+                }
+                json.endArray();
+
+                // Summary statistics
+                json.key("total").value((int)stats.totalRules)
+                    .key("enabled").value((int)stats.enabledRules)
+                    .key("disabled").value((int)stats.disabledRules)
+                    .endObject();
+
+                res.set_content(json.toString(), "application/json");
+                res.status = 200;
+
+            } catch (const std::exception& e) {
+                std::cerr << "Error in /routing/routes: " << e.what() << std::endl;
+                res.set_content(std::string("{\"error\":\"") + e.what() + "\"}", "application/json");
+                res.status = 500;
+            }
+        });
+
+        // 2. POST /routing/routes - Create a new routing rule
+        server->Post("/routing/routes", [this, parseNodeId](const httplib::Request& req, httplib::Response& res) {
+            try {
+                if (!routeManager) {
+                    res.set_content("{\"error\":\"Route manager not initialized\"}", "application/json");
+                    res.status = 500;
+                    return;
+                }
+
+                // Parse JSON body (simple extraction)
+                auto body = req.body;
+                std::string srcNodeStr, dstNodeStr;
+                int srcDeviceId = 0, dstDeviceId = 0;
+                bool enabled = true;
+                int priority = 100;
+
+                // Extract fields
+                auto extractString = [&body](const std::string& key) -> std::string {
+                    std::string pattern = "\"" + key + "\":\"";
+                    size_t pos = body.find(pattern);
+                    if (pos != std::string::npos) {
+                        size_t start = pos + pattern.length();
+                        size_t end = body.find("\"", start);
+                        if (end != std::string::npos) {
+                            return body.substr(start, end - start);
+                        }
+                    }
+                    return "";
+                };
+
+                auto extractInt = [&body](const std::string& key) -> int {
+                    std::string pattern = "\"" + key + "\":";
+                    size_t pos = body.find(pattern);
+                    if (pos != std::string::npos) {
+                        size_t start = pos + pattern.length();
+                        size_t end = body.find_first_of(",}", start);
+                        if (end != std::string::npos) {
+                            return std::stoi(body.substr(start, end - start));
+                        }
+                    }
+                    return 0;
+                };
+
+                auto extractBool = [&body](const std::string& key) -> bool {
+                    std::string pattern = "\"" + key + "\":";
+                    size_t pos = body.find(pattern);
+                    if (pos != std::string::npos) {
+                        size_t start = pos + pattern.length();
+                        return body.substr(start, 4) == "true";
+                    }
+                    return true;
+                };
+
+                srcNodeStr = extractString("source_node_id");
+                srcDeviceId = extractInt("source_device_id");
+                dstNodeStr = extractString("destination_node_id");
+                dstDeviceId = extractInt("destination_device_id");
+
+                // Optional fields
+                if (body.find("\"enabled\"") != std::string::npos) {
+                    enabled = extractBool("enabled");
+                }
+                if (body.find("\"priority\"") != std::string::npos) {
+                    priority = extractInt("priority");
+                }
+
+                // Parse node IDs
+                auto srcNodeId = parseNodeId(srcNodeStr);
+                auto dstNodeId = parseNodeId(dstNodeStr);
+
+                // Create rule
+                NetworkMidi::ForwardingRule rule(srcNodeId, (uint16_t)srcDeviceId,
+                                                  dstNodeId, (uint16_t)dstDeviceId);
+                rule.enabled = enabled;
+                rule.priority = priority;
+
+                // Add rule to manager
+                std::string ruleId = routeManager->addRule(rule);
+
+                // Build response
+                JsonBuilder json;
+                json.startObject()
+                    .key("route_id").value(ruleId)
+                    .key("status").value(std::string("created"))
+                    .endObject();
+
+                res.set_content(json.toString(), "application/json");
+                res.status = 201;
+
+            } catch (const std::exception& e) {
+                std::cerr << "Error creating route: " << e.what() << std::endl;
+                res.set_content(std::string("{\"error\":\"") + e.what() + "\"}", "application/json");
+                res.status = 400;
+            }
+        });
+
+        // 3. GET /routing/routes/:route_id - Get specific route details
+        server->Get(R"(/routing/routes/(.+))", [this](const httplib::Request& req, httplib::Response& res) {
+            try {
+                if (!routeManager) {
+                    res.set_content("{\"error\":\"Route manager not initialized\"}", "application/json");
+                    res.status = 500;
+                    return;
+                }
+
+                std::string ruleId = req.matches[1];
+                auto rule = routeManager->getRule(ruleId);
+
+                if (!rule.has_value()) {
+                    res.set_content("{\"error\":\"Route not found\"}", "application/json");
+                    res.status = 404;
+                    return;
+                }
+
+                // Build detailed response
+                JsonBuilder json;
+                json.startObject()
+                    .key("route_id").value(rule->ruleId.toStdString())
+                    .key("enabled").value(rule->enabled)
+                    .key("priority").value(rule->priority);
+
+                // Source device
+                json.key("source").startObject()
+                    .key("node_id").value(rule->sourceNodeId().toString().toStdString())
+                    .key("device_id").value((int)rule->sourceDeviceId())
+                    .endObject();
+
+                // Destination device
+                json.key("destination").startObject()
+                    .key("node_id").value(rule->destinationNodeId().toString().toStdString())
+                    .key("device_id").value((int)rule->destinationDeviceId())
+                    .endObject();
+
+                // Statistics
+                json.key("statistics").startObject()
+                    .key("messages_forwarded").value((int)rule->statistics.messagesForwarded)
+                    .key("messages_dropped").value((int)rule->statistics.messagesDropped)
+                    .endObject();
+
+                json.endObject();
+
+                res.set_content(json.toString(), "application/json");
+                res.status = 200;
+
+            } catch (const std::exception& e) {
+                std::cerr << "Error retrieving route: " << e.what() << std::endl;
+                res.set_content(std::string("{\"error\":\"") + e.what() + "\"}", "application/json");
+                res.status = 500;
+            }
+        });
+
+        // 4. PUT /routing/routes/:route_id - Update a route
+        server->Put(R"(/routing/routes/(.+))", [this](const httplib::Request& req, httplib::Response& res) {
+            try {
+                if (!routeManager) {
+                    res.set_content("{\"error\":\"Route manager not initialized\"}", "application/json");
+                    res.status = 500;
+                    return;
+                }
+
+                std::string ruleId = req.matches[1];
+                auto existingRule = routeManager->getRule(ruleId);
+
+                if (!existingRule.has_value()) {
+                    res.set_content("{\"error\":\"Route not found\"}", "application/json");
+                    res.status = 404;
+                    return;
+                }
+
+                // Parse JSON body for updates
+                auto body = req.body;
+                auto updatedRule = *existingRule;
+
+                // Check for enabled field
+                if (body.find("\"enabled\"") != std::string::npos) {
+                    size_t pos = body.find("\"enabled\":");
+                    if (pos != std::string::npos) {
+                        size_t start = pos + 10;
+                        updatedRule.enabled = (body.substr(start, 4) == "true");
+                    }
+                }
+
+                // Check for priority field
+                if (body.find("\"priority\"") != std::string::npos) {
+                    size_t pos = body.find("\"priority\":");
+                    if (pos != std::string::npos) {
+                        size_t start = pos + 11;
+                        size_t end = body.find_first_of(",}", start);
+                        if (end != std::string::npos) {
+                            updatedRule.priority = std::stoi(body.substr(start, end - start));
+                        }
+                    }
+                }
+
+                // Update the rule
+                if (routeManager->updateRule(ruleId, updatedRule)) {
+                    JsonBuilder json;
+                    json.startObject()
+                        .key("status").value(std::string("updated"))
+                        .key("route_id").value(ruleId)
+                        .endObject();
+
+                    res.set_content(json.toString(), "application/json");
+                    res.status = 200;
+                } else {
+                    res.set_content("{\"error\":\"Failed to update route\"}", "application/json");
+                    res.status = 500;
+                }
+
+            } catch (const std::exception& e) {
+                std::cerr << "Error updating route: " << e.what() << std::endl;
+                res.set_content(std::string("{\"error\":\"") + e.what() + "\"}", "application/json");
+                res.status = 400;
+            }
+        });
+
+        // 5. DELETE /routing/routes/:route_id - Delete a route
+        server->Delete(R"(/routing/routes/(.+))", [this](const httplib::Request& req, httplib::Response& res) {
+            try {
+                if (!routeManager) {
+                    res.set_content("{\"error\":\"Route manager not initialized\"}", "application/json");
+                    res.status = 500;
+                    return;
+                }
+
+                std::string ruleId = req.matches[1];
+
+                if (routeManager->removeRule(ruleId)) {
+                    JsonBuilder json;
+                    json.startObject()
+                        .key("status").value(std::string("deleted"))
+                        .key("route_id").value(ruleId)
+                        .endObject();
+
+                    res.set_content(json.toString(), "application/json");
+                    res.status = 200;
+                } else {
+                    res.set_content("{\"error\":\"Route not found\"}", "application/json");
+                    res.status = 404;
+                }
+
+            } catch (const std::exception& e) {
+                std::cerr << "Error deleting route: " << e.what() << std::endl;
+                res.set_content(std::string("{\"error\":\"") + e.what() + "\"}", "application/json");
+                res.status = 500;
+            }
+        });
+
+        // 6. GET /routing/table - Get complete routing state (debug endpoint)
+        server->Get("/routing/table", [this](const httplib::Request&, httplib::Response& res) {
+            try {
+                JsonBuilder json;
+                json.startObject();
+
+                if (routeManager) {
+                    auto rules = routeManager->getAllRules();
+                    auto stats = routeManager->getStatistics();
+
+                    json.key("total_rules").value((int)stats.totalRules)
+                        .key("enabled_rules").value((int)stats.enabledRules)
+                        .key("disabled_rules").value((int)stats.disabledRules)
+                        .key("total_messages_forwarded").value((int)stats.totalMessagesForwarded)
+                        .key("total_messages_dropped").value((int)stats.totalMessagesDropped);
+
+                    json.key("rules").startArray();
+                    for (const auto& rule : rules) {
+                        json.startObject()
+                            .key("route_id").value(rule.ruleId.toStdString())
+                            .key("enabled").value(rule.enabled)
+                            .key("priority").value(rule.priority)
+                            .key("source_node").value(rule.sourceNodeId().toString().toStdString())
+                            .key("source_device").value((int)rule.sourceDeviceId())
+                            .key("dest_node").value(rule.destinationNodeId().toString().toStdString())
+                            .key("dest_device").value((int)rule.destinationDeviceId())
+                            .key("messages_forwarded").value((int)rule.statistics.messagesForwarded)
+                            .key("messages_dropped").value((int)rule.statistics.messagesDropped)
+                            .endObject();
+                    }
+                    json.endArray();
+                }
+
+                if (deviceRegistry) {
+                    auto devices = deviceRegistry->getAllDevices();
+                    json.key("devices").startArray();
+                    for (const auto& device : devices) {
+                        json.startObject()
+                            .key("node_id").value(device.ownerNode().toString().toStdString())
+                            .key("device_id").value((int)device.id())
+                            .key("name").value(device.name.toStdString())
+                            .key("type").value(device.type.toStdString())
+                            .key("is_local").value(device.isLocal())
+                            .endObject();
+                    }
+                    json.endArray();
+                }
+
+                json.endObject();
+                res.set_content(json.toString(), "application/json");
+                res.status = 200;
+
+            } catch (const std::exception& e) {
+                std::cerr << "Error in /routing/table: " << e.what() << std::endl;
+                res.set_content(std::string("{\"error\":\"") + e.what() + "\"}", "application/json");
+                res.status = 500;
+            }
+        });
     }
 
     const NetworkMidi::NodeIdentity& identity;
+    NetworkMidi::InstanceManager* instanceManager;
     int requestedPort;
     int actualPort;
     int udpPort;
@@ -812,6 +1238,7 @@ private:
     std::unique_ptr<NetworkMidi::UdpMidiTransport> udpTransport;
     std::unique_ptr<NetworkMidi::DeviceRegistry> deviceRegistry;
     std::unique_ptr<NetworkMidi::RoutingTable> routingTable;
+    std::unique_ptr<NetworkMidi::RouteManager> routeManager;
     std::unique_ptr<NetworkMidi::MidiRouter> midiRouter;
     std::unique_ptr<NetworkMidi::MeshManager> meshManager;
     std::unique_ptr<NetworkTransportAdapter> networkAdapter;
@@ -861,7 +1288,7 @@ int main(int argc, char* argv[])
         std::cout << "  HTTP Port: " << port << std::endl;
     }
 
-    NetworkMidiServer server(identity, port);
+    NetworkMidiServer server(identity, instanceManager.get(), port);
     server.startServer();
 
     int actualPort = server.getActualPort();
@@ -876,11 +1303,17 @@ int main(int argc, char* argv[])
                                        .getFullPathName().toStdString() << std::endl;
 
     std::cout << "\nEndpoints:" << std::endl;
-    std::cout << "  GET  /health          - Health check" << std::endl;
-    std::cout << "  GET  /node/info       - Node information" << std::endl;
-    std::cout << "  GET  /midi/devices    - List all MIDI devices (local + remote)" << std::endl;
-    std::cout << "  GET  /network/mesh    - Network mesh status" << std::endl;
-    std::cout << "  GET  /network/stats   - Network statistics" << std::endl;
+    std::cout << "  GET    /health                - Health check" << std::endl;
+    std::cout << "  GET    /node/info             - Node information" << std::endl;
+    std::cout << "  GET    /midi/devices          - List all MIDI devices (local + remote)" << std::endl;
+    std::cout << "  GET    /network/mesh          - Network mesh status" << std::endl;
+    std::cout << "  GET    /network/stats         - Network statistics" << std::endl;
+    std::cout << "  GET    /routing/routes        - List all routing rules" << std::endl;
+    std::cout << "  POST   /routing/routes        - Create new routing rule" << std::endl;
+    std::cout << "  GET    /routing/routes/:id    - Get specific routing rule" << std::endl;
+    std::cout << "  PUT    /routing/routes/:id    - Update routing rule" << std::endl;
+    std::cout << "  DELETE /routing/routes/:id    - Delete routing rule" << std::endl;
+    std::cout << "  GET    /routing/table         - Get complete routing state (debug)" << std::endl;
 
     std::cout << "\nReady. Press Ctrl+C to stop..." << std::endl;
 
