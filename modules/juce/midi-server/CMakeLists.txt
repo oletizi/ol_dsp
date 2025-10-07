@@ -229,6 +229,7 @@ add_executable(network_midi_tests
     tests/unit/DeviceRegistryTest.cpp
     tests/unit/RoutingTableTest.cpp
     tests/unit/RouteManagerTest.cpp
+    tests/unit/MidiMessageForwardingTest.cpp
     tests/unit/MessageBufferTest.cpp
     tests/unit/UdpMidiTransportTest.cpp
     tests/unit/ConnectionPoolTest.cpp

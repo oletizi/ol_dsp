@@ -9,6 +9,7 @@
 #include "NetworkConnectionQueue.h"
 #include "ConnectionWorker.h"
 #include "Commands.h"
+#include "../routing/MidiRouter.h"
 #include <iostream>
 
 namespace NetworkMidi {
@@ -51,12 +52,26 @@ void NetworkConnection::connect()
     // This allows callbacks to be set before worker is created
     if (!worker) {
         std::cout << "===== Creating ConnectionWorker with callbacks =====" << std::endl << std::flush;
+
+        // Wrap onMidiMessageReceived to integrate MidiRouter forwarding (Phase 3.2)
+        auto wrappedMidiCallback = [this](const MidiMessage& msg) {
+            // Forward to MidiRouter if configured (Phase 3.2 integration)
+            if (midiRouter) {
+                midiRouter->forwardMessage(remoteNodeInfo.uuid, msg.deviceId, msg.data);
+            }
+
+            // Also invoke user callback if set (backward compatibility)
+            if (onMidiMessageReceived) {
+                onMidiMessageReceived(msg);
+            }
+        };
+
         worker = std::make_unique<ConnectionWorker>(
             *commandQueue,
             remoteNodeInfo,
             onStateChanged,
             onDevicesReceived,
-            onMidiMessageReceived,
+            wrappedMidiCallback,
             onError
         );
         worker->startThread();
@@ -249,6 +264,15 @@ bool NetworkConnection::isAlive() const
 void NetworkConnection::checkHeartbeat()
 {
     commandQueue->pushCommand(std::make_unique<Commands::CheckHeartbeatCommand>());
+}
+
+//==============================================================================
+void NetworkConnection::setMidiRouter(MidiRouter* router)
+{
+    midiRouter = router;
+    juce::Logger::writeToLog("NetworkConnection: MidiRouter " +
+                            juce::String(router ? "enabled" : "disabled") +
+                            " for " + remoteNodeInfo.name);
 }
 
 } // namespace NetworkMidi

@@ -10,6 +10,7 @@
 
 #include "DeviceRegistry.h"
 #include "RoutingTable.h"
+#include "ForwardingRule.h"
 #include <juce_core/juce_core.h>
 #include <juce_audio_devices/juce_audio_devices.h>
 #include <vector>
@@ -21,8 +22,9 @@
 
 namespace NetworkMidi {
 
-// Forward declarations for transport layer (Phase 4)
+// Forward declarations
 struct MidiPacket;
+class RouteManager;
 
 /**
  * Callback interface for network message transmission
@@ -75,6 +77,9 @@ public:
     // Network transport integration (Phase 4)
     void setNetworkTransport(NetworkTransport* transport);
 
+    // RouteManager integration (Phase 3.1)
+    void setRouteManager(RouteManager* manager);
+
     // Local port management
     void registerLocalPort(uint16_t deviceId,
                            std::unique_ptr<MidiPortInterface> port);
@@ -99,6 +104,11 @@ public:
                                  uint16_t deviceId,
                                  const std::vector<uint8_t>& midiData);
 
+    // Message forwarding (Phase 3.1)
+    void forwardMessage(const juce::Uuid& sourceNode,
+                        uint16_t sourceDevice,
+                        const std::vector<uint8_t>& midiData);
+
     // Statistics
     struct Statistics {
         uint64_t localMessagesSent = 0;
@@ -106,6 +116,8 @@ public:
         uint64_t networkMessagesSent = 0;
         uint64_t networkMessagesReceived = 0;
         uint64_t routingErrors = 0;
+        uint64_t messagesForwarded = 0;      // Phase 3.1
+        uint64_t messagesDropped = 0;        // Phase 3.1
     };
 
     Statistics getStatistics() const;
@@ -122,6 +134,9 @@ private:
 
     // Network transport (Phase 4)
     NetworkTransport* networkTransport;
+
+    // Route manager (Phase 3.1)
+    RouteManager* routeManager;
 
     // Local MIDI ports
     mutable std::mutex portMutex;
@@ -150,6 +165,17 @@ private:
                               const std::vector<uint8_t>& midiData);
 
     void reportError(const juce::String& error);
+
+    // Phase 3.1 forwarding helpers
+    bool matchesFilters(const ForwardingRule& rule,
+                        const std::vector<uint8_t>& midiData) const;
+
+    void forwardToDestination(const juce::Uuid& destNode,
+                              uint16_t destDevice,
+                              const std::vector<uint8_t>& midiData);
+
+    uint8_t extractMidiChannel(const std::vector<uint8_t>& midiData) const;
+    MidiMessageType getMidiMessageType(const std::vector<uint8_t>& midiData) const;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MidiRouter)
 };

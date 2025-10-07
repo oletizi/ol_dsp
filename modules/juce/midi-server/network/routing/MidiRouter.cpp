@@ -5,6 +5,8 @@
  */
 
 #include "MidiRouter.h"
+#include "RouteManager.h"
+#include "ForwardingRule.h"
 #include <algorithm>
 
 namespace NetworkMidi {
@@ -13,6 +15,7 @@ MidiRouter::MidiRouter(DeviceRegistry& registry, RoutingTable& routes)
     : deviceRegistry(registry)
     , routingTable(routes)
     , networkTransport(nullptr)
+    , routeManager(nullptr)
 {
 }
 
@@ -27,6 +30,14 @@ MidiRouter::~MidiRouter()
 void MidiRouter::setNetworkTransport(NetworkTransport* transport)
 {
     networkTransport = transport;
+}
+
+//==============================================================================
+// RouteManager integration (Phase 3.1)
+
+void MidiRouter::setRouteManager(RouteManager* manager)
+{
+    routeManager = manager;
 }
 
 //==============================================================================
@@ -283,6 +294,155 @@ void MidiRouter::reportError(const juce::String& error)
     }
     // Also log to stderr for debugging
     std::cerr << "MidiRouter Error: " << error << std::endl;
+}
+
+//==============================================================================
+// Message forwarding (Phase 3.1)
+
+void MidiRouter::forwardMessage(const juce::Uuid& sourceNode,
+                                uint16_t sourceDevice,
+                                const std::vector<uint8_t>& midiData)
+{
+    if (midiData.empty()) {
+        reportError("Cannot forward empty MIDI message");
+        return;
+    }
+
+    if (!routeManager) {
+        // No route manager configured - skip forwarding
+        return;
+    }
+
+    // Query RouteManager for destination rules (already sorted by priority, filtered to enabled only)
+    auto rules = routeManager->getDestinations(sourceNode, sourceDevice);
+
+    if (rules.empty()) {
+        // No forwarding rules configured for this source device
+        return;
+    }
+
+    // For each rule (already sorted by priority, highest first)
+    for (const auto& rule : rules) {
+        // Apply filters (channel, message type)
+        if (!matchesFilters(rule, midiData)) {
+            // Message doesn't match filters - update statistics
+            routeManager->updateRuleStatistics(rule.ruleId.toStdString(), false);
+
+            std::lock_guard<std::mutex> lock(statsMutex);
+            stats.messagesDropped++;
+            continue;
+        }
+
+        // Forward to destination
+        forwardToDestination(rule.destinationNodeId(),
+                            rule.destinationDeviceId(),
+                            midiData);
+
+        // Update statistics
+        routeManager->updateRuleStatistics(rule.ruleId.toStdString(), true);
+
+        {
+            std::lock_guard<std::mutex> lock(statsMutex);
+            stats.messagesForwarded++;
+        }
+    }
+}
+
+bool MidiRouter::matchesFilters(const ForwardingRule& rule,
+                                const std::vector<uint8_t>& midiData) const
+{
+    if (midiData.empty()) {
+        return false;
+    }
+
+    // Extract MIDI channel from message
+    uint8_t midiChannel = extractMidiChannel(midiData);
+
+    // Check channel filter
+    if (!rule.matchesChannel(midiChannel)) {
+        return false;
+    }
+
+    // Extract message type
+    MidiMessageType msgType = getMidiMessageType(midiData);
+
+    // Check message type filter
+    if (!rule.matchesMessageType(msgType)) {
+        return false;
+    }
+
+    return true;
+}
+
+void MidiRouter::forwardToDestination(const juce::Uuid& destNode,
+                                      uint16_t destDevice,
+                                      const std::vector<uint8_t>& midiData)
+{
+    // Check if destination is local (local devices have null UUID in RoutingTable)
+    if (destNode.isNull()) {
+        // Forward to local device
+        routeLocalMessage(destDevice, midiData);
+    }
+    else {
+        // Forward to remote device
+        routeNetworkMessage(destNode, destDevice, midiData);
+    }
+}
+
+uint8_t MidiRouter::extractMidiChannel(const std::vector<uint8_t>& midiData) const
+{
+    if (midiData.empty()) {
+        return 0;  // Invalid
+    }
+
+    const uint8_t statusByte = midiData[0];
+
+    // Channel voice messages (0x80-0xEF) encode channel in lower nibble
+    if (statusByte >= 0x80 && statusByte < 0xF0) {
+        // MIDI channels are 1-16, status byte lower nibble is 0-15
+        return (statusByte & 0x0F) + 1;
+    }
+
+    // System messages don't have a channel
+    return 0;
+}
+
+NetworkMidi::MidiMessageType MidiRouter::getMidiMessageType(const std::vector<uint8_t>& midiData) const
+{
+    if (midiData.empty()) {
+        return MidiMessageType::None;
+    }
+
+    const uint8_t statusByte = midiData[0];
+
+    // System Real-Time messages (0xF8-0xFF)
+    if (statusByte >= 0xF8) {
+        return MidiMessageType::SystemMessage;
+    }
+
+    // System Exclusive (0xF0)
+    if (statusByte == 0xF0) {
+        return MidiMessageType::SystemMessage;
+    }
+
+    // System Common messages (0xF1-0xF7)
+    if (statusByte >= 0xF0 && statusByte < 0xF8) {
+        return MidiMessageType::SystemMessage;
+    }
+
+    // Channel voice messages - extract message type from upper nibble
+    uint8_t messageType = statusByte & 0xF0;
+
+    switch (messageType) {
+        case 0x80: return MidiMessageType::NoteOff;
+        case 0x90: return MidiMessageType::NoteOn;
+        case 0xA0: return MidiMessageType::PolyAftertouch;
+        case 0xB0: return MidiMessageType::ControlChange;
+        case 0xC0: return MidiMessageType::ProgramChange;
+        case 0xD0: return MidiMessageType::ChannelAftertouch;
+        case 0xE0: return MidiMessageType::PitchBend;
+        default:   return MidiMessageType::None;
+    }
 }
 
 } // namespace NetworkMidi

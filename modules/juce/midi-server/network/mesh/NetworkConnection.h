@@ -32,6 +32,7 @@ namespace NetworkMidi {
 // Forward declarations for SEDA infrastructure
 class NetworkConnectionQueue;
 class ConnectionWorker;
+class MidiRouter;
 
 //==============================================================================
 // Node information structure
@@ -192,6 +193,17 @@ public:
      */
     void checkHeartbeat();
 
+    //==============================================================================
+    // Routing integration (Phase 3.2)
+
+    /**
+     * Sets the MidiRouter for forwarding received MIDI messages.
+     * Optional - if not set, messages are only delivered via onMidiMessageReceived callback.
+     *
+     * @param router Pointer to MidiRouter instance (not owned, must outlive NetworkConnection)
+     */
+    void setMidiRouter(MidiRouter* router);
+
 private:
     //==============================================================================
     // Member variables
@@ -205,6 +217,9 @@ private:
 
     std::unique_ptr<NetworkConnectionQueue> commandQueue;
     std::unique_ptr<ConnectionWorker> worker;
+
+    // Routing integration (Phase 3.2)
+    MidiRouter* midiRouter = nullptr;  // Not owned, optional
 
     static constexpr int64_t HEARTBEAT_TIMEOUT_MS = 3000;  // 3 seconds
 
