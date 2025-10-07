@@ -140,7 +140,12 @@ TEST_F(UuidRegistryTest, UnregisterUnknownUuid) {
 
 // Test 5: Null UUID handling
 TEST_F(UuidRegistryTest, NullUuidHandling) {
-    juce::Uuid nullUuid;
+    // JUCE's default Uuid() constructor creates a RANDOM UUID, not a null one!
+    // To get a null UUID, we need to construct it from nullptr
+    juce::Uuid nullUuid(static_cast<const unsigned char*>(nullptr));
+
+    // Verify it's actually null
+    ASSERT_TRUE(nullUuid.isNull());
 
     // Registering null UUID should be safe (no-op)
     registry->registerNode(nullUuid);

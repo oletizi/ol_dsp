@@ -444,9 +444,9 @@ void ConnectionWorker::handleSendPacketCommand(Commands::SendPacketCommand* cmd)
         return;
     }
 
-    // Validate transport initialized
-    if (!realtimeTransport) {
-        juce::Logger::writeToLog("ConnectionWorker: Cannot send packet - realtime transport not available");
+    // Validate UDP socket initialized
+    if (!udpSocket) {
+        juce::Logger::writeToLog("ConnectionWorker: Cannot send packet - UDP socket not available");
         return;
     }
 
@@ -468,13 +468,17 @@ void ConnectionWorker::handleSendPacketCommand(Commands::SendPacketCommand* cmd)
         return;
     }
 
-    // Send via UDP transport
-    realtimeTransport->sendPacket(buffer.data(), buffer.size(), remoteHost, remoteUdpPort);
+    // Send via UDP socket directly
+    int bytesSent = udpSocket->write(remoteHost, remoteUdpPort, buffer.data(), static_cast<int>(buffer.size()));
 
-    juce::Logger::writeToLog("ConnectionWorker: Sent MidiPacket via UDP - " +
-                            juce::String(buffer.size()) + " bytes to " +
-                            remoteHost + ":" + juce::String(remoteUdpPort) +
-                            (cmd->packet.hasForwardingContext() ? " (with context)" : ""));
+    if (bytesSent > 0) {
+        juce::Logger::writeToLog("ConnectionWorker: Sent MidiPacket via UDP - " +
+                                juce::String(bytesSent) + " bytes to " +
+                                remoteHost + ":" + juce::String(remoteUdpPort) +
+                                (cmd->packet.hasForwardingContext() ? " (with context)" : ""));
+    } else {
+        juce::Logger::writeToLog("ConnectionWorker: Failed to send MidiPacket via UDP");
+    }
 }
 
 void ConnectionWorker::handleGetStateQuery(Commands::GetStateQuery* query)

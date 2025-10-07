@@ -79,10 +79,9 @@ void MidiRouter::processCommand(std::unique_ptr<MidiRouterCommands::Command> cmd
             auto* fwdCmd = static_cast<ForwardMessageCommand*>(cmd.get());
 
             // Phase 4.3: Use incoming context if present, otherwise create fresh
-            MidiRouter::ForwardingContext context;
+            ForwardingContext context;
             if (fwdCmd->incomingContext.has_value()) {
-                context.visitedDevices = fwdCmd->incomingContext->visitedDevices;
-                context.hopCount = fwdCmd->incomingContext->hopCount;
+                context = fwdCmd->incomingContext.value();
             }
 
             forwardMessageInternal(fwdCmd->sourceNode, fwdCmd->sourceDevice,
@@ -93,7 +92,7 @@ void MidiRouter::processCommand(std::unique_ptr<MidiRouterCommands::Command> cmd
         case Command::DirectSend: {
             auto* sendCmd = static_cast<DirectSendCommand*>(cmd.get());
             // Create fresh context for direct send
-            MidiRouter::ForwardingContext context;
+            ForwardingContext context;
             forwardToDestination(sendCmd->destNode, sendCmd->destDevice,
                                  sendCmd->midiData, context);
             break;
@@ -345,9 +344,9 @@ void MidiRouter::onNetworkPacketReceived(const MidiPacket& packet)
     }
 
     // Convert NetworkMidi::ForwardingContext to MidiRouter::ForwardingContext
-    std::optional<NetworkMidi::ForwardingContext> routerContextOpt;
+    std::optional<MidiRouterCommands::ForwardingContext> routerContextOpt;
     if (contextOpt.has_value()) {
-        NetworkMidi::ForwardingContext routerCtx;
+        MidiRouterCommands::ForwardingContext routerCtx;
         routerCtx.visitedDevices = contextOpt->visitedDevices;
         routerCtx.hopCount = contextOpt->hopCount;
         routerContextOpt = routerCtx;

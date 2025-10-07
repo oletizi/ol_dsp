@@ -43,9 +43,9 @@ public:
     UuidRegistry();
 
     /**
-     * Destructor
+     * Destructor (virtual to enable mocking)
      */
-    ~UuidRegistry();
+    virtual ~UuidRegistry();
 
     /**
      * Register a node UUID for hash lookup.
@@ -57,7 +57,7 @@ public:
      *
      * @param nodeId The full UUID to register
      */
-    void registerNode(const juce::Uuid& nodeId);
+    virtual void registerNode(const juce::Uuid& nodeId);
 
     /**
      * Unregister a node UUID.
@@ -67,7 +67,7 @@ public:
      *
      * @param nodeId The UUID to unregister
      */
-    void unregisterNode(const juce::Uuid& nodeId);
+    virtual void unregisterNode(const juce::Uuid& nodeId);
 
     /**
      * Look up a full UUID from its 32-bit hash.
@@ -76,7 +76,7 @@ public:
      * @param hash The 32-bit hash value
      * @return The full UUID if found, std::nullopt otherwise
      */
-    std::optional<juce::Uuid> lookupFromHash(uint32_t hash) const;
+    virtual std::optional<juce::Uuid> lookupFromHash(uint32_t hash) const;
 
     /**
      * Get the number of currently registered nodes.

@@ -19,7 +19,7 @@ using namespace testing;
 // Mock UuidRegistry for Phase 4 testing
 class MockUuidRegistry : public UuidRegistry {
 public:
-    std::optional<juce::Uuid> lookupFromHash(uint32_t hash) const {
+    std::optional<juce::Uuid> lookupFromHash(uint32_t hash) const override {
         auto it = hashToUuid.find(hash);
         if (it != hashToUuid.end()) {
             return it->second;
@@ -27,7 +27,7 @@ public:
         return std::nullopt;
     }
 
-    void registerNode(const juce::Uuid& uuid) {
+    void registerNode(const juce::Uuid& uuid) override {
         uint32_t hash = MidiPacket::hashUuid(uuid);
         hashToUuid[hash] = uuid;
     }

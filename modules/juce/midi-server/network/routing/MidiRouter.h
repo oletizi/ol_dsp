@@ -24,7 +24,7 @@
 namespace NetworkMidi {
 
 // Forward declarations
-struct MidiPacket;
+class MidiPacket;
 class RouteManager;
 class UuidRegistry;
 

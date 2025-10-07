@@ -81,8 +81,7 @@ void MidiRouter::processCommand(std::unique_ptr<MidiRouterCommands::Command> cmd
             // Phase 4.3: Use incoming context if present, otherwise create fresh
             MidiRouter::ForwardingContext context;
             if (fwdCmd->incomingContext.has_value()) {
-                context.visitedDevices = fwdCmd->incomingContext->visitedDevices;
-                context.hopCount = fwdCmd->incomingContext->hopCount;
+                context = fwdCmd->incomingContext.value();
             }
 
             forwardMessageInternal(fwdCmd->sourceNode, fwdCmd->sourceDevice,

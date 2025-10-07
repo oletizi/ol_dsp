@@ -149,7 +149,7 @@ TEST_F(MidiRouterContextTest, ExtractContextFromPacket) {
     ForwardingContext context;
     context.hopCount = 1;
     context.visitedDevices.insert(DeviceKey(node1, 2));
-    packet.setForwardingContext(context, *uuidRegistry);
+    packet.setForwardingContext(context);
 
     ASSERT_TRUE(packet.hasForwardingContext()) << "Context should be set on packet";
 
@@ -217,7 +217,7 @@ TEST_F(MidiRouterContextTest, UpdateVisitedDevicesCorrectly) {
     MidiPacket packet1 = MidiPacket::createDataPacket(node1, node2, 2, midiData, 100);
     ForwardingContext ctx1;
     ctx1.hopCount = 0;
-    packet1.setForwardingContext(ctx1, *uuidRegistry);
+    packet1.setForwardingContext(ctx1);
 
     mockTransport->reset();
 
@@ -261,7 +261,7 @@ TEST_F(MidiRouterContextTest, HopCountIncrement) {
     MidiPacket packet = MidiPacket::createDataPacket(node1, node2, 2, midiData, 100);
     ForwardingContext context;
     context.hopCount = 5;
-    packet.setForwardingContext(context, *uuidRegistry);
+    packet.setForwardingContext(context);
 
     mockTransport->reset();
 
@@ -290,7 +290,7 @@ TEST_F(MidiRouterContextTest, LoopDetectionWithContext) {
     ForwardingContext context;
     context.hopCount = 1;
     context.visitedDevices.insert(DeviceKey(node1, 2));  // Mark as visited
-    packet.setForwardingContext(context, *uuidRegistry);
+    packet.setForwardingContext(context);
 
     mockTransport->reset();
 
@@ -322,7 +322,7 @@ TEST_F(MidiRouterContextTest, NullUuidRegistryGracefulDegradation) {
     // Add context to packet
     ForwardingContext context;
     context.hopCount = 1;
-    packet.setForwardingContext(context, *uuidRegistry);
+    packet.setForwardingContext(context);
 
     mockTransport->reset();
 
@@ -350,7 +350,7 @@ TEST_F(MidiRouterContextTest, ContextPreservationAcrossRules) {
     MidiPacket packet1 = MidiPacket::createDataPacket(node1, node2, 2, midiData, 100);
     ForwardingContext ctx1;
     ctx1.hopCount = 0;
-    packet1.setForwardingContext(ctx1, *uuidRegistry);
+    packet1.setForwardingContext(ctx1);
 
     mockTransport->reset();
 
@@ -390,7 +390,7 @@ TEST_F(MidiRouterContextTest, MaxHopsExceeded) {
     MidiPacket packet = MidiPacket::createDataPacket(node1, node2, 2, midiData, 100);
     ForwardingContext context;
     context.hopCount = ForwardingContext::MAX_HOPS;  // 8 hops
-    packet.setForwardingContext(context, *uuidRegistry);
+    packet.setForwardingContext(context);
 
     mockTransport->reset();
 
@@ -442,11 +442,9 @@ TEST_F(MidiRouterContextTest, BackwardCompatibilityNoContext) {
 TEST_F(MidiRouterContextTest, ContextWithMessageFilters) {
     // Add rule with channel filter
     ForwardingRule rule;
-    rule.sourceNode = node1;
-    rule.sourceDevice = 2;
-    rule.destNode = node2;
-    rule.destDevice = 5;
-    rule.channelFilter = 0;  // Only channel 0
+    rule.sourceDevice = DeviceKey(node1, 2);
+    rule.destinationDevice = DeviceKey(node2, 5);
+    rule.channelFilter = ChannelFilter(0);  // Only channel 0
     routeManager->addForwardingRule(rule);
 
     // Send message on channel 0 (should forward)
