@@ -286,6 +286,7 @@ public:
         midiRouter = std::make_unique<NetworkMidi::MidiRouter>(*deviceRegistry, *routingTable);
         networkAdapter = std::make_unique<NetworkTransportAdapter>(*udpTransport);
         midiRouter->setNetworkTransport(networkAdapter.get());
+        midiRouter->setRouteManager(routeManager.get());  // Connect router to route manager
 
         // 4. Create virtual MIDI ports (Phase 1: Virtual MIDI Ports)
         createVirtualMidiPorts();
@@ -443,9 +444,11 @@ public:
         std::cout << "DEBUG: Device ID = " << deviceId << std::endl;
 
         if (deviceId != 0xFFFF && midiRouter) {
-            std::cout << "DEBUG: Routing MIDI message through midiRouter" << std::endl;
-            // Route through MidiRouter (handles local and network delivery)
-            midiRouter->sendMessage(deviceId, data);
+            std::cout << "DEBUG: Routing MIDI message through midiRouter (using RouteManager)" << std::endl;
+            // Route through MidiRouter using RouteManager (handles local and network delivery)
+            // For local devices, use null UUID as source node
+            juce::Uuid localNodeId(juce::String("00000000-0000-0000-0000-000000000000"));
+            midiRouter->forwardMessage(localNodeId, deviceId, data);
         } else {
             std::cout << "DEBUG: NOT routing - deviceId=" << deviceId << ", midiRouter=" << (midiRouter ? "exists" : "null") << std::endl;
         }
@@ -721,13 +724,8 @@ private:
     void handleNetworkPacket(const NetworkMidi::MidiPacket& packet) {
         // Route received network MIDI to appropriate local device
         if (midiRouter) {
-            // Use getter methods to access packet fields
-            auto midiData = packet.getMidiData();
-            midiRouter->onNetworkPacketReceived(
-                packet.getSourceNode(),
-                packet.getDeviceId(),
-                midiData
-            );
+            // Use Phase 4.3 packet handling (with ForwardingContext support)
+            midiRouter->onNetworkPacketReceived(packet);
         }
     }
 

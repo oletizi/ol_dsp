@@ -333,6 +333,17 @@ void MidiRouter::onNetworkPacketReceived(const MidiPacket& packet)
         return;
     }
 
+    // Check if packet is addressed to this node
+    if (packet.getDestNode() == myNodeId || packet.getDestNode().isNull()) {
+        // Packet is for this node - deliver to local device
+        // packet.getDeviceId() is the DESTINATION device ID (local device to deliver to)
+        auto cmd = std::make_unique<MidiRouterCommands::QueueMessageCommand>(
+            packet.getDeviceId(), midiData);
+        commandQueue.push(std::move(cmd));
+        return;
+    }
+
+    // Packet is for another node - forward it (multi-hop routing)
     // Extract context from packet if present
     std::optional<NetworkMidi::ForwardingContext> contextOpt;
     if (packet.hasForwardingContext() && uuidRegistry) {
@@ -353,7 +364,7 @@ void MidiRouter::onNetworkPacketReceived(const MidiPacket& packet)
         routerContextOpt = routerCtx;
     }
 
-    // Create command with context
+    // Multi-hop: forward using routing system
     auto cmd = std::make_unique<MidiRouterCommands::ForwardMessageCommand>(
         packet.getSourceNode(), packet.getDeviceId(), midiData, routerContextOpt);
 
