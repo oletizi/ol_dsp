@@ -25,5 +25,8 @@
   "bugs": {
     "url": "https://github.com/oletizi/ol_dsp/issues"
   },
-  "homepage": "https://github.com/oletizi/ol_dsp#readme"
+  "homepage": "https://github.com/oletizi/ol_dsp#readme",
+  "dependencies": {
+    "@oletizi/mulder-claude-config": "^0.6.0"
+  }
 }

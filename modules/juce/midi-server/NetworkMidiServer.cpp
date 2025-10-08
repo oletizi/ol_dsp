@@ -387,13 +387,10 @@ public:
             }
         }
 
-        // Stop virtual MIDI ports
+        // Stop virtual MIDI input (output is owned by MidiRouter port wrapper)
         if (virtualInput) {
             virtualInput->stop();
             virtualInput.reset();
-        }
-        if (virtualOutput) {
-            virtualOutput.reset();
         }
 
         // Stop mesh and discovery
@@ -535,7 +532,13 @@ private:
                 "output"
             );
 
-            std::cout << "  Registered virtual output: " << virtualOutput->getName().toStdString() << std::endl;
+            // Create port wrapper and register with MidiRouter
+            // Move ownership of virtualOutput to the port wrapper (like system devices)
+            auto port = std::make_unique<JuceMidiPort>(virtualOutput->getName(), false);
+            port->setMidiOutput(std::move(virtualOutput));
+            midiRouter->registerLocalPort(2, std::move(port));
+
+            std::cout << "  Registered virtual output with MidiRouter" << std::endl;
         }
 
         std::cout << "Virtual MIDI ports registered successfully" << std::endl;
