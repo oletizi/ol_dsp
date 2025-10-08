@@ -104,6 +104,8 @@ public:
     // Deserialization
     static MidiPacket deserialize(const uint8_t* data, size_t length);
     static bool tryDeserialize(const uint8_t* data, size_t length, MidiPacket& outPacket);
+    static bool tryDeserialize(const uint8_t* data, size_t length, MidiPacket& outPacket,
+                                const UuidRegistry* registry);
 
     // Validation
     bool isValid() const;

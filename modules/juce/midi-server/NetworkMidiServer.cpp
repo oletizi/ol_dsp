@@ -206,15 +206,30 @@ public:
 
     void sendPacket(const NetworkMidi::MidiPacket& packet) override {
         // Phase 4.5: Send packet with full context via UDP
-        if (meshManager) {
-            auto nodeInfo = meshManager->getNodeInfo(packet.getDestNode());
-            if (nodeInfo.isValid()) {
-                udpTransport.sendPacket(
-                    packet,
-                    nodeInfo.ipAddress,
-                    nodeInfo.udpPort
-                );
-            }
+        if (!meshManager) {
+            std::cerr << "ERROR: sendPacket called but meshManager is null!" << std::endl;
+            return;
+        }
+
+        auto destUuid = packet.getDestNode();
+        std::cout << "DEBUG sendPacket: Sending to node " << destUuid.toString().toStdString() << std::endl;
+
+        auto nodeInfo = meshManager->getNodeInfo(destUuid);
+        std::cout << "DEBUG sendPacket: NodeInfo valid=" << nodeInfo.isValid()
+                  << " ip=" << nodeInfo.ipAddress.toStdString()
+                  << " port=" << nodeInfo.udpPort << std::endl;
+
+        if (nodeInfo.isValid()) {
+            std::cout << "DEBUG sendPacket: Calling udpTransport.sendPacket to "
+                      << nodeInfo.ipAddress.toStdString() << ":" << nodeInfo.udpPort << std::endl;
+            udpTransport.sendPacket(
+                packet,
+                nodeInfo.ipAddress,
+                nodeInfo.udpPort
+            );
+        } else {
+            std::cerr << "ERROR sendPacket: NodeInfo is INVALID for node "
+                      << destUuid.toString().toStdString() << std::endl;
         }
     }
 
@@ -366,10 +381,15 @@ public:
         // Connect network adapter to mesh manager
         networkAdapter->setMeshManager(meshManager.get());
 
-        // Phase 4.5: Inject UuidRegistry and node ID into MidiRouter
+        // Phase 4.5: Inject UuidRegistry and node ID into MidiRouter and UdpTransport
         if (midiRouter) {
             midiRouter->setNodeId(identity.getNodeId());
             midiRouter->setUuidRegistry(&meshManager->getUuidRegistry());
+        }
+
+        // Inject UuidRegistry into UdpTransport for packet deserialization
+        if (udpTransport) {
+            udpTransport->setUuidRegistry(&meshManager->getUuidRegistry());
         }
 
         // 11. NOW start MIDI inputs (after everything is fully initialized)

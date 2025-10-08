@@ -5,6 +5,7 @@ namespace NetworkMidi {
 
 UdpMidiTransport::UdpMidiTransport(int port)
     : port(port)
+    , uuidRegistry(nullptr)
     , nextSequence(0)
     , running(false)
 {
@@ -135,9 +136,13 @@ void UdpMidiTransport::receiveLoop() {
                 stats.bytesReceived += bytesRead;
             }
 
-            // Try to deserialize packet
+            // Try to deserialize packet (with UUID registry if available)
             MidiPacket packet;
-            if (MidiPacket::tryDeserialize(buffer, bytesRead, packet)) {
+            bool deserialized = uuidRegistry
+                ? MidiPacket::tryDeserialize(buffer, bytesRead, packet, uuidRegistry)
+                : MidiPacket::tryDeserialize(buffer, bytesRead, packet);
+
+            if (deserialized) {
                 // Update statistics
                 {
                     juce::ScopedLock lock(statsLock);

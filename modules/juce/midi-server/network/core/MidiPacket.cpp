@@ -334,6 +334,52 @@ bool MidiPacket::tryDeserialize(const uint8_t* data, size_t length, MidiPacket& 
     return true;
 }
 
+bool MidiPacket::tryDeserialize(const uint8_t* data, size_t length, MidiPacket& outPacket,
+                                 const UuidRegistry* registry)
+{
+    // First call the basic deserialization
+    if (!tryDeserialize(data, length, outPacket)) {
+        return false;
+    }
+
+    // If registry is provided, look up full UUIDs from hashes
+    if (registry) {
+        // Re-parse the hash values from the packet (they're at fixed offsets)
+        constexpr size_t SOURCE_HASH_OFFSET = 4;  // After magic(2) + version(1) + flags(1)
+        constexpr size_t DEST_HASH_OFFSET = 8;    // After source hash(4)
+
+        uint32_t sourceHash = (static_cast<uint32_t>(data[SOURCE_HASH_OFFSET]) << 24) |
+                              (static_cast<uint32_t>(data[SOURCE_HASH_OFFSET + 1]) << 16) |
+                              (static_cast<uint32_t>(data[SOURCE_HASH_OFFSET + 2]) << 8) |
+                              static_cast<uint32_t>(data[SOURCE_HASH_OFFSET + 3]);
+
+        uint32_t destHash = (static_cast<uint32_t>(data[DEST_HASH_OFFSET]) << 24) |
+                            (static_cast<uint32_t>(data[DEST_HASH_OFFSET + 1]) << 16) |
+                            (static_cast<uint32_t>(data[DEST_HASH_OFFSET + 2]) << 8) |
+                            static_cast<uint32_t>(data[DEST_HASH_OFFSET + 3]);
+
+        // Look up full UUIDs
+        auto sourceUuid = registry->lookupFromHash(sourceHash);
+        auto destUuid = registry->lookupFromHash(destHash);
+
+        if (sourceUuid) {
+            outPacket.sourceNode = *sourceUuid;
+        } else {
+            std::cerr << "WARNING: Source UUID hash 0x" << std::hex << sourceHash
+                      << " not found in registry" << std::dec << std::endl;
+        }
+
+        if (destUuid) {
+            outPacket.destNode = *destUuid;
+        } else {
+            std::cerr << "WARNING: Dest UUID hash 0x" << std::hex << destHash
+                      << " not found in registry" << std::dec << std::endl;
+        }
+    }
+
+    return true;
+}
+
 bool MidiPacket::isValid() const {
     return magic == MAGIC && version == VERSION;
 }

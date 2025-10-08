@@ -252,6 +252,44 @@ target_link_libraries(context_performance_test
     juce::juce_recommended_warning_flags
 )
 
+#==============================================================================
+# Network Transport Adapter Test (Diagnostic)
+#==============================================================================
+
+juce_add_console_app(test_network_adapter
+    PRODUCT_NAME "Network Adapter Test"
+)
+
+target_sources(test_network_adapter
+    PRIVATE
+    /tmp/test_network_adapter.cpp
+    ${CORE_SOURCES}
+    ${MESH_SOURCES}
+    ${TRANSPORT_SOURCES}
+    ${ROUTING_SOURCES}
+)
+
+target_compile_definitions(test_network_adapter
+    PRIVATE
+    JUCE_WEB_BROWSER=0
+    JUCE_USE_CURL=0
+)
+
+target_include_directories(test_network_adapter
+    PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
+target_link_libraries(test_network_adapter
+    PRIVATE
+    juce::juce_core
+    juce::juce_audio_devices
+    juce::juce_events
+    PUBLIC
+    juce::juce_recommended_config_flags
+    juce::juce_recommended_warning_flags
+)
+
 # Unit Tests with Google Test and Coverage
 # Note: Google Test is already configured in the parent project's test/ directory
 # No need to fetch it again - just use the existing targets

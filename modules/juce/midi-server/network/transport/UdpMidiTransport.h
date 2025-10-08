@@ -100,6 +100,13 @@ public:
     juce::Uuid getNodeId() const { return myNodeId; }
 
     /**
+     * Set the UUID registry for packet deserialization.
+     * The registry is used to convert 32-bit UUID hashes back to full UUIDs.
+     * @param registry Pointer to the UuidRegistry (not owned)
+     */
+    void setUuidRegistry(class UuidRegistry* registry) { uuidRegistry = registry; }
+
+    /**
      * Callback for received packets.
      * Called on the receive thread - keep processing minimal.
      */
@@ -140,6 +147,9 @@ private:
 
     // Node identity
     juce::Uuid myNodeId;
+
+    // UUID registry for packet deserialization
+    class UuidRegistry* uuidRegistry;
 
     // Sequence number for outgoing packets
     std::atomic<uint16_t> nextSequence;
