@@ -287,10 +287,13 @@ public:
         networkAdapter = std::make_unique<NetworkTransportAdapter>(*udpTransport);
         midiRouter->setNetworkTransport(networkAdapter.get());
 
-        // 4. Enumerate and register local MIDI devices (now that router exists)
+        // 4. Create virtual MIDI ports (Phase 1: Virtual MIDI Ports)
+        createVirtualMidiPorts();
+
+        // 5. Enumerate and register local MIDI devices (now that router exists)
         registerLocalMidiDevices();
 
-        // 5. Load persisted routes (after devices are registered)
+        // 6. Load persisted routes (after devices are registered)
         loadRoutes();
 
         // Set up UDP packet reception callback
@@ -300,7 +303,7 @@ public:
             handleNetworkPacket(packet);
         };
 
-        // 6. Create HTTP server
+        // 7. Create HTTP server
         server = std::make_unique<httplib::Server>();
         setupRoutes();
 
@@ -327,7 +330,7 @@ public:
         // Wait for HTTP server to start
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
-        // 7. Create service discovery (advertise this node)
+        // 8. Create service discovery (advertise this node)
         int deviceCount = deviceRegistry->getLocalDeviceCount();
         serviceDiscovery = std::make_unique<ServiceDiscovery>(
             identity.getNodeId(),
@@ -343,7 +346,7 @@ public:
         serviceDiscovery->advertise();
         std::cout << "Started mDNS advertising" << std::endl;
 
-        // 8. Create mesh manager (handle peer connections)
+        // 9. Create mesh manager (handle peer connections)
         meshManager = std::make_unique<NetworkMidi::MeshManager>(
             identity.getNodeId(),
             actualPort,
@@ -365,7 +368,7 @@ public:
             midiRouter->setUuidRegistry(&meshManager->getUuidRegistry());
         }
 
-        // 9. NOW start MIDI inputs (after everything is fully initialized)
+        // 10. NOW start MIDI inputs (after everything is fully initialized)
         startMidiInputs();
     }
 
@@ -378,6 +381,15 @@ public:
             if (input) {
                 input->stop();
             }
+        }
+
+        // Stop virtual MIDI ports
+        if (virtualInput) {
+            virtualInput->stop();
+            virtualInput.reset();
+        }
+        if (virtualOutput) {
+            virtualOutput.reset();
         }
 
         // Stop mesh and discovery
@@ -437,6 +449,35 @@ public:
     }
 
 private:
+    //==============================================================================
+    // Phase 1: Virtual MIDI Port Creation
+    void createVirtualMidiPorts() {
+        std::cout << "DEBUG: createVirtualMidiPorts() called" << std::endl;
+
+        // Get short UUID for naming (first 8 chars)
+        auto shortUuid = identity.getNodeId().toString().substring(0, 8);
+        std::cout << "DEBUG: Short UUID = " << shortUuid.toStdString() << std::endl;
+
+        // Create virtual input (receive from other apps)
+        auto inputName = juce::String("Network MIDI Node ") + shortUuid + " In";
+        virtualInput = juce::MidiInput::createNewDevice(inputName, this);
+        if (virtualInput) {
+            virtualInput->start();
+            std::cout << "Created virtual MIDI input: " << inputName.toStdString() << std::endl;
+        } else {
+            std::cerr << "Warning: Failed to create virtual MIDI input" << std::endl;
+        }
+
+        // Create virtual output (send to other apps)
+        auto outputName = juce::String("Network MIDI Node ") + shortUuid + " Out";
+        virtualOutput = juce::MidiOutput::createNewDevice(outputName);
+        if (virtualOutput) {
+            std::cout << "Created virtual MIDI output: " << outputName.toStdString() << std::endl;
+        } else {
+            std::cerr << "Warning: Failed to create virtual MIDI output" << std::endl;
+        }
+    }
+
     void registerLocalMidiDevices() {
         uint16_t deviceId = 1;  // Start at 1 (0 reserved)
 
@@ -1313,6 +1354,10 @@ private:
     std::vector<std::unique_ptr<juce::MidiInput>> midiInputs;
     std::vector<std::unique_ptr<juce::MidiOutput>> midiOutputs;
     std::map<juce::String, uint16_t> inputDeviceMap;
+
+    // Phase 1: Virtual MIDI ports
+    std::unique_ptr<juce::MidiInput> virtualInput;
+    std::unique_ptr<juce::MidiOutput> virtualOutput;
 };
 
 //==============================================================================
