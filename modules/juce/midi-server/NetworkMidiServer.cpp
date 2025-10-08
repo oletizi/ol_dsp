@@ -290,10 +290,13 @@ public:
         // 4. Create virtual MIDI ports (Phase 1: Virtual MIDI Ports)
         createVirtualMidiPorts();
 
-        // 5. Enumerate and register local MIDI devices (now that router exists)
+        // 5. Register virtual MIDI ports (Phase 2: Device Registration)
+        registerVirtualMidiPorts();
+
+        // 6. Enumerate and register local MIDI devices (now that router exists)
         registerLocalMidiDevices();
 
-        // 6. Load persisted routes (after devices are registered)
+        // 7. Load persisted routes (after devices are registered)
         loadRoutes();
 
         // Set up UDP packet reception callback
@@ -303,7 +306,7 @@ public:
             handleNetworkPacket(packet);
         };
 
-        // 7. Create HTTP server
+        // 8. Create HTTP server
         server = std::make_unique<httplib::Server>();
         setupRoutes();
 
@@ -330,7 +333,7 @@ public:
         // Wait for HTTP server to start
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
-        // 8. Create service discovery (advertise this node)
+        // 9. Create service discovery (advertise this node)
         int deviceCount = deviceRegistry->getLocalDeviceCount();
         serviceDiscovery = std::make_unique<ServiceDiscovery>(
             identity.getNodeId(),
@@ -346,7 +349,7 @@ public:
         serviceDiscovery->advertise();
         std::cout << "Started mDNS advertising" << std::endl;
 
-        // 9. Create mesh manager (handle peer connections)
+        // 10. Create mesh manager (handle peer connections)
         meshManager = std::make_unique<NetworkMidi::MeshManager>(
             identity.getNodeId(),
             actualPort,
@@ -368,7 +371,7 @@ public:
             midiRouter->setUuidRegistry(&meshManager->getUuidRegistry());
         }
 
-        // 10. NOW start MIDI inputs (after everything is fully initialized)
+        // 11. NOW start MIDI inputs (after everything is fully initialized)
         startMidiInputs();
     }
 
@@ -478,8 +481,66 @@ private:
         }
     }
 
+    //==============================================================================
+    // Phase 2: Virtual MIDI Port Registration
+    void registerVirtualMidiPorts() {
+        std::cout << "DEBUG: registerVirtualMidiPorts() called" << std::endl;
+
+        // Register virtual input as device ID 1
+        if (virtualInput) {
+            std::cout << "Registering virtual input as device ID 1" << std::endl;
+
+            // Add to device registry
+            deviceRegistry->addLocalDevice(
+                1,
+                virtualInput->getName(),
+                "input",
+                virtualInput->getIdentifier()
+            );
+
+            // Add to routing table (local devices use null UUID)
+            routingTable->addRoute(
+                juce::Uuid(),  // Local device
+                1,
+                virtualInput->getName(),
+                "input"
+            );
+
+            // Store mapping for input device lookup
+            inputDeviceMap[virtualInput->getIdentifier()] = 1;
+
+            std::cout << "  Registered virtual input: " << virtualInput->getName().toStdString() << std::endl;
+        }
+
+        // Register virtual output as device ID 2
+        if (virtualOutput) {
+            std::cout << "Registering virtual output as device ID 2" << std::endl;
+
+            // Add to device registry
+            deviceRegistry->addLocalDevice(
+                2,
+                virtualOutput->getName(),
+                "output",
+                juce::String()  // Virtual outputs don't have identifiers in same way
+            );
+
+            // Add to routing table (local devices use null UUID)
+            routingTable->addRoute(
+                juce::Uuid(),  // Local device
+                2,
+                virtualOutput->getName(),
+                "output"
+            );
+
+            std::cout << "  Registered virtual output: " << virtualOutput->getName().toStdString() << std::endl;
+        }
+
+        std::cout << "Virtual MIDI ports registered successfully" << std::endl;
+    }
+
     void registerLocalMidiDevices() {
-        uint16_t deviceId = 1;  // Start at 1 (0 reserved)
+        // Phase 2: Start at device ID 3 (IDs 1-2 are reserved for virtual ports)
+        uint16_t deviceId = 3;
 
         // Register MIDI inputs (but don't start them yet)
         auto inputs = juce::MidiInput::getAvailableDevices();
