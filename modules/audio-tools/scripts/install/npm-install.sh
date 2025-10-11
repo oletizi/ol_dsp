@@ -27,8 +27,9 @@ install_packages() {
   echo ""
 
   # Check npm prefix to determine installation location
+  # Use --workspaces=false to avoid workspace conflicts when running from repo
   local npm_prefix
-  npm_prefix=$(npm config get prefix)
+  npm_prefix=$(npm config get prefix --workspaces=false)
   local need_sudo=false
 
   if [[ "$npm_prefix" == "/usr/local" ]] || [[ "$npm_prefix" == "/usr" ]]; then
@@ -40,16 +41,17 @@ install_packages() {
   fi
 
   # Try to install packages
+  # Use --workspaces=false to avoid workspace conflicts when running from repo
   local install_failed=false
   for package in "${PACKAGES[@]}"; do
     echo "Installing $package..."
     if [ "$need_sudo" = true ]; then
-      if ! sudo npm install -g "$package"; then
+      if ! sudo npm install -g "$package" --workspaces=false; then
         install_failed=true
         break
       fi
     else
-      if ! npm install -g "$package"; then
+      if ! npm install -g "$package" --workspaces=false; then
         install_failed=true
         break
       fi
@@ -115,7 +117,7 @@ verify_binaries() {
     echo ""
     echo "2. Add npm global bin directory to PATH:"
     local npm_prefix
-    npm_prefix=$(npm config get prefix)
+    npm_prefix=$(npm config get prefix --workspaces=false)
     echo "   export PATH=\"$npm_prefix/bin:\$PATH\""
     echo ""
     echo "3. Add this to your shell profile (~/.bashrc, ~/.zshrc, etc.)"
@@ -180,7 +182,7 @@ verify_package_installation() {
   echo "Verifying package installation..."
 
   local npm_prefix
-  npm_prefix=$(npm config get prefix)
+  npm_prefix=$(npm config get prefix --workspaces=false)
 
   local installed_count=0
   for package in "${PACKAGES[@]}"; do
@@ -188,7 +190,7 @@ verify_package_installation() {
     local pkg_name="${package##*/}"
 
     # Check if package is installed
-    if npm list -g --depth=0 "$package" >/dev/null 2>&1; then
+    if npm list -g --depth=0 "$package" --workspaces=false >/dev/null 2>&1; then
       echo "  ✓ $package"
       ((installed_count++))
     else
