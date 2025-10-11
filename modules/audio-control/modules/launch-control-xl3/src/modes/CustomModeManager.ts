@@ -25,6 +25,8 @@ export interface CustomModeEvents {
   'mode:loaded': (slot: number, mode: CustomMode) => void;
   'mode:saved': (slot: number, mode: CustomMode) => void;
   'mode:error': (error: Error) => void;
+  'cache:cleared': () => void;
+  'cache:updated': (slot: number) => void;
 }
 
 /**
@@ -90,6 +92,7 @@ export class CustomModeManager extends EventEmitter {
   private deviceManager: DeviceManager;
   private options: Required<CustomModeManagerOptions>;
   private pendingOperations: Map<number, Promise<CustomMode>> = new Map();
+  private cachedModes: Map<number, CustomMode> = new Map();
 
   constructor(options: CustomModeManagerOptions) {
     super();
@@ -117,7 +120,8 @@ export class CustomModeManager extends EventEmitter {
     });
 
     this.deviceManager.on('device:disconnected', () => {
-      // Cleanup on disconnect
+      this.clearCache();
+      this.emit('cache:cleared');
     });
   }
 
@@ -126,6 +130,12 @@ export class CustomModeManager extends EventEmitter {
    */
   async readMode(slot: CustomModeSlot): Promise<CustomMode> {
     this.validateSlot(slot);
+
+    // Check if we have a cached mode for this slot
+    const cached = this.cachedModes.get(slot);
+    if (cached) {
+      return cached;
+    }
 
     // Check if we have a pending operation for this slot
     const pending = this.pendingOperations.get(slot);
@@ -151,7 +161,10 @@ export class CustomModeManager extends EventEmitter {
    */
   private async performReadMode(slot: CustomModeSlot): Promise<CustomMode> {
     const response = await this.deviceManager.readCustomMode(slot);
-    return this.parseCustomModeResponse(slot, response);
+    const mode = this.parseCustomModeResponse(slot, response);
+    this.cachedModes.set(slot, mode);
+    this.emit('cache:updated', slot);
+    return mode;
   }
 
   /**
@@ -167,7 +180,11 @@ export class CustomModeManager extends EventEmitter {
     // Send to device
     await this.deviceManager.writeCustomMode(slot, deviceMode);
 
+    // Update cache with the original mode (not device format)
+    this.cachedModes.set(slot, mode);
+
     this.emit('mode:saved', slot, mode);
+    this.emit('cache:updated', slot);
   }
 
   /**
@@ -198,12 +215,20 @@ export class CustomModeManager extends EventEmitter {
         : Object.values(response.controls);
 
       for (const control of controlsArray) {
-        const controlId = this.getControlIdName(control.controlId);
-        const label = labelsMap.get(control.controlId);
+        const controlIdValue = control.controlId;
+
+        // Skip unknown control IDs (not in CONTROL_IDS)
+        const isKnownControl = Object.values(CONTROL_IDS).includes(controlIdValue);
+        if (!isKnownControl) {
+          continue; // Skip this control
+        }
+
+        const controlId = this.getControlIdName(controlIdValue);
+        const label = labelsMap.get(controlIdValue);
 
         mode.controls[controlId] = {
           name: label,
-          type: this.getControlType(control.controlId),
+          type: this.getControlType(controlIdValue),
           // Primary property names
           midiChannel: control.midiChannel,
           ccNumber: control.ccNumber,
@@ -236,14 +261,22 @@ export class CustomModeManager extends EventEmitter {
       const controlId = this.getControlIdValue(key);
       if (controlId !== undefined) {
         const ctrl = control as any;
+
+        // Read from primary property names first, fallback to legacy aliases
+        const midiChannel = ctrl.midiChannel ?? ctrl.channel ?? 0;
+        const ccNumber = ctrl.ccNumber ?? ctrl.cc ?? 0;
+        const minValue = ctrl.minValue ?? ctrl.min ?? 0;
+        const maxValue = ctrl.maxValue ?? ctrl.max ?? 127;
+        const behavior = ctrl.behavior ?? ctrl.behaviour ?? 'absolute';
+
         controls.push({
           controlId,
-          // Support both property names, prefer primary names
-          channel: ctrl.midiChannel ?? ctrl.channel,
-          ccNumber: ctrl.ccNumber ?? ctrl.cc,
-          minValue: ctrl.minValue ?? ctrl.min,
-          maxValue: ctrl.maxValue ?? ctrl.max,
-          behaviour: ctrl.behavior ?? ctrl.behaviour,
+          // Use primary property names for output
+          midiChannel,
+          ccNumber,
+          minValue,
+          maxValue,
+          behavior,
         });
 
         // Extract label if present
@@ -512,25 +545,25 @@ export class CustomModeManager extends EventEmitter {
    */
   cleanup(): void {
     this.pendingOperations.clear();
+    this.cachedModes.clear();
     this.removeAllListeners();
   }
 
   /**
-   * Clear the pending operations cache
+   * Clear the pending operations cache and cached modes
    */
   clearCache(): void {
     this.pendingOperations.clear();
+    this.cachedModes.clear();
   }
 
   /**
    * Get all cached modes
-   * Note: Current implementation doesn't maintain persistent cache beyond pending operations
+   * Returns a copy of the cached modes map to prevent external mutation
    * @returns Map of slot numbers to cached CustomMode objects
    */
   getCachedModes(): Map<number, CustomMode> {
-    // For now, return empty map as we don't persist cache beyond pendingOperations
-    // Future enhancement: Add persistent caching if needed
-    return new Map();
+    return new Map(this.cachedModes);
   }
 }
 

@@ -8,10 +8,8 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { SysExParser, MANUFACTURER_ID, SysExMessageType, DEVICE_FAMILY } from '@/core/SysExParser';
 import type { CustomModeMessage, SysExMessage } from '@/core/SysExParser';
-import { setupFakeTimers, createSysExMessage, assertSysExMessage } from '@/test/helpers/test-utils';
 
 describe('SysExParser', () => {
-  setupFakeTimers();
 
   // ===== buildNovationSyn() Tests =====
   describe('buildNovationSyn', () => {

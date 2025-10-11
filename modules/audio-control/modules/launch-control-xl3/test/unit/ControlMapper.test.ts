@@ -6,10 +6,10 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { ControlMapper, ValueTransformers, RelativeHandlers } from '@/src/mapping/ControlMapper.js';
-import { ControlMapping, ControlType, ControlBehaviour } from '@/src/types/index.js';
-import { MidiMessage } from '@/src/core/MidiInterface.js';
-import { setupFakeTimers, createControlChangeMessage } from '@/test/helpers/test-utils.js';
+import { ControlMapper, ValueTransformers, RelativeHandlers } from '@/mapping/ControlMapper';
+import { ControlMapping, ControlType, ControlBehaviour } from '@/types/index';
+import { MidiMessage } from '@/core/MidiInterface';
+import { setupFakeTimers, createControlChangeMessage } from '../helpers/test-utils';
 
 describe('ControlMapper', () => {
   setupFakeTimers();

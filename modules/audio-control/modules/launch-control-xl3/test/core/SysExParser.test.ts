@@ -412,7 +412,7 @@ describe('SysExParser', () => {
         data: []
       };
 
-      const message = SysExParser.buildCustomModeWriteRequest(0, modeData as any);
+      const message = SysExParser.buildCustomModeWriteRequest(0, 0, modeData as any);
 
       // Check SysEx boundaries
       expect(message[0]).toBe(0xF0);
@@ -441,7 +441,7 @@ describe('SysExParser', () => {
         data: []
       };
 
-      const message = SysExParser.buildCustomModeWriteRequest(0, modeData as any);
+      const message = SysExParser.buildCustomModeWriteRequest(0, 0, modeData as any);
 
       // Data header should be at position 10 (Phase 2: new format)
       expect(message.slice(10, 14)).toEqual([0x01, 0x20, 0x10, 0x2A]);
@@ -465,7 +465,7 @@ describe('SysExParser', () => {
         data: []
       };
 
-      const message = SysExParser.buildCustomModeWriteRequest(0, modeData as any);
+      const message = SysExParser.buildCustomModeWriteRequest(0, 0, modeData as any);
 
       // Find control definition (after header + data header + name)
       // Header(10) + DataHeader(4) + Name(4) = 18
@@ -504,7 +504,7 @@ describe('SysExParser', () => {
         data: []
       };
 
-      const message = SysExParser.buildCustomModeWriteRequest(0, modeData as any);
+      const message = SysExParser.buildCustomModeWriteRequest(0, 0, modeData as any);
       const messageStr = message.map(b => String.fromCharCode(b)).join('');
 
       // Should contain the actual control name
@@ -532,7 +532,7 @@ describe('SysExParser', () => {
         data: []
       };
 
-      const message = SysExParser.buildCustomModeWriteRequest(0, modeData as any);
+      const message = SysExParser.buildCustomModeWriteRequest(0, 0, modeData as any);
 
       // Should contain label marker
       expect(message).toContain(0x69);
@@ -561,7 +561,7 @@ describe('SysExParser', () => {
         data: []
       };
 
-      const message = SysExParser.buildCustomModeWriteRequest(0, modeData as any);
+      const message = SysExParser.buildCustomModeWriteRequest(0, 0, modeData as any);
 
       // Should contain color marker
       expect(message).toContain(0x60);
@@ -593,7 +593,7 @@ describe('SysExParser', () => {
         data: []
       };
 
-      const message = SysExParser.buildCustomModeWriteRequest(0, modeData as any);
+      const message = SysExParser.buildCustomModeWriteRequest(0, 0, modeData as any);
 
       // According to MIDI-PROTOCOL.md, complete messages are 400-500+ bytes
       // With 4 controls, labels, and colors, should be substantial
@@ -615,7 +615,7 @@ describe('SysExParser', () => {
           data: []
         };
 
-        const message = SysExParser.buildCustomModeWriteRequest(slot, modeData);
+        const message = SysExParser.buildCustomModeWriteRequest(slot, 0, modeData);
 
         // Check SysEx start and end
         expect(message[0]).toBe(0xF0); // SysEx start
@@ -644,7 +644,7 @@ describe('SysExParser', () => {
           data: []
         };
 
-        const message = SysExParser.buildCustomModeWriteRequest(0, modeData);
+        const message = SysExParser.buildCustomModeWriteRequest(0, 0, modeData);
 
         // Data should start at position 10 (after header) (Phase 2: new format)
         expect(message.slice(10, 14)).toEqual([0x01, 0x20, 0x10, 0x2A]);
@@ -664,7 +664,7 @@ describe('SysExParser', () => {
           data: []
         };
 
-        const message = SysExParser.buildCustomModeWriteRequest(0, modeData);
+        const message = SysExParser.buildCustomModeWriteRequest(0, 0, modeData);
 
         // Mode name should be at position 14 (after header + new 4-byte data header)
         const nameBytes = message.slice(14, 14 + modeName.length);
@@ -684,7 +684,7 @@ describe('SysExParser', () => {
           data: []
         };
 
-        const message = SysExParser.buildCustomModeWriteRequest(0, modeData);
+        const message = SysExParser.buildCustomModeWriteRequest(0, 0, modeData);
 
         // Check that up to 16 characters are encoded (Phase 2: new format)
         const nameBytes = message.slice(14, 30); // 4-byte header + 16 chars
@@ -716,7 +716,7 @@ describe('SysExParser', () => {
           data: []
         };
 
-        const message = SysExParser.buildCustomModeWriteRequest(0, modeData);
+        const message = SysExParser.buildCustomModeWriteRequest(0, 0, modeData);
 
         // Find the control definition (should start after header + data header + name)
         // Header(10) + DataHeader(4) + Name(4) = 18
@@ -758,7 +758,7 @@ describe('SysExParser', () => {
           data: []
         };
 
-        const message = SysExParser.buildCustomModeWriteRequest(0, modeData);
+        const message = SysExParser.buildCustomModeWriteRequest(0, 0, modeData);
 
         // Now the implementation includes ALL hardware controls, not just user-defined ones
         // Check that specific controls have the correct offset applied
@@ -799,7 +799,7 @@ describe('SysExParser', () => {
           data: []
         };
 
-        const message = SysExParser.buildCustomModeWriteRequest(0, modeData);
+        const message = SysExParser.buildCustomModeWriteRequest(0, 0, modeData);
 
         let position = 18; // After header + data header + name (Phase 2: 4-byte header)
 
@@ -838,7 +838,7 @@ describe('SysExParser', () => {
           data: []
         };
 
-        const message = SysExParser.buildCustomModeWriteRequest(0, modeData);
+        const message = SysExParser.buildCustomModeWriteRequest(0, 0, modeData);
 
         // Find label section (after ALL control definitions)
         // Header(10) + DataHeader(3) + Name(4) + AllControls(48*11) = 545
@@ -872,7 +872,7 @@ describe('SysExParser', () => {
           data: []
         };
 
-        const message = SysExParser.buildCustomModeWriteRequest(0, modeData);
+        const message = SysExParser.buildCustomModeWriteRequest(0, 0, modeData);
 
         // Find color section (after all controls + all labels)
         // Easier approach: search for the first 0x60 marker
@@ -906,7 +906,7 @@ describe('SysExParser', () => {
           data: []
         };
 
-        const message = SysExParser.buildCustomModeWriteRequest(0, modeData);
+        const message = SysExParser.buildCustomModeWriteRequest(0, 0, modeData);
 
         // Message should contain label markers (there might be extras from label text)
         const labelMarkers = message.filter(byte => byte === 0x69);
@@ -941,7 +941,7 @@ describe('SysExParser', () => {
           data: []
         };
 
-        const message = SysExParser.buildCustomModeWriteRequest(0, modeData);
+        const message = SysExParser.buildCustomModeWriteRequest(0, 0, modeData);
 
         // Verify key parts of the message structure
         expect(message[0]).toBe(0xF0); // Start
@@ -982,7 +982,7 @@ describe('SysExParser', () => {
           data: []
         };
 
-        const message = SysExParser.buildCustomModeWriteRequest(0, modeData);
+        const message = SysExParser.buildCustomModeWriteRequest(0, 0, modeData);
 
         // Check if the implementation correctly:
         // 1. Uses control names (not generic labels)
@@ -1011,8 +1011,8 @@ describe('SysExParser', () => {
           data: []
         };
 
-        expect(() => SysExParser.buildCustomModeWriteRequest(-1, modeData)).toThrow();
-        expect(() => SysExParser.buildCustomModeWriteRequest(16, modeData)).toThrow();
+        expect(() => SysExParser.buildCustomModeWriteRequest(-1, 0, modeData)).toThrow();
+        expect(() => SysExParser.buildCustomModeWriteRequest(16, 0, modeData)).toThrow();
       });
 
       it('should throw error if controls array is missing', () => {
@@ -1025,7 +1025,7 @@ describe('SysExParser', () => {
           // controls missing
         };
 
-        expect(() => SysExParser.buildCustomModeWriteRequest(0, modeData)).toThrow('controls array');
+        expect(() => SysExParser.buildCustomModeWriteRequest(0, 0, modeData)).toThrow('controls array');
       });
 
       it('should throw error if colors array is missing', () => {
@@ -1038,7 +1038,7 @@ describe('SysExParser', () => {
           // colors missing
         };
 
-        expect(() => SysExParser.buildCustomModeWriteRequest(0, modeData)).toThrow('colors array');
+        expect(() => SysExParser.buildCustomModeWriteRequest(0, 0, modeData)).toThrow('colors array');
       });
     });
   });
