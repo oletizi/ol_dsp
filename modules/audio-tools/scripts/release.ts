@@ -179,6 +179,10 @@ This installer is specifically tested with packages at version \`${version}\`. F
   execCommand(`tar -czf "${tarballPath}" --exclude node_modules --exclude dist --exclude '*.tsbuildinfo' --exclude .release-assets --exclude '*.tar.gz' .`, rootDir);
   console.log(`✓ Created ${tarballName}`);
 
+  // Get current branch name for --target flag
+  const currentBranch = execSync('git branch --show-current', { cwd: rootDir, encoding: 'utf-8' }).trim();
+  console.log(`\nCurrent branch: ${currentBranch}`);
+
   console.log(`\nCreating GitHub release ${tag}...`);
 
   // Check if release already exists
@@ -210,10 +214,11 @@ This installer is specifically tested with packages at version \`${version}\`. F
   writeFileSync(notesFile, notes, 'utf-8');
 
   try {
-    // Create release with multiple assets
+    // Create release with multiple assets, targeting current branch
     execCommand(
       `gh release create "${tag}" ` +
       `--title "${title}" ` +
+      `--target "${currentBranch}" ` +
       `--notes-file "${notesFile}" ` +
       `"${tarballPath}" ` +
       `"${installerAsset.path}#Installer Script" ` +
@@ -230,7 +235,7 @@ This installer is specifically tested with packages at version \`${version}\`. F
   } catch (error) {
     console.error('⚠️  Failed to create GitHub release');
     console.error('You can create it manually with:');
-    console.error(`  gh release create "${tag}" --title "${title}" --notes-file "${notesFile}" "${tarballPath}" "${installerAsset.path}" "${installerAsset.checksumPath}"`);
+    console.error(`  gh release create "${tag}" --title "${title}" --target "${currentBranch}" --notes-file "${notesFile}" "${tarballPath}" "${installerAsset.path}" "${installerAsset.checksumPath}"`);
     execCommand(`rm -f "${tarballPath}" "${notesFile}"`, rootDir);
     cleanupInstallerAssets(rootDir);
     throw error;
