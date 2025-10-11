@@ -1,6 +1,6 @@
 {
   "name": "@oletizi/audiotools-config",
-  "version": "1.0.0-alpha.44",
+  "version": "1.0.0-alpha.45",
   "description": "Shared configuration system for audio-tools",
   "type": "module",
   "main": "./dist/index.js",
