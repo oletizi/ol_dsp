@@ -12,4 +12,6 @@
 "@oletizi/sampler-attic": patch
 ---
 
-Fix GitHub release installer to use bootstrap script that downloads dependencies at runtime
+BREAKING CHANGE: Installer no longer auto-modifies npm config
+
+The installer will now fail gracefully with instructions instead of permanently changing your npm prefix without consent.
