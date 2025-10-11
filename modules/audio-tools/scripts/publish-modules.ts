@@ -9,12 +9,37 @@ interface PackageJson {
   private?: boolean;
 }
 
-function execCommand(command: string, cwd?: string): void {
+function getDistTag(version: string): string {
+  // Check if version has a prerelease identifier (e.g., 1.0.0-alpha.1)
+  const hasPrerelease = version.includes('-');
+
+  if (!hasPrerelease) {
+    return 'latest';
+  }
+
+  // Extract prerelease identifier (e.g., "alpha" from "1.0.0-alpha.1")
+  const prereleaseMatch = version.match(/-([a-z]+)/);
+  if (prereleaseMatch && prereleaseMatch[1]) {
+    const identifier = prereleaseMatch[1];
+    // Common prerelease identifiers
+    if (['alpha', 'beta', 'rc', 'next'].includes(identifier)) {
+      return identifier;
+    }
+    // Default to 'next' for other prerelease versions
+    return 'next';
+  }
+
+  return 'next';
+}
+
+function execCommand(command: string, cwd?: string, interactive: boolean = false): void {
   console.log(`\n→ ${command}`);
   execSync(command, {
     cwd,
-    stdio: 'inherit',
+    stdio: interactive ? 'inherit' : 'inherit',
     encoding: 'utf-8',
+    // Ensure stdin is available for interactive commands
+    ...(interactive ? { input: undefined } : {}),
   });
 }
 
@@ -23,7 +48,17 @@ function getPackages(rootDir: string): string[] {
   const packagePatterns = workspaceYaml
     .split('\n')
     .filter(line => line.trim().startsWith('-'))
-    .map(line => line.trim().replace(/^-\s*['"]?/, '').replace(/['"]?\s*$/, ''));
+    .map(line => {
+      // Remove leading '- ' and quotes, then strip inline comments
+      let pkg = line.trim().replace(/^-\s*['"]?/, '').replace(/['"]?\s*$/, '');
+      // Strip inline comments (# ...)
+      const commentIndex = pkg.indexOf('#');
+      if (commentIndex !== -1) {
+        pkg = pkg.substring(0, commentIndex).trim();
+      }
+      // Remove trailing quotes if any
+      return pkg.replace(/['"]$/, '');
+    });
 
   const packages: string[] = [];
   for (const pattern of packagePatterns) {
@@ -73,14 +108,18 @@ function publishModules(dryRun: boolean = false) {
       continue;
     }
 
+    const distTag = getDistTag(pkg.version);
+    const publishCmd = `pnpm publish --access public --tag ${distTag} --no-git-checks`;
+
     if (dryRun) {
       console.log(`\n  Would publish ${pkg.name}@${pkg.version}`);
-      console.log(`  → npm publish --access public (DRY RUN)`);
+      console.log(`  → ${publishCmd} (DRY RUN)`);
+      console.log(`  → dist-tag: ${distTag}`);
     } else {
-      console.log(`\n  Publishing ${pkg.name}@${pkg.version}...`);
+      console.log(`\n  Publishing ${pkg.name}@${pkg.version} with tag '${distTag}'...`);
       try {
-        execCommand('npm publish --access public', pkgPath);
-        console.log(`  ✓ ${pkg.name}@${pkg.version} published`);
+        execCommand(publishCmd, pkgPath);
+        console.log(`  ✓ ${pkg.name}@${pkg.version} published (tag: ${distTag})`);
       } catch (error) {
         console.error(`  ✗ Failed to publish ${pkg.name}`);
         throw error;
