@@ -176,10 +176,20 @@ This installer is specifically tested with packages at version \`${version}\`. F
   const tarballName = `audio-tools-${version}.tar.gz`;
   const tarballPath = join(rootDir, tarballName);
 
-  execCommand(`tar -czf "${tarballPath}" --exclude node_modules --exclude dist --exclude '*.tsbuildinfo' --exclude .release-assets .`, rootDir);
+  execCommand(`tar -czf "${tarballPath}" --exclude node_modules --exclude dist --exclude '*.tsbuildinfo' --exclude .release-assets --exclude '*.tar.gz' .`, rootDir);
   console.log(`✓ Created ${tarballName}`);
 
   console.log(`\nCreating GitHub release ${tag}...`);
+
+  // Check if release already exists
+  try {
+    execSync(`gh release view "${tag}"`, { stdio: 'ignore', encoding: 'utf-8' });
+    console.log(`⚠️  Release ${tag} already exists, deleting it first...`);
+    execSync(`gh release delete "${tag}" -y`, { stdio: 'inherit', encoding: 'utf-8' });
+    console.log(`✓ Deleted existing release ${tag}`);
+  } catch (error) {
+    // Release doesn't exist, continue
+  }
 
   // Write notes to temporary file to avoid shell escaping issues
   const notesFile = join(rootDir, '.release-notes.tmp');
