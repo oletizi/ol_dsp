@@ -175,7 +175,7 @@ describe('SysExParser', () => {
   // ===== buildCustomModeReadRequest() Tests =====
   describe('buildCustomModeReadRequest', () => {
     it('should build correct custom mode read request', () => {
-      const message = SysExParser.buildCustomModeReadRequest(3);
+      const message = SysExParser.buildCustomModeReadRequest(3, 0);
 
       expect(message).toEqual([
         0xF0,             // SysEx start
@@ -185,27 +185,27 @@ describe('SysExParser', () => {
         0x05,             // Sub-command
         0x00,             // Reserved
         0x40,             // Read operation
+        0x00,             // Page byte (0x00 for page 0)
         3,                // Slot number
-        0x00,             // Parameter
         0xF7              // SysEx end
       ]);
     });
 
     it('should handle slot boundaries', () => {
-      const slot0 = SysExParser.buildCustomModeReadRequest(0);
-      const slot15 = SysExParser.buildCustomModeReadRequest(15);
+      const slot0 = SysExParser.buildCustomModeReadRequest(0, 0);
+      const slot14 = SysExParser.buildCustomModeReadRequest(14, 0);
 
-      expect(slot0[9]).toBe(0); // Slot number at position 9
-      expect(slot15[9]).toBe(15);
+      expect(slot0[10]).toBe(0); // Slot number at position 10
+      expect(slot14[10]).toBe(14);
     });
 
     it('should validate slot range', () => {
-      expect(() => SysExParser.buildCustomModeReadRequest(-1)).toThrow('Custom mode slot must be 0-15');
-      expect(() => SysExParser.buildCustomModeReadRequest(16)).toThrow('Custom mode slot must be 0-15');
+      expect(() => SysExParser.buildCustomModeReadRequest(-1, 0)).toThrow('Custom mode slot must be 0-14');
+      expect(() => SysExParser.buildCustomModeReadRequest(15, 0)).toThrow('Custom mode slot must be 0-14');
     });
 
     it('should create valid SysEx format', () => {
-      const message = SysExParser.buildCustomModeReadRequest(5);
+      const message = SysExParser.buildCustomModeReadRequest(5, 0);
 
       expect(SysExParser.isValidSysEx(message)).toBe(true);
     });
@@ -300,7 +300,7 @@ describe('SysExParser', () => {
     };
 
     it('should build valid custom mode write request', () => {
-      const message = SysExParser.buildCustomModeWriteRequest(2, mockModeData);
+      const message = SysExParser.buildCustomModeWriteRequest(2, 0, mockModeData);
 
       expect(message[0]).toBe(0xF0); // SysEx start
       expect(message.slice(1, 4)).toEqual([0x00, 0x20, 0x29]); // Manufacturer ID
@@ -309,13 +309,14 @@ describe('SysExParser', () => {
       expect(message[6]).toBe(0x05); // Sub-command
       expect(message[7]).toBe(0x00); // Reserved
       expect(message[8]).toBe(0x45); // Write operation
-      expect(message[9]).toBe(2); // Slot number
+      expect(message[9]).toBe(0); // Page number
+      expect(message[10]).toBe(2); // Slot number
       expect(message[message.length - 1]).toBe(0xF7); // SysEx end
     });
 
     it('should validate slot range', () => {
-      expect(() => SysExParser.buildCustomModeWriteRequest(-1, mockModeData)).toThrow('Custom mode slot must be 0-15');
-      expect(() => SysExParser.buildCustomModeWriteRequest(16, mockModeData)).toThrow('Custom mode slot must be 0-15');
+      expect(() => SysExParser.buildCustomModeWriteRequest(-1, 0, mockModeData)).toThrow('Custom mode slot must be 0-14');
+      expect(() => SysExParser.buildCustomModeWriteRequest(15, 0, mockModeData)).toThrow('Custom mode slot must be 0-14');
     });
 
     it('should validate mode data before encoding', () => {
@@ -329,11 +330,11 @@ describe('SysExParser', () => {
         ]
       };
 
-      expect(() => SysExParser.buildCustomModeWriteRequest(0, invalidModeData)).toThrow('CC number must be 0-127');
+      expect(() => SysExParser.buildCustomModeWriteRequest(0, 0, invalidModeData)).toThrow('CC number must be 0-127');
     });
 
     it('should create valid SysEx format', () => {
-      const message = SysExParser.buildCustomModeWriteRequest(0, mockModeData);
+      const message = SysExParser.buildCustomModeWriteRequest(0, 0, mockModeData);
 
       expect(SysExParser.isValidSysEx(message)).toBe(true);
     });
@@ -690,8 +691,8 @@ describe('SysExParser', () => {
   // ===== Boundary Condition Tests =====
   describe('Boundary Conditions', () => {
     it('should handle maximum slot numbers', () => {
-      expect(() => SysExParser.buildCustomModeReadRequest(15)).not.toThrow();
-      expect(() => SysExParser.buildCustomModeReadRequest(0)).not.toThrow();
+      expect(() => SysExParser.buildCustomModeReadRequest(14, 0)).not.toThrow();
+      expect(() => SysExParser.buildCustomModeReadRequest(0, 0)).not.toThrow();
     });
 
     it('should handle maximum CC values', () => {
