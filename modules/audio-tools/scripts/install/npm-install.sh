@@ -106,72 +106,33 @@ verify_binaries() {
   done
 
   if [ ${#missing[@]} -gt 0 ]; then
-    warn "Binaries not found in PATH: ${missing[*]}"
+    error "Binaries not found in PATH: ${missing[*]}"
     echo ""
-    echo "Troubleshooting:"
+    echo "The audiotools CLI was installed but is not in your PATH."
     echo ""
-    echo "1. Check npm global bin directory:"
+    echo "To fix this:"
+    echo ""
+    echo "1. Check your npm global bin directory:"
     echo "   npm config get prefix"
     echo ""
-    echo "2. Add npm global bin directory to PATH:"
+    echo "2. Add npm global bin directory to PATH by adding this to your shell profile:"
     local npm_prefix
     npm_prefix=$(npm config get prefix --workspaces=false)
     echo "   export PATH=\"$npm_prefix/bin:\$PATH\""
     echo ""
-    echo "3. Add this to your shell profile (~/.bashrc, ~/.zshrc, etc.)"
+    echo "3. Add the above line to your shell profile file:"
+    echo "   - For zsh: ~/.zshrc"
+    echo "   - For bash: ~/.bashrc or ~/.bash_profile"
     echo ""
     echo "4. Reload your shell:"
     echo "   source ~/.bashrc  # or ~/.zshrc"
     echo ""
-
-    # Offer to add to PATH automatically
-    echo "Would you like to add the npm bin directory to your PATH now?"
-    read -p "[y/N]: " add_to_path
-    if [[ "$add_to_path" =~ ^[Yy] ]]; then
-      add_npm_to_path "$npm_prefix"
-    else
-      error "Installation incomplete. Please add npm bin directory to PATH and try again."
-    fi
+    echo "Then re-run this installer to complete the installation."
+    echo ""
+    exit 1
   fi
 
   success "CLI tools available: ${BINARIES[*]}"
-}
-
-# Add npm bin directory to PATH in user's shell profile
-add_npm_to_path() {
-  local npm_prefix=$1
-  local shell_profile
-
-  # Detect shell profile
-  if [ -n "${ZSH_VERSION:-}" ]; then
-    shell_profile="$HOME/.zshrc"
-  elif [ -n "${BASH_VERSION:-}" ]; then
-    if [ -f "$HOME/.bashrc" ]; then
-      shell_profile="$HOME/.bashrc"
-    else
-      shell_profile="$HOME/.bash_profile"
-    fi
-  else
-    shell_profile="$HOME/.profile"
-  fi
-
-  echo ""
-  echo "Adding npm bin directory to $shell_profile..."
-
-  # Check if already present
-  if grep -q "npm.*global.*bin" "$shell_profile" 2>/dev/null; then
-    echo "PATH already contains npm global bin directory"
-  else
-    # Add to profile
-    echo "" >> "$shell_profile"
-    echo "# Added by audio-tools installer" >> "$shell_profile"
-    echo "export PATH=\"$npm_prefix/bin:\$PATH\"" >> "$shell_profile"
-
-    success "Updated $shell_profile"
-    echo ""
-    echo "Please reload your shell or run:"
-    echo "  source $shell_profile"
-  fi
 }
 
 # Verify package installation by checking package.json files
