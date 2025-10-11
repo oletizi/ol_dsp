@@ -9,6 +9,66 @@ import {
   SysExMessageType,
   DEVICE_FAMILY
 } from '@/core/SysExParser';
+import { CONTROL_IDS } from '@/modes/CustomModeManager';
+
+/**
+ * Convert CustomMode format to CustomModeMessage format for testing
+ *
+ * Takes object-based controls (e.g., { SEND_A1: {...}, SEND_B2: {...} })
+ * and converts to array-based format with controlId properties that
+ * buildCustomModeWriteRequest expects.
+ */
+function convertToCustomModeMessage(mode: any, slot: number): any {
+  const controls: any[] = [];
+  const colors: any[] = [];
+  const labels = new Map<number, string>();
+
+  // Convert object-based controls to array-based
+  if (mode.controls) {
+    for (const [key, control] of Object.entries(mode.controls)) {
+      const controlId = (CONTROL_IDS as any)[key];
+      if (controlId !== undefined) {
+        controls.push({
+          controlId,
+          channel: (control as any).channel ?? (control as any).midiChannel,
+          ccNumber: (control as any).cc ?? (control as any).ccNumber,
+          minValue: (control as any).min ?? (control as any).minValue ?? 0,
+          maxValue: (control as any).max ?? (control as any).maxValue ?? 127,
+          behaviour: (control as any).behaviour ?? (control as any).behavior ?? 'absolute',
+        });
+
+        if ((control as any).name) {
+          labels.set(controlId, (control as any).name);
+        }
+      }
+    }
+  }
+
+  // Convert LED mappings to colors array
+  if (mode.leds) {
+    for (const [controlName, ledConfig] of mode.leds.entries()) {
+      const controlId = (CONTROL_IDS as any)[controlName];
+      if (controlId !== undefined) {
+        colors.push({
+          controlId,
+          color: (ledConfig as any).color,
+          behaviour: (ledConfig as any).behaviour ?? 'static',
+        });
+      }
+    }
+  }
+
+  return {
+    type: 'custom_mode_write',
+    manufacturerId: [0x00, 0x20, 0x29],
+    slot,
+    name: mode.name,
+    controls,
+    colors,
+    labels,
+    data: [],
+  };
+}
 
 describe('SysExParser', () => {
   describe('parse', () => {
@@ -545,7 +605,7 @@ describe('SysExParser', () => {
     describe('Message Structure', () => {
       it('should create a properly formatted SysEx message with correct header and footer', () => {
         const slot = 0;
-        const modeData: CustomModeMessage = {
+        const modeData: any = {
           type: 'custom_mode_response',
           manufacturerId: [0x00, 0x20, 0x29],
           slot,
@@ -574,7 +634,7 @@ describe('SysExParser', () => {
       });
 
       it('should include the data header (00 20 08) after the protocol header', () => {
-        const modeData: CustomModeMessage = {
+        const modeData: any = {
           type: 'custom_mode_response',
           manufacturerId: [0x00, 0x20, 0x29],
           slot: 0,
@@ -594,7 +654,7 @@ describe('SysExParser', () => {
     describe('Mode Name Encoding', () => {
       it('should encode the mode name as ASCII after the data header', () => {
         const modeName = 'CHANNEVE';
-        const modeData: CustomModeMessage = {
+        const modeData: any = {
           type: 'custom_mode_response',
           manufacturerId: [0x00, 0x20, 0x29],
           slot: 0,
@@ -614,7 +674,7 @@ describe('SysExParser', () => {
       });
 
       it('should limit mode name to 8 characters maximum', () => {
-        const modeData: CustomModeMessage = {
+        const modeData: any = {
           type: 'custom_mode_response',
           manufacturerId: [0x00, 0x20, 0x29],
           slot: 0,
@@ -636,7 +696,7 @@ describe('SysExParser', () => {
 
     describe('Control Encoding', () => {
       it('should encode controls with 0x49 marker and correct structure', () => {
-        const control: ControlMapping = {
+        const control: any = {
           controlId: 0x00, // Fader 1
           name: 'Volume',
           midiChannel: 0,
@@ -646,7 +706,7 @@ describe('SysExParser', () => {
           behaviour: 'absolute'
         };
 
-        const modeData: CustomModeMessage = {
+        const modeData: any = {
           type: 'custom_mode_response',
           manufacturerId: [0x00, 0x20, 0x29],
           slot: 0,
@@ -681,14 +741,14 @@ describe('SysExParser', () => {
       });
 
       it('should apply correct control ID offset (+0x28) for all controls', () => {
-        const controls: ControlMapping[] = [
+        const controls: any[] = [
           { controlId: 0x00, ccNumber: 1 }, // Fader 1
           { controlId: 0x10, ccNumber: 2 }, // Top encoder 1
           { controlId: 0x18, ccNumber: 3 }, // Mid encoder 1
           { controlId: 0x20, ccNumber: 4 }, // Bot encoder 1
         ];
 
-        const modeData: CustomModeMessage = {
+        const modeData: any = {
           type: 'custom_mode_response',
           manufacturerId: [0x00, 0x20, 0x29],
           slot: 0,
@@ -722,14 +782,14 @@ describe('SysExParser', () => {
       });
 
       it('should use correct control type values based on hardware position', () => {
-        const controls: ControlMapping[] = [
+        const controls: any[] = [
           { controlId: 0x00 }, // Fader - should use type 0x00
           { controlId: 0x10 }, // Top encoder - should use type 0x05
           { controlId: 0x18 }, // Mid encoder - should use type 0x09
           { controlId: 0x20 }, // Bot encoder - should use type 0x0D
         ];
 
-        const modeData: CustomModeMessage = {
+        const modeData: any = {
           type: 'custom_mode_response',
           manufacturerId: [0x00, 0x20, 0x29],
           slot: 0,
@@ -762,13 +822,13 @@ describe('SysExParser', () => {
 
     describe('Label and Color Data', () => {
       it('should include label data with 0x69 marker and control names', () => {
-        const control: ControlMapping = {
+        const control: any = {
           controlId: 0x00,
           name: 'Volume',
           ccNumber: 77
         };
 
-        const modeData: CustomModeMessage = {
+        const modeData: any = {
           type: 'custom_mode_response',
           manufacturerId: [0x00, 0x20, 0x29],
           slot: 0,
@@ -796,13 +856,13 @@ describe('SysExParser', () => {
       });
 
       it('should include color data with 0x60 marker', () => {
-        const control: ControlMapping = {
+        const control: any = {
           controlId: 0x00,
           name: 'Vol',
           ccNumber: 77
         };
 
-        const modeData: CustomModeMessage = {
+        const modeData: any = {
           type: 'custom_mode_response',
           manufacturerId: [0x00, 0x20, 0x29],
           slot: 0,
@@ -826,7 +886,7 @@ describe('SysExParser', () => {
       });
 
       it('should include labels and colors for all controls', () => {
-        const controls: ControlMapping[] = [
+        const controls: any[] = [
           { controlId: 0x00, name: 'Vol1', ccNumber: 1 },
           { controlId: 0x01, name: 'Vol2', ccNumber: 2 },
         ];
@@ -836,7 +896,7 @@ describe('SysExParser', () => {
           { controlId: 0x01, color: 0x0D },
         ];
 
-        const modeData: CustomModeMessage = {
+        const modeData: any = {
           type: 'custom_mode_response',
           manufacturerId: [0x00, 0x20, 0x29],
           slot: 0,
@@ -861,7 +921,7 @@ describe('SysExParser', () => {
     describe('Complete Message Validation', () => {
       it('should generate a message matching the CHANNEVE example structure', () => {
         // Create controls matching the CHANNEVE example from MIDI-PROTOCOL.md
-        const controls: ControlMapping[] = [
+        const controls: any[] = [
           { controlId: 0x10, name: 'Mic Gain', midiChannel: 0, ccNumber: 13 }, // Top encoder 1
           { controlId: 0x11, name: 'Reverb', midiChannel: 0, ccNumber: 14 },   // Top encoder 2
         ];
@@ -871,7 +931,7 @@ describe('SysExParser', () => {
           { controlId: 0x11, color: 0x60 },
         ];
 
-        const modeData: CustomModeMessage = {
+        const modeData: any = {
           type: 'custom_mode_response',
           manufacturerId: [0x00, 0x20, 0x29],
           slot: 0,
@@ -905,14 +965,14 @@ describe('SysExParser', () => {
 
       it('should fail if current implementation is incorrect', () => {
         // This test documents known issues with the current implementation
-        const control: ControlMapping = {
+        const control: any = {
           controlId: 0x00,
           name: 'TestControl',
           midiChannel: 5,
           ccNumber: 64
         };
 
-        const modeData: CustomModeMessage = {
+        const modeData: any = {
           type: 'custom_mode_response',
           manufacturerId: [0x00, 0x20, 0x29],
           slot: 0,
@@ -941,7 +1001,7 @@ describe('SysExParser', () => {
 
     describe('Error Handling', () => {
       it('should throw error for invalid slot numbers', () => {
-        const modeData: CustomModeMessage = {
+        const modeData: any = {
           type: 'custom_mode_response',
           manufacturerId: [0x00, 0x20, 0x29],
           slot: 0,

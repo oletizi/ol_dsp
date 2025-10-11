@@ -348,6 +348,9 @@ export class SysExParser {
   /**
    * Phase 1 Fix: Enhanced name parsing with factory fallback handling
    * Handles both custom names and factory format fallbacks (06 20 1F pattern)
+   *
+   * BUGFIX (2025-10-11): Stop reading at marker byte boundaries (0x48, 0x49, 0x60, 0x69, 0xF7)
+   * to prevent including control/label/color markers in mode name.
    */
   private static parseName(data: number[]): string | undefined {
     let nameStart = -1;
@@ -409,18 +412,30 @@ export class SysExParser {
         }
       } else {
         // Fall back to terminator-based parsing for formats without length
+        // BUGFIX: Check for marker bytes BEFORE adding to nameBytes
         for (let i = nameStart; i < data.length; i++) {
           const byte = data[i];
 
           if (byte === undefined) break;
 
-          // Stop at control structure patterns
-          if (byte === 0x49 && i < data.length - 2) {
-            const next1 = data[i + 1];
-            const next2 = data[i + 2];
-            if (next1 === 0x21 && next2 === 0x00) {
-              break;
-            }
+          // Stop at control marker bytes (0x48, 0x49)
+          if (byte === 0x48 || byte === 0x49) {
+            break;
+          }
+
+          // Stop at label marker byte (0x69)
+          if (byte === 0x69) {
+            break;
+          }
+
+          // Stop at color marker byte (0x60)
+          if (byte === 0x60) {
+            break;
+          }
+
+          // Stop at end of message (0xF7)
+          if (byte === 0xF7) {
+            break;
           }
 
           // Stop at terminator 0x21 (!)

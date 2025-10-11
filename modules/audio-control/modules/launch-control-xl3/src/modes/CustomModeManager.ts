@@ -204,11 +204,18 @@ export class CustomModeManager extends EventEmitter {
         mode.controls[controlId] = {
           name: label,
           type: this.getControlType(control.controlId),
+          // Primary property names
           midiChannel: control.midiChannel,
           ccNumber: control.ccNumber,
           minValue: control.minValue,
           maxValue: control.maxValue,
           behavior: control.behavior as ControlBehaviour,
+          // Legacy aliases for backward compatibility
+          channel: control.midiChannel,
+          cc: control.ccNumber,
+          min: control.minValue,
+          max: control.maxValue,
+          behaviour: control.behavior as ControlBehaviour,
         };
       }
     }
@@ -355,6 +362,13 @@ export class CustomModeManager extends EventEmitter {
       const key = `SEND_A${i + 1}`;
       mode.controls[key] = {
         type: 'knob',
+        // Primary property names
+        midiChannel: 0,
+        ccNumber: 13 + i,
+        minValue: 0,
+        maxValue: 127,
+        behavior: 'absolute',
+        // Legacy aliases for backward compatibility
         channel: 0,
         cc: 13 + i,
         min: 0,
@@ -368,6 +382,13 @@ export class CustomModeManager extends EventEmitter {
       const key = `SEND_B${i + 1}`;
       mode.controls[key] = {
         type: 'knob',
+        // Primary property names
+        midiChannel: 0,
+        ccNumber: 29 + i,
+        minValue: 0,
+        maxValue: 127,
+        behavior: 'absolute',
+        // Legacy aliases for backward compatibility
         channel: 0,
         cc: 29 + i,
         min: 0,
@@ -381,6 +402,13 @@ export class CustomModeManager extends EventEmitter {
       const key = `PAN${i + 1}`;
       mode.controls[key] = {
         type: 'knob',
+        // Primary property names
+        midiChannel: 0,
+        ccNumber: 49 + i,
+        minValue: 0,
+        maxValue: 127,
+        behavior: 'absolute',
+        // Legacy aliases for backward compatibility
         channel: 0,
         cc: 49 + i,
         min: 0,
@@ -394,6 +422,13 @@ export class CustomModeManager extends EventEmitter {
       const key = `FADER${i + 1}`;
       mode.controls[key] = {
         type: 'fader',
+        // Primary property names
+        midiChannel: 0,
+        ccNumber: 77 + i,
+        minValue: 0,
+        maxValue: 127,
+        behavior: 'absolute',
+        // Legacy aliases for backward compatibility
         channel: 0,
         cc: 77 + i,
         min: 0,
@@ -478,6 +513,24 @@ export class CustomModeManager extends EventEmitter {
   cleanup(): void {
     this.pendingOperations.clear();
     this.removeAllListeners();
+  }
+
+  /**
+   * Clear the pending operations cache
+   */
+  clearCache(): void {
+    this.pendingOperations.clear();
+  }
+
+  /**
+   * Get all cached modes
+   * Note: Current implementation doesn't maintain persistent cache beyond pending operations
+   * @returns Map of slot numbers to cached CustomMode objects
+   */
+  getCachedModes(): Map<number, CustomMode> {
+    // For now, return empty map as we don't persist cache beyond pendingOperations
+    // Future enhancement: Add persistent caching if needed
+    return new Map();
   }
 }
 
