@@ -191,6 +191,20 @@ This installer is specifically tested with packages at version \`${version}\`. F
     // Release doesn't exist, continue
   }
 
+  // Delete existing git tag (local and remote) to ensure new release creates tag from current branch
+  try {
+    execSync(`git tag -d "${tag}"`, { stdio: 'ignore', encoding: 'utf-8' });
+    console.log(`✓ Deleted local tag ${tag}`);
+  } catch (error) {
+    // Tag doesn't exist locally
+  }
+  try {
+    execSync(`git push origin :refs/tags/"${tag}"`, { stdio: 'ignore', encoding: 'utf-8' });
+    console.log(`✓ Deleted remote tag ${tag}`);
+  } catch (error) {
+    // Tag doesn't exist on remote
+  }
+
   // Write notes to temporary file to avoid shell escaping issues
   const notesFile = join(rootDir, '.release-notes.tmp');
   writeFileSync(notesFile, notes, 'utf-8');
