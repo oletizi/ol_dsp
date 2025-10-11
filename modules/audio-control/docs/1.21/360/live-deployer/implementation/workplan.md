@@ -9,6 +9,15 @@
 **Completed:** 2025-10-06
 **Priority:** High - Blocking one-click deployment workflow
 
+## Related Documentation
+
+- **[360 Overview](../../README.md)** - Feature 360 master navigation
+- **[Architecture](../../architecture.md)** - Overall 360 architecture and design patterns
+- **[Main Workplan](../../implementation/workplan.md)** - Controller-workflow module implementation
+- **[LiveDeployer Architecture](../architecture.md)** - Dual-pipeline architecture summary
+- **[Implementation Status](../../status.md)** - Current progress tracking
+- **[Workflow Guide](../../workflow.md)** - User workflows and deployment examples
+
 ---
 
 ## Executive Summary
@@ -983,10 +992,19 @@ The dual-pipeline mapping architecture is **ready for production use**:
 
 ## Related Documentation
 
-- [Mapping Sources Architecture](/Users/orion/work/ol_dsp-audio-control/modules/audio-control/modules/live-max-cc-router/docs/architecture/mapping-sources.md)
-- [live-max-cc-router README](/Users/orion/work/ol_dsp-audio-control/modules/audio-control/modules/live-max-cc-router/README.md)
-- [Controller Workflow README](/Users/orion/work/ol_dsp-audio-control/modules/audio-control/modules/controller-workflow/README.md)
-- [Overall Architecture Plan](/Users/orion/work/ol_dsp-audio-control/modules/audio-control/docs/1.21/360/implementation/workplan.md)
+### Feature 360 Documentation
+- **[360 Overview](../../README.md)** - Master navigation and quick reference
+- **[Architecture](../../architecture.md)** - System architecture and design patterns
+- **[Main Workplan](../../implementation/workplan.md)** - Controller-workflow implementation plan
+- **[LiveDeployer Architecture](../architecture.md)** - Dual-pipeline architecture summary
+- **[Implementation Status](../../status.md)** - Current progress tracking
+- **[Workflow Guide](../../workflow.md)** - Complete user workflows
+- **[Goal Document](../../goal.md)** - Original feature requirements
+
+### Module Documentation
+- [Mapping Sources Architecture (Detailed)](../../../../modules/live-max-cc-router/docs/architecture/mapping-sources.md)
+- [live-max-cc-router README](../../../../modules/live-max-cc-router/README.md)
+- [controller-workflow README](../../../../modules/controller-workflow/README.md)
 
 ---
 
@@ -1046,8 +1064,10 @@ The dual-pipeline mapping architecture is **ready for production use**:
 |---------|------|---------|
 | 1.0 | 2025-10-05 | Initial workplan created |
 | 1.1 | 2025-10-06 | Phase 2 completed, dual-pipeline documented |
+| 1.2 | 2025-10-11 | Cross-references added to consolidated 360 documentation |
 
 ---
 
+**Last Updated:** 2025-10-11 (cross-references added)
 **Maintained by:** Audio Control Monorepo Team
-**Questions:** See controller-workflow module documentation
+**Questions:** See [360 Overview](../../README.md) for navigation to all documentation

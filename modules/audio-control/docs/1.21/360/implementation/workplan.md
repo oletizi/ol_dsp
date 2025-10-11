@@ -5,6 +5,14 @@
 **Status:** Planning → Implementation
 **Created:** 2025-10-05
 
+## Related Documentation
+
+- **[360 Overview](../README.md)** - Feature 360 master navigation
+- **[Architecture](../architecture.md)** - Overall 360 architecture
+- **[Workflow Guide](../workflow.md)** - User workflows and CLI usage
+- **[Implementation Status](../status.md)** - Current progress tracking
+- **[LiveDeployer Architecture](../live-deployer/architecture.md)** - Dual-pipeline mapping system
+
 ## Overview
 
 Create a new **`controller-workflow`** module that provides a generalized framework for:
@@ -1120,16 +1128,25 @@ export class LiveDeployer implements DAWDeployerInterface {
 
 ## References
 
+### Feature 360 Documentation
+- **[360 Overview](../README.md)** - Master navigation and quick reference
+- **[Architecture](../architecture.md)** - System architecture and design patterns
+- **[Workflow Guide](../workflow.md)** - Complete 3-phase workflow
+- **[Implementation Status](../status.md)** - Current progress and tracking
+- **[LiveDeployer Architecture](../live-deployer/architecture.md)** - Dual-pipeline mapping system
+- **[Goal Document](../goal.md)** - Original feature vision and requirements
+
 ### Related Modules
 - `@oletizi/launch-control-xl3` - Device library
 - `@oletizi/canonical-midi-maps` - Canonical format
 - `@oletizi/ardour-midi-maps` - Ardour deployment
 - `@oletizi/live-max-cc-router` - Live integration
 
-### Documentation
-- [Launch Control XL3 README](../../modules/launch-control-xl3/README.md)
-- [Canonical MIDI Maps README](../../modules/canonical-midi-maps/README.md)
-- [Ardour MIDI Maps README](../../modules/ardour-midi-maps/README.md)
+### Module Documentation
+- [Launch Control XL3 README](../../../modules/launch-control-xl3/README.md)
+- [Canonical MIDI Maps README](../../../modules/canonical-midi-maps/README.md)
+- [Ardour MIDI Maps README](../../../modules/ardour-midi-maps/README.md)
+- [Live Max CC Router README](../../../modules/live-max-cc-router/README.md)
 
 ### External Resources
 - [Ardour MIDI Binding Documentation](https://manual.ardour.org/using-control-surfaces/generic-midi/)
@@ -1137,6 +1154,6 @@ export class LiveDeployer implements DAWDeployerInterface {
 
 ---
 
-**Last Updated:** 2025-10-05
+**Last Updated:** 2025-10-11 (cross-references added)
 **Author:** Claude Code AI Assistant
 **Status:** Ready for Implementation
