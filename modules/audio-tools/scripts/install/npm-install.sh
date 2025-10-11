@@ -16,8 +16,6 @@ readonly PACKAGES=(
 # Binary verification list
 readonly BINARIES=(
   "audiotools"
-  "akai-backup"
-  "akai-extract"
 )
 
 # Install all audio-tools packages globally

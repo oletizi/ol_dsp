@@ -13,9 +13,6 @@
   "module": "./dist/lib/index.mjs",
   "types": "./dist/lib/index.d.ts",
   "type": "module",
-  "bin": {
-    "akai-extract": "./dist/cli/extract.cjs"
-  },
   "files": [
     "dist",
     "bin",

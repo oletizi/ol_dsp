@@ -11,10 +11,6 @@
   },
   "types": "./dist/lib/index.d.ts",
   "type": "module",
-  "bin": {
-    "akai-backup": "./dist/cli/backup.js",
-    "sampler-migrate": "./dist/cli/migrate.js"
-  },
   "files": [
     "dist",
     "LICENSE"
