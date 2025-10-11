@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.0.0-alpha.44
+
+### Patch Changes
+
+- Test release - validating release automation
+- Updated dependencies
+  - @oletizi/audiotools-config@1.0.0-alpha.44
+  - @oletizi/sampler-lib@1.0.0-alpha.44
+  - @oletizi/sampler-devices@1.0.0-alpha.44
+  - @oletizi/lib-device-uuid@1.0.0-alpha.44
+
 ## 1.0.0-alpha.43
 
 ### Patch Changes

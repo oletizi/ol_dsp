@@ -1,5 +1,11 @@
 # @oletizi/audiotools-config
 
+## 1.0.0-alpha.44
+
+### Patch Changes
+
+- Test release - validating release automation
+
 ## 1.0.0-alpha.43
 
 ### Patch Changes

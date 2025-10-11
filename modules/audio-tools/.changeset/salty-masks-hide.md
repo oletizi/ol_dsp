@@ -12,6 +12,4 @@
 "@oletizi/sampler-attic": patch
 ---
 
-BREAKING CHANGE: Installer no longer auto-modifies npm config
-
-The installer will now fail gracefully with instructions instead of permanently changing your npm prefix without consent.
+Test release - validating release automation

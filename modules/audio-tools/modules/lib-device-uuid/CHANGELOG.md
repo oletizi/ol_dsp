@@ -1,5 +1,13 @@
 # @oletizi/lib-device-uuid
 
+## 1.0.0-alpha.44
+
+### Patch Changes
+
+- Test release - validating release automation
+- Updated dependencies
+  - @oletizi/sampler-lib@1.0.0-alpha.44
+
 ## 1.0.0-alpha.43
 
 ### Patch Changes
