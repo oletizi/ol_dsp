@@ -6,11 +6,10 @@
  */
 
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { ArdourDeployer } from '@/adapters/daws/ArdourDeployer.js';
+import { ArdourDeployer, type PlatformProvider } from '@/adapters/daws/ArdourDeployer.js';
 import type { CanonicalMidiMap, ControlDefinition } from '@oletizi/canonical-midi-maps';
 import type { DeploymentOptions } from '@/types/daw-deployer.js';
 import * as fs from 'node:fs/promises';
-import * as os from 'node:os';
 
 // Mock file system operations
 vi.mock('node:fs/promises', () => ({
@@ -228,8 +227,11 @@ describe('ArdourDeployer', () => {
 
   describe('getConfigDirectory', () => {
     it('should return macOS path on darwin platform', async () => {
-      vi.spyOn(os, 'platform').mockReturnValue('darwin');
-      vi.spyOn(os, 'homedir').mockReturnValue('/Users/test');
+      const mockPlatformProvider: PlatformProvider = {
+        platform: () => 'darwin',
+        homedir: () => '/Users/test',
+      };
+      const deployer = ArdourDeployer.create(mockPlatformProvider);
 
       const configDir = await deployer.getConfigDirectory();
 
@@ -237,8 +239,11 @@ describe('ArdourDeployer', () => {
     });
 
     it('should return Linux path on linux platform', async () => {
-      vi.spyOn(os, 'platform').mockReturnValue('linux');
-      vi.spyOn(os, 'homedir').mockReturnValue('/home/test');
+      const mockPlatformProvider: PlatformProvider = {
+        platform: () => 'linux',
+        homedir: () => '/home/test',
+      };
+      const deployer = ArdourDeployer.create(mockPlatformProvider);
 
       const configDir = await deployer.getConfigDirectory();
 
@@ -246,27 +251,40 @@ describe('ArdourDeployer', () => {
     });
 
     it('should return Windows path on win32 platform', async () => {
-      vi.spyOn(os, 'platform').mockReturnValue('win32');
-      vi.spyOn(os, 'homedir').mockReturnValue('C:\\Users\\test');
+      const mockPlatformProvider: PlatformProvider = {
+        platform: () => 'win32',
+        homedir: () => 'C:\\Users\\test',
+      };
+      const deployer = ArdourDeployer.create(mockPlatformProvider);
       process.env['APPDATA'] = 'C:\\Users\\test\\AppData\\Roaming';
 
       const configDir = await deployer.getConfigDirectory();
 
-      expect(configDir).toBe('C:\\Users\\test\\AppData\\Roaming\\Ardour8\\midi_maps');
+      // On non-Windows hosts, path.join uses forward slashes, so we normalize for comparison
+      expect(configDir.replace(/\//g, '\\')).toBe('C:\\Users\\test\\AppData\\Roaming\\Ardour8\\midi_maps');
     });
 
     it('should use fallback path when APPDATA not set on Windows', async () => {
-      vi.spyOn(os, 'platform').mockReturnValue('win32');
-      vi.spyOn(os, 'homedir').mockReturnValue('C:\\Users\\test');
+      const mockPlatformProvider: PlatformProvider = {
+        platform: () => 'win32',
+        homedir: () => 'C:\\Users\\test',
+      };
+      const deployer = ArdourDeployer.create(mockPlatformProvider);
       delete process.env['APPDATA'];
 
       const configDir = await deployer.getConfigDirectory();
 
-      expect(configDir).toContain('AppData\\Roaming\\Ardour8\\midi_maps');
+      // Normalize path separators for cross-platform testing
+      const normalizedPath = configDir.replace(/\//g, '\\');
+      expect(normalizedPath).toContain('AppData\\Roaming\\Ardour8\\midi_maps');
     });
 
     it('should throw error for unsupported platform', async () => {
-      vi.spyOn(os, 'platform').mockReturnValue('aix' as NodeJS.Platform);
+      const mockPlatformProvider: PlatformProvider = {
+        platform: () => 'aix' as NodeJS.Platform,
+        homedir: () => '/home/test',
+      };
+      const deployer = ArdourDeployer.create(mockPlatformProvider);
 
       await expect(deployer.getConfigDirectory()).rejects.toThrow('Unsupported platform');
     });
@@ -441,7 +459,7 @@ describe('ArdourDeployer', () => {
       await deployer.deploy(mapWithChannels, options);
 
       const [, content] = vi.mocked(fs.writeFile).mock.calls[0];
-      expect(content).toContain('chn="5"');
+      expect(content).toContain('channel="5"');
     });
 
     it('should use map-level channel when control channel not specified', async () => {
@@ -468,7 +486,7 @@ describe('ArdourDeployer', () => {
       await deployer.deploy(mapWithDefaultChannel, options);
 
       const [, content] = vi.mocked(fs.writeFile).mock.calls[0];
-      expect(content).toContain('chn="7"');
+      expect(content).toContain('channel="7"');
     });
 
     it('should group controls by channel', async () => {
@@ -496,8 +514,8 @@ describe('ArdourDeployer', () => {
       expect(content).toContain('Novation Launch Control XL 3');
 
       // All channels should be present
-      expect(content).toContain('chn="0"');
-      expect(content).toContain('chn="1"');
+      expect(content).toContain('channel="0"');
+      expect(content).toContain('channel="1"');
     });
   });
 

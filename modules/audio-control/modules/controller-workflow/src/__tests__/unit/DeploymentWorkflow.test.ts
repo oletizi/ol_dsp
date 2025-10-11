@@ -5,7 +5,10 @@
  * Uses dependency injection for all components (no module stubbing).
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { mkdtemp, rm } from 'node:fs/promises';
 import { DeploymentWorkflow } from '@/orchestrator/DeploymentWorkflow.js';
 import type {
   ControllerAdapterInterface,
@@ -141,13 +144,27 @@ describe('DeploymentWorkflow', () => {
 
   describe('execute', () => {
     let workflow: DeploymentWorkflow;
+    let tempDir: string | undefined;
 
     beforeEach(async () => {
       workflow = await DeploymentWorkflow.create({
         controllerAdapter: mockAdapter,
+        converter: mockConverter,
         targets: ['ardour'],
         deployers,
       });
+    });
+
+    afterEach(async () => {
+      // Clean up temporary directory if it was created
+      if (tempDir) {
+        try {
+          await rm(tempDir, { recursive: true, force: true });
+        } catch (error) {
+          // Ignore cleanup errors
+        }
+        tempDir = undefined;
+      }
     });
 
     it('should execute complete workflow successfully', async () => {
@@ -282,31 +299,24 @@ describe('DeploymentWorkflow', () => {
     });
 
     it('should save canonical YAML when output directory specified', async () => {
-      // Mock file operations via the parser
-      vi.mock('@oletizi/canonical-midi-maps', async () => {
-        const actual = await vi.importActual('@oletizi/canonical-midi-maps');
-        return {
-          ...actual,
-          CanonicalMapParser: {
-            serializeToYAML: vi.fn().mockReturnValue('yaml: content'),
-          },
-        };
-      });
+      tempDir = await mkdtemp(join(tmpdir(), 'workflow-test-'));
 
       const options: WorkflowOptions = {
         configSlot: 0,
         targets: ['ardour'],
-        outputDir: '/test/output',
+        outputDir: tempDir,
       };
 
       const result = await workflow.execute(options);
 
       expect(result.canonicalPath).toBeDefined();
-      expect(result.canonicalPath).toContain('/test/output');
+      expect(result.canonicalPath).toContain(tempDir);
       expect(result.canonicalPath).toMatch(/\.yaml$/);
     });
 
     it('should emit canonical-saved event when YAML saved', async () => {
+      tempDir = await mkdtemp(join(tmpdir(), 'workflow-test-'));
+
       let savedEvent: CanonicalSavedEvent | undefined;
       workflow.on('canonical-saved', (event: CanonicalSavedEvent) => {
         savedEvent = event;
@@ -315,7 +325,7 @@ describe('DeploymentWorkflow', () => {
       const options: WorkflowOptions = {
         configSlot: 0,
         targets: ['ardour'],
-        outputDir: '/test/output',
+        outputDir: tempDir,
       };
 
       await workflow.execute(options);
@@ -344,6 +354,7 @@ describe('DeploymentWorkflow', () => {
 
       workflow = await DeploymentWorkflow.create({
         controllerAdapter: mockAdapter,
+        converter: mockConverter,
         targets: ['ardour', 'live'],
         deployers,
       });
@@ -361,10 +372,12 @@ describe('DeploymentWorkflow', () => {
     });
 
     it('should pass deployment options to deployers', async () => {
+      tempDir = await mkdtemp(join(tmpdir(), 'workflow-test-'));
+
       const options: WorkflowOptions = {
         configSlot: 0,
         targets: ['ardour'],
-        outputDir: '/test/output',
+        outputDir: tempDir,
         autoInstall: true,
         dryRun: false,
       };
@@ -375,7 +388,7 @@ describe('DeploymentWorkflow', () => {
         mockCanonicalMap,
         expect.objectContaining({
           autoInstall: true,
-          outputPath: expect.stringContaining('/test/output/ardour'),
+          outputPath: expect.stringContaining('/ardour'),
           dryRun: false,
         }),
       );
@@ -414,6 +427,10 @@ describe('DeploymentWorkflow', () => {
     });
 
     it('should handle controller read errors', async () => {
+      // Add error listener to prevent unhandled error event
+      const errorHandler = vi.fn();
+      workflow.on('error', errorHandler);
+
       mockAdapter.readConfiguration.mockRejectedValue(new Error('SysEx timeout'));
 
       const options: WorkflowOptions = {
@@ -426,9 +443,14 @@ describe('DeploymentWorkflow', () => {
       expect(result.success).toBe(false);
       expect(result.errors).toContain('SysEx timeout');
       expect(result.controllerConfig).toBeUndefined();
+      expect(errorHandler).toHaveBeenCalled();
     });
 
     it('should handle empty configuration', async () => {
+      // Add error listener to prevent unhandled error event
+      const errorHandler = vi.fn();
+      workflow.on('error', errorHandler);
+
       mockAdapter.readConfiguration.mockResolvedValue({
         name: 'Empty',
         controls: [],
@@ -443,9 +465,14 @@ describe('DeploymentWorkflow', () => {
 
       expect(result.success).toBe(false);
       expect(result.errors.some(e => e.includes('No valid configuration'))).toBe(true);
+      expect(errorHandler).toHaveBeenCalled();
     });
 
     it('should handle conversion errors', async () => {
+      // Add error listener to prevent unhandled error event
+      const errorHandler = vi.fn();
+      workflow.on('error', errorHandler);
+
       mockConverter.canConvert.mockReturnValue(false);
 
       const options: WorkflowOptions = {
@@ -457,6 +484,7 @@ describe('DeploymentWorkflow', () => {
 
       expect(result.success).toBe(false);
       expect(result.errors.some(e => e.includes('cannot be converted'))).toBe(true);
+      expect(errorHandler).toHaveBeenCalled();
     });
 
     it('should emit error event on failure', async () => {
@@ -513,6 +541,7 @@ describe('DeploymentWorkflow', () => {
 
       workflow = await DeploymentWorkflow.create({
         controllerAdapter: mockAdapter,
+        converter: mockConverter,
         targets: ['ardour', 'live'],
         deployers,
       });
@@ -530,13 +559,15 @@ describe('DeploymentWorkflow', () => {
     });
 
     it('should sanitize canonical filename from map name', async () => {
+      tempDir = await mkdtemp(join(tmpdir(), 'workflow-test-'));
+
       mockCanonicalMap.metadata.name = 'Test Map (Special #1)';
       mockConverter.convert.mockReturnValue(mockCanonicalMap);
 
       const options: WorkflowOptions = {
         configSlot: 0,
         targets: ['ardour'],
-        outputDir: '/test/output',
+        outputDir: tempDir,
       };
 
       const result = await workflow.execute(options);
@@ -579,6 +610,7 @@ describe('DeploymentWorkflow', () => {
     beforeEach(async () => {
       workflow = await DeploymentWorkflow.create({
         controllerAdapter: mockAdapter,
+        converter: mockConverter,
         targets: ['ardour'],
         deployers,
       });

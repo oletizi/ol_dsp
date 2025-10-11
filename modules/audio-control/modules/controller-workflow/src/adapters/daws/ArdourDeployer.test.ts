@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { ArdourDeployer } from './ArdourDeployer.js';
+import { ArdourDeployer, type PlatformProvider } from './ArdourDeployer.js';
 import type { CanonicalMidiMap } from '@oletizi/canonical-midi-maps';
 
 describe('ArdourDeployer', () => {
@@ -56,47 +56,58 @@ describe('ArdourDeployer', () => {
 
   describe('Platform detection', () => {
     it('should return correct path for macOS', async () => {
-      vi.stubGlobal('process', { ...process, platform: 'darwin' });
+      const mockPlatformProvider: PlatformProvider = {
+        platform: () => 'darwin',
+        homedir: () => '/Users/test',
+      };
+      const deployer = ArdourDeployer.create(mockPlatformProvider);
 
       const path = await deployer.getConfigDirectory();
       expect(path).toContain('Library/Application Support/Ardour8/midi_maps');
-
-      vi.unstubAllGlobals();
     });
 
     it('should return correct path for Linux', async () => {
-      vi.stubGlobal('process', { ...process, platform: 'linux' });
+      const mockPlatformProvider: PlatformProvider = {
+        platform: () => 'linux',
+        homedir: () => '/home/test',
+      };
+      const deployer = ArdourDeployer.create(mockPlatformProvider);
 
       const path = await deployer.getConfigDirectory();
       expect(path).toContain('.config/ardour8/midi_maps');
-
-      vi.unstubAllGlobals();
     });
 
     it('should return correct path for Windows', async () => {
-      vi.stubGlobal('process', { ...process, platform: 'win32', env: { APPDATA: 'C:\\Users\\Test\\AppData\\Roaming' } });
+      const mockPlatformProvider: PlatformProvider = {
+        platform: () => 'win32',
+        homedir: () => 'C:\\Users\\test',
+      };
+      const deployer = ArdourDeployer.create(mockPlatformProvider);
+      process.env['APPDATA'] = 'C:\\Users\\Test\\AppData\\Roaming';
 
       const path = await deployer.getConfigDirectory();
       expect(path).toContain('Ardour8');
       expect(path).toContain('midi_maps');
-
-      vi.unstubAllGlobals();
     });
 
     it('should throw error for unsupported platform', async () => {
-      vi.stubGlobal('process', { ...process, platform: 'freebsd' });
+      const mockPlatformProvider: PlatformProvider = {
+        platform: () => 'freebsd' as NodeJS.Platform,
+        homedir: () => '/home/test',
+      };
+      const deployer = ArdourDeployer.create(mockPlatformProvider);
 
       await expect(deployer.getConfigDirectory()).rejects.toThrow('Unsupported platform');
-
-      vi.unstubAllGlobals();
     });
 
     it('should throw error for unknown platform', async () => {
-      vi.stubGlobal('process', { ...process, platform: 'unknown' });
+      const mockPlatformProvider: PlatformProvider = {
+        platform: () => 'unknown' as NodeJS.Platform,
+        homedir: () => '/home/test',
+      };
+      const deployer = ArdourDeployer.create(mockPlatformProvider);
 
       await expect(deployer.getConfigDirectory()).rejects.toThrow('Unsupported platform');
-
-      vi.unstubAllGlobals();
     });
   });
 

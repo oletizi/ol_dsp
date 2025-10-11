@@ -112,13 +112,21 @@ describe('DeploymentWorkflow', () => {
     });
   });
 
+  const createWorkflow = async (options: Partial<{
+    targets: string[];
+    deployers: Map<string, DAWDeployerInterface>;
+  }> = {}) => {
+    return DeploymentWorkflow.create({
+      controllerAdapter: mockAdapter,
+      converter: mockConverter,
+      targets: options.targets ?? ['testdaw'],
+      deployers: options.deployers ?? new Map([['testdaw', mockDeployer]]),
+    });
+  };
+
   describe('Workflow execution', () => {
     it('should execute complete workflow successfully', async () => {
-      workflow = await DeploymentWorkflow.create({
-        controllerAdapter: mockAdapter,
-        targets: ['testdaw'],
-        deployers: new Map([['testdaw', mockDeployer]]),
-      });
+      workflow = await createWorkflow();
 
       const result = await workflow.execute({
         configSlot: 0,
@@ -134,11 +142,7 @@ describe('DeploymentWorkflow', () => {
     });
 
     it('should read configuration from correct slot', async () => {
-      workflow = await DeploymentWorkflow.create({
-        controllerAdapter: mockAdapter,
-        targets: ['testdaw'],
-        deployers: new Map([['testdaw', mockDeployer]]),
-      });
+      workflow = await createWorkflow();
 
       await workflow.execute({
         configSlot: 5,
@@ -167,8 +171,7 @@ describe('DeploymentWorkflow', () => {
         installed: false,
       });
 
-      workflow = await DeploymentWorkflow.create({
-        controllerAdapter: mockAdapter,
+      workflow = await createWorkflow({
         targets: ['daw1', 'daw2'],
         deployers: new Map([
           ['daw1', deployer1],
@@ -189,11 +192,7 @@ describe('DeploymentWorkflow', () => {
     });
 
     it('should not write files in dry-run mode', async () => {
-      workflow = await DeploymentWorkflow.create({
-        controllerAdapter: mockAdapter,
-        targets: ['testdaw'],
-        deployers: new Map([['testdaw', mockDeployer]]),
-      });
+      workflow = await createWorkflow();
 
       const result = await workflow.execute({
         configSlot: 0,
@@ -211,11 +210,7 @@ describe('DeploymentWorkflow', () => {
     });
 
     it('should handle missing deployer gracefully', async () => {
-      workflow = await DeploymentWorkflow.create({
-        controllerAdapter: mockAdapter,
-        targets: ['testdaw'],
-        deployers: new Map([['testdaw', mockDeployer]]),
-      });
+      workflow = await createWorkflow();
 
       const result = await workflow.execute({
         configSlot: 0,
@@ -232,13 +227,15 @@ describe('DeploymentWorkflow', () => {
 
   describe('Error handling', () => {
     it('should handle controller read errors', async () => {
-      vi.mocked(mockAdapter.readConfiguration).mockRejectedValue(new Error('Read failed'));
+      workflow = await createWorkflow();
 
-      workflow = await DeploymentWorkflow.create({
-        controllerAdapter: mockAdapter,
-        targets: ['testdaw'],
-        deployers: new Map([['testdaw', mockDeployer]]),
-      });
+      // Add error listener to prevent unhandled error event
+      const errorHandler = vi.fn();
+      workflow.on('error', errorHandler);
+
+      // Override the mock after workflow is created
+      const readError = new Error('Read failed');
+      vi.mocked(mockAdapter.readConfiguration).mockRejectedValueOnce(readError);
 
       const result = await workflow.execute({
         configSlot: 0,
@@ -248,17 +245,20 @@ describe('DeploymentWorkflow', () => {
 
       expect(result.success).toBe(false);
       expect(result.errors).toContain('Read failed');
+      expect(errorHandler).toHaveBeenCalled();
     });
 
     it('should handle conversion errors', async () => {
-      vi.mocked(mockConverter.convert).mockImplementation(() => {
-        throw new Error('Conversion failed');
-      });
+      workflow = await createWorkflow();
 
-      workflow = await DeploymentWorkflow.create({
-        controllerAdapter: mockAdapter,
-        targets: ['testdaw'],
-        deployers: new Map([['testdaw', mockDeployer]]),
+      // Add error listener to prevent unhandled error event
+      const errorHandler = vi.fn();
+      workflow.on('error', errorHandler);
+
+      // Override the mock after workflow is created
+      const conversionError = new Error('Conversion failed');
+      vi.mocked(mockConverter.convert).mockImplementationOnce(() => {
+        throw conversionError;
       });
 
       const result = await workflow.execute({
@@ -269,19 +269,17 @@ describe('DeploymentWorkflow', () => {
 
       expect(result.success).toBe(false);
       expect(result.errors).toContain('Conversion failed');
+      expect(errorHandler).toHaveBeenCalled();
     });
 
     it('should handle deployment errors', async () => {
-      vi.mocked(mockDeployer.deploy).mockResolvedValue({
+      workflow = await createWorkflow();
+
+      // Override the mock after workflow is created
+      vi.mocked(mockDeployer.deploy).mockResolvedValueOnce({
         success: false,
         dawName: 'TestDAW',
         errors: ['Deployment failed'],
-      });
-
-      workflow = await DeploymentWorkflow.create({
-        controllerAdapter: mockAdapter,
-        targets: ['testdaw'],
-        deployers: new Map([['testdaw', mockDeployer]]),
       });
 
       const result = await workflow.execute({
@@ -296,13 +294,10 @@ describe('DeploymentWorkflow', () => {
     });
 
     it('should emit error event on failure', async () => {
-      vi.mocked(mockAdapter.readConfiguration).mockRejectedValue(new Error('Read failed'));
+      workflow = await createWorkflow();
 
-      workflow = await DeploymentWorkflow.create({
-        controllerAdapter: mockAdapter,
-        targets: ['testdaw'],
-        deployers: new Map([['testdaw', mockDeployer]]),
-      });
+      // Override the mock after workflow is created
+      vi.mocked(mockAdapter.readConfiguration).mockRejectedValueOnce(new Error('Read failed'));
 
       const errorHandler = vi.fn();
       workflow.on('error', errorHandler);
@@ -317,13 +312,10 @@ describe('DeploymentWorkflow', () => {
     });
 
     it('should handle deployment exception gracefully', async () => {
-      vi.mocked(mockDeployer.deploy).mockRejectedValue(new Error('Unexpected deployment error'));
+      workflow = await createWorkflow();
 
-      workflow = await DeploymentWorkflow.create({
-        controllerAdapter: mockAdapter,
-        targets: ['testdaw'],
-        deployers: new Map([['testdaw', mockDeployer]]),
-      });
+      // Override the mock after workflow is created
+      vi.mocked(mockDeployer.deploy).mockRejectedValueOnce(new Error('Unexpected deployment error'));
 
       const result = await workflow.execute({
         configSlot: 0,
@@ -339,11 +331,7 @@ describe('DeploymentWorkflow', () => {
 
   describe('Event emission', () => {
     it('should emit progress events', async () => {
-      workflow = await DeploymentWorkflow.create({
-        controllerAdapter: mockAdapter,
-        targets: ['testdaw'],
-        deployers: new Map([['testdaw', mockDeployer]]),
-      });
+      workflow = await createWorkflow();
 
       const progressHandler = vi.fn();
       workflow.on('progress', progressHandler);
@@ -362,11 +350,7 @@ describe('DeploymentWorkflow', () => {
     });
 
     it('should emit canonical-saved event when saving YAML', async () => {
-      workflow = await DeploymentWorkflow.create({
-        controllerAdapter: mockAdapter,
-        targets: ['testdaw'],
-        deployers: new Map([['testdaw', mockDeployer]]),
-      });
+      workflow = await createWorkflow();
 
       const savedHandler = vi.fn();
       workflow.on('canonical-saved', savedHandler);
@@ -390,11 +374,7 @@ describe('DeploymentWorkflow', () => {
         type: 'vst3' as const,
       };
 
-      workflow = await DeploymentWorkflow.create({
-        controllerAdapter: mockAdapter,
-        targets: ['testdaw'],
-        deployers: new Map([['testdaw', mockDeployer]]),
-      });
+      workflow = await createWorkflow();
 
       await workflow.execute({
         configSlot: 0,
@@ -410,11 +390,7 @@ describe('DeploymentWorkflow', () => {
     });
 
     it('should pass MIDI channel to converter', async () => {
-      workflow = await DeploymentWorkflow.create({
-        controllerAdapter: mockAdapter,
-        targets: ['testdaw'],
-        deployers: new Map([['testdaw', mockDeployer]]),
-      });
+      workflow = await createWorkflow();
 
       await workflow.execute({
         configSlot: 0,
@@ -430,11 +406,7 @@ describe('DeploymentWorkflow', () => {
     });
 
     it('should pass preserveLabels to converter', async () => {
-      workflow = await DeploymentWorkflow.create({
-        controllerAdapter: mockAdapter,
-        targets: ['testdaw'],
-        deployers: new Map([['testdaw', mockDeployer]]),
-      });
+      workflow = await createWorkflow();
 
       await workflow.execute({
         configSlot: 0,
@@ -450,11 +422,7 @@ describe('DeploymentWorkflow', () => {
     });
 
     it('should pass autoInstall to deployer', async () => {
-      workflow = await DeploymentWorkflow.create({
-        controllerAdapter: mockAdapter,
-        targets: ['testdaw'],
-        deployers: new Map([['testdaw', mockDeployer]]),
-      });
+      workflow = await createWorkflow();
 
       await workflow.execute({
         configSlot: 0,
@@ -470,11 +438,7 @@ describe('DeploymentWorkflow', () => {
     });
 
     it('should pass outputPath to deployer', async () => {
-      workflow = await DeploymentWorkflow.create({
-        controllerAdapter: mockAdapter,
-        targets: ['testdaw'],
-        deployers: new Map([['testdaw', mockDeployer]]),
-      });
+      workflow = await createWorkflow();
 
       await workflow.execute({
         configSlot: 0,
@@ -492,11 +456,7 @@ describe('DeploymentWorkflow', () => {
 
   describe('Cleanup', () => {
     it('should disconnect adapter on cleanup', async () => {
-      workflow = await DeploymentWorkflow.create({
-        controllerAdapter: mockAdapter,
-        targets: ['testdaw'],
-        deployers: new Map([['testdaw', mockDeployer]]),
-      });
+      workflow = await createWorkflow();
 
       await workflow.cleanup();
 
@@ -506,11 +466,7 @@ describe('DeploymentWorkflow', () => {
     it('should not disconnect if not connected', async () => {
       vi.mocked(mockAdapter.isConnected).mockReturnValue(false);
 
-      workflow = await DeploymentWorkflow.create({
-        controllerAdapter: mockAdapter,
-        targets: ['testdaw'],
-        deployers: new Map([['testdaw', mockDeployer]]),
-      });
+      workflow = await createWorkflow();
 
       await workflow.cleanup();
 
@@ -523,6 +479,7 @@ describe('DeploymentWorkflow', () => {
       await expect(
         DeploymentWorkflow.create({
           controllerAdapter: mockAdapter,
+          converter: mockConverter,
           targets: ['ardour'],
         })
       ).rejects.toThrow('DAW deployers not yet implemented');
@@ -531,6 +488,7 @@ describe('DeploymentWorkflow', () => {
     it('should create workflow with empty targets', async () => {
       const newWorkflow = await DeploymentWorkflow.create({
         controllerAdapter: mockAdapter,
+        converter: mockConverter,
         targets: [],
         deployers: new Map(),
       });

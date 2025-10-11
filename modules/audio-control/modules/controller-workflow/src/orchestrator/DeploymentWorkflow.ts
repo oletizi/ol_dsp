@@ -73,6 +73,8 @@ export interface WorkflowResult {
 export interface CreateOptions {
   /** Optional pre-configured controller adapter */
   controllerAdapter?: ControllerAdapterInterface;
+  /** Optional pre-configured canonical converter */
+  converter?: CanonicalConverterInterface;
   /** Target DAW names */
   targets: string[];
   /** Optional pre-configured DAW deployers */
@@ -142,8 +144,8 @@ export class DeploymentWorkflow extends EventEmitter {
     // Use provided adapter or auto-detect controller
     const adapter = options.controllerAdapter ?? (await this.detectController());
 
-    // Select appropriate converter for detected controller
-    const converter = this.getConverterFor(adapter);
+    // Use provided converter or select appropriate one for detected controller
+    const converter = options.converter ?? this.getConverterFor(adapter);
 
     // Create DAW deployers for requested targets
     const deployers = options.deployers ?? (await this.createDeployers(options.targets));
@@ -275,7 +277,8 @@ export class DeploymentWorkflow extends EventEmitter {
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Unknown workflow error';
       errors.push(errorMsg);
-      this.emit('error', new Error(errorMsg));
+      // Emit error event for listeners, but don't re-throw
+      this.emit('error', error instanceof Error ? error : new Error(errorMsg));
 
       const result: WorkflowResult = {
         success: false,

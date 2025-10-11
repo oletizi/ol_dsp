@@ -19,6 +19,27 @@ import type {
 } from '@/types/daw-deployer.js';
 
 /**
+ * Platform provider interface for dependency injection
+ */
+export interface PlatformProvider {
+  platform(): NodeJS.Platform;
+  homedir(): string;
+}
+
+/**
+ * Default platform provider using Node.js os module
+ */
+export class DefaultPlatformProvider implements PlatformProvider {
+  platform(): NodeJS.Platform {
+    return platform();
+  }
+
+  homedir(): string {
+    return homedir();
+  }
+}
+
+/**
  * Ardour DAW Deployer
  *
  * Converts canonical MIDI maps to Ardour's native XML format and optionally
@@ -29,12 +50,22 @@ export class ArdourDeployer implements DAWDeployerInterface {
   readonly version = '8.x';
 
   private readonly serializer = new ArdourXMLSerializer();
+  private readonly platformProvider: PlatformProvider;
+
+  /**
+   * Constructor with dependency injection
+   *
+   * @param platformProvider - Provider for platform and homedir (optional, defaults to DefaultPlatformProvider)
+   */
+  constructor(platformProvider?: PlatformProvider) {
+    this.platformProvider = platformProvider ?? new DefaultPlatformProvider();
+  }
 
   /**
    * Factory method to create ArdourDeployer instance
    */
-  static create(): ArdourDeployer {
-    return new ArdourDeployer();
+  static create(platformProvider?: PlatformProvider): ArdourDeployer {
+    return new ArdourDeployer(platformProvider);
   }
 
   /**
@@ -128,8 +159,8 @@ export class ArdourDeployer implements DAWDeployerInterface {
    * @throws Error if platform is not supported
    */
   async getConfigDirectory(): Promise<string> {
-    const home = homedir();
-    const os = platform();
+    const home = this.platformProvider.homedir();
+    const os = this.platformProvider.platform();
 
     switch (os) {
       case 'darwin':

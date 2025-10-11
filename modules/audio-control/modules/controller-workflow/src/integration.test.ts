@@ -279,12 +279,17 @@ describe('Integration Tests', () => {
     });
 
     it('should handle workflow errors gracefully', async () => {
-      vi.mocked(mockDevice.readCustomMode).mockRejectedValue(new Error('Device error'));
+      mockDevice.readCustomMode.mockRejectedValue(new Error('Device error'));
 
       const workflow = await DeploymentWorkflow.create({
         controllerAdapter: adapter,
         targets: ['ardour'],
         deployers: new Map([['ardour', deployer]]),
+      });
+
+      // Add error listener to prevent unhandled error event
+      workflow.on('error', () => {
+        // Intentionally empty - we expect errors in this test
       });
 
       const result = await workflow.execute({

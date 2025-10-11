@@ -34,7 +34,7 @@ export class LaunchControlXL3Adapter implements ControllerAdapterInterface {
   readonly model = 'Launch Control XL 3';
   readonly capabilities: ControllerCapabilities = {
     supportsCustomModes: true,
-    maxConfigSlots: 15, // Slots 0-14 are user-programmable, slot 15 is factory
+    maxConfigSlots: 16, // Slots 0-15 (16 total: 0-14 user-programmable, 15 factory)
     supportsRead: true,
     supportsWrite: true,
     supportedControlTypes: ['encoder', 'slider', 'button'],
@@ -87,14 +87,15 @@ export class LaunchControlXL3Adapter implements ControllerAdapterInterface {
   /**
    * List all configuration slots
    *
-   * Reads slots 0-14 from the device (slot 15 is reserved for factory content).
+   * Reads all 16 slots (0-15) from the device.
+   * Slots 0-14 are user-programmable, slot 15 is factory preset.
    * Returns their status (empty or populated with mode name).
    */
   async listConfigurations(): Promise<ConfigurationSlot[]> {
     const slots: ConfigurationSlot[] = [];
 
-    // Only read slots 0-14; slot 15 is factory-only
-    for (let i = 0; i < 15; i++) {
+    // Read all 16 slots (0-15)
+    for (let i = 0; i < 16; i++) {
       const mode = await this.device.readCustomMode(i);
       const slot: ConfigurationSlot = {
         index: i,
@@ -127,7 +128,7 @@ export class LaunchControlXL3Adapter implements ControllerAdapterInterface {
       throw new Error(`No configuration found in slot ${slot}`);
     }
 
-    return this.convertFromLCXL3(customMode);
+    return this.convertFromLCXL3(customMode, slot);
   }
 
   /**
@@ -169,7 +170,7 @@ export class LaunchControlXL3Adapter implements ControllerAdapterInterface {
   /**
    * Convert LCXL3 CustomMode to generic ControllerConfiguration
    */
-  private convertFromLCXL3(mode: LCXL3CustomMode): ControllerConfiguration {
+  private convertFromLCXL3(mode: LCXL3CustomMode, slot?: number): ControllerConfiguration {
     const controls: ControlMapping[] = [];
 
     // Convert LCXL3 control mappings to generic format
@@ -178,14 +179,18 @@ export class LaunchControlXL3Adapter implements ControllerAdapterInterface {
       controls.push(mapping);
     }
 
+    // Check for labels and colors both at top level and in metadata
+    const labels = mode.labels ?? mode.metadata?.labels;
+    const colors = mode.colors ?? mode.metadata?.colors;
+
     return {
       name: mode.name,
       controls,
       metadata: {
         ...mode.metadata,
-        slot: mode.slot,
-        labels: mode.labels ? this.mapToObject(mode.labels) : undefined,
-        colors: mode.colors ? this.mapToObject(mode.colors) : undefined,
+        slot: mode.metadata?.slot ?? slot,
+        labels: labels ? this.mapToObject(labels) : undefined,
+        colors: colors ? this.mapToObject(colors) : undefined,
       },
     };
   }
@@ -256,15 +261,16 @@ export class LaunchControlXL3Adapter implements ControllerAdapterInterface {
   }
 
   /**
-   * Truncate name to specified length, ensuring clean truncation
+   * Truncate name to specified length
    * @param name - Name to truncate
    * @param maxLength - Maximum length
-   * @returns Truncated name
+   * @returns Truncated name (exactly maxLength characters)
    */
   private truncateName(name: string, maxLength: number): string {
     if (name.length <= maxLength) {
       return name;
     }
+
     return name.substring(0, maxLength);
   }
 
@@ -274,8 +280,24 @@ export class LaunchControlXL3Adapter implements ControllerAdapterInterface {
   private convertControlToLCXL3(control: ControlMapping): LCXL3ControlMapping {
     const [minValue, maxValue] = control.range ?? [0, 127];
 
+    // Map generic type to LCXL3 type (reverse of mapControlType)
+    let lcxl3Type: string;
+    switch (control.type) {
+      case 'encoder':
+        lcxl3Type = 'knob';
+        break;
+      case 'slider':
+        lcxl3Type = 'fader';
+        break;
+      case 'button':
+        lcxl3Type = 'button';
+        break;
+      default:
+        lcxl3Type = 'knob'; // Default fallback
+    }
+
     const lcxl3Control: LCXL3ControlMapping = {
-      type: this.mapControlType(control.type) as any,
+      type: lcxl3Type as any,
       minValue,
       maxValue,
       behavior: 'absolute', // Default behavior

@@ -309,11 +309,11 @@ describe('LaunchControlXL3Adapter', () => {
       const [slot, lcxl3Mode] = mockDevice.writeCustomMode.mock.calls[0];
 
       expect(slot).toBe(0);
-      expect(lcxl3Mode.name).toBe('Generic C'); // LCXL3 truncates to 8 chars
+      expect(lcxl3Mode.name).toBe('Generic '); // LCXL3 truncates to 8 chars
       expect(lcxl3Mode.controls.SEND_A1).toBeDefined();
-      expect(lcxl3Mode.controls.SEND_A1.type).toBe('encoder');
+      expect(lcxl3Mode.controls.SEND_A1.type).toBe('knob'); // LCXL3 uses 'knob' for encoders
       expect(lcxl3Mode.controls.FADER1).toBeDefined();
-      expect(lcxl3Mode.controls.FADER1.type).toBe('slider');
+      expect(lcxl3Mode.controls.FADER1.type).toBe('fader'); // LCXL3 uses 'fader' for sliders
     });
 
     it('should truncate mode name to 8 characters', async () => {

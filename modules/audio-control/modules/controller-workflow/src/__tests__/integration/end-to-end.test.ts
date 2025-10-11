@@ -78,6 +78,9 @@ describe('End-to-End Workflow', () => {
     } as unknown as jest.Mocked<LaunchControlXL3>;
 
     // Reset file system mocks
+    vi.mocked(fs.mkdir).mockClear();
+    vi.mocked(fs.writeFile).mockClear();
+    vi.mocked(fs.access).mockClear();
     vi.mocked(fs.mkdir).mockResolvedValue(undefined);
     vi.mocked(fs.writeFile).mockResolvedValue(undefined);
     vi.mocked(fs.access).mockResolvedValue(undefined);
@@ -346,6 +349,11 @@ describe('End-to-End Workflow', () => {
         deployers,
       });
 
+      // Add error listener to prevent unhandled error event
+      workflow.on('error', () => {
+        // Intentionally empty - we expect errors in this test
+      });
+
       const options: WorkflowOptions = {
         configSlot: 0,
         targets: ['ardour'],
@@ -371,6 +379,11 @@ describe('End-to-End Workflow', () => {
         deployers,
       });
 
+      // Add error listener to prevent unhandled error event
+      workflow.on('error', () => {
+        // Intentionally empty - we expect errors in this test
+      });
+
       const options: WorkflowOptions = {
         configSlot: 5,
         targets: ['ardour'],
@@ -383,6 +396,8 @@ describe('End-to-End Workflow', () => {
     });
 
     it('should handle file system errors during deployment', async () => {
+      // Reset to success first, then set rejection for this test
+      vi.mocked(fs.writeFile).mockClear();
       vi.mocked(fs.writeFile).mockRejectedValue(new Error('Disk full'));
 
       const adapter = new LaunchControlXL3Adapter(mockDevice);
@@ -394,6 +409,11 @@ describe('End-to-End Workflow', () => {
         controllerAdapter: adapter,
         targets: ['ardour'],
         deployers,
+      });
+
+      // Add error listener to prevent unhandled error event
+      workflow.on('error', () => {
+        // Intentionally empty - we expect errors in this test
       });
 
       const options: WorkflowOptions = {
