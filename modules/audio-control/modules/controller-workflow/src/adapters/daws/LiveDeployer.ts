@@ -17,24 +17,42 @@ import type {
   DeploymentResult,
 } from '../../types/daw-deployer.js';
 
+/**
+ * Max for Live plugin mapping data structure.
+ * Represents a complete MIDI CC to plugin parameter mapping for the cc-router device.
+ */
 interface PluginMapping {
+  /** Controller device information */
   controller: {
+    /** Controller manufacturer name */
     manufacturer?: string;
+    /** Controller model name */
     model?: string;
   };
+  /** Plugin name being controlled */
   pluginName: string;
+  /** Plugin manufacturer name */
   pluginManufacturer: string;
+  /** MIDI CC number to parameter mappings */
   mappings: {
     [ccNumber: number]: {
+      /** Index of the device in the Live track (0 = cc-router, 1 = first plugin) */
       deviceIndex: number;
+      /** Index of the parameter within the plugin */
       parameterIndex: number;
+      /** Human-readable parameter name */
       parameterName: string;
+      /** Parameter value curve type */
       curve: 'linear' | 'exponential' | 'logarithmic';
     };
   };
+  /** Optional mapping metadata */
   metadata: {
+    /** Mapping configuration name */
     name?: string;
+    /** Description of this mapping */
     description?: string;
+    /** Version of this mapping */
     version?: string;
   };
 }
@@ -118,7 +136,13 @@ export class LiveDeployer implements DAWDeployerInterface {
   }
 
   /**
-   * Get path to live-max-cc-router module
+   * Get path to live-max-cc-router module.
+   *
+   * Navigates from controller-workflow to the sibling live-max-cc-router module
+   * where the cc-router Max for Live device and its data files are located.
+   *
+   * @returns Absolute path to live-max-cc-router module
+   * @internal
    */
   private getCCRouterPath(): string {
     // Assume we're in controller-workflow, navigate to sibling module
@@ -126,7 +150,15 @@ export class LiveDeployer implements DAWDeployerInterface {
   }
 
   /**
-   * Convert canonical MIDI map to M4L plugin mapping format
+   * Convert canonical MIDI map to M4L plugin mapping format.
+   *
+   * Transforms canonical control definitions into the JSON structure expected
+   * by the cc-router Max for Live device. Each control's CC number is mapped
+   * to a plugin parameter with device/parameter indices.
+   *
+   * @param canonicalMap - Canonical MIDI map to convert
+   * @returns PluginMapping structure for cc-router
+   * @internal
    */
   private convertToM4LFormat(canonicalMap: CanonicalMidiMap): PluginMapping {
     const mappings: PluginMapping['mappings'] = {};
@@ -166,8 +198,22 @@ export class LiveDeployer implements DAWDeployerInterface {
   }
 
   /**
-   * Extract parameter index from control ID
-   * Control IDs like "control_16" map to parameter index based on semantic meaning
+   * Extract parameter index from control ID.
+   *
+   * Parses numeric suffix from control IDs to determine parameter index.
+   * Control IDs like "encoder_16" or "slider_3" map to parameter indices
+   * based on their semantic meaning.
+   *
+   * @param controlId - Control identifier (e.g., "encoder_16", "slider_3")
+   * @returns Parameter index (0 if no number found)
+   * @internal
+   *
+   * @example
+   * ```typescript
+   * extractParameterIndex("encoder_16") // returns 16
+   * extractParameterIndex("slider_3")   // returns 3
+   * extractParameterIndex("button")     // returns 0
+   * ```
    */
   private extractParameterIndex(controlId: string): number {
     // Try to extract number from control ID
@@ -180,7 +226,17 @@ export class LiveDeployer implements DAWDeployerInterface {
   }
 
   /**
-   * Update plugin mappings database with new mapping
+   * Update plugin mappings database with new mapping.
+   *
+   * Adds or updates a mapping in the plugin-mappings.json database.
+   * The mapping key is generated from controller and plugin names to ensure
+   * uniqueness across different controller-plugin combinations.
+   *
+   * @param existingMappings - Current mappings database
+   * @param newMapping - New mapping to add/update
+   * @param canonicalMap - Source canonical map for key generation
+   * @returns Updated mappings database
+   * @internal
    */
   private async updateCanonicalMaps(
     existingMappings: Record<string, PluginMapping>,
@@ -200,7 +256,21 @@ export class LiveDeployer implements DAWDeployerInterface {
   }
 
   /**
-   * Generate mapping key from canonical map
+   * Generate unique mapping key from canonical map.
+   *
+   * Creates a key in the format "controller_plugin" where both parts
+   * are lowercase and space-separated. This key uniquely identifies
+   * a controller-plugin pairing in the mappings database.
+   *
+   * @param canonicalMap - Canonical map containing device and plugin info
+   * @returns Mapping key (e.g., "launch-control-xl-3_vital-synth")
+   * @internal
+   *
+   * @example
+   * ```typescript
+   * // For a Launch Control XL 3 mapped to Vital synth:
+   * generateMappingKey(map) // returns "launch-control-xl-3_vital-synth"
+   * ```
    */
   private generateMappingKey(canonicalMap: CanonicalMidiMap): string {
     const controller = (canonicalMap.device.model ?? 'unknown').toLowerCase().replace(/\s+/g, '-');
@@ -212,7 +282,12 @@ export class LiveDeployer implements DAWDeployerInterface {
 
 
   /**
-   * Check if Ableton Live is installed
+   * Check if Ableton Live is installed.
+   *
+   * For Live, we check if the cc-router module exists rather than checking
+   * for Live itself, since the cc-router is required for deployment to work.
+   *
+   * @returns true if cc-router module is accessible
    */
   async isInstalled(): Promise<boolean> {
     // For now, assume Live is installed if cc-router module exists
@@ -226,7 +301,15 @@ export class LiveDeployer implements DAWDeployerInterface {
   }
 
   /**
-   * Get Ableton Live's configuration directory
+   * Get Ableton Live's User Library Remote Scripts directory.
+   *
+   * Returns platform-specific paths:
+   * - macOS: ~/Music/Ableton/User Library/Remote Scripts
+   * - Windows: ~/Documents/Ableton/User Library/Remote Scripts
+   * - Linux: ~/Ableton/User Library/Remote Scripts
+   *
+   * @returns Absolute path to Live's Remote Scripts directory
+   * @throws Error if platform is not supported
    */
   async getConfigDirectory(): Promise<string> {
     const home = homedir();

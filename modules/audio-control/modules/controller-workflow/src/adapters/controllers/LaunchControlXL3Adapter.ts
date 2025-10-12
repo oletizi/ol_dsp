@@ -180,15 +180,15 @@ export class LaunchControlXL3Adapter implements ControllerAdapterInterface {
     }
 
     // Check for labels and colors both at top level and in metadata
-    const labels = mode.labels ?? mode.metadata?.labels;
-    const colors = mode.colors ?? mode.metadata?.colors;
+    const labels = mode.labels ?? (mode.metadata ? mode.metadata['labels'] : undefined);
+    const colors = mode.colors ?? (mode.metadata ? mode.metadata['colors'] : undefined);
 
     return {
       name: mode.name,
       controls,
       metadata: {
         ...mode.metadata,
-        slot: mode.metadata?.slot ?? slot,
+        slot: (mode.metadata ? mode.metadata['slot'] : undefined) ?? slot,
         labels: labels ? this.mapToObject(labels) : undefined,
         colors: colors ? this.mapToObject(colors) : undefined,
       },

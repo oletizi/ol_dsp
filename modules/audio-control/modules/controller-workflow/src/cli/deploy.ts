@@ -20,23 +20,35 @@ import type { DAWDeployerInterface } from '../types/daw-deployer.js';
 import type { CanonicalMidiMap, PluginDefinition } from '@oletizi/canonical-midi-maps';
 
 /**
- * CLI Progress Events
+ * CLI progress event structure.
+ * Used for displaying multi-step workflow progress to the user.
  */
 interface ProgressEvent {
+  /** Current step number (1-based) */
   step: number;
+  /** Total number of steps in workflow */
   total: number;
+  /** Human-readable progress message */
   message: string;
 }
 
 /**
- * Deployment Result
+ * Complete deployment result summary.
+ * Contains all information about a deployment workflow execution
+ * including file paths and any errors encountered.
  */
 interface DeploymentSummary {
+  /** Whether the deployment succeeded without errors */
   success: boolean;
+  /** Controller name (manufacturer + model) */
   controller: string;
+  /** Configuration slot number that was read */
   slot: number;
+  /** Path to saved canonical YAML file */
   canonicalPath: string;
+  /** Map of DAW name to deployed file path */
   dawPaths: Record<string, string>;
+  /** List of error messages from deployment */
   errors: string[];
 }
 
@@ -115,7 +127,17 @@ program
   });
 
 /**
- * Execute full deployment workflow
+ * Execute full deployment workflow.
+ *
+ * Orchestrates the complete process of reading a controller configuration,
+ * converting it to canonical format, and deploying to one or more DAWs.
+ *
+ * @param options - Deployment options from CLI
+ * @returns Deployment summary with paths and error details
+ * @throws Error if slot number is invalid (not 0-15)
+ * @throws Error if MIDI channel is invalid (not 0-15)
+ * @throws Error if controller detection fails
+ * @throws Error if configuration cannot be read from controller
  */
 async function executeDeployment(options: {
   controller?: string;
@@ -231,7 +253,14 @@ async function executeDeployment(options: {
 }
 
 /**
- * Create DAW deployer based on DAW type
+ * Create DAW deployer based on DAW type.
+ *
+ * Factory function that instantiates the appropriate deployer implementation
+ * for the specified DAW.
+ *
+ * @param daw - DAW name (e.g., "ardour", "live", "ableton")
+ * @returns DAW-specific deployer instance
+ * @throws Error if DAW is not supported
  */
 function createDeployer(daw: string): DAWDeployerInterface {
   const normalizedDAW = daw.toLowerCase();
@@ -250,7 +279,12 @@ function createDeployer(daw: string): DAWDeployerInterface {
 }
 
 /**
- * Get file extension for DAW format
+ * Get file extension for DAW format.
+ *
+ * Maps DAW names to their respective output file extensions.
+ *
+ * @param daw - DAW name (e.g., "ardour", "live")
+ * @returns File extension without dot (e.g., "map", "amxd")
  */
 function getFileExtension(daw: string): string {
   const normalizedDAW = daw.toLowerCase();
@@ -267,8 +301,14 @@ function getFileExtension(daw: string): string {
 }
 
 /**
- * Auto-detect connected MIDI controller
- * Currently supports Launch Control XL3
+ * Auto-detect connected MIDI controller.
+ *
+ * Attempts to detect and connect to a supported MIDI controller.
+ * Currently supports Novation Launch Control XL 3, with future
+ * extensibility for additional controllers.
+ *
+ * @returns Connected controller adapter instance
+ * @throws Error if no supported controller is detected
  */
 async function detectController(): Promise<ControllerAdapterInterface> {
   // Attempt to detect LCXL3
@@ -284,14 +324,24 @@ async function detectController(): Promise<ControllerAdapterInterface> {
 }
 
 /**
- * Emit progress message
+ * Emit progress message to console.
+ *
+ * Displays a formatted progress message showing the current step
+ * in the deployment workflow.
+ *
+ * @param event - Progress event containing step, total, and message
  */
 function emitProgress(event: ProgressEvent): void {
   console.log(`[${event.step}/${event.total}] ${event.message}`);
 }
 
 /**
- * Display successful deployment summary
+ * Display successful deployment summary.
+ *
+ * Prints a formatted success message with paths to all generated files
+ * including the canonical YAML and DAW-specific formats.
+ *
+ * @param result - Deployment result summary
  */
 function displaySuccessSummary(result: DeploymentSummary): void {
   console.log('\n✅ Deployment complete!\n');
@@ -309,7 +359,12 @@ function displaySuccessSummary(result: DeploymentSummary): void {
 }
 
 /**
- * Display error summary
+ * Display error summary.
+ *
+ * Prints a formatted error message listing all errors that occurred
+ * during the deployment workflow.
+ *
+ * @param result - Deployment result summary with errors
  */
 function displayErrorSummary(result: DeploymentSummary): void {
   console.error('\n❌ Deployment failed\n');
@@ -324,7 +379,12 @@ function displayErrorSummary(result: DeploymentSummary): void {
 }
 
 /**
- * Handle uncaught errors
+ * Handle uncaught errors.
+ *
+ * Final error handler that prints error messages and exits the process
+ * with a non-zero status code.
+ *
+ * @param error - Error object or string
  */
 function handleError(error: unknown): void {
   const message = error instanceof Error ? error.message : String(error);
@@ -333,7 +393,19 @@ function handleError(error: unknown): void {
 }
 
 /**
- * Sanitize filename for filesystem safety
+ * Sanitize filename for filesystem safety.
+ *
+ * Removes special characters and normalizes spaces to underscores
+ * to create safe filenames for all platforms.
+ *
+ * @param name - Original name string
+ * @returns Sanitized filename safe for filesystem use
+ *
+ * @example
+ * ```typescript
+ * sanitizeFilename("My Config #1")  // returns "my_config_1"
+ * sanitizeFilename("Test-Mode")     // returns "test-mode"
+ * ```
  */
 function sanitizeFilename(name: string): string {
   return name
@@ -343,7 +415,19 @@ function sanitizeFilename(name: string): string {
 }
 
 /**
- * Capitalize first letter of string
+ * Capitalize first letter of string.
+ *
+ * Simple utility to capitalize the first character of a string
+ * for display purposes.
+ *
+ * @param str - Input string
+ * @returns String with first character capitalized
+ *
+ * @example
+ * ```typescript
+ * capitalize("ardour")  // returns "Ardour"
+ * capitalize("live")    // returns "Live"
+ * ```
  */
 function capitalize(str: string): string {
   return str.charAt(0).toUpperCase() + str.slice(1);

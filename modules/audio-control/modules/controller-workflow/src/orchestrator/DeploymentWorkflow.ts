@@ -307,7 +307,13 @@ export class DeploymentWorkflow extends EventEmitter {
 
   /**
    * Auto-detect connected controller and create appropriate adapter.
-   * Currently supports Launch Control XL 3, extensible for future controllers.
+   *
+   * Attempts to detect and connect to supported MIDI controllers in sequence.
+   * Currently supports Launch Control XL 3, with extensibility for future controllers.
+   *
+   * @returns Connected controller adapter
+   * @throws Error if no supported controller is detected
+   * @internal
    */
   private static async detectController(): Promise<ControllerAdapterInterface> {
     // Try Launch Control XL 3 first
@@ -338,7 +344,14 @@ export class DeploymentWorkflow extends EventEmitter {
 
   /**
    * Select appropriate converter for a controller adapter.
-   * Maps controller models to their specific converter implementations.
+   *
+   * Maps controller manufacturer and model to the appropriate converter
+   * implementation. The mapping is extensible for future controllers.
+   *
+   * @param adapter - Controller adapter instance
+   * @returns Matching converter implementation
+   * @throws Error if no converter exists for the controller
+   * @internal
    */
   private static getConverterFor(adapter: ControllerAdapterInterface): CanonicalConverterInterface {
     const controllerKey = `${adapter.manufacturer}:${adapter.model}`.toLowerCase();
@@ -363,7 +376,16 @@ export class DeploymentWorkflow extends EventEmitter {
 
   /**
    * Create DAW deployers for requested targets.
-   * Currently a placeholder - deployers should be registered or injected.
+   *
+   * Currently a placeholder implementation. In the future, deployers will be:
+   * 1. Registered in a central registry
+   * 2. Dependency-injected via constructor
+   * 3. Dynamically loaded based on available DAW implementations
+   *
+   * @param targets - List of target DAW names
+   * @returns Map of DAW name to deployer instance
+   * @throws Error indicating deployers must be provided via CreateOptions.deployers
+   * @internal
    */
   private static async createDeployers(targets: string[]): Promise<Map<string, DAWDeployerInterface>> {
     const deployers = new Map<string, DAWDeployerInterface>();
@@ -392,6 +414,14 @@ export class DeploymentWorkflow extends EventEmitter {
 
   /**
    * Read configuration from controller at specified slot.
+   *
+   * Ensures controller is connected before attempting to read.
+   * Validates that the configuration contains controls.
+   *
+   * @param slot - Configuration slot number (0-15)
+   * @returns Controller configuration
+   * @throws Error if configuration is empty or read fails
+   * @internal
    */
   private async readControllerConfiguration(slot: number): Promise<ControllerConfiguration> {
     if (!this.controllerAdapter.isConnected()) {
@@ -408,6 +438,16 @@ export class DeploymentWorkflow extends EventEmitter {
 
   /**
    * Convert controller configuration to canonical format.
+   *
+   * Validates that the configuration can be converted before attempting
+   * conversion. Builds conversion options from workflow options with proper
+   * type safety for exactOptionalPropertyTypes.
+   *
+   * @param config - Controller configuration to convert
+   * @param options - Workflow options containing conversion parameters
+   * @returns Canonical MIDI map
+   * @throws Error if configuration cannot be converted
+   * @internal
    */
   private async convertToCanonical(
     config: ControllerConfiguration,
@@ -435,6 +475,15 @@ export class DeploymentWorkflow extends EventEmitter {
 
   /**
    * Save canonical MIDI map to YAML file.
+   *
+   * Creates the output directory if it doesn't exist, generates a safe
+   * filename from the map name, and writes the serialized YAML content.
+   *
+   * @param map - Canonical MIDI map to save
+   * @param outputDir - Directory to save file in
+   * @returns Absolute path to saved YAML file
+   * @throws Error if directory creation or file write fails
+   * @internal
    */
   private async saveCanonicalYAML(map: CanonicalMidiMap, outputDir: string): Promise<string> {
     // Create output directory if it doesn't exist
@@ -455,6 +504,19 @@ export class DeploymentWorkflow extends EventEmitter {
 
   /**
    * Sanitize map name for use as filename.
+   *
+   * Converts to lowercase, replaces non-alphanumeric characters with hyphens,
+   * and removes leading/trailing hyphens to create filesystem-safe names.
+   *
+   * @param name - Map name to sanitize
+   * @returns Filesystem-safe filename (without extension)
+   * @internal
+   *
+   * @example
+   * ```typescript
+   * sanitizeFilename("My MIDI Map")  // returns "my-midi-map"
+   * sanitizeFilename("Config #1!")   // returns "config-1"
+   * ```
    */
   private sanitizeFilename(name: string): string {
     return name
@@ -464,7 +526,15 @@ export class DeploymentWorkflow extends EventEmitter {
   }
 
   /**
-   * Emit progress event.
+   * Emit progress event to listeners.
+   *
+   * Constructs a progress event and emits it via the EventEmitter interface.
+   * Listeners can subscribe to track workflow progress.
+   *
+   * @param step - Current step number (1-4)
+   * @param message - Human-readable progress message
+   * @param data - Optional data associated with this step
+   * @internal
    */
   private emitProgress(step: number, message: string, data?: unknown): void {
     this.emit('progress', {
@@ -475,7 +545,10 @@ export class DeploymentWorkflow extends EventEmitter {
   }
 
   /**
-   * Disconnect from controller when done.
+   * Disconnect from controller and cleanup resources.
+   *
+   * Should be called when workflow is complete to ensure proper
+   * disconnection from the controller hardware.
    */
   async cleanup(): Promise<void> {
     if (this.controllerAdapter.isConnected()) {
