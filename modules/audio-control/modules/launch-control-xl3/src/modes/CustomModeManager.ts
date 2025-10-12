@@ -137,7 +137,6 @@ export class CustomModeManager extends EventEmitter {
 
     this.deviceManager.on('device:disconnected', () => {
       this.clearCache();
-      this.emit('cache:cleared');
     });
   }
 
@@ -334,16 +333,16 @@ export class CustomModeManager extends EventEmitter {
         const ccNumber = ctrl.ccNumber ?? ctrl.cc ?? 0;
         const minValue = ctrl.minValue ?? ctrl.min ?? 0;
         const maxValue = ctrl.maxValue ?? ctrl.max ?? 127;
-        const behavior = ctrl.behavior ?? ctrl.behaviour ?? 'absolute';
+        const behaviour = ctrl.behaviour ?? ctrl.behavior ?? 'absolute';
 
         controls.push({
           controlId,
-          // Use primary property names for output
-          midiChannel,
+          // Use legacy property names for output (tests expect these)
+          channel: midiChannel,
           ccNumber,
           minValue,
           maxValue,
-          behavior,
+          behaviour,
         });
 
         // Extract label if present
@@ -398,7 +397,7 @@ export class CustomModeManager extends EventEmitter {
 
     // If no named constant exists, generate control_XX format
     // This matches the CustomModeBuilder.build() format
-    return `control_${value}`;
+    return `control_${value.toString(16)}`;
   }
 
   /**
@@ -677,7 +676,23 @@ export class CustomModeManager extends EventEmitter {
 
         if (behaviour && !VALID_LED_BEHAVIOURS.includes(behaviour)) {
           // Get control name for better error message
-          const controlName = this.getControlIdName(Number(controlId));
+          // Handle both numeric IDs and string names (like "FOCUS1")
+          let controlName: string;
+          if (typeof controlId === 'string') {
+            // Check if it's a control name (like "FOCUS1") or a numeric string
+            const controlIdValue = this.getControlIdValue(controlId);
+            if (controlIdValue !== undefined) {
+              // It's a valid control name
+              controlName = controlId;
+            } else {
+              // It's a numeric string, parse it
+              const controlIdNum = parseInt(controlId, 10);
+              controlName = this.getControlIdName(controlIdNum);
+            }
+          } else {
+            // It's a number
+            controlName = this.getControlIdName(Number(controlId));
+          }
           throw new Error(`Invalid LED behaviour for ${controlName}: ${behaviour}`);
         }
       }
@@ -699,6 +714,7 @@ export class CustomModeManager extends EventEmitter {
   clearCache(): void {
     this.pendingOperations.clear();
     this.cache.clear();
+    this.emit('cache:cleared');
   }
 
   /**

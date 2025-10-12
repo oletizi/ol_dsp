@@ -114,22 +114,24 @@ describe('DawPortController', () => {
       ];
 
       for (const { slot, ccValue } of expectedMappings) {
-        // Clear sendMessage for this iteration
-        sendMessage.mockClear();
-
-        // Create fresh mock for waitForMessage with responses for this iteration
+        // Create fresh mocks for this iteration
+        const iterationSendMessage = vi.fn().mockResolvedValue(undefined);
+        // Mock device on a DIFFERENT slot to force Phase 2
+        // Use (slot + 1) % 15 to ensure device is always on a different slot than target
+        const deviceSlot = (slot + 1) % 15;
+        const deviceCCValue = deviceSlot + 6;
         const iterationWaitForMessage = vi.fn()
-          .mockResolvedValueOnce([0xB6, 30, 6])   // Phase 1 response (device on slot 0, forces Phase 2)
-          .mockResolvedValueOnce([0x9F, 11, 0])   // Phase 1 Note Off echo
-          .mockResolvedValueOnce([0x9F, 11, 0]);  // Phase 2 Note Off echo
+          .mockResolvedValueOnce([0xB6, 30, deviceCCValue])  // Phase 1 response (device on different slot)
+          .mockResolvedValueOnce([0x9F, 11, 0])              // Phase 1 Note Off echo
+          .mockResolvedValueOnce([0x9F, 11, 0]);             // Phase 2 Note Off echo
 
         // Create new controller with fresh mocks for this iteration
-        const iterationController = new DawPortControllerImpl(sendMessage, iterationWaitForMessage);
+        const iterationController = new DawPortControllerImpl(iterationSendMessage, iterationWaitForMessage);
 
         await iterationController.selectSlot(slot);
 
         // Check the CC set message (5th call in Phase 2)
-        expect(sendMessage).toHaveBeenNthCalledWith(5, [0xB6, 30, ccValue]);
+        expect(iterationSendMessage).toHaveBeenNthCalledWith(5, [0xB6, 30, ccValue]);
       }
     });
 
