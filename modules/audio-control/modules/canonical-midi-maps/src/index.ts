@@ -1,5 +1,6 @@
 // Types
 export * from './types/canonical.js';
+export * from './types/plugin-descriptor.js';
 
 // Validation
 export * from './validators/schema.js';

@@ -22,5 +22,8 @@ export * from './converters/LaunchControlXL3Converter.js';
 export * from './adapters/daws/ArdourDeployer.js';
 export * from './adapters/daws/LiveDeployer.js';
 
+// Export services
+export * from './services/index.js';
+
 // Export orchestrator (core workflow engine)
 export * from './orchestrator/DeploymentWorkflow.js';

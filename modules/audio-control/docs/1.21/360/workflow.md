@@ -1,7 +1,7 @@
 # Feature 360 Workflow
 
 **Version:** 1.21
-**Last Updated:** 2025-10-11
+**Last Updated:** 2025-10-12
 
 ## Overview
 
@@ -19,6 +19,10 @@ Phase 1: PLUGIN INTERROGATION          Phase 2: CANONICAL MAPPING
 1. Extract plugin parameters           4. Read controller configuration
 2. Generate plugin descriptors         5. Convert to canonical format
 3. Categorize and cache                6. Save canonical YAML (optional)
+
+Phase 2.5: FUZZY PARAMETER MATCHING (AI-Powered) ⭐
+────────────────────────────────────────────────────
+6.5. Match control names → plugin parameters (Claude AI)
 
 Phase 3: DAW DEPLOYMENT
 ────────────────────────
@@ -159,6 +163,7 @@ Create device-specific MIDI controller → plugin parameter mappings using accur
 2. Label controls with parameter names
 3. Use `controller-deploy` to extract configuration
 4. Automatically generate canonical mapping
+5. **AI-powered parameter matching** (Phase 2.5)
 
 ### Manual YAML Creation
 
@@ -266,7 +271,7 @@ npx controller-deploy deploy --slot 0 --daw ardour
 # Deploy multiple DAWs
 npx controller-deploy deploy --slot 0 --daw ardour live
 
-# With plugin context
+# With plugin context (triggers fuzzy matching)
 npx controller-deploy deploy \
   --slot 0 \
   --plugin "TAL-J-8" \
@@ -284,8 +289,288 @@ npx controller-deploy deploy \
 1. Reads custom mode from controller slot 0
 2. Extracts control assignments and labels
 3. Converts to canonical MIDI map format
-4. Deploys to specified DAWs
-5. Optionally saves canonical YAML
+4. **[Phase 2.5] AI-powered fuzzy matching** (when --plugin provided)
+5. Deploys to specified DAWs
+6. Optionally saves canonical YAML
+
+## Phase 2.5: AI-Powered Fuzzy Parameter Matching ⭐
+
+### Purpose
+
+Automatically match human-readable control names from hardware (e.g., "VCF Cutoff", "Env Attack") to plugin parameter indices using Claude AI.
+
+### When It Runs
+
+Fuzzy matching is triggered when you provide the `--plugin` flag during deployment:
+
+```bash
+npx controller-deploy deploy --slot 0 --plugin "TAL-J-8" --daw ardour
+```
+
+### How It Works
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│              Fuzzy Parameter Matching Workflow                  │
+└─────────────────────────────────────────────────────────────────┘
+
+1. Extract Control Names               2. Load Plugin Descriptor
+   ↓                                      ↓
+┌──────────────────┐                 ┌──────────────────┐
+│ Hardware Labels  │                 │ Plugin Descriptor│
+│ ────────────────│                 │ ────────────────│
+│ • VCF Cutoff     │                 │ • param[105]:    │
+│ • Env Attack     │                 │   "VCF Cutoff"   │
+│ • Filter Res     │                 │ • param[65]:     │
+│ • LFO Rate       │                 │   "Env Attack"   │
+└──────────────────┘                 └──────────────────┘
+         │                                    │
+         └────────────────┬───────────────────┘
+                          ↓
+              ┌───────────────────────┐
+              │  Claude AI Matcher    │
+              │  ─────────────────────│
+              │  Shell out to:        │
+              │  • claude CLI, OR     │
+              │  • Anthropic API      │
+              └───────────────────────┘
+                          ↓
+              ┌───────────────────────┐
+              │  Matched Parameters   │
+              │  ─────────────────────│
+              │  VCF Cutoff → 105     │
+              │  Env Attack → 65      │
+              │  Filter Res → 107     │
+              │  LFO Rate → 89        │
+              └───────────────────────┘
+                          ↓
+              ┌───────────────────────┐
+              │  Enhanced Canonical   │
+              │  ─────────────────────│
+              │  controls:            │
+              │    - id: encoder_1    │
+              │      name: VCF Cutoff │
+              │      cc: 13           │
+              │      plugin_parameter:│
+              │        105  ← ADDED   │
+              └───────────────────────┘
+```
+
+### Before and After
+
+#### Before Fuzzy Matching (Generic URIs)
+
+```yaml
+controls:
+  - id: encoder_1
+    name: VCF Cutoff        # From hardware
+    cc: 13
+    # No plugin_parameter field
+```
+
+**Ardour Output:**
+```xml
+<Binding channel="1" ctl="13" function="track-set-gain[1]"/>
+<!-- Generic function, not plugin-specific -->
+```
+
+#### After Fuzzy Matching (Plugin-Specific URIs)
+
+```yaml
+controls:
+  - id: encoder_1
+    name: VCF Cutoff        # From hardware
+    cc: 13
+    plugin_parameter: 105    # ← Added by AI matcher
+```
+
+**Ardour Output:**
+```xml
+<Binding channel="1" ctl="13" function="plugin-parameter"
+         uri="TAL-J-8/param/105"/>  <!-- VCF Cutoff -->
+<!-- Plugin-specific parameter binding -->
+```
+
+### Integration Methods
+
+#### Method 1: Claude CLI (Preferred)
+
+```typescript
+// Shell out to claude CLI
+const result = await execAsync(
+  `claude --prompt "Match these control names to plugin parameters: ${JSON.stringify(controls)}" --plugin-descriptor ${descriptorPath}`
+);
+```
+
+**Requirements:**
+- `claude` CLI installed and in PATH
+- API key configured in environment
+
+#### Method 2: Anthropic API (Direct)
+
+```typescript
+import Anthropic from '@anthropic-ai/sdk';
+
+const anthropic = new Anthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY,
+});
+
+const message = await anthropic.messages.create({
+  model: 'claude-3-5-sonnet-20241022',
+  max_tokens: 1024,
+  messages: [{
+    role: 'user',
+    content: `Match control names to plugin parameters:\n${prompt}`
+  }],
+});
+```
+
+### Matching Algorithm
+
+Claude AI analyzes:
+1. **Semantic similarity**: "VCF Cutoff" matches "VCF Cutoff" (exact)
+2. **Abbreviations**: "Filter Res" matches "VCF Resonance"
+3. **Synonyms**: "Env Attack" matches "Attack Time"
+4. **Context**: Groups related parameters (filters, envelopes, etc.)
+5. **Confidence scoring**: Returns match confidence for validation
+
+### Example Prompt
+
+```
+You are a MIDI parameter matching expert. Match hardware control names to plugin parameters.
+
+Hardware Controls:
+- VCF Cutoff (CC 13)
+- Filter Res (CC 14)
+- Env Attack (CC 53)
+- LFO Rate (CC 21)
+
+Plugin Parameters (TAL-J-8):
+- [105] VCF Cutoff
+- [107] VCF Resonance
+- [109] VCF Envelope Amount
+- [65] Attack Time
+- [67] Decay Time
+- [89] LFO 1 Rate
+- [91] LFO 1 Amount
+
+Return JSON with matches:
+{
+  "matches": [
+    { "control": "VCF Cutoff", "cc": 13, "parameter": 105, "confidence": 1.0 },
+    { "control": "Filter Res", "cc": 14, "parameter": 107, "confidence": 0.95 },
+    ...
+  ]
+}
+```
+
+### Output Format
+
+```json
+{
+  "matches": [
+    {
+      "control_name": "VCF Cutoff",
+      "control_cc": 13,
+      "parameter_index": 105,
+      "parameter_name": "VCF Cutoff",
+      "confidence": 1.0,
+      "match_type": "exact"
+    },
+    {
+      "control_name": "Filter Res",
+      "control_cc": 14,
+      "parameter_index": 107,
+      "parameter_name": "VCF Resonance",
+      "confidence": 0.95,
+      "match_type": "abbreviation"
+    },
+    {
+      "control_name": "Env Attack",
+      "control_cc": 53,
+      "parameter_index": 65,
+      "parameter_name": "Attack Time",
+      "confidence": 0.9,
+      "match_type": "synonym"
+    }
+  ],
+  "unmatched": []
+}
+```
+
+### Troubleshooting Fuzzy Matching
+
+#### Problem: No matches found
+
+**Causes:**
+- Plugin descriptor not found
+- Control names too generic ("Knob 1", "Encoder A")
+- Plugin parameters unnamed or use internal IDs
+
+**Solutions:**
+```bash
+# Verify plugin descriptor exists
+ls plugin-descriptors/tal-togu-audio-line-tal-j-8.json
+
+# Use more descriptive control names in hardware
+# Good: "VCF Cutoff", "Resonance", "Attack"
+# Bad: "Knob1", "Enc A", "Control 1"
+
+# Manually specify parameter indices in YAML if AI fails
+```
+
+#### Problem: Wrong parameter matched
+
+**Causes:**
+- Ambiguous control names
+- Multiple parameters with similar names
+- Low confidence matches
+
+**Solutions:**
+```bash
+# Review match confidence scores
+# Confidence < 0.7 may indicate ambiguous match
+
+# Use more specific control names
+# Instead of: "Cutoff" → "VCF Cutoff"
+# Instead of: "Attack" → "Env 1 Attack"
+
+# Override matches in canonical YAML
+```
+
+#### Problem: Claude API errors
+
+**Causes:**
+- API key not configured
+- Rate limiting
+- Network issues
+
+**Solutions:**
+```bash
+# Set API key
+export ANTHROPIC_API_KEY=your_api_key
+
+# Or use claude CLI
+which claude  # Verify CLI installed
+claude --version
+
+# Check rate limits in Anthropic Console
+# Retry with exponential backoff
+```
+
+#### Problem: Slow matching performance
+
+**Solutions:**
+```bash
+# Cache matches for reuse
+# Matches saved in canonical YAML
+
+# Batch multiple controls in single API call
+# Faster than individual requests
+
+# Use local descriptor cache
+# Avoid re-reading descriptor files
+```
 
 ## Phase 3: DAW Deployment
 
@@ -324,18 +609,18 @@ pnpm generate:install
 - **File:** `dist/ardour-maps/novation-launch-control-xl-3.map`
 - **Installed:** `~/Library/Preferences/Ardour8/midi_maps/` (macOS)
 
-**Ardour XML Structure:**
+**Ardour XML Structure (With Fuzzy Matching):**
 ```xml
 <ArdourMIDIBindings version="1.0.0" name="LCXL3 - TAL-J-8">
   <DeviceInfo bank-size="8"/>
 
-  <!-- Filter Controls -->
+  <!-- Filter Controls (AI-matched parameters) -->
   <Binding channel="1" ctl="13" function="plugin-parameter"
            uri="TAL-J-8/param/105"/>  <!-- VCF Cutoff -->
   <Binding channel="1" ctl="14" function="plugin-parameter"
            uri="TAL-J-8/param/107"/>  <!-- VCF Resonance -->
 
-  <!-- Envelope Controls -->
+  <!-- Envelope Controls (AI-matched parameters) -->
   <Binding channel="1" ctl="53" function="plugin-parameter"
            uri="TAL-J-8/param/65"/>   <!-- Attack -->
   <Binding channel="1" ctl="54" function="plugin-parameter"
@@ -362,9 +647,10 @@ npx controller-deploy deploy --slot 0 --daw live --install
 
 **What happens:**
 1. Converts canonical map to plugin mapping format
-2. Writes to `live-max-cc-router/data/plugin-mappings.json`
-3. Runtime loader merges with canonical mappings
-4. Max for Live device uses merged mappings
+2. **AI-matched parameters included in JSON**
+3. Writes to `live-max-cc-router/data/plugin-mappings.json`
+4. Runtime loader merges with canonical mappings
+5. Max for Live device uses merged mappings
 
 **Dual-Pipeline Architecture:**
 
@@ -374,6 +660,7 @@ Tier 1: Canonical (Build-time)         Tier 2: Runtime (Device-extracted)
 Source: YAML files                      Source: Controller slot
 Build:  convert-canonical-maps.cjs     Extract: controller-deploy
 Output: canonical-plugin-maps.ts        Output: plugin-mappings.json
+                                                (with AI-matched params)
 
                     Runtime Merge
                     { ...canonical, ...runtime }
@@ -387,7 +674,7 @@ See [live-deployer/architecture.md](./live-deployer/architecture.md) for details
 // live-max-cc-router/data/plugin-mappings.json
 {
   "version": "1.0.0",
-  "lastUpdated": "2025-10-11T10:00:00Z",
+  "lastUpdated": "2025-10-12T10:00:00Z",
   "mappings": {
     "launch-control-xl-3_tal-j-8": {
       "controller": {
@@ -399,22 +686,25 @@ See [live-deployer/architecture.md](./live-deployer/architecture.md) for details
       "mappings": {
         "13": {
           "deviceIndex": 0,
-          "parameterIndex": 105,
+          "parameterIndex": 105,        // ← AI-matched
           "parameterName": "VCF Cutoff",
-          "curve": "linear"
+          "curve": "linear",
+          "matchConfidence": 1.0        // ← Match quality
         },
         "53": {
           "deviceIndex": 0,
-          "parameterIndex": 65,
+          "parameterIndex": 65,         // ← AI-matched
           "parameterName": "Env Attack",
-          "curve": "linear"
+          "curve": "linear",
+          "matchConfidence": 0.9
         }
       },
       "metadata": {
         "name": "Jupiter-8 Template",
         "source": "device-extracted",
         "controllerSlot": 0,
-        "extractedAt": "2025-10-11T10:00:00Z"
+        "extractedAt": "2025-10-12T10:00:00Z",
+        "aiMatchingEnabled": true      // ← Fuzzy matching used
       }
     }
   }
@@ -441,11 +731,11 @@ pnpm generate:install
 # (Select in control surface preferences)
 ```
 
-### Workflow 2: One-Click Hardware Extraction ⭐
+### Workflow 2: One-Click Hardware Extraction with AI Matching ⭐
 
 ```bash
 # 1. Create custom mode on controller (use Novation Components)
-# 2. Deploy in one command
+# 2. Deploy in one command with AI-powered parameter matching
 npx controller-deploy deploy \
   --slot 0 \
   --plugin "TAL-J-8" \
@@ -453,7 +743,7 @@ npx controller-deploy deploy \
   --install \
   --output ./my-mappings
 
-# Done! Both DAWs configured from hardware
+# Done! Both DAWs configured from hardware with AI-matched parameters
 ```
 
 ### Workflow 3: Update Existing Mapping
@@ -472,12 +762,12 @@ pnpm generate:install
 ### Workflow 4: Multi-Plugin Session
 
 ```bash
-# Deploy multiple plugins from controller slots
+# Deploy multiple plugins from controller slots with AI matching
 npx controller-deploy deploy --slot 0 --plugin "TAL-J-8" --daw ardour live
 npx controller-deploy deploy --slot 1 --plugin "Mini V4" --daw ardour live
 npx controller-deploy deploy --slot 2 --plugin "Jup-8 V4" --daw ardour live
 
-# All three plugins now mapped from hardware
+# All three plugins now mapped from hardware with AI-matched parameters
 ```
 
 ## CLI Reference
@@ -510,7 +800,7 @@ Deploy controller configuration to DAW(s).
 - `-c, --controller <type>`: Controller type (auto-detect if omitted)
 - `-s, --slot <number>`: Configuration slot (default: 0)
 - `-d, --daw <daws...>`: Target DAWs (default: ardour)
-- `-p, --plugin <name>`: Plugin name for context
+- `-p, --plugin <name>`: Plugin name for AI parameter matching ⭐
 - `-m, --midi-channel <number>`: MIDI channel override
 - `-o, --output <dir>`: Output directory for canonical YAML
 - `--install`: Auto-install to DAW config directories
@@ -524,7 +814,7 @@ npx controller-deploy deploy --slot 0 --daw ardour
 # Multiple DAWs
 npx controller-deploy deploy --slot 0 --daw ardour live
 
-# With plugin context
+# With plugin context (enables AI matching)
 npx controller-deploy deploy --slot 0 --plugin "TAL-J-8" --daw ardour
 
 # Save canonical and install
@@ -567,6 +857,29 @@ const SKIP_PATTERNS = [
 - Verify required fields (version, device, plugin, controls)
 - Use YAML validator: `npx js-yaml --validate mapping.yaml`
 
+### Fuzzy Matching Issues
+
+**Problem:** AI matching fails completely
+- Verify `ANTHROPIC_API_KEY` environment variable set
+- Check `claude` CLI is installed: `which claude`
+- Ensure plugin descriptor exists and is valid
+- Check control names are descriptive (not "Knob1", "EncA")
+
+**Problem:** Low confidence matches (< 0.7)
+- Use more specific control names on hardware
+- Add semantic context ("VCF Cutoff" vs "Cutoff")
+- Manually override in canonical YAML if needed
+
+**Problem:** Multiple parameters matched to same control
+- Review match confidence scores in output
+- Use most specific parameter name on hardware
+- Manually specify correct parameter in YAML
+
+**Problem:** Rate limiting or API errors
+- Batch controls in single request (default behavior)
+- Add retry logic with exponential backoff
+- Use cached results when available
+
 ### Deployment Issues
 
 **Problem:** Ardour map not appearing
@@ -593,6 +906,17 @@ Plugin interrogation is cached for 24 hours. To force refresh:
 ```bash
 rm plugin-descriptors/plugins-catalog-batch.json
 pnpm plugin:generate-batch
+```
+
+### Cache AI Matches
+
+AI matches are saved in canonical YAML for reuse:
+```bash
+# First deployment: AI matching runs (~2-5 seconds)
+npx controller-deploy deploy --slot 0 --plugin "TAL-J-8" --output ./cache
+
+# Subsequent deployments: Reads from cached YAML (~instant)
+npx controller-deploy deploy --input ./cache/lcxl3-jupiter8.yaml --daw ardour
 ```
 
 ### Batch Deployments
