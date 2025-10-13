@@ -95,39 +95,13 @@ void NetworkConnection::disconnect()
 //==============================================================================
 NetworkConnection::State NetworkConnection::getState() const
 {
-    // SAFETY CHECK 1: Verify worker thread is running
+    // Use cached atomic state for fast, non-blocking reads
+    // This avoids the timeout issues that occur when querying the worker thread
     if (!worker || !worker->isThreadRunning()) {
-        juce::Logger::writeToLog("NetworkConnection::getState() - Worker thread not running");
         return State::Disconnected;
     }
 
-    // Use query command for thread-safe state access
-    auto query = std::make_unique<Commands::GetStateQuery>();
-    auto* queryPtr = query.get();
-
-    commandQueue->pushCommand(std::move(query));
-
-    // SAFETY CHECK 2: Validate timeout value (1ms - 60s range)
-    int timeoutMs = 1000;
-    if (timeoutMs <= 0 || timeoutMs > 60000) {
-        juce::Logger::writeToLog("NetworkConnection::getState() - Invalid timeout value");
-        return State::Disconnected;
-    }
-
-    // SAFETY CHECK 3: Wrap wait() in try-catch to handle exceptions
-    try {
-        if (queryPtr->wait(timeoutMs)) {
-            return queryPtr->result;
-        }
-    } catch (const std::exception& e) {
-        juce::Logger::writeToLog("NetworkConnection::getState() - WaitableEvent exception: " +
-                                juce::String(e.what()));
-        return State::Disconnected;
-    }
-
-    // Timeout - return Disconnected as safe default
-    juce::Logger::writeToLog("NetworkConnection::getState() - Query timeout, returning Disconnected");
-    return State::Disconnected;
+    return worker->getCachedState();
 }
 
 //==============================================================================
@@ -229,39 +203,16 @@ void NetworkConnection::sendPacket(const MidiPacket& packet)
 //==============================================================================
 int64_t NetworkConnection::getTimeSinceLastHeartbeat() const
 {
-    // SAFETY CHECK 1: Verify worker thread is running
+    // Use cached heartbeat time for fast, non-blocking reads
     if (!worker || !worker->isThreadRunning()) {
-        juce::Logger::writeToLog("NetworkConnection::getTimeSinceLastHeartbeat() - Worker thread not running");
         return HEARTBEAT_TIMEOUT_MS + 1;  // Return value indicating disconnected
     }
 
-    // Use GetHeartbeatQuery command for accurate timing from worker thread
-    auto query = std::make_unique<Commands::GetHeartbeatQuery>();
-    auto* queryPtr = query.get();
+    // Get cached heartbeat time
+    int64_t lastHeartbeat = worker->getCachedHeartbeatTime();
+    int64_t currentTime = juce::Time::getMillisecondCounterHiRes();
 
-    commandQueue->pushCommand(std::move(query));
-
-    // SAFETY CHECK 2: Validate timeout value
-    int timeoutMs = 1000;
-    if (timeoutMs <= 0 || timeoutMs > 60000) {
-        juce::Logger::writeToLog("NetworkConnection::getTimeSinceLastHeartbeat() - Invalid timeout value");
-        return HEARTBEAT_TIMEOUT_MS + 1;
-    }
-
-    // SAFETY CHECK 3: Wrap wait() in try-catch
-    try {
-        if (queryPtr->wait(timeoutMs)) {
-            return queryPtr->timeSinceLastHeartbeat;
-        }
-    } catch (const std::exception& e) {
-        juce::Logger::writeToLog("NetworkConnection::getTimeSinceLastHeartbeat() - WaitableEvent exception: " +
-                                juce::String(e.what()));
-        return HEARTBEAT_TIMEOUT_MS + 1;
-    }
-
-    // Timeout - assume disconnected (return value > timeout threshold)
-    juce::Logger::writeToLog("NetworkConnection::getTimeSinceLastHeartbeat() - Query timeout");
-    return HEARTBEAT_TIMEOUT_MS + 1;
+    return currentTime - lastHeartbeat;
 }
 
 //==============================================================================

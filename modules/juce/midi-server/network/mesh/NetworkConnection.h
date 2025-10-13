@@ -13,7 +13,7 @@
  * - All mutable state owned by ConnectionWorker thread
  * - Commands sent via lock-free queue
  * - No mutexes needed (single-threaded worker)
- * - Query commands use blocking WaitableEvent for synchronous results
+ * - State queries use atomic snapshots for fast, non-blocking reads
  */
 
 #pragma once
@@ -98,7 +98,8 @@ struct MidiMessage {
  * SEDA Architecture:
  * - All state owned by ConnectionWorker thread (no mutexes)
  * - Commands sent via lock-free queue
- * - Queries use blocking WaitableEvent pattern
+ * - State queries use atomic snapshots (no blocking)
+ * - Complex queries can optionally use command pattern for accuracy
  * - Callbacks invoked from worker thread
  *
  * Thread Safety:
@@ -145,7 +146,11 @@ public:
 
     /**
      * Returns current connection state.
-     * Thread-safe via query command.
+     * Thread-safe via cached atomic snapshot (non-blocking).
+     *
+     * This method reads from an atomic variable maintained by the worker thread,
+     * avoiding the timeout issues that can occur with query commands when the
+     * worker thread is busy.
      */
     State getState() const;
 
@@ -188,6 +193,7 @@ public:
     /**
      * Returns time since last heartbeat received (milliseconds).
      * Used to monitor connection health.
+     * Thread-safe via cached atomic snapshot (non-blocking).
      */
     int64_t getTimeSinceLastHeartbeat() const;
 

@@ -69,6 +69,25 @@ public:
     void run() override;
 
     /**
+     * Returns cached connection state without blocking.
+     * Thread-safe - uses atomic snapshot updated by worker thread.
+     *
+     * This is the preferred way to query state from API endpoints,
+     * as it avoids timeouts that can occur with query commands.
+     */
+    NetworkConnection::State getCachedState() const {
+        return stateSnapshot.load(std::memory_order_acquire);
+    }
+
+    /**
+     * Returns cached heartbeat timestamp without blocking.
+     * Thread-safe - uses atomic snapshot updated by worker thread.
+     */
+    int64_t getCachedHeartbeatTime() const {
+        return heartbeatSnapshot.load(std::memory_order_acquire);
+    }
+
+    /**
      * Transport statistics for monitoring performance.
      */
     struct TransportStats {
