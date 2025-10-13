@@ -36,7 +36,9 @@
     "test:parallel": "vitest run --reporter=verbose --threads",
     "test:all": "vitest run --config vitest.all.config.ts",
     "test:unit": "vitest run test/core test/device test/unit test/utils",
-    "test:integration": "vitest run test/integration",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "test:integration:skip": "SKIP_HARDWARE_TESTS=true vitest run --config vitest.integration.config.ts",
+    "test:integration:force": "SKIP_HARDWARE_TESTS=false vitest run --config vitest.integration.config.ts",
     "test:coverage": "vitest --coverage",
     "test:watch": "vitest --watch",
     "test:handshake:node": "tsx utils/test-handshake-node.ts",
@@ -109,8 +111,8 @@
     "tsx": "^4.7.0",
     "typescript": "^5.3.3",
     "vite": "^5.0.0",
-    "vite-plugin-dts": "^4.5.4",
-    "vitest": "^1.2.0"
+    "vitest": "^1.2.0",
+    "vite-plugin-dts": "^4.5.4"
   },
   "peerDependencies": {
     "midi": "^2.0.0"

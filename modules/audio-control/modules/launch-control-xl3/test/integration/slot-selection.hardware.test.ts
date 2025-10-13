@@ -10,25 +10,35 @@
  * 3. Device properly acknowledges slot selection
  * 4. Sequential slot switching works correctly
  *
+ * INTEGRATION TEST PATTERN (MANDATORY):
+ * ALL integration tests MUST use this skip pattern to prevent timeouts:
+ *   const SKIP_HARDWARE_TESTS = process.env.SKIP_HARDWARE_TESTS === 'true';
+ *   describe.skipIf(SKIP_HARDWARE_TESTS)('Test Suite', () => { ... });
+ *
+ * This allows:
+ * - `pnpm test:integration:skip` - Skips all hardware tests (fast, no device needed)
+ * - `pnpm test:integration:force` - Runs with real hardware (requires device connected)
+ *
  * Note: These tests require a Launch Control XL 3 to be connected
  */
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { DeviceManager } from '@/device/DeviceManager.js';
-import { EasyMidiBackend } from '@/core/backends/EasyMidiBackend.js';
+import { JuceMidiBackend } from '@/backends/JuceMidiBackend.js';
 import type { CustomMode } from '@/types/index.js';
 
 // Skip these tests if no device is connected
+// MANDATORY: All integration tests MUST respect this flag
 const SKIP_HARDWARE_TESTS = process.env.SKIP_HARDWARE_TESTS === 'true';
 
 describe.skipIf(SKIP_HARDWARE_TESTS)('Slot Selection Hardware Integration', () => {
   let deviceManager: DeviceManager;
-  let backend: EasyMidiBackend;
+  let backend: JuceMidiBackend;
 
   beforeAll(async () => {
     console.log('\n[Slot Selection Tests] Connecting to Launch Control XL 3...');
 
-    backend = new EasyMidiBackend();
+    backend = new JuceMidiBackend();
     await backend.initialize();
 
     deviceManager = new DeviceManager({
@@ -241,7 +251,7 @@ describe.skipIf(SKIP_HARDWARE_TESTS)('Slot Selection Hardware Integration', () =
 
 describe('Slot Selection Mock Tests', () => {
   it('should handle connection failure gracefully', async () => {
-    const backend = new EasyMidiBackend();
+    const backend = new JuceMidiBackend();
     await backend.initialize();
 
     const deviceManager = new DeviceManager({
