@@ -959,11 +959,15 @@ private:
                           << " UDP: " << udpEndpoint << std::endl;
 
                 // Build handshake response with our node info and device list
+                // Format UDP endpoint as "IP:PORT"
+                auto localIp = juce::IPAddress::getLocalAddress().toString();
+                auto localUdpEndpoint = localIp + ":" + juce::String(udpPort);
+
                 JsonBuilder json;
                 json.startObject()
                     .key("node_id").value(identity.getNodeId().toString().toStdString())
                     .key("node_name").value(identity.getNodeName().toStdString())
-                    .key("udp_endpoint").value(std::to_string(udpPort))
+                    .key("udp_endpoint").value(localUdpEndpoint.toStdString())
                     .key("version").value(std::string("1.0"));
 
                 // Add device list
