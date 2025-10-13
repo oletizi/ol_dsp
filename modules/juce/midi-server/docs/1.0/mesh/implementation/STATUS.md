@@ -232,15 +232,17 @@ The Network MIDI Mesh implementation is **functionally complete** at the mesh ne
 
 ### Immediate (v1.0 - Current Sprint)
 
-1. **Implement default routing rules**
-   - Auto-forward all messages between connected nodes
-   - Or require explicit route configuration via HTTP API
-
-2. **End-to-end MIDI routing test**
-   - Send MIDI from Node 1 local device
-   - Verify reception on Node 2
-   - Measure end-to-end latency
-   - Validate with actual MIDI hardware or virtual ports
+1. **End-to-end MIDI routing validation** ⚠️ **READY FOR TESTING**
+   - Infrastructure complete (MidiRouter, RouteManager, HTTP API)
+   - Documentation complete (ROUTING_GUIDE.md)
+   - Test tools available (midi_mesh_test, mesh_midi_routing_test.sh)
+   - **Action needed:** Create routing rules via HTTP API and validate message flow
+   - Example workflow:
+     1. Start two nodes
+     2. Query device IDs via GET /midi/devices
+     3. Create routing rule via POST /routing/routes
+     4. Send MIDI with midi_mesh_test send
+     5. Verify reception with midi_mesh_test receive
 
 ### Short-term (v1.1)
 
@@ -289,11 +291,11 @@ The Network MIDI Mesh implementation is **functionally complete** at the mesh ne
 - ✅ Coverage analysis
 - ✅ API documentation (inline)
 - ✅ This status document
+- ✅ **MIDI routing configuration guide** (`ROUTING_GUIDE.md`)
 
 ### Pending
 - User guide for running servers
-- Configuration guide for routing rules
-- Troubleshooting guide
+- Troubleshooting guide (partial in ROUTING_GUIDE.md)
 - Deployment guide
 
 ---
@@ -325,6 +327,8 @@ The mesh networking layer is complete and validated. MIDI routing infrastructure
 **Tests:** `modules/juce/midi-server/tests/integration/`
 
 **Key Commits:**
+- `66c5104` - Added comprehensive MIDI routing configuration guide
+- `b564a12` - Updated STATUS.md with recent fixes
 - `7d2e088` - Disabled NonRealtimeMidiTransport (TCP server not implemented)
 - `0b8877d` - Atomic state snapshots fix
 - `bb4ab9b` - Merge main into feat/midi-server-discovery
