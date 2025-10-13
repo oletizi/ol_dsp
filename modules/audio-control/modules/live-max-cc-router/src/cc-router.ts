@@ -96,7 +96,10 @@ export class CCRouter {
   private findMapping(ccNumber: number): ParameterMapping | null {
     for (let i = 0; i < this.mappings.length; i++) {
       const mapping = this.mappings[i];
-      if (mapping && mapping.ccNumber === ccNumber) {
+      if (!mapping) {
+        continue;
+      }
+      if (mapping.ccNumber === ccNumber) {
         return mapping;
       }
     }
@@ -295,21 +298,24 @@ export class CCRouter {
         // Apply mappings
         const mappingKeys = Object.keys(pluginMapping.mappings);
         for (let i = 0; i < mappingKeys.length; i++) {
-          const ccNumberStr = mappingKeys[i];
-          if (!ccNumberStr) continue;
-
-          const ccNumber = parseInt(ccNumberStr, 10);
-          const mapping = pluginMapping.mappings[ccNumberStr];
-
-          if (mapping) {
-            this.setMapping(
-              ccNumber,
-              mapping.deviceIndex,
-              mapping.parameterIndex,
-              mapping.parameterName,
-              mapping.curve
-            );
+          const key = mappingKeys[i];
+          if (!key) {
+            throw new Error("Mapping key at index " + i + " is undefined - corrupted mapping data");
           }
+          const ccNumber = parseInt(key, 10);
+          const mapping = pluginMapping.mappings[key];
+
+          if (!mapping) {
+            throw new Error("Mapping not found for CC number " + ccNumber + " - invalid mapping data structure");
+          }
+
+          this.setMapping(
+            ccNumber,
+            mapping.deviceIndex,
+            mapping.parameterIndex,
+            mapping.parameterName,
+            mapping.curve
+          );
         }
 
         logger.info("Applied " + mappingKeys.length + " mappings for " + pluginMapping.pluginName);
@@ -505,9 +511,10 @@ export class CCRouter {
 
     for (let i = 0; i < this.mappings.length; i++) {
       const m = this.mappings[i];
-      if (m) {
-        logger.info("  CC " + m.ccNumber + " -> Device " + m.deviceIndex + " Param " + m.parameterIndex + " (" + m.curve + ")");
+      if (!m) {
+        throw new Error("Mapping at index " + i + " is undefined - corrupted mappings array");
       }
+      logger.info("  CC " + m.ccNumber + " -> Device " + m.deviceIndex + " Param " + m.parameterIndex + " (" + m.curve + ")");
     }
 
     const trackInfo = this.getSelectedTrackInfo();

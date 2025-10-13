@@ -77,9 +77,10 @@ function initializeRouter(): void {
   if (devices.length > 0) {
     for (let i = 0; i < devices.length; i++) {
       const device = devices[i];
-      if (device) {
-        logger.info("Device " + i + ": " + device.name + " (" + device.parameterCount + " params)");
+      if (!device) {
+        throw new Error(`Device at index ${i} is undefined - invalid device array returned from CCRouter`);
       }
+      logger.info("Device " + i + ": " + device.name + " (" + device.parameterCount + " params)");
     }
   } else {
     logger.info("No devices found on track");
@@ -171,9 +172,10 @@ function trackinfo(): void {
     const devices = ccRouter.getSelectedTrackDevices();
     for (let i = 0; i < devices.length; i++) {
       const device = devices[i];
-      if (device) {
-        logger.info("  Device " + device.index + ": " + device.name + " (" + device.parameterCount + " parameters)");
+      if (!device) {
+        throw new Error(`Device at index ${i} is undefined - invalid device array returned from CCRouter`);
       }
+      logger.info("  Device " + device.index + ": " + device.name + " (" + device.parameterCount + " parameters)");
     }
   } else {
     logger.info("No track selected");
@@ -216,9 +218,10 @@ function listcontrollers(): void {
   logger.info("=== Available Controllers ===");
   for (let i = 0; i < controllers.length; i++) {
     const controller = controllers[i];
-    if (controller) {
-      logger.info(controller.manufacturer + " " + controller.model);
+    if (!controller) {
+      throw new Error(`Controller at index ${i} is undefined - invalid controller array returned from CCRouter`);
     }
+    logger.info(controller.manufacturer + " " + controller.model);
   }
   logger.info("===========================");
 }
