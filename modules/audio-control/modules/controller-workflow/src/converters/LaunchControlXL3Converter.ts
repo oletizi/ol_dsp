@@ -176,7 +176,7 @@ export class LaunchControlXL3Converter implements CanonicalConverterInterface {
     const canonicalId = this.mapControlId(control.id);
     const name = options.preserveLabels === true && control.name ? control.name : this.getDefaultName(canonicalId);
 
-    return {
+    const controlDef: ControlDefinition = {
       id: canonicalId,
       name,
       type: this.mapControlType(control.type),
@@ -185,6 +185,13 @@ export class LaunchControlXL3Converter implements CanonicalConverterInterface {
       range: control.range ?? [0, 127],
       description: `Mapped from LCXL3 control: ${control.id}`,
     };
+
+    // Preserve plugin_parameter from AI matching (if present)
+    if (control.plugin_parameter !== undefined) {
+      controlDef.plugin_parameter = control.plugin_parameter;
+    }
+
+    return controlDef;
   }
 
   /**

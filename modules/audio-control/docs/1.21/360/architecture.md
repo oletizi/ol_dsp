@@ -41,7 +41,7 @@ The 360 feature implements a modular, extensible architecture for deploying MIDI
 ┌─────────────────────┐
 │ Matching Layer ⭐   │  AI-powered parameter matching
 ├─────────────────────┤
-│ • Parameter Matcher │  Claude AI integration
+│ • Parameter Matcher │  Claude Code CLI integration
 │ • Descriptor Loader │  Plugin descriptor reader
 │ • Confidence Scorer │  Match quality validation
 └──────────┬──────────┘
@@ -106,7 +106,7 @@ interface DAWDeployerInterface {
 - **Dependency injection:** Components accept dependencies via constructor
 - **Factory pattern:** Auto-detection and instantiation via factories
 - **Event-driven:** Progress reporting via EventEmitter
-- **AI-augmented:** Optional Claude AI integration for parameter matching
+- **AI-augmented:** Optional Claude Code CLI integration for parameter matching
 
 See [implementation/workplan.md](./implementation/workplan.md) for detailed design.
 
@@ -214,16 +214,16 @@ Input:
          │  ─────────────────  │
          │  • Load descriptor  │
          │  • Build AI prompt  │
-         │  • Call Claude API  │
+         │  • Call Claude CLI  │
          │  • Parse response   │
          │  • Validate matches │
          └─────────────────────┘
                     ↓
          ┌─────────────────────┐
-         │  Claude AI          │
+         │  Claude Code CLI    │
          │  ─────────────────  │
          │  Model: Claude 3.5  │
-         │  Method: CLI or API │
+         │  Integration: CLI   │
          │  Semantic matching  │
          └─────────────────────┘
                     ↓
@@ -245,10 +245,10 @@ Output:
    - Synonyms: "Env Attack" → "Attack Time"
    - Context-aware: Groups related parameters
 
-2. **Integration Methods**
-   - **Method 1:** Shell out to `claude` CLI
-   - **Method 2:** Direct Anthropic API calls
-   - **Method 3:** Cached results from previous matches
+2. **Integration Method**
+   - **Claude Code CLI:** Exclusively uses Claude Code CLI for AI integration
+   - **Authentication:** Leverages Claude Code's built-in authentication
+   - **Caching:** Results cached in canonical YAML for performance
 
 3. **Confidence Scoring**
    - 1.0: Exact string match
@@ -257,7 +257,7 @@ Output:
    - < 0.7: Low confidence (ambiguous match)
 
 4. **Error Handling**
-   - Graceful degradation if AI unavailable
+   - Graceful degradation if CLI unavailable
    - Retry logic with exponential backoff
    - Cache results for performance
    - Manual override support
@@ -281,7 +281,7 @@ interface ParameterMatcherInterface {
   getConfidence(match: ParameterMatch): number;
 
   /**
-   * Check if matcher is available (API key configured)
+   * Check if matcher is available (CLI installed and authenticated)
    */
   isAvailable(): Promise<boolean>;
 }
@@ -308,8 +308,7 @@ interface MatchOptions {
 import { ParameterMatcher } from '@/services/ParameterMatcher';
 
 const matcher = new ParameterMatcher({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-  useCLI: true  // Prefer CLI if available
+  useCLI: true  // Uses Claude Code CLI
 });
 
 // Load plugin descriptor
@@ -332,14 +331,13 @@ for (const match of matches) {
 ```
 
 **Performance:**
-- Single API call batches all controls
+- Single CLI call batches all controls
 - Results cached in canonical YAML
 - Typical matching time: 2-5 seconds
 - Subsequent deployments: instant (uses cache)
 
 **Dependencies:**
-- `@anthropic-ai/sdk` (API method)
-- `claude` CLI (optional, preferred method)
+- Claude Code CLI (required)
 - Plugin descriptor files (from Phase 1)
 
 ### 4. Ardour Deployer
@@ -390,7 +388,7 @@ Source: YAML files                              Source: Hardware custom modes
         (version-controlled)                             (extracted via LiveDeployer)
 
 Build:  convert-canonical-maps.cjs              Extract: controller-deploy deploy
-        ↓                                       AI Match: ParameterMatcher
+        ↓                                       AI Match: ParameterMatcher (CLI)
 Output: canonical-plugin-maps.ts                        ↓
                                                 Output:  plugin-mappings.json
                                                          (with AI-matched params)
@@ -408,7 +406,7 @@ Updates: Via PR/commit workflow                 Updates: One-click from hardware
 
 **Benefits:**
 - **Tier 1** provides curated, version-controlled defaults
-- **Tier 2** enables one-click deployment with AI parameter matching
+- **Tier 2** enables one-click deployment with AI parameter matching via Claude Code CLI
 - **No conflicts** with build pipeline (separate data files)
 - **Runtime override** allows user customization
 - **AI-enhanced** parameter bindings for better plugin control
@@ -447,7 +445,7 @@ See [live-deployer/architecture.md](./live-deployer/architecture.md) for details
    │ ParameterMatcher     │
    │ .matchParameters()   │
    │ ├─ Load descriptor   │
-   │ ├─ Call Claude AI    │
+   │ ├─ Call Claude CLI   │
    │ └─ Validate matches  │
    └──────────┬───────────┘
               │ CanonicalMidiMap (with plugin_parameter)
@@ -542,7 +540,7 @@ const result = await workflow.execute({
 |-------|--------------|
 | **Core** | TypeScript 5.3+, ESM modules, Strict mode |
 | **MIDI** | WebMIDI API (browsers), node-midi (Node.js), SysEx parsing |
-| **AI Integration** | Anthropic API, Claude CLI, Claude 3.5 Sonnet |
+| **AI Integration** | Claude Code CLI |
 | **Data Formats** | YAML (canonical), JSON (runtime), XML (Ardour) |
 | **Build** | Vite (bundling), TypeScript compiler, pnpm workspaces |
 | **Testing** | Vitest, dependency injection for mocking |
@@ -637,7 +635,7 @@ Benefits:
 
 - **Caching:** Controller configurations cached between deployments
 - **AI result caching:** Matched parameters saved in canonical YAML
-- **Batch matching:** All controls matched in single API call
+- **Batch matching:** All controls matched in single CLI call
 - **Lazy loading:** DAW deployers loaded on-demand
 - **Async operations:** Non-blocking I/O for file operations
 - **Streaming:** Large maps processed in chunks
@@ -647,11 +645,11 @@ Benefits:
 
 - **File system access:** Validates output paths before writing
 - **MIDI input:** Validates SysEx messages before parsing
-- **API keys:** Secure storage and environment variable handling
-- **Command injection:** No shell command execution except trusted `claude` CLI
+- **Authentication:** Leverages Claude Code's secure authentication
+- **Command execution:** Only trusted Claude Code CLI commands
 - **Path traversal:** Sanitizes file paths in output directory options
 - **AI prompts:** Input validation to prevent prompt injection
-- **Rate limiting:** Respects Anthropic API rate limits
+- **Rate limiting:** Respects Claude Code CLI rate limits
 
 ## Cross-References
 

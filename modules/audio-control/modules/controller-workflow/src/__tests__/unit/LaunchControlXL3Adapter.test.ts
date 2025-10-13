@@ -155,9 +155,51 @@ describe('LaunchControlXL3Adapter', () => {
     });
 
     it('should handle read errors gracefully', async () => {
-      mockDevice.readCustomMode.mockRejectedValue(new Error('SysEx timeout'));
+      // Mock: first slot fails, rest succeed with various states
+      mockDevice.readCustomMode.mockImplementation(async (slot: number) => {
+        if (slot === 0) {
+          throw new Error('SysEx timeout');
+        }
+        if (slot === 1) {
+          return {
+            name: 'Working Slot',
+            controls: {
+              SEND_A1: {
+                name: 'Test Control',
+                type: 'knob',
+                cc: 13,
+                channel: 0,
+                minValue: 0,
+                maxValue: 127,
+                behavior: 'absolute',
+              },
+            },
+            metadata: { slot },
+          };
+        }
+        return null; // Rest are empty
+      });
 
-      await expect(adapter.listConfigurations()).rejects.toThrow('SysEx timeout');
+      const slots = await adapter.listConfigurations();
+
+      // Should have all 16 slots
+      expect(slots).toHaveLength(16);
+
+      // First slot should be marked as empty due to error
+      expect(slots[0]).toEqual({
+        index: 0,
+        isEmpty: true,
+      });
+
+      // Second slot should be populated
+      expect(slots[1]).toEqual({
+        index: 1,
+        isEmpty: false,
+        name: 'Working Slot',
+      });
+
+      // Rest should be empty
+      expect(slots[2].isEmpty).toBe(true);
     });
   });
 

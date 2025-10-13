@@ -22,7 +22,7 @@ Phase 1: PLUGIN INTERROGATION          Phase 2: CANONICAL MAPPING
 
 Phase 2.5: FUZZY PARAMETER MATCHING (AI-Powered) ⭐
 ────────────────────────────────────────────────────
-6.5. Match control names → plugin parameters (Claude AI)
+6.5. Match control names → plugin parameters (Claude Code CLI)
 
 Phase 3: DAW DEPLOYMENT
 ────────────────────────
@@ -297,7 +297,7 @@ npx controller-deploy deploy \
 
 ### Purpose
 
-Automatically match human-readable control names from hardware (e.g., "VCF Cutoff", "Env Attack") to plugin parameter indices using Claude AI.
+Automatically match human-readable control names from hardware (e.g., "VCF Cutoff", "Env Attack") to plugin parameter indices using Claude AI via Claude Code CLI.
 
 ### When It Runs
 
@@ -330,9 +330,8 @@ npx controller-deploy deploy --slot 0 --plugin "TAL-J-8" --daw ardour
               ┌───────────────────────┐
               │  Claude AI Matcher    │
               │  ─────────────────────│
-              │  Shell out to:        │
-              │  • claude CLI, OR     │
-              │  • Anthropic API      │
+              │  Integration:         │
+              │  • Claude Code CLI    │
               └───────────────────────┘
                           ↓
               ┌───────────────────────┐
@@ -391,39 +390,22 @@ controls:
 <!-- Plugin-specific parameter binding -->
 ```
 
-### Integration Methods
+### Integration Method
 
-#### Method 1: Claude CLI (Preferred)
+The parameter matching service integrates with Claude AI exclusively through the Claude Code CLI:
 
 ```typescript
-// Shell out to claude CLI
+// Shell out to Claude Code CLI
 const result = await execAsync(
   `claude --prompt "Match these control names to plugin parameters: ${JSON.stringify(controls)}" --plugin-descriptor ${descriptorPath}`
 );
 ```
 
 **Requirements:**
-- `claude` CLI installed and in PATH
-- API key configured in environment
+- Claude Code CLI installed and authenticated
+- Claude Code session active
 
-#### Method 2: Anthropic API (Direct)
-
-```typescript
-import Anthropic from '@anthropic-ai/sdk';
-
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
-
-const message = await anthropic.messages.create({
-  model: 'claude-3-5-sonnet-20241022',
-  max_tokens: 1024,
-  messages: [{
-    role: 'user',
-    content: `Match control names to plugin parameters:\n${prompt}`
-  }],
-});
-```
+**Note:** The original implementation planned to support direct Anthropic API calls, but the production implementation uses Claude Code CLI exclusively for authentication simplicity and consistency with the Claude Code ecosystem.
 
 ### Matching Algorithm
 
@@ -538,24 +520,26 @@ ls plugin-descriptors/tal-togu-audio-line-tal-j-8.json
 # Override matches in canonical YAML
 ```
 
-#### Problem: Claude API errors
+#### Problem: Claude Code CLI errors
 
 **Causes:**
-- API key not configured
-- Rate limiting
-- Network issues
+- Claude Code CLI not installed
+- Not authenticated with Claude Code
+- Claude Code session expired
 
 **Solutions:**
 ```bash
-# Set API key
-export ANTHROPIC_API_KEY=your_api_key
+# Verify CLI installed
+which claude  # Should show path to CLI
 
-# Or use claude CLI
-which claude  # Verify CLI installed
+# Check version
 claude --version
 
-# Check rate limits in Anthropic Console
-# Retry with exponential backoff
+# Authenticate if needed
+claude auth login
+
+# Verify authentication
+claude auth status
 ```
 
 #### Problem: Slow matching performance
@@ -860,8 +844,9 @@ const SKIP_PATTERNS = [
 ### Fuzzy Matching Issues
 
 **Problem:** AI matching fails completely
-- Verify `ANTHROPIC_API_KEY` environment variable set
-- Check `claude` CLI is installed: `which claude`
+- Verify Claude Code CLI is installed: `which claude`
+- Check authentication: `claude auth status`
+- Ensure Claude Code session is active
 - Ensure plugin descriptor exists and is valid
 - Check control names are descriptive (not "Knob1", "EncA")
 
@@ -875,10 +860,11 @@ const SKIP_PATTERNS = [
 - Use most specific parameter name on hardware
 - Manually specify correct parameter in YAML
 
-**Problem:** Rate limiting or API errors
-- Batch controls in single request (default behavior)
-- Add retry logic with exponential backoff
-- Use cached results when available
+**Problem:** Claude Code CLI not responding
+- Check Claude Code is running
+- Restart Claude Code session
+- Verify network connectivity
+- Check Claude Code status page for service issues
 
 ### Deployment Issues
 
