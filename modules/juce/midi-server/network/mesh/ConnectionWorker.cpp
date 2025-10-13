@@ -266,18 +266,21 @@ void ConnectionWorker::handleConnectCommand()
             );
             realtimeTransport->startThread();
 
-            // Initialize non-real-time transport (TCP)
-            // Use httpPort + 1 for TCP MIDI transport (convention)
-            int remoteTcpPort = remoteNodeInfo.httpPort + 1;
-            nonRealtimeTransport = std::make_unique<NonRealtimeMidiTransport>(
-                remoteHost,
-                remoteTcpPort
-            );
-            nonRealtimeTransport->startThread();
+            // TODO: Non-real-time transport (TCP) disabled until TCP MIDI server is implemented
+            // There is currently no TCP server listening for MIDI connections.
+            // Options to implement this feature:
+            // 1. Add dedicated TCP MIDI server on a separate port
+            // 2. Use HTTP POST to existing HTTP server for non-realtime messages
+            // 3. Rely solely on UDP for all MIDI (acceptable for LAN scenarios)
+            //
+            // For now, UDP provides sufficient functionality for realtime MIDI.
+            // NonRealtimeMidiTransport would be needed for:
+            // - Reliable SysEx delivery (with ACK/retry)
+            // - Bulk data transfers
+            // - WAN scenarios requiring TCP reliability
 
-            juce::Logger::writeToLog("ConnectionWorker: Dual-transport initialized (UDP: " +
-                                    remoteHost + ":" + juce::String(remoteUdpPort) +
-                                    ", TCP: " + remoteHost + ":" + juce::String(remoteTcpPort) + ")");
+            juce::Logger::writeToLog("ConnectionWorker: Realtime transport initialized (UDP: " +
+                                    remoteHost + ":" + juce::String(remoteUdpPort) + ")");
         } else {
             juce::Logger::writeToLog("ConnectionWorker: Failed to parse remote UDP endpoint");
         }
@@ -312,16 +315,13 @@ void ConnectionWorker::handleDisconnectCommand()
     // Set running flag to false
     running = false;
 
-    // Shutdown dual-transport threads first
+    // Shutdown transport threads
     if (realtimeTransport) {
         realtimeTransport->stopThread(1000);
         realtimeTransport.reset();
     }
 
-    if (nonRealtimeTransport) {
-        nonRealtimeTransport->stopThread(1000);
-        nonRealtimeTransport.reset();
-    }
+    // nonRealtimeTransport currently disabled (no cleanup needed)
 
     realtimeBuffer.reset();
 
@@ -396,8 +396,8 @@ void ConnectionWorker::handleSendMidiCommand(Commands::SendMidiCommand* cmd)
     }
 
     // Validate transport initialized
-    if (!realtimeBuffer || !realtimeTransport || !nonRealtimeTransport) {
-        juce::Logger::writeToLog("ConnectionWorker: Transports not initialized");
+    if (!realtimeBuffer || !realtimeTransport) {
+        juce::Logger::writeToLog("ConnectionWorker: UDP transport not initialized");
         return;
     }
 
@@ -426,11 +426,22 @@ void ConnectionWorker::handleSendMidiCommand(Commands::SendMidiCommand* cmd)
             juce::Logger::writeToLog("ConnectionWorker: Real-time buffer full, message dropped");
         }
     } else {
-        // Non-real-time: Send via TCP with reliable delivery
-        nonRealtimeTransport->sendMessage(msg, cmd->deviceId);
-        juce::Logger::writeToLog("ConnectionWorker: Non-real-time MIDI sent via TCP - deviceId=" +
-                                juce::String(cmd->deviceId) +
-                                ", bytes=" + juce::String(static_cast<int>(cmd->data.size())));
+        // Non-real-time: TCP transport currently disabled (see transport initialization)
+        // For now, send all messages via UDP even if they're non-realtime
+        // This may result in dropped SysEx messages, but provides basic functionality
+        RealtimeMidiBuffer::MidiPacket packet;
+        packet.length = static_cast<uint8_t>(cmd->data.size());
+        std::memcpy(packet.data, cmd->data.data(), cmd->data.size());
+        packet.deviceId = cmd->deviceId;
+        packet.timestamp = static_cast<uint32_t>(juce::Time::getMillisecondCounterHiRes());
+
+        if (realtimeBuffer->write(packet)) {
+            juce::Logger::writeToLog("ConnectionWorker: Non-realtime MIDI sent via UDP (TCP disabled) - deviceId=" +
+                                    juce::String(cmd->deviceId) +
+                                    ", bytes=" + juce::String(static_cast<int>(cmd->data.size())));
+        } else {
+            juce::Logger::writeToLog("ConnectionWorker: Buffer full, non-realtime message dropped");
+        }
     }
 }
 
@@ -594,15 +605,8 @@ ConnectionWorker::TransportStats ConnectionWorker::getTransportStats() const
         stats.realtimeTransport.receiveErrors = rtStats.receiveErrors;
     }
 
-    if (nonRealtimeTransport) {
-        auto nrtStats = nonRealtimeTransport->getStats();
-        stats.nonRealtimeTransport.messagesSent = nrtStats.messagesSent;
-        stats.nonRealtimeTransport.messagesReceived = nrtStats.messagesReceived;
-        stats.nonRealtimeTransport.fragmentsSent = nrtStats.fragmentsSent;
-        stats.nonRealtimeTransport.fragmentsReceived = nrtStats.fragmentsReceived;
-        stats.nonRealtimeTransport.retries = nrtStats.retries;
-        stats.nonRealtimeTransport.failures = nrtStats.failures;
-    }
+    // nonRealtimeTransport is currently disabled (see initialization code)
+    // Stats will be zero until TCP transport is implemented
 
     return stats;
 }
