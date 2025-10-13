@@ -1,7 +1,7 @@
 /**
  * Unit tests for ParameterMatcher service.
  *
- * Tests fuzzy matching of controller names to plugin parameters using Claude AI.
+ * Tests fuzzy matching of controller names to plugin parameters using Claude Code CLI.
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
@@ -11,6 +11,12 @@ import {
   type ParameterMatchResult,
 } from '../ParameterMatcher.js';
 import type { PluginDescriptor } from '@oletizi/canonical-midi-maps';
+import { spawn } from 'child_process';
+
+// Mock spawn
+vi.mock('child_process', () => ({
+  spawn: vi.fn(),
+}));
 
 // Mock plugin descriptor for testing
 const mockPluginDescriptor: PluginDescriptor = {
@@ -82,11 +88,47 @@ const mockPluginDescriptor: PluginDescriptor = {
   ],
 };
 
+/**
+ * Helper to create a mock spawn process
+ */
+function createMockProcess(stdout: string, stderr = '', exitCode = 0) {
+  const mockProcess = {
+    stdout: {
+      on: vi.fn((event, handler) => {
+        if (event === 'data' && stdout) {
+          // Simulate async data emission
+          setTimeout(() => handler(Buffer.from(stdout)), 0);
+        }
+      }),
+    },
+    stderr: {
+      on: vi.fn((event, handler) => {
+        if (event === 'data' && stderr) {
+          setTimeout(() => handler(Buffer.from(stderr)), 0);
+        }
+      }),
+    },
+    stdin: {
+      write: vi.fn(),
+      end: vi.fn(),
+    },
+    on: vi.fn((event, handler) => {
+      if (event === 'close') {
+        setTimeout(() => handler(exitCode), 10);
+      }
+    }),
+    kill: vi.fn(),
+  };
+
+  return mockProcess;
+}
+
 describe('ParameterMatcher', () => {
   let matcher: ParameterMatcher;
 
   beforeEach(() => {
     matcher = ParameterMatcher.create();
+    vi.clearAllMocks();
   });
 
   describe('constructor and factory', () => {
@@ -104,9 +146,8 @@ describe('ParameterMatcher', () => {
     });
   });
 
-  describe('matchParameters', () => {
-    it('should handle successful Claude API response', async () => {
-      // Mock fetch for API call
+  describe('matchParameters with Claude Code CLI', () => {
+    it('should handle successful Claude CLI response', async () => {
       const mockResponse = JSON.stringify([
         {
           controlName: 'Cutoff',
@@ -124,15 +165,8 @@ describe('ParameterMatcher', () => {
         },
       ]);
 
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: async () => ({
-          content: [{ type: 'text', text: mockResponse }],
-        }),
-      });
-
-      // Set API key to trigger API path
-      process.env.ANTHROPIC_API_KEY = 'test-key';
+      const mockProc = createMockProcess(mockResponse);
+      vi.mocked(spawn).mockReturnValue(mockProc as any);
 
       const results = await matcher.matchParameters(
         ['Cutoff', 'Resonance'],
@@ -146,7 +180,14 @@ describe('ParameterMatcher', () => {
       expect(results[1].controlName).toBe('Resonance');
       expect(results[1].pluginParameter).toBe(2);
 
-      delete process.env.ANTHROPIC_API_KEY;
+      // Verify spawn was called correctly
+      expect(spawn).toHaveBeenCalledWith('claude', [], {
+        stdio: ['pipe', 'pipe', 'pipe'],
+      });
+
+      // Verify prompt was written to stdin
+      expect(mockProc.stdin.write).toHaveBeenCalled();
+      expect(mockProc.stdin.end).toHaveBeenCalled();
     });
 
     it('should filter results below minimum confidence', async () => {
@@ -160,14 +201,8 @@ describe('ParameterMatcher', () => {
         },
       ]);
 
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: async () => ({
-          content: [{ type: 'text', text: mockResponse }],
-        }),
-      });
-
-      process.env.ANTHROPIC_API_KEY = 'test-key';
+      const mockProc = createMockProcess(mockResponse);
+      vi.mocked(spawn).mockReturnValue(mockProc as any);
 
       const results = await matcher.matchParameters(
         ['Unknown'],
@@ -178,92 +213,80 @@ describe('ParameterMatcher', () => {
       expect(results).toHaveLength(1);
       expect(results[0].pluginParameter).toBeUndefined();
       expect(results[0].confidence).toBe(0.2);
-
-      delete process.env.ANTHROPIC_API_KEY;
     });
 
-    it('should handle Claude API errors gracefully', async () => {
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: false,
-        status: 500,
-        text: async () => 'Internal server error',
-      });
-
-      process.env.ANTHROPIC_API_KEY = 'test-key';
+    it('should handle Claude CLI errors gracefully', async () => {
+      const mockProc = createMockProcess('', 'Command failed', 1);
+      vi.mocked(spawn).mockReturnValue(mockProc as any);
 
       await expect(
         matcher.matchParameters(['Test'], mockPluginDescriptor)
-      ).rejects.toThrow('Claude API request failed');
-
-      delete process.env.ANTHROPIC_API_KEY;
+      ).rejects.toThrow('Claude CLI exited with code 1');
     });
 
-    it('should handle empty API response', async () => {
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: async () => ({
-          content: [],
-        }),
-      });
-
-      process.env.ANTHROPIC_API_KEY = 'test-key';
+    it('should handle empty CLI response', async () => {
+      const mockProc = createMockProcess('');
+      vi.mocked(spawn).mockReturnValue(mockProc as any);
 
       await expect(
         matcher.matchParameters(['Test'], mockPluginDescriptor)
-      ).rejects.toThrow('Claude API returned empty response');
+      ).rejects.toThrow('Claude CLI returned empty response');
+    });
 
-      delete process.env.ANTHROPIC_API_KEY;
+    it('should handle CLI spawn errors', async () => {
+      const mockProc = createMockProcess('');
+      mockProc.on = vi.fn((event, handler) => {
+        if (event === 'error') {
+          setTimeout(() => handler(new Error('spawn ENOENT')), 0);
+        }
+      });
+      vi.mocked(spawn).mockReturnValue(mockProc as any);
+
+      await expect(
+        matcher.matchParameters(['Test'], mockPluginDescriptor)
+      ).rejects.toThrow('Failed to spawn Claude CLI: spawn ENOENT');
+    });
+
+    it('should handle CLI timeout', async () => {
+      const mockProc = createMockProcess('');
+      // Don't emit 'close' event to simulate timeout
+      mockProc.on = vi.fn();
+      vi.mocked(spawn).mockReturnValue(mockProc as any);
+
+      const shortTimeoutMatcher = ParameterMatcher.create({ timeout: 100 });
+
+      await expect(
+        shortTimeoutMatcher.matchParameters(['Test'], mockPluginDescriptor)
+      ).rejects.toThrow('Claude CLI request timed out after 100ms');
+
+      expect(mockProc.kill).toHaveBeenCalled();
     });
 
     it('should handle invalid JSON in Claude response', async () => {
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: async () => ({
-          content: [{ type: 'text', text: 'Not valid JSON' }],
-        }),
-      });
-
-      process.env.ANTHROPIC_API_KEY = 'test-key';
+      const mockProc = createMockProcess('Not valid JSON');
+      vi.mocked(spawn).mockReturnValue(mockProc as any);
 
       await expect(
         matcher.matchParameters(['Test'], mockPluginDescriptor)
       ).rejects.toThrow('Could not find JSON array in Claude response');
-
-      delete process.env.ANTHROPIC_API_KEY;
     });
 
     it('should handle malformed JSON in Claude response', async () => {
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: async () => ({
-          content: [{ type: 'text', text: '[{invalid json}]' }],
-        }),
-      });
-
-      process.env.ANTHROPIC_API_KEY = 'test-key';
+      const mockProc = createMockProcess('[{invalid json}]');
+      vi.mocked(spawn).mockReturnValue(mockProc as any);
 
       await expect(
         matcher.matchParameters(['Test'], mockPluginDescriptor)
       ).rejects.toThrow('Failed to parse Claude response as JSON');
-
-      delete process.env.ANTHROPIC_API_KEY;
     });
 
     it('should handle non-array JSON response', async () => {
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: async () => ({
-          content: [{ type: 'text', text: '{"not": "an array"}' }],
-        }),
-      });
-
-      process.env.ANTHROPIC_API_KEY = 'test-key';
+      const mockProc = createMockProcess('{"not": "an array"}');
+      vi.mocked(spawn).mockReturnValue(mockProc as any);
 
       await expect(
         matcher.matchParameters(['Test'], mockPluginDescriptor)
-      ).rejects.toThrow('Claude response is not an array');
-
-      delete process.env.ANTHROPIC_API_KEY;
+      ).rejects.toThrow('Could not find JSON array');
     });
 
     it('should validate parameter indices from Claude', async () => {
@@ -277,14 +300,8 @@ describe('ParameterMatcher', () => {
         },
       ]);
 
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: async () => ({
-          content: [{ type: 'text', text: mockResponse }],
-        }),
-      });
-
-      process.env.ANTHROPIC_API_KEY = 'test-key';
+      const mockProc = createMockProcess(mockResponse);
+      vi.mocked(spawn).mockReturnValue(mockProc as any);
 
       const results = await matcher.matchParameters(['Test'], mockPluginDescriptor);
 
@@ -292,8 +309,6 @@ describe('ParameterMatcher', () => {
       expect(results[0].pluginParameter).toBeUndefined();
       expect(results[0].confidence).toBe(0);
       expect(results[0].reasoning).toContain('Invalid parameter index');
-
-      delete process.env.ANTHROPIC_API_KEY;
     });
 
     it('should handle null parameter indices from Claude', async () => {
@@ -307,22 +322,14 @@ describe('ParameterMatcher', () => {
         },
       ]);
 
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: async () => ({
-          content: [{ type: 'text', text: mockResponse }],
-        }),
-      });
-
-      process.env.ANTHROPIC_API_KEY = 'test-key';
+      const mockProc = createMockProcess(mockResponse);
+      vi.mocked(spawn).mockReturnValue(mockProc as any);
 
       const results = await matcher.matchParameters(['Test'], mockPluginDescriptor);
 
       expect(results).toHaveLength(1);
       expect(results[0].pluginParameter).toBeUndefined();
       expect(results[0].confidence).toBe(0.1);
-
-      delete process.env.ANTHROPIC_API_KEY;
     });
 
     it('should handle missing matches in Claude response', async () => {
@@ -337,14 +344,8 @@ describe('ParameterMatcher', () => {
         // Missing second control
       ]);
 
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: async () => ({
-          content: [{ type: 'text', text: mockResponse }],
-        }),
-      });
-
-      process.env.ANTHROPIC_API_KEY = 'test-key';
+      const mockProc = createMockProcess(mockResponse);
+      vi.mocked(spawn).mockReturnValue(mockProc as any);
 
       const results = await matcher.matchParameters(
         ['Control1', 'Control2'],
@@ -355,8 +356,6 @@ describe('ParameterMatcher', () => {
       expect(results[0].pluginParameter).toBe(0);
       expect(results[1].pluginParameter).toBeUndefined();
       expect(results[1].reasoning).toBe('No match found');
-
-      delete process.env.ANTHROPIC_API_KEY;
     });
 
     it('should extract JSON from markdown code blocks', async () => {
@@ -370,43 +369,25 @@ describe('ParameterMatcher', () => {
         },
       ]) + '\n```';
 
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: async () => ({
-          content: [{ type: 'text', text: mockResponse }],
-        }),
-      });
-
-      process.env.ANTHROPIC_API_KEY = 'test-key';
+      const mockProc = createMockProcess(mockResponse);
+      vi.mocked(spawn).mockReturnValue(mockProc as any);
 
       const results = await matcher.matchParameters(['Test'], mockPluginDescriptor);
 
       expect(results).toHaveLength(1);
       expect(results[0].pluginParameter).toBe(0);
-
-      delete process.env.ANTHROPIC_API_KEY;
     });
   });
 
-  describe('buildMatchingPrompt', () => {
-    it('should include plugin and parameter information', async () => {
-      // We can't directly test private methods, but we can test the effect
-      // by ensuring the API receives a properly formatted prompt
+  describe('prompt building', () => {
+    it('should include plugin and parameter information in prompt', async () => {
       let capturedPrompt = '';
 
-      global.fetch = vi.fn().mockImplementation(async (url, options) => {
-        const body = JSON.parse(options?.body as string);
-        capturedPrompt = body.messages[0].content;
-
-        return {
-          ok: true,
-          json: async () => ({
-            content: [{ type: 'text', text: '[]' }],
-          }),
-        };
+      const mockProc = createMockProcess('[]');
+      mockProc.stdin.write = vi.fn((data) => {
+        capturedPrompt = data.toString();
       });
-
-      process.env.ANTHROPIC_API_KEY = 'test-key';
+      vi.mocked(spawn).mockReturnValue(mockProc as any);
 
       await matcher.matchParameters(['Cutoff'], mockPluginDescriptor);
 
@@ -414,8 +395,6 @@ describe('ParameterMatcher', () => {
       expect(capturedPrompt).toContain('Test Plugin');
       expect(capturedPrompt).toContain('Filter Cutoff');
       expect(capturedPrompt).toContain('Cutoff');
-
-      delete process.env.ANTHROPIC_API_KEY;
     });
   });
 });

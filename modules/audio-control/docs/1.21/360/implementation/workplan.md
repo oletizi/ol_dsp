@@ -47,6 +47,9 @@ modules/audio-control/
     │   │   ├── converters/
     │   │   │   └── LaunchControlXL3Converter.ts    # LCXL3-specific converter
     │   │   │
+    │   │   ├── services/
+    │   │   │   └── ParameterMatcher.ts             # AI-powered parameter matching
+    │   │   │
     │   │   ├── orchestrator/
     │   │   │   └── DeploymentWorkflow.ts           # Generic orchestrator
     │   │   │
@@ -646,7 +649,7 @@ program
   .option('-c, --controller <type>', 'Controller type (auto-detect if omitted)')
   .option('-s, --slot <number>', 'Configuration slot number', '0')
   .option('-d, --daw <daws...>', 'Target DAWs (ardour, live)', ['ardour'])
-  .option('-p, --plugin <name>', 'Plugin name for parameter mapping')
+  .option('-p, --plugin <name>', 'Plugin name for AI-powered parameter matching')
   .option('-m, --midi-channel <number>', 'MIDI channel override')
   .option('-o, --output <dir>', 'Output directory for canonical YAML')
   .option('--install', 'Auto-install to DAW config directories', false)
@@ -706,7 +709,7 @@ npx controller-deploy list
 # Deploy Launch Control XL3 slot 0 to Ardour
 npx controller-deploy deploy --slot 0 --daw ardour
 
-# Deploy with plugin context
+# Deploy with AI-powered plugin parameter matching
 npx controller-deploy deploy --slot 0 --plugin "TAL-J-8" --daw ardour live
 
 # Auto-detect controller, save canonical, and deploy
@@ -940,6 +943,76 @@ export class LiveDeployer implements DAWDeployerInterface {
 
 ---
 
+## Phase 8: AI Parameter Matching Service
+
+**Objective:** Implement Claude AI-powered fuzzy matching to automatically map hardware control names to plugin parameter indices.
+
+**Location:** `modules/controller-workflow/src/services/ParameterMatcher.ts`
+
+### Components
+
+1. **ParameterMatcherInterface** - Core matching interface
+2. **ParameterMatcher** - Implementation with Claude integration
+3. **Plugin descriptor loader** - Load parameter databases
+4. **Claude integration** - Dual method (API + CLI fallback)
+5. **Confidence scoring** - Match quality metrics
+
+### Implementation Requirements
+
+- Load plugin descriptors from canonical-midi-maps registry
+- Dual Claude integration: Anthropic API (primary), CLI (fallback)
+- Semantic matching: exact, abbreviation, synonym recognition
+- Confidence scoring: 0-1 scale with reasoning
+- Error handling: graceful degradation if AI unavailable
+- Caching: Save matches in canonical YAML for reuse
+- Timeout handling: 30s default, configurable
+
+### Integration Points
+
+**Deploy workflow (deploy.ts):**
+```typescript
+if (options.plugin) {
+  const matcher = ParameterMatcher.create();
+  const descriptor = await loadPluginDescriptor(options.plugin);
+  const matches = await matcher.matchParameters(controlNames, descriptor);
+
+  // Add plugin_parameter fields to controls
+  config.controls.forEach((control, i) => {
+    if (matches[i]?.pluginParameter) {
+      control.plugin_parameter = matches[i].pluginParameter;
+    }
+  });
+}
+```
+
+### Testing Strategy
+
+- Mock Claude responses for deterministic tests
+- Test confidence thresholds (0.6 minimum)
+- Test graceful degradation (API failure → CLI fallback)
+- Test parameter validation
+- Test caching behavior
+- Integration test with real TAL-J-8 descriptor
+
+### Acceptance Criteria - Phase 8
+
+- [x] Implements ParameterMatcherInterface
+- [x] Supports Anthropic API integration
+- [x] Supports Claude CLI fallback
+- [x] Confidence scoring (0-1) with reasoning
+- [x] Plugin descriptor loading
+- [x] Error handling with descriptive messages
+- [x] Timeout handling (30s default)
+- [x] Parameter index validation
+- [x] Unit tests with mocked responses (16 tests)
+- [x] Example usage code
+- [x] Documentation (README.md in services/)
+- [ ] Integration with deploy.ts workflow
+- [ ] End-to-end test with real plugin descriptor
+- [ ] Performance benchmarks (<5s for 48 controls)
+
+---
+
 ## Package Configuration
 
 ### modules/controller-workflow/package.json
@@ -1063,7 +1136,8 @@ export class LiveDeployer implements DAWDeployerInterface {
 | 5. CLI | Universal command interface | 2-3 hours | ⏳ Pending |
 | 6. DAW Deployers | Ardour & Live adapters | 2-3 hours | ⏳ Pending |
 | 7. Testing & Docs | Tests & documentation | 3-4 hours | ⏳ Pending |
-| **Total** | | **18-25 hours** | |
+| 8. AI Parameter Matching | Claude-powered matching | 4-6 hours | ⏳ Pending |
+| **Total** | | **22-31 hours** | |
 
 ---
 
@@ -1091,6 +1165,12 @@ export class LiveDeployer implements DAWDeployerInterface {
 - ✅ Clear progress indicators
 - ✅ Helpful error messages
 
+### 5. AI Parameter Matching
+- ✅ Automatic parameter mapping via Claude AI
+- ✅ High confidence matching (>0.6 threshold)
+- ✅ Graceful degradation when AI unavailable
+- ✅ < 5 seconds for 48 controls
+
 ---
 
 ## Implementation Progress Tracking
@@ -1110,6 +1190,7 @@ export class LiveDeployer implements DAWDeployerInterface {
 - [ ] Phase 5: CLI
 - [ ] Phase 6: DAW Deployers
 - [ ] Phase 7: Testing & Documentation
+- [ ] Phase 8: AI Parameter Matching
 
 ---
 
@@ -1154,6 +1235,6 @@ export class LiveDeployer implements DAWDeployerInterface {
 
 ---
 
-**Last Updated:** 2025-10-11 (cross-references added)
+**Last Updated:** 2025-10-12 (Phase 8: AI Parameter Matching added)
 **Author:** Claude Code AI Assistant
 **Status:** Ready for Implementation

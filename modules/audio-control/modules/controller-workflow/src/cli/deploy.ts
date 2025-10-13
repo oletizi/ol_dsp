@@ -24,7 +24,7 @@ import type { CanonicalMidiMap, PluginDefinition } from '@oletizi/canonical-midi
  * Used for displaying multi-step workflow progress to the user.
  */
 interface ProgressEvent {
-  /** Current step number (1-based) */
+  /** Current step number (1-based, supports fractional steps like 1.5) */
   step: number;
   /** Total number of steps in workflow */
   total: number;
@@ -173,6 +173,61 @@ async function executeDeployment(options: {
 
   console.log(`     ✓ Controller: ${deviceInfo.manufacturer} ${deviceInfo.model}`);
   console.log(`     ✓ Configuration: "${config.name}" from slot ${slotNumber}\n`);
+
+  // Step 1.5: AI-powered parameter matching (if plugin specified)
+  if (options.plugin) {
+    try {
+      emitProgress({ step: 1.5, total: 3, message: 'AI-matching control names to plugin parameters...' });
+
+      const { ParameterMatcher, loadPluginDescriptor } = await import('../services/ParameterMatcher.js');
+
+      // Load plugin descriptor
+      const descriptor = await loadPluginDescriptor(options.plugin);
+      console.log(`     ✓ Loaded plugin descriptor: ${descriptor.plugin.name} (${descriptor.parameters.length} parameters)`);
+
+      // Extract control names
+      const controlNames = config.controls
+        .filter(c => c.name && c.name.trim().length > 0)
+        .map(c => c.name!);
+
+      if (controlNames.length === 0) {
+        console.log('     ⚠ No named controls found, skipping AI matching');
+      } else {
+        // Match parameters
+        const matcher = ParameterMatcher.create({ minConfidence: 0.6 });
+        const matches = await matcher.matchParameters(controlNames, descriptor);
+
+        // Add plugin_parameter to controls
+        let matchCount = 0;
+        config.controls.forEach((control) => {
+          if (!control.name) return;
+
+          const match = matches.find(m => m.controlName === control.name);
+          if (match?.pluginParameter !== undefined) {
+            control.plugin_parameter = match.pluginParameter;
+            matchCount++;
+          }
+        });
+
+        console.log(`     ✓ AI-matched ${matchCount}/${controlNames.length} controls (${((matchCount/controlNames.length)*100).toFixed(0)}%)`);
+
+        // Show low confidence warnings
+        const lowConfidence = matches.filter(m => m.confidence < 0.7 && m.pluginParameter !== undefined);
+        if (lowConfidence.length > 0) {
+          console.log(`     ⚠ ${lowConfidence.length} matches with confidence < 0.7:`);
+          lowConfidence.forEach(m => {
+            console.log(`       - "${m.controlName}" → ${m.parameterName} (${(m.confidence * 100).toFixed(0)}%)`);
+          });
+        }
+      }
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.log(`     ⚠ AI matching failed: ${errorMessage}`);
+      console.log('     ℹ Continuing without parameter matching...');
+      // Don't fail deployment if AI matching fails
+    }
+    console.log('');
+  }
 
   // Step 2: Convert to canonical format
   emitProgress({ step: 2, total: 3, message: 'Converting to canonical format...' });

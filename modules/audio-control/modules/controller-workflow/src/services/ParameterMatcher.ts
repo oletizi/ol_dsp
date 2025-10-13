@@ -11,7 +11,7 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { spawn } from 'child_process';
-import type { PluginDescriptor } from '@oletizi/canonical-midi-maps';
+import type { PluginDescriptor, PluginParameter } from '@oletizi/canonical-midi-maps';
 
 /**
  * Result of a parameter matching operation.
@@ -74,10 +74,10 @@ export interface ParameterMatcherInterface {
 /**
  * Claude AI-based parameter matcher implementation.
  *
- * Uses Claude to intelligently match hardware control names to plugin parameters
+ * Uses Claude Code CLI to intelligently match hardware control names to plugin parameters
  * based on semantic similarity, common naming patterns, and domain knowledge.
  *
- * Supports both Anthropic API (via ANTHROPIC_API_KEY) and Claude CLI.
+ * Requires Claude Code CLI (`claude` command) to be installed and authenticated.
  */
 export class ParameterMatcher implements ParameterMatcherInterface {
   private readonly minConfidence: number;
@@ -107,13 +107,13 @@ export class ParameterMatcher implements ParameterMatcherInterface {
    * Match hardware control names to plugin parameters using Claude AI.
    *
    * Constructs a prompt containing control names and plugin parameters,
-   * sends it to Claude, and parses the structured response.
+   * sends it to Claude Code CLI, and parses the structured response.
    *
    * @param controlNames - Hardware control names to match
    * @param pluginDescriptor - Plugin descriptor with parameters
    * @param options - Optional matching configuration
    * @returns Promise resolving to match results
-   * @throws Error if Claude API/CLI is unavailable
+   * @throws Error if Claude Code CLI is unavailable
    * @throws Error if response parsing fails
    */
   async matchParameters(
@@ -126,19 +126,19 @@ export class ParameterMatcher implements ParameterMatcherInterface {
     // Build the matching prompt
     const prompt = this.buildMatchingPrompt(controlNames, pluginDescriptor, options);
 
-    // Call Claude (API or CLI)
-    const response = await this.callClaude(prompt);
+    // Call Claude Code CLI
+    const response = await this.callClaudeCLI(prompt);
 
     // Parse Claude's response
     const results = this.parseClaudeResponse(response, controlNames, pluginDescriptor);
 
     // Filter by confidence threshold
-    return results.map((result) => {
+    return results.map((result): ParameterMatchResult => {
       if (result.confidence < minConfidence) {
         return {
           controlName: result.controlName,
           confidence: result.confidence,
-          reasoning: result.reasoning,
+          ...(result.reasoning !== undefined && { reasoning: result.reasoning }),
         };
       }
       return result;
@@ -192,7 +192,7 @@ Respond with a JSON array of objects with this structure:
 
     // Format parameter list
     const parameterList = pluginDescriptor.parameters
-      .map((param) => {
+      .map((param: PluginParameter) => {
         const group = param.group ? ` [${param.group}]` : '';
         return `  ${param.index}: ${param.name}${group}`;
       })
@@ -217,79 +217,12 @@ Please provide the JSON response with matches for each control.`;
   }
 
   /**
-   * Call Claude AI to process the matching request.
+   * Call Claude Code CLI to process the matching request.
    *
-   * Attempts to use Anthropic API if ANTHROPIC_API_KEY is set,
-   * otherwise falls back to Claude CLI command.
+   * Spawns the `claude` CLI process and pipes the prompt to stdin.
    *
    * @param prompt - The matching prompt
    * @returns Promise resolving to Claude's response text
-   * @throws Error if both API and CLI are unavailable
-   * @throws Error if request times out or fails
-   */
-  private async callClaude(prompt: string): Promise<string> {
-    const apiKey = process.env.ANTHROPIC_API_KEY;
-
-    if (apiKey) {
-      return this.callClaudeAPI(prompt, apiKey);
-    } else {
-      return this.callClaudeCLI(prompt);
-    }
-  }
-
-  /**
-   * Call Claude using the Anthropic API.
-   *
-   * Makes a direct HTTP request to the Anthropic API endpoint.
-   *
-   * @param prompt - The matching prompt
-   * @param apiKey - Anthropic API key
-   * @returns Promise resolving to Claude's response
-   * @throws Error if API request fails
-   */
-  private async callClaudeAPI(prompt: string, apiKey: string): Promise<string> {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: 'claude-3-5-sonnet-20241022',
-        max_tokens: 4096,
-        messages: [
-          {
-            role: 'user',
-            content: prompt,
-          },
-        ],
-      }),
-    });
-
-    if (!response.ok) {
-      const error = await response.text();
-      throw new Error(`Claude API request failed: ${response.status} - ${error}`);
-    }
-
-    const data = (await response.json()) as {
-      content: Array<{ type: string; text: string }>;
-    };
-
-    if (!data.content || data.content.length === 0) {
-      throw new Error('Claude API returned empty response');
-    }
-
-    return data.content[0].text;
-  }
-
-  /**
-   * Call Claude using the CLI command.
-   *
-   * Spawns the `claude` CLI process and pipes the prompt to it.
-   *
-   * @param prompt - The matching prompt
-   * @returns Promise resolving to Claude's response
    * @throws Error if CLI command fails or times out
    */
   private async callClaudeCLI(prompt: string): Promise<string> {
@@ -379,6 +312,10 @@ Please provide the JSON response with matches for each control.`;
 
     for (let i = 0; i < controlNames.length; i++) {
       const controlName = controlNames[i];
+      if (!controlName) {
+        continue;
+      }
+
       const match = parsed[i];
 
       if (!match || typeof match !== 'object') {
@@ -391,9 +328,9 @@ Please provide the JSON response with matches for each control.`;
         continue;
       }
 
-      const paramIndex = match.parameterIndex;
+      const paramIndex = match.parameterIndex as number | null | undefined;
       const confidence = typeof match.confidence === 'number' ? match.confidence : 0;
-      const reasoning = typeof match.reasoning === 'string' ? match.reasoning : '';
+      const reasoning = typeof match.reasoning === 'string' ? match.reasoning : undefined;
 
       if (paramIndex === null || paramIndex === undefined || paramIndex < 0) {
         results.push({
@@ -444,7 +381,7 @@ export async function loadPluginDescriptor(pluginName: string): Promise<PluginDe
 
   // Find the canonical-midi-maps module
   // Navigate from controller-workflow to canonical-midi-maps
-  const baseDir = path.resolve(__dirname, '../../canonical-midi-maps/plugin-descriptors');
+  const baseDir = path.resolve(__dirname, "../../../canonical-midi-maps/plugin-descriptors");
 
   // Try to find matching descriptor file
   let descriptorPath: string | undefined;

@@ -86,6 +86,8 @@ export interface ControlMapping {
   channel?: number;
   /** Value range [min, max] */
   range?: [number, number];
+  /** AI-matched plugin parameter index (optional, populated by ParameterMatcher) */
+  plugin_parameter?: number;
 }
 
 /**
