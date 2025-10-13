@@ -185,13 +185,19 @@ async function executeDeployment(options: {
       const descriptor = await loadPluginDescriptor(options.plugin);
       console.log(`     ✓ Loaded plugin descriptor: ${descriptor.plugin.name} (${descriptor.parameters.length} parameters)`);
 
-      // Extract control names
+      // Extract control names (use all controls with names, even generic ones)
       const controlNames = config.controls
         .filter(c => c.name && c.name.trim().length > 0)
         .map(c => c.name!);
 
+      console.log(`     ℹ Found ${controlNames.length} named controls out of ${config.controls.length} total controls`);
+
       if (controlNames.length === 0) {
         console.log('     ⚠ No named controls found, skipping AI matching');
+      } else if (controlNames.every(name => /^Control \d+$/.test(name))) {
+        // All names are generic "Control X" format - skip AI matching
+        console.log('     ⚠ All controls have generic names (Control X), skipping AI matching');
+        console.log('     ℹ Hint: Set custom labels in Novation Components to enable AI parameter matching');
       } else {
         // Match parameters
         const matcher = ParameterMatcher.create({ minConfidence: 0.6 });

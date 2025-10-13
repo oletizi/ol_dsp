@@ -10,6 +10,7 @@
 
 import * as fs from 'fs/promises';
 import * as path from 'path';
+import { fileURLToPath } from 'url';
 import { spawn } from 'child_process';
 import type { PluginDescriptor, PluginParameter } from '@oletizi/canonical-midi-maps';
 
@@ -380,6 +381,10 @@ export async function loadPluginDescriptor(pluginName: string): Promise<PluginDe
   const normalizedName = pluginName.toLowerCase().replace(/\s+/g, '-');
 
   // Find the canonical-midi-maps module
+  // Get current file's directory (ES module approach)
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = path.dirname(__filename);
+
   // Navigate from controller-workflow to canonical-midi-maps
   const baseDir = path.resolve(__dirname, "../../../canonical-midi-maps/plugin-descriptors");
 

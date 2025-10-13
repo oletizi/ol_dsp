@@ -3,8 +3,8 @@ device:
   manufacturer: Novation
   model: Launch Control XL 3
 metadata:
-  name: Jupiter 8
-  description: "Converted from LCXL3 custom mode: Jupiter 8"
+  name: Cutoffj
+  description: "Converted from LCXL3 custom mode: Cutoffj"
   tags:
     - launch-control-xl3
     - auto-generated
@@ -76,8 +76,8 @@ controls:
   - id: control_23
     name: Control 23
     type: encoder
-    cc: 41
-    channel: 0
+    cc: 20
+    channel: 1
     range:
       - 0
       - 127
@@ -85,7 +85,7 @@ controls:
   - id: control_24
     name: Control 24
     type: encoder
-    cc: 21
+    cc: 29
     channel: 0
     range:
       - 0
@@ -94,7 +94,7 @@ controls:
   - id: control_25
     name: Control 25
     type: encoder
-    cc: 22
+    cc: 30
     channel: 0
     range:
       - 0
@@ -103,7 +103,7 @@ controls:
   - id: control_26
     name: Control 26
     type: encoder
-    cc: 23
+    cc: 31
     channel: 0
     range:
       - 0
@@ -112,8 +112,8 @@ controls:
   - id: control_27
     name: Control 27
     type: encoder
-    cc: 24
-    channel: 0
+    cc: 32
+    channel: 1
     range:
       - 0
       - 127
@@ -121,7 +121,7 @@ controls:
   - id: control_28
     name: Control 28
     type: encoder
-    cc: 25
+    cc: 33
     channel: 0
     range:
       - 0
@@ -130,7 +130,7 @@ controls:
   - id: control_29
     name: Control 29
     type: encoder
-    cc: 26
+    cc: 34
     channel: 0
     range:
       - 0
@@ -139,7 +139,7 @@ controls:
   - id: control_30
     name: Control 30
     type: encoder
-    cc: 27
+    cc: 35
     channel: 0
     range:
       - 0
@@ -148,7 +148,7 @@ controls:
   - id: control_31
     name: Control 31
     type: encoder
-    cc: 28
+    cc: 36
     channel: 0
     range:
       - 0
@@ -157,7 +157,7 @@ controls:
   - id: control_32
     name: Control 32
     type: slider
-    cc: 29
+    cc: 22
     channel: 0
     range:
       - 0
@@ -166,7 +166,7 @@ controls:
   - id: control_33
     name: Control 33
     type: slider
-    cc: 30
+    cc: 23
     channel: 0
     range:
       - 0
@@ -175,7 +175,7 @@ controls:
   - id: control_34
     name: Control 34
     type: slider
-    cc: 31
+    cc: 24
     channel: 0
     range:
       - 0
@@ -184,7 +184,7 @@ controls:
   - id: control_35
     name: Control 35
     type: slider
-    cc: 61
+    cc: 25
     channel: 0
     range:
       - 0
@@ -193,7 +193,7 @@ controls:
   - id: control_36
     name: Control 36
     type: slider
-    cc: 33
+    cc: 26
     channel: 0
     range:
       - 0
@@ -202,7 +202,7 @@ controls:
   - id: control_37
     name: Control 37
     type: slider
-    cc: 34
+    cc: 27
     channel: 0
     range:
       - 0
@@ -211,7 +211,7 @@ controls:
   - id: control_38
     name: Control 38
     type: slider
-    cc: 35
+    cc: 28
     channel: 0
     range:
       - 0
@@ -220,8 +220,8 @@ controls:
   - id: control_39
     name: Control 39
     type: slider
-    cc: 36
-    channel: 0
+    cc: 53
+    channel: 1
     range:
       - 0
       - 127
