@@ -852,13 +852,13 @@ export class SysExParser {
    * - Page 0 (0x00): Gets controls 0x10-0x27 (encoders)
    * - Page 1 (0x03): Gets controls 0x28-0x3F (faders/buttons)
    *
-   * The slot byte in the SysEx message directly selects the target slot (0-14).
-   * Slot 15 is reserved for immutable factory content and cannot be read or written.
+   * The slot byte in the SysEx message directly selects the target slot (0-15).
+   * Slot 15 is factory preset (read-only). Slots 0-14 are user-programmable.
    * DAW port protocol is NOT required for slot selection.
    */
   static buildCustomModeReadRequest(slot: number, page: number = 0): number[] {
-    if (slot < 0 || slot > 14) {
-      throw new Error('Custom mode slot must be 0-14');
+    if (slot < 0 || slot > 15) {
+      throw new Error('Custom mode slot must be 0-15 (slot 15 is factory preset, read-only)');
     }
     if (page < 0 || page > 1) {
       throw new Error('Page must be 0 (encoders) or 1 (faders/buttons)');
@@ -866,11 +866,11 @@ export class SysExParser {
 
     // Format: F0 00 20 29 02 15 05 00 40 [PAGE] [SLOT] F7
     // Where PAGE = 0x00 for first 24 controls, 0x03 for second 24 controls
-    // And SLOT = slot number (0-14) - slot 15 is reserved for immutable factory content
+    // And SLOT = slot number (0-15) - slot 15 is factory preset (read-only)
     //
     // Discovery (2025-10-01): The SysEx message includes a slot parameter.
-    // Using the slot number directly (0-14) works correctly.
-    // Slot 15 (0x0F) is reserved and cannot be read or written.
+    // Using the slot number directly (0-15) works correctly.
+    // Slot 15 (0x0F) is factory preset and can be read but not written.
     // DAW port protocol is NOT required for slot selection.
     return [
       0xF0,             // SysEx start
@@ -881,7 +881,7 @@ export class SysExParser {
       0x00,             // Reserved
       0x40,             // Read operation
       page === 0 ? 0x00 : 0x03, // Page byte: 0x00 for encoders, 0x03 for faders/buttons
-      slot,             // Slot byte: slot number (0-14, slot 15 reserved)
+      slot,             // Slot byte: slot number (0-15, slot 15 is factory preset)
       0xF7              // SysEx end
     ];
   }

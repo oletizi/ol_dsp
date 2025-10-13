@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ArdourMIDIBindings version="1.0.0" name="Novation Launch Control XL 3">
+  <!-- MIDI Channel 0: Novation Launch Control XL 3 -->
+  <Binding channel="0" ctl="13" uri="/plugins/parameter/control_16" encoder="yes"/>
+  <Binding channel="0" ctl="14" uri="/plugins/parameter/control_17" encoder="yes"/>
+  <Binding channel="0" ctl="15" uri="/plugins/parameter/control_18" encoder="yes"/>
+  <Binding channel="0" ctl="16" uri="/plugins/parameter/control_19" encoder="yes"/>
+  <Binding channel="0" ctl="17" uri="/plugins/parameter/control_20" encoder="yes"/>
+  <Binding channel="0" ctl="18" uri="/plugins/parameter/control_21" encoder="yes"/>
+  <Binding channel="0" ctl="19" uri="/plugins/parameter/control_22" encoder="yes"/>
+  <Binding channel="0" ctl="41" uri="/plugins/parameter/control_23" encoder="yes"/>
+  <Binding channel="0" ctl="21" uri="/plugins/parameter/control_24" encoder="yes"/>
+  <Binding channel="0" ctl="22" uri="/plugins/parameter/control_25" encoder="yes"/>
+  <Binding channel="0" ctl="23" uri="/plugins/parameter/control_26" encoder="yes"/>
+  <Binding channel="0" ctl="24" uri="/plugins/parameter/control_27" encoder="yes"/>
+  <Binding channel="0" ctl="25" uri="/plugins/parameter/control_28" encoder="yes"/>
+  <Binding channel="0" ctl="26" uri="/plugins/parameter/control_29" encoder="yes"/>
+  <Binding channel="0" ctl="27" uri="/plugins/parameter/control_30" encoder="yes"/>
+  <Binding channel="0" ctl="28" uri="/plugins/parameter/control_31" encoder="yes"/>
+  <Binding channel="0" ctl="29" uri="/plugins/parameter/control_32"/>
+  <Binding channel="0" ctl="30" uri="/plugins/parameter/control_33"/>
+  <Binding channel="0" ctl="31" uri="/plugins/parameter/control_34"/>
+  <Binding channel="0" ctl="61" uri="/plugins/parameter/control_35"/>
+  <Binding channel="0" ctl="33" uri="/plugins/parameter/control_36"/>
+  <Binding channel="0" ctl="34" uri="/plugins/parameter/control_37"/>
+  <Binding channel="0" ctl="35" uri="/plugins/parameter/control_38"/>
+  <Binding channel="0" ctl="36" uri="/plugins/parameter/control_39"/>
+  <Binding channel="0" ctl="53" uri="/plugins/parameter/control_40" encoder="yes"/>
+  <Binding channel="0" ctl="54" uri="/plugins/parameter/control_41" encoder="yes"/>
+  <Binding channel="0" ctl="55" uri="/plugins/parameter/control_42" encoder="yes"/>
+  <Binding channel="0" ctl="56" uri="/plugins/parameter/control_43" encoder="yes"/>
+  <Binding channel="0" ctl="57" uri="/plugins/parameter/control_44" encoder="yes"/>
+  <Binding channel="0" ctl="58" uri="/plugins/parameter/control_45" encoder="yes"/>
+  <Binding channel="0" ctl="59" uri="/plugins/parameter/control_46" encoder="yes"/>
+  <Binding channel="0" ctl="60" uri="/plugins/parameter/control_47" encoder="yes"/>
+
+  <!-- MIDI Channel 3: Novation Launch Control XL 3 -->
+  <Binding channel="3" note="51" uri="/plugins/parameter/control_62"/>
+  <Binding channel="3" note="52" uri="/plugins/parameter/control_63"/>
+</ArdourMIDIBindings>

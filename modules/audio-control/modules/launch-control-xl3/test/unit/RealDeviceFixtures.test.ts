@@ -9,7 +9,11 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { CustomModeManager } from '@/modes/CustomModeManager.js';
 import { DeviceManager } from '@/device/DeviceManager.js';
 import { promises as fs } from 'fs';
-import { join } from 'path';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 describe('Real Device Fixtures', () => {
   let customModeManager: CustomModeManager;

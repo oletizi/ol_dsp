@@ -1,6 +1,10 @@
 import { defineConfig } from 'vite';
-import { resolve } from 'path';
+import { resolve, dirname } from 'path';
+import { fileURLToPath } from 'url';
 import dts from 'vite-plugin-dts';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 export default defineConfig({
   plugins: [
@@ -22,6 +26,7 @@ export default defineConfig({
     rollupOptions: {
       external: [
         'midi',
+        '@julusian/midi', // Native module - must be external
         '@midival/core',
         'commander',
         'inquirer',

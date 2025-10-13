@@ -1,0 +1,318 @@
+version: 1.0.0
+device:
+  manufacturer: Novation
+  model: Launch Control XL 3
+metadata:
+  name: Jupiter 8
+  description: "Converted from LCXL3 custom mode: Jupiter 8"
+  tags:
+    - launch-control-xl3
+    - auto-generated
+  date: 2025-10-13
+controls:
+  - id: control_16
+    name: Control 16
+    type: encoder
+    cc: 13
+    channel: 0
+    range:
+      - 0
+      - 127
+    description: "Mapped from LCXL3 control: control_16"
+  - id: control_17
+    name: Control 17
+    type: encoder
+    cc: 14
+    channel: 0
+    range:
+      - 0
+      - 127
+    description: "Mapped from LCXL3 control: control_17"
+  - id: control_18
+    name: Control 18
+    type: encoder
+    cc: 15
+    channel: 0
+    range:
+      - 0
+      - 127
+    description: "Mapped from LCXL3 control: control_18"
+  - id: control_19
+    name: Control 19
+    type: encoder
+    cc: 16
+    channel: 0
+    range:
+      - 0
+      - 127
+    description: "Mapped from LCXL3 control: control_19"
+  - id: control_20
+    name: Control 20
+    type: encoder
+    cc: 17
+    channel: 0
+    range:
+      - 0
+      - 127
+    description: "Mapped from LCXL3 control: control_20"
+  - id: control_21
+    name: Control 21
+    type: encoder
+    cc: 18
+    channel: 0
+    range:
+      - 0
+      - 127
+    description: "Mapped from LCXL3 control: control_21"
+  - id: control_22
+    name: Control 22
+    type: encoder
+    cc: 19
+    channel: 0
+    range:
+      - 0
+      - 127
+    description: "Mapped from LCXL3 control: control_22"
+  - id: control_23
+    name: Control 23
+    type: encoder
+    cc: 41
+    channel: 0
+    range:
+      - 0
+      - 127
+    description: "Mapped from LCXL3 control: control_23"
+  - id: control_24
+    name: Control 24
+    type: encoder
+    cc: 21
+    channel: 0
+    range:
+      - 0
+      - 127
+    description: "Mapped from LCXL3 control: control_24"
+  - id: control_25
+    name: Control 25
+    type: encoder
+    cc: 22
+    channel: 0
+    range:
+      - 0
+      - 127
+    description: "Mapped from LCXL3 control: control_25"
+  - id: control_26
+    name: Control 26
+    type: encoder
+    cc: 23
+    channel: 0
+    range:
+      - 0
+      - 127
+    description: "Mapped from LCXL3 control: control_26"
+  - id: control_27
+    name: Control 27
+    type: encoder
+    cc: 24
+    channel: 0
+    range:
+      - 0
+      - 127
+    description: "Mapped from LCXL3 control: control_27"
+  - id: control_28
+    name: Control 28
+    type: encoder
+    cc: 25
+    channel: 0
+    range:
+      - 0
+      - 127
+    description: "Mapped from LCXL3 control: control_28"
+  - id: control_29
+    name: Control 29
+    type: encoder
+    cc: 26
+    channel: 0
+    range:
+      - 0
+      - 127
+    description: "Mapped from LCXL3 control: control_29"
+  - id: control_30
+    name: Control 30
+    type: encoder
+    cc: 27
+    channel: 0
+    range:
+      - 0
+      - 127
+    description: "Mapped from LCXL3 control: control_30"
+  - id: control_31
+    name: Control 31
+    type: encoder
+    cc: 28
+    channel: 0
+    range:
+      - 0
+      - 127
+    description: "Mapped from LCXL3 control: control_31"
+  - id: control_32
+    name: Control 32
+    type: slider
+    cc: 29
+    channel: 0
+    range:
+      - 0
+      - 127
+    description: "Mapped from LCXL3 control: control_32"
+  - id: control_33
+    name: Control 33
+    type: slider
+    cc: 30
+    channel: 0
+    range:
+      - 0
+      - 127
+    description: "Mapped from LCXL3 control: control_33"
+  - id: control_34
+    name: Control 34
+    type: slider
+    cc: 31
+    channel: 0
+    range:
+      - 0
+      - 127
+    description: "Mapped from LCXL3 control: control_34"
+  - id: control_35
+    name: Control 35
+    type: slider
+    cc: 61
+    channel: 0
+    range:
+      - 0
+      - 127
+    description: "Mapped from LCXL3 control: control_35"
+  - id: control_36
+    name: Control 36
+    type: slider
+    cc: 33
+    channel: 0
+    range:
+      - 0
+      - 127
+    description: "Mapped from LCXL3 control: control_36"
+  - id: control_37
+    name: Control 37
+    type: slider
+    cc: 34
+    channel: 0
+    range:
+      - 0
+      - 127
+    description: "Mapped from LCXL3 control: control_37"
+  - id: control_38
+    name: Control 38
+    type: slider
+    cc: 35
+    channel: 0
+    range:
+      - 0
+      - 127
+    description: "Mapped from LCXL3 control: control_38"
+  - id: control_39
+    name: Control 39
+    type: slider
+    cc: 36
+    channel: 0
+    range:
+      - 0
+      - 127
+    description: "Mapped from LCXL3 control: control_39"
+  - id: control_40
+    name: Control 40
+    type: encoder
+    cc: 53
+    channel: 0
+    range:
+      - 0
+      - 127
+    description: "Mapped from LCXL3 control: control_40"
+  - id: control_41
+    name: Control 41
+    type: encoder
+    cc: 54
+    channel: 0
+    range:
+      - 0
+      - 127
+    description: "Mapped from LCXL3 control: control_41"
+  - id: control_42
+    name: Control 42
+    type: encoder
+    cc: 55
+    channel: 0
+    range:
+      - 0
+      - 127
+    description: "Mapped from LCXL3 control: control_42"
+  - id: control_43
+    name: Control 43
+    type: encoder
+    cc: 56
+    channel: 0
+    range:
+      - 0
+      - 127
+    description: "Mapped from LCXL3 control: control_43"
+  - id: control_44
+    name: Control 44
+    type: encoder
+    cc: 57
+    channel: 0
+    range:
+      - 0
+      - 127
+    description: "Mapped from LCXL3 control: control_44"
+  - id: control_45
+    name: Control 45
+    type: encoder
+    cc: 58
+    channel: 0
+    range:
+      - 0
+      - 127
+    description: "Mapped from LCXL3 control: control_45"
+  - id: control_46
+    name: Control 46
+    type: encoder
+    cc: 59
+    channel: 0
+    range:
+      - 0
+      - 127
+    description: "Mapped from LCXL3 control: control_46"
+  - id: control_47
+    name: Control 47
+    type: encoder
+    cc: 60
+    channel: 0
+    range:
+      - 0
+      - 127
+    description: "Mapped from LCXL3 control: control_47"
+  - id: control_62
+    name: Control 62
+    type: button
+    cc: 51
+    channel: 3
+    range:
+      - 0
+      - 127
+    description: "Mapped from LCXL3 control: control_62"
+  - id: control_63
+    name: Control 63
+    type: button
+    cc: 52
+    channel: 3
+    range:
+      - 0
+      - 127
+    description: "Mapped from LCXL3 control: control_63"

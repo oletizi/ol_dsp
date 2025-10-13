@@ -7,7 +7,7 @@
  * @module adapters/controllers/LaunchControlXL3Adapter
  */
 
-import { LaunchControlXL3, JuceMidiBackend } from '@oletizi/launch-control-xl3/node';
+import { LaunchControlXL3, NodeMidiBackend } from '@oletizi/launch-control-xl3/node';
 import type {
   CustomMode as LCXL3CustomMode,
   ControlMapping as LCXL3ControlMapping,
@@ -49,8 +49,8 @@ export class LaunchControlXL3Adapter implements ControllerAdapterInterface {
    * @throws Error if device connection fails
    */
   static async create(): Promise<LaunchControlXL3Adapter> {
-    // Create JUCE MIDI backend for Node.js environment
-    const backend = new JuceMidiBackend({ host: 'localhost', port: 7777 });
+    // Create Node MIDI backend for direct hardware access (no server needed)
+    const backend = new NodeMidiBackend();
     const device = new LaunchControlXL3({
       enableCustomModes: true,
       midiBackend: backend
@@ -96,16 +96,25 @@ export class LaunchControlXL3Adapter implements ControllerAdapterInterface {
 
     // Read all 16 slots (0-15)
     for (let i = 0; i < 16; i++) {
-      const mode = await this.device.readCustomMode(i);
-      const slot: ConfigurationSlot = {
-        index: i,
-        isEmpty: mode === null,
-      };
-      // Only include name if it exists
-      if (mode?.name !== undefined) {
-        slot.name = mode.name;
+      try {
+        const mode = await this.device.readCustomMode(i);
+        const slot: ConfigurationSlot = {
+          index: i,
+          isEmpty: mode === null,
+        };
+        // Only include name if it exists
+        if (mode?.name !== undefined) {
+          slot.name = mode.name;
+        }
+        slots.push(slot);
+      } catch (error) {
+        // If read fails (timeout, empty slot, or unsupported slot like factory preset),
+        // mark the slot as empty
+        slots.push({
+          index: i,
+          isEmpty: true,
+        });
       }
-      slots.push(slot);
     }
 
     return slots;

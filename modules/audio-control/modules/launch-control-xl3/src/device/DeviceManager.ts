@@ -619,8 +619,8 @@ export class DeviceManager extends EventEmitter {
    * Read custom mode from device (fetches both pages)
    */
   async readCustomMode(slot: number): Promise<CustomMode> {
-    if (slot < 0 || slot > 14) {
-      throw new Error('Custom mode slot must be 0-14 (slot 15 is reserved for immutable factory content)');
+    if (slot < 0 || slot > 15) {
+      throw new Error('Custom mode slot must be 0-15 (slot 15 is factory preset, read-only)');
     }
 
     // Slot selection is handled by the SysEx slot byte parameter.
@@ -1096,6 +1096,7 @@ export class DeviceManager extends EventEmitter {
 
   /**
    * Initialize DAW port for slot selection using separate MIDI interface
+   * NOTE: DAW port is now OPTIONAL - slot selection uses SysEx slot byte directly
    */
   private async initializeDawPort(): Promise<void> {
     try {
@@ -1108,8 +1109,8 @@ export class DeviceManager extends EventEmitter {
       // DAW port controller infrastructure removed - slot selection uses SysEx slot byte directly
       console.log('[DeviceManager] DAW port initialized (slot selection via SysEx, not DAW port protocol)');
     } catch (error) {
-      console.error('DAW port initialization failed - device will not function properly:', error);
-      throw new Error(`Failed to initialize DAW port: ${error instanceof Error ? error.message : String(error)}`);
+      // DAW port is optional - slot selection works via SysEx without it
+      console.warn('[DeviceManager] DAW port initialization skipped (not required for SysEx-based slot selection):', (error as Error).message);
     }
   }
 
