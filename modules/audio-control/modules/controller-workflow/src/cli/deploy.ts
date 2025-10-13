@@ -15,6 +15,7 @@ import { stringify as yamlStringify } from 'yaml';
 import { LaunchControlXL3Adapter } from '../adapters/controllers/LaunchControlXL3Adapter.js';
 import { LaunchControlXL3Converter } from '../converters/LaunchControlXL3Converter.js';
 import { ArdourDeployer } from '../adapters/daws/ArdourDeployer.js';
+import { LiveDeployer } from '../adapters/daws/LiveDeployer.js';
 import type { ControllerAdapterInterface } from '../types/controller-adapter.js';
 import type { DAWDeployerInterface } from '../types/daw-deployer.js';
 import type { CanonicalMidiMap, PluginDefinition } from '@oletizi/canonical-midi-maps';
@@ -332,7 +333,7 @@ function createDeployer(daw: string): DAWDeployerInterface {
 
     case 'live':
     case 'ableton':
-      throw new Error('Ableton Live deployment not yet implemented');
+      return LiveDeployer.create();
 
     default:
       throw new Error(`Unsupported DAW: ${daw}`);
@@ -345,7 +346,7 @@ function createDeployer(daw: string): DAWDeployerInterface {
  * Maps DAW names to their respective output file extensions.
  *
  * @param daw - DAW name (e.g., "ardour", "live")
- * @returns File extension without dot (e.g., "map", "amxd")
+ * @returns File extension without dot (e.g., "map", "json")
  */
 function getFileExtension(daw: string): string {
   const normalizedDAW = daw.toLowerCase();
@@ -355,7 +356,7 @@ function getFileExtension(daw: string): string {
       return 'map';
     case 'live':
     case 'ableton':
-      return 'amxd';
+      return 'json';
     default:
       return 'txt';
   }

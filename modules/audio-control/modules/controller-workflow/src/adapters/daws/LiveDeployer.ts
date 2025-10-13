@@ -156,6 +156,9 @@ export class LiveDeployer implements DAWDeployerInterface {
    * by the cc-router Max for Live device. Each control's CC number is mapped
    * to a plugin parameter with device/parameter indices.
    *
+   * Prioritizes plugin_parameter if available, otherwise falls back to extracting
+   * from control ID.
+   *
    * @param canonicalMap - Canonical MIDI map to convert
    * @returns PluginMapping structure for cc-router
    * @internal
@@ -169,9 +172,14 @@ export class LiveDeployer implements DAWDeployerInterface {
         continue; // Skip controls without CC numbers
       }
 
+      // Use plugin_parameter if available, otherwise extract from control ID
+      const parameterIndex = (control as any).plugin_parameter !== undefined
+        ? (control as any).plugin_parameter
+        : this.extractParameterIndex(control.id);
+
       mappings[control.cc] = {
         deviceIndex: 1, // Device 1 is the first plugin after cc-router (device 0)
-        parameterIndex: this.extractParameterIndex(control.id),
+        parameterIndex,
         parameterName: control.name || control.id,
         curve: 'linear', // Default curve, could be enhanced with metadata
       };
@@ -203,6 +211,8 @@ export class LiveDeployer implements DAWDeployerInterface {
    * Parses numeric suffix from control IDs to determine parameter index.
    * Control IDs like "encoder_16" or "slider_3" map to parameter indices
    * based on their semantic meaning.
+   *
+   * This is used as a fallback when plugin_parameter is not specified.
    *
    * @param controlId - Control identifier (e.g., "encoder_16", "slider_3")
    * @returns Parameter index (0 if no number found)
