@@ -167,6 +167,9 @@ export class SysExParser {
       if (operation === 0x15) {
         return this.parseWriteAcknowledgement(messageData);
       }
+
+      // If it's some other operation in the XL3 format, throw error
+      throw new Error(`Unexpected operation in Launch Control XL 3 response: 0x${(operation ?? 0).toString(16)}`);
     }
 
     // Fallback to legacy format parsing
@@ -348,6 +351,9 @@ export class SysExParser {
   /**
    * Phase 1 Fix: Enhanced name parsing with factory fallback handling
    * Handles both custom names and factory format fallbacks (06 20 1F pattern)
+   *
+   * BUGFIX (2025-10-11): Stop reading at marker byte boundaries (0x48, 0x49, 0x60, 0x69, 0xF7)
+   * to prevent including control/label/color markers in mode name.
    */
   private static parseName(data: number[]): string | undefined {
     let nameStart = -1;
@@ -409,18 +415,30 @@ export class SysExParser {
         }
       } else {
         // Fall back to terminator-based parsing for formats without length
+        // BUGFIX: Check for marker bytes BEFORE adding to nameBytes
         for (let i = nameStart; i < data.length; i++) {
           const byte = data[i];
 
           if (byte === undefined) break;
 
-          // Stop at control structure patterns
-          if (byte === 0x49 && i < data.length - 2) {
-            const next1 = data[i + 1];
-            const next2 = data[i + 2];
-            if (next1 === 0x21 && next2 === 0x00) {
-              break;
-            }
+          // Stop at control marker bytes (0x48, 0x49)
+          if (byte === 0x48 || byte === 0x49) {
+            break;
+          }
+
+          // Stop at label marker byte (0x69)
+          if (byte === 0x69) {
+            break;
+          }
+
+          // Stop at color marker byte (0x60)
+          if (byte === 0x60) {
+            break;
+          }
+
+          // Stop at end of message (0xF7)
+          if (byte === 0xF7) {
+            break;
           }
 
           // Stop at terminator 0x21 (!)
@@ -461,8 +479,6 @@ export class SysExParser {
     const controls: ControlMapping[] = [];
     const colors: ColorMapping[] = [];
 
-    console.log(`[SysExParser] parseControls: Raw data length = ${data.length} bytes`);
-
     // Find where controls actually start (after name)
     let controlsStart = 0;
 
@@ -477,16 +493,12 @@ export class SysExParser {
     }
 
     if (writeResponseStart > 0) {
-      console.log('[SysExParser] Detected WRITE response format');
       // Phase 1 Fix: Parse write response format with 0x40 markers
       this.parseWriteResponseFormat(data, writeResponseStart, controls, colors);
     } else {
-      console.log('[SysExParser] Detected READ response format');
       // Phase 1 Fix: Enhanced parsing for READ responses with mixed formats
       this.parseReadResponseFormat(data, controlsStart, controls, colors);
     }
-
-    console.log(`[SysExParser] Parsed ${controls.length} controls from device data`);
 
     return { parsedControls: controls, parsedColors: colors };
   }
@@ -549,7 +561,7 @@ export class SysExParser {
   }
 
   /**
-   * Parse read response format with mixed 0x48/0x40 markers
+   * Parse read response format with 0x48 control definition markers
    */
   private static parseReadResponseFormat(
     data: number[],
@@ -557,25 +569,7 @@ export class SysExParser {
     controls: ControlMapping[],
     colors: ColorMapping[]
   ): void {
-    console.log(`[parseReadResponseFormat] Starting parse from position ${startPos}, data length ${data.length}`);
-
-    // Step 1: Parse any 0x40 CC data sections first (from mixed response)
-    const ccData: { ccNumber: number, position: number }[] = [];
-    for (let i = startPos; i < data.length - 1; i++) {
-      if (data[i] === 0x40 && data[i + 1] !== undefined) {
-        const ccNumber = data[i + 1];
-        if (ccNumber !== undefined) {
-          ccData.push({ ccNumber, position: ccData.length });
-        }
-        i++; // Skip the CC number byte
-      }
-    }
-
-    console.log(`[parseReadResponseFormat] Found ${ccData.length} 0x40 CC data entries`);
-
-    // Step 2: Parse 0x48 control definition sections (device stores as 0x48, not 0x49)
-    let controlsFound = 0;
-    let lastPosition = startPos;
+    // Parse 0x48 control definition sections (device stores as 0x48, not 0x49)
     for (let i = startPos; i < data.length - 9; i++) {
       if (data[i] === 0x48) {
         const controlId = data[i + 1];
@@ -594,13 +588,6 @@ export class SysExParser {
         if (isValidControl && controlId !== undefined &&
             minValue !== undefined && ccNumber !== undefined &&
             maxValue !== undefined && channel !== undefined) {
-
-          controlsFound++;
-          lastPosition = i;
-
-          if (controlsFound <= 5) {
-            console.log(`[parseReadResponseFormat] Control ${controlsFound}: ID=0x${controlId.toString(16)}, CH=${channel}, CC=${ccNumber}, pos=${i}`);
-          }
 
           controls.push({
             controlId,
@@ -623,57 +610,6 @@ export class SysExParser {
           i += 9;
         }
       }
-    }
-
-    console.log(`[parseReadResponseFormat] Parsed ${controlsFound} controls (last at position ${lastPosition}, loop ended at ${data.length - 9})`);
-
-    // Step 3: Process 0x40 short-format controls (unconfigured controls with default CH0/CC0)
-    // These appear mixed with 0x48 controls in the device response
-    if (ccData.length > 0) {
-      // Build set of control IDs we already have from 0x48 parsing
-      const existingControlIds = new Set(controls.map(c => c.controlId));
-
-      console.log(`[parseReadResponseFormat] Found ${ccData.length} 0x40 entries, ${existingControlIds.size} already parsed from 0x48`);
-
-      // Parse 0x40 markers to get control IDs
-      const shortFormatControls: number[] = [];
-      for (let i = 0; i < data.length - 1; i++) {
-        if (data[i] === 0x40) {
-          const possibleControlId = data[i + 1];
-          // Valid control IDs are 0x10-0x3F
-          if (possibleControlId !== undefined && possibleControlId >= 0x10 && possibleControlId <= 0x3F) {
-            shortFormatControls.push(possibleControlId);
-          }
-        }
-      }
-
-      console.log(`[parseReadResponseFormat] Found ${shortFormatControls.length} valid 0x40 control IDs`);
-
-      // Add controls for 0x40 entries that aren't already in our list
-      let addedCount = 0;
-      for (const controlId of shortFormatControls) {
-        if (!existingControlIds.has(controlId)) {
-          controls.push({
-            controlId,
-            channel: 0,  // Default/unconfigured
-            ccNumber: 0, // Default/unconfigured
-            minValue: 0,
-            maxValue: 127,
-            behaviour: 'absolute' as any,
-          });
-
-          colors.push({
-            controlId,
-            color: this.getDefaultColorForControl(controlId),
-            behaviour: 'static',
-          });
-
-          existingControlIds.add(controlId);
-          addedCount++;
-        }
-      }
-
-      console.log(`[parseReadResponseFormat] Added ${addedCount} controls from 0x40 short format`);
     }
   }
 
@@ -715,30 +651,6 @@ export class SysExParser {
 
     const controlNames: Map<number, string> = new Map();
 
-    console.log('[DEBUG] parseControlLabels: Starting label parsing with length-encoding');
-    console.log('[DEBUG] Total data length:', data.length);
-
-    // Dump raw bytes for label sections (positions 250-420) to help with debugging
-    if (data.length > 250) {
-      console.log('\n[DEBUG] Raw bytes 250-420:');
-      for (let i = 250; i < Math.min(420, data.length); i++) {
-        const byte = data[i];
-        if (byte !== undefined) {
-          const hex = `0x${byte.toString(16).padStart(2, '0')}`;
-          const ascii = byte >= 0x20 && byte <= 0x7E ? String.fromCharCode(byte) : '.';
-          const markers: string[] = [];
-          if (byte >= 0x60 && byte <= 0x6F) {
-            const length = byte - 0x60;
-            markers.push(`LEN=${length}`);
-          }
-          if (byte >= 0x10 && byte <= 0x3F) markers.push('CID');
-          const tags = markers.length > 0 ? ` [${markers.join(',')}]` : '';
-          console.log(`  ${i}: ${hex} '${ascii}'${tags}`);
-        }
-      }
-      console.log('');
-    }
-
     // Scan for label entries
     for (let i = 0; i < data.length - 2; i++) {
       const markerByte = data[i];
@@ -750,36 +662,20 @@ export class SysExParser {
 
         // Verify this is a valid control ID (0x10-0x3F)
         if (controlId !== undefined && controlId >= 0x10 && controlId <= 0x3F) {
-          console.log(`[DEBUG] Found label at position ${i}: marker=0x${markerByte.toString(16)}, length=${length}, controlId=0x${controlId.toString(16)}`);
-
           // Read exactly `length` bytes as the name
           const nameBytes: number[] = [];
           for (let j = 0; j < length; j++) {
             const nameByte = data[i + 2 + j];
             if (nameByte !== undefined && nameByte >= 0x20 && nameByte <= 0x7E) {
               nameBytes.push(nameByte);
-            } else {
-              console.log(`[DEBUG]   Warning: unexpected byte 0x${nameByte?.toString(16)} at position ${i + 2 + j} (expected printable ASCII)`);
             }
-          }
-
-          // Verify terminator (should be 0x60 or another marker)
-          const terminatorPos = i + 2 + length;
-          const terminator = data[terminatorPos];
-          if (terminator !== undefined && terminator >= 0x60 && terminator <= 0x6F) {
-            console.log(`[DEBUG]   Verified terminator/next-marker 0x${terminator.toString(16)} at position ${terminatorPos}`);
-          } else {
-            console.log(`[DEBUG]   Warning: expected terminator at position ${terminatorPos}, got 0x${terminator?.toString(16)}`);
           }
 
           // Store the name
           if (nameBytes.length > 0) {
             const name = String.fromCharCode(...nameBytes).trim();
-            console.log(`[DEBUG]   Extracted name "${name}" for control 0x${controlId.toString(16)}`);
             const canonicalControlId = this.mapLabelControlId(controlId);
             controlNames.set(canonicalControlId, name);
-          } else if (length > 0) {
-            console.log(`[DEBUG]   Warning: expected ${length} name bytes but got ${nameBytes.length}`);
           }
 
           // Skip past this label entry (marker + controlID + name bytes + terminator)
@@ -788,9 +684,6 @@ export class SysExParser {
         }
       }
     }
-
-    console.log('[DEBUG] parseControlLabels: Found', controlNames.size, 'control names');
-    console.log('[DEBUG] Control names map:', Array.from(controlNames.entries()).map(([id, name]) => `0x${id.toString(16)}: "${name}"`));
 
     // Apply names to controls based on their actual control IDs
     for (const control of controls) {
@@ -965,7 +858,7 @@ export class SysExParser {
    */
   static buildCustomModeReadRequest(slot: number, page: number = 0): number[] {
     if (slot < 0 || slot > 14) {
-      throw new Error('Custom mode slot must be 0-14 (slot 15 is reserved for immutable factory content)');
+      throw new Error('Custom mode slot must be 0-14');
     }
     if (page < 0 || page > 1) {
       throw new Error('Page must be 0 (encoders) or 1 (faders/buttons)');
@@ -996,8 +889,15 @@ export class SysExParser {
 
   /**
    * Build custom mode write request
+   *
+   * The slot byte in the SysEx message directly selects the target slot (0-14).
+   * Slot 15 is reserved for immutable factory content and cannot be written.
+   * DAW port protocol is NOT required for slot selection.
    */
-  static buildCustomModeWriteRequest(page: number, modeData: CustomModeMessage): number[] {
+  static buildCustomModeWriteRequest(slot: number, page: number, modeData: CustomModeMessage): number[] {
+    if (slot < 0 || slot > 14) {
+      throw new Error('Custom mode slot must be 0-14');
+    }
     if (page < 0 || page > 3) {
       throw new Error('Page must be 0-3');
     }
@@ -1014,9 +914,11 @@ export class SysExParser {
     // Page 3: Controls 0x28-0x3F (IDs 40-63, remaining 24 hardware controls)
     // Note: Control IDs 0x00-0x0F do not exist on the device hardware
     //
-    // Format: F0 00 20 29 02 15 05 00 45 [page] 00 [encoded data] F7
+    // Format: F0 00 20 29 02 15 05 00 45 [page] [slot] [encoded data] F7
     //
-    // Slot selection is done via DAW port BEFORE sending any pages.
+    // The slot byte directly selects the target slot (0-14).
+    // Slot 15 (0x0F) is reserved for immutable factory content and cannot be written.
+    // DAW port protocol is NOT required for slot selection.
 
     return [
       0xF0,             // SysEx start
@@ -1027,7 +929,7 @@ export class SysExParser {
       0x00,             // Reserved
       0x45,             // Write operation with data
       page,             // Page number (0 or 3 for write operations)
-      0x00,             // Flag byte (always 0x00)
+      slot,             // Slot byte: slot number (0-14, slot 15 reserved)
       ...encodedData,   // Encoded custom mode data
       0xF7              // SysEx end
     ];

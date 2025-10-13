@@ -17,7 +17,7 @@ Provide zero-configuration, user-friendly tools for backing up and extracting Ak
 - Smart rotation (same-day resume vs. next-day rotation)
 - Multi-sampler support (S5K, S3K)
 - SSH-based remote backup from PiSCSI devices
-- ⚠️ **Missing:** Local media support (SD cards, USB drives)
+- Local media support (SD cards, USB drives) - MVP complete
 
 **Extraction System** (`@oletizi/sampler-export`)
 - Native Akai format extraction (akaitools integration)
@@ -28,6 +28,7 @@ Provide zero-configuration, user-friendly tools for backing up and extracting Ak
 - Batch extraction with timestamp-based change detection
 - Smart content detection (skip empty disks)
 - Warning vs. error distinction (exit code 0 for unsupported formats)
+- Dynamic sampler discovery (no hardcoded paths)
 
 **Platform Support**
 - ✅ macOS Apple Silicon (darwin-arm64) - Full support
@@ -35,57 +36,40 @@ Provide zero-configuration, user-friendly tools for backing up and extracting Ak
 
 ---
 
-## Code Cleanup
+## ✅ Code Cleanup (Completed - PR #28)
 
 **Goal:** Clean up and complete ongoing refactoring before wider distribution
 
-**Requirements:**
-- [ ] Complete ongoing refactoring work
-- [ ] Improve code organization and modularity
-- [ ] Add comprehensive error handling
-- [ ] Improve logging and user feedback
-- [ ] Add tests for critical paths
-- [ ] Document public APIs
-- [ ] Remove dead code and unused dependencies
-- [ ] Standardize file and directory structure
+**Completed (Oct 5, 2025):**
+- [x] Complete ongoing refactoring work
+- [x] Improve code organization and modularity
+- [x] Add comprehensive error handling
+- [x] Improve logging and user feedback
+- [x] Add tests for critical paths (Vitest migration, comprehensive coverage)
+- [x] Document public APIs (JSDoc/TSDoc across all packages)
+- [x] Remove dead code and unused dependencies (1,259 lines archived, 6,310 deleted)
+- [x] Standardize file and directory structure
+- [x] Added Apache 2.0 licensing
+- [x] Version reset to 1.0.0-alpha.4
 
 ---
 
-## Local Media Support
-
-**Target Users:** Most sampler users don't have networked PiSCSI. They use:
-- Floppy emulators (Gotek, HxC)
-- Non-networked SCSI emulators (ZuluSCSI, SCSI2SD)
-- Direct SD card/USB access on modern computers
-
-**Requirements:**
-- [ ] Auto-detect mounted SD cards/USB drives containing disk images
-- [ ] Support reading disk images directly from mounted filesystems
-- [ ] Backup: copy disk images from removable media to local storage
-- [ ] Extract: process disk images from removable media
-- [ ] Handle common SD card filesystem formats (FAT32, exFAT)
-- [ ] Detect disk image files (*.hds, *.img, *.iso)
-- [ ] Optional: Monitor for newly inserted media (hot-plug detection)
-
-**User Workflow:**
-1. Remove SD card from sampler/emulator
-2. Insert into laptop/desktop
-3. Run `akai-tools backup --source /Volumes/SDCARD`
-4. Run `akai-tools extract --source ~/.audiotools/backup`
-
----
-
-## Cross-Platform Binary Support
+## ✅ Cross-Platform Binary Support (Completed - Oct 7, 2025)
 
 **Goal:** Bundle mtools for all platforms (zero-configuration installation)
 
-**Requirements:**
-- [ ] macOS Intel (darwin-x64)
-- [ ] Linux x64 (linux-x64)
-- [ ] Linux ARM64 (linux-arm64)
-- [ ] Windows x64 (win32-x64)
-- [ ] Fallback to system mtools if bundled binary unavailable
-- [ ] Package size < 5MB total
+**Completed:**
+- [x] macOS Apple Silicon (darwin-arm64) - 190KB
+- [x] Linux x64 (linux-x64) - 209KB
+- [x] Linux ARM64 (linux-arm64) - 197KB
+- [x] Fallback to system mtools if bundled binary unavailable
+- [x] Package size < 5MB total (achieved 465KB compressed, 9.3% of target)
+
+**Excluded:**
+- [ ] macOS Intel (darwin-x64) - Deferred (Apple Silicon transition complete)
+- [ ] Windows x64 (win32-x64) - Not supported (mtools complex on Windows)
+
+**Documentation:** See `sampler-export/docs/1.0/multi-platform/implementation/workplan.md`
 
 ---
 
@@ -191,6 +175,16 @@ See [DISTRIBUTION.md](./DISTRIBUTION.md) for detailed analysis.
 - [ ] Favorite samples
 - [ ] Export sample collections
 - [ ] Share sample libraries
+
+### Local Media Support Enhancements
+
+**MVP complete for v1.0.0.** Future enhancements:
+
+- [ ] Auto-detect mounted SD cards/USB drives containing disk images
+- [ ] Monitor for newly inserted media (hot-plug detection)
+- [ ] Automatic backup on media insertion
+- [ ] Validation and integrity checking
+- [ ] Media eject automation after backup
 
 ---
 
