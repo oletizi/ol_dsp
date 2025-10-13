@@ -128,6 +128,34 @@ program
   });
 
 /**
+ * Auto-Deploy Command - Automatically deploy all controller slots
+ */
+program
+  .command('auto-deploy')
+  .description('Automatically deploy all controller slots with AI-powered plugin identification')
+  .option('-d, --daw <daws...>', 'Target DAWs (e.g., ardour, live)', ['ardour', 'live'])
+  .option('-o, --output <dir>', 'Output directory for all files', './output')
+  .option('--install', 'Auto-install to DAW config directories', false)
+  .option('--dry-run', 'Preview deployment without writing files', false)
+  .option('--min-confidence <number>', 'Minimum confidence for plugin identification (0-1)', '0.7')
+  .option('--skip-low-confidence', 'Skip slots with low confidence matches', false)
+  .action(async (options) => {
+    try {
+      const result = await executeAutoDeployment(options);
+
+      if (result.success && result.slotsDeployed > 0) {
+        displayAutoDeploySuccessSummary(result);
+        process.exit(0);
+      } else {
+        displayAutoDeployErrorSummary(result);
+        process.exit(1);
+      }
+    } catch (error: unknown) {
+      handleError(error);
+    }
+  });
+
+/**
  * Execute full deployment workflow.
  *
  * Orchestrates the complete process of reading a controller configuration,
@@ -493,6 +521,149 @@ function sanitizeFilename(name: string): string {
  */
 function capitalize(str: string): string {
   return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+/**
+ * Execute auto-deployment for all controller slots.
+ *
+ * Orchestrates the complete process of:
+ * 1. Reading all 16 slots from the controller
+ * 2. Identifying which plugin each slot is designed for (AI)
+ * 3. Matching control names to plugin parameters (AI)
+ * 4. Deploying to all specified DAWs
+ *
+ * @param options - Auto-deployment options from CLI
+ * @returns Auto-deployment result with summary
+ */
+async function executeAutoDeployment(options: {
+  daw: string[];
+  output: string;
+  install: boolean;
+  dryRun: boolean;
+  minConfidence: string;
+  skipLowConfidence: boolean;
+}): Promise<import('../orchestrator/AutoDeployOrchestrator.js').AutoDeploymentResult> {
+  console.log('\n🎛️  Auto-Deploy - Deploying All Controller Slots\n');
+
+  const minConfidence = parseFloat(options.minConfidence);
+  if (isNaN(minConfidence) || minConfidence < 0 || minConfidence > 1) {
+    throw new Error('Minimum confidence must be between 0 and 1');
+  }
+
+  // Import services (dynamic to avoid loading if not needed)
+  const { PluginRegistry } = await import('../services/PluginRegistry.js');
+  const { PluginIdentifier } = await import('../services/PluginIdentifier.js');
+  const { ParameterMatcher } = await import('../services/ParameterMatcher.js');
+  const { AutoDeployOrchestrator } = await import('../orchestrator/AutoDeployOrchestrator.js');
+
+  console.log('⏳ Initializing services...\n');
+
+  // Initialize services
+  const pluginRegistry = await PluginRegistry.create();
+  console.log(`   ✓ Plugin registry loaded: ${pluginRegistry.getAllPlugins().length} plugins available\n`);
+
+  const pluginIdentifier = PluginIdentifier.create(pluginRegistry);
+  const parameterMatcher = ParameterMatcher.create({ minConfidence: 0.6 });
+
+  // Detect and connect to controller
+  const adapter = await detectController();
+  const converter = new LaunchControlXL3Converter();
+
+  // Create deployers
+  const deployers = options.daw.map(daw => createDeployer(daw));
+
+  // Create orchestrator
+  const orchestrator = AutoDeployOrchestrator.create(
+    adapter,
+    converter,
+    pluginIdentifier,
+    parameterMatcher
+  );
+
+  console.log('🚀 Starting auto-deployment...\n');
+
+  // Execute auto-deployment
+  const result = await orchestrator.deploy({
+    deployers,
+    outputDir: options.output,
+    autoInstall: options.install,
+    dryRun: options.dryRun,
+    minConfidence,
+    skipLowConfidence: options.skipLowConfidence
+  });
+
+  return result;
+}
+
+/**
+ * Display successful auto-deployment summary.
+ *
+ * @param result - Auto-deployment result
+ */
+function displayAutoDeploySuccessSummary(result: import('../orchestrator/AutoDeployOrchestrator.js').AutoDeploymentResult): void {
+  console.log('\n╔══════════════════════════════════════════════════════════╗');
+  console.log('║          Auto-Deploy Complete                           ║');
+  console.log('╚══════════════════════════════════════════════════════════╝\n');
+
+  console.log(`  📊 Summary:`);
+  console.log(`     Total slots: ${result.totalSlots}`);
+  console.log(`     Populated: ${result.populatedSlots}`);
+  console.log(`     Processed: ${result.slotsProcessed}`);
+  console.log(`     Deployed: ${result.slotsDeployed}`);
+  console.log(`     Total time: ${(result.totalTime / 1000).toFixed(1)}s\n`);
+
+  // Show slot details
+  const deployed = result.slotResults.filter(r => r.success);
+  const skipped = result.slotResults.filter(r => !r.success);
+
+  if (deployed.length > 0) {
+    console.log('  ✅ Successfully Deployed:');
+    for (const slot of deployed) {
+      const plugin = slot.pluginIdentification.pluginName || 'Unknown';
+      const confidence = (slot.pluginIdentification.confidence * 100).toFixed(0);
+      console.log(`     [${slot.slotIndex}] ${slot.slotName}`);
+      console.log(`         Plugin: ${plugin} (${confidence}% confidence)`);
+      if (slot.parameterMatching) {
+        console.log(`         Parameters: ${slot.parameterMatching.matchedControls}/${slot.parameterMatching.totalControls} matched`);
+      }
+      console.log(`         DAWs: ${slot.deploymentResults.filter(r => r.success).map(r => r.daw).join(', ')}`);
+      console.log(`         Time: ${(slot.duration / 1000).toFixed(1)}s\n`);
+    }
+  }
+
+  if (skipped.length > 0) {
+    console.log('  ⚠️  Skipped/Failed:');
+    for (const slot of skipped) {
+      console.log(`     [${slot.slotIndex}] ${slot.slotName}`);
+      console.log(`         Reason: ${slot.error || 'Unknown'}\n`);
+    }
+  }
+
+  console.log('');
+}
+
+/**
+ * Display auto-deployment error summary.
+ *
+ * @param result - Auto-deployment result with errors
+ */
+function displayAutoDeployErrorSummary(result: import('../orchestrator/AutoDeployOrchestrator.js').AutoDeploymentResult): void {
+  console.error('\n❌ Auto-Deploy Failed\n');
+
+  if (result.slotsProcessed === 0) {
+    console.error('  No slots were successfully processed.\n');
+  } else {
+    console.error(`  Only ${result.slotsDeployed}/${result.slotsProcessed} slots deployed successfully.\n`);
+  }
+
+  const failed = result.slotResults.filter(r => !r.success);
+  if (failed.length > 0) {
+    console.error('  Failed slots:');
+    for (const slot of failed) {
+      console.error(`    [${slot.slotIndex}] ${slot.slotName}: ${slot.error}`);
+    }
+    console.error('');
+  }
 }
 
 // Parse and execute CLI
