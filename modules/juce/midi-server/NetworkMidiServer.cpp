@@ -107,12 +107,16 @@ private:
 };
 
 //==============================================================================
-// JUCE MIDI port wrapper implementing MidiPortInterface
-class JuceMidiPort : public NetworkMidi::MidiPortInterface
+// JUCE MIDI port wrapper implementing MidiPortInterface and MidiInputCallback
+class JuceMidiPort : public NetworkMidi::MidiPortInterface,
+                     public juce::MidiInputCallback
 {
 public:
     JuceMidiPort(const juce::String& deviceName, bool isInputPort)
         : name(deviceName), inputPort(isInputPort) {}
+
+    // Callback handler for MIDI messages
+    std::function<void(const juce::MidiMessage&)> onMidiReceived;
 
     void sendMessage(const std::vector<uint8_t>& data) override {
         if (!output || data.empty()) return;
@@ -155,8 +159,9 @@ public:
         if (input) {
             std::cout << "DEBUG: Starting MIDI input: " << input->getName().toStdString() << std::endl;
             std::cout << "  Identifier: " << input->getIdentifier().toStdString() << std::endl;
+            std::cout << "  Registering callback with JuceMidiPort" << std::endl;
             input->start();
-            std::cout << "  Started successfully!" << std::endl;
+            std::cout << "  Started successfully with callback!" << std::endl;
         }
     }
 
@@ -167,6 +172,20 @@ public:
     void queueMessage(const std::vector<uint8_t>& data) {
         std::lock_guard<std::mutex> lock(queueMutex);
         messageQueue.push(data);
+    }
+
+    // MidiInputCallback interface
+    void handleIncomingMidiMessage(juce::MidiInput* source,
+                                   const juce::MidiMessage& message) override {
+        // Call registered callback handler if set
+        if (onMidiReceived) {
+            onMidiReceived(message);
+        }
+
+        // Also queue for pull-based consumption
+        std::vector<uint8_t> data(message.getRawData(),
+                                 message.getRawData() + message.getRawDataSize());
+        queueMessage(data);
     }
 
 private:
@@ -587,14 +606,21 @@ private:
                 "input"
             );
 
-            // Open MIDI input but DON'T start it yet
+            // Create port wrapper first
+            auto port = std::make_unique<JuceMidiPort>(deviceInfo.name, true);
+
+            // Set callback handler to forward to NetworkMidiServer
+            port->onMidiReceived = [this, deviceId](const juce::MidiMessage& message) {
+                this->handleIncomingMidiMessage(nullptr, message);
+            };
+
+            // Open MIDI input with port as callback
             auto input = juce::MidiInput::openDevice(
                 deviceInfo.identifier,
-                this  // MidiInputCallback
+                port.get()  // JuceMidiPort is now the callback handler
             );
+
             if (input) {
-                // Create port wrapper
-                auto port = std::make_unique<JuceMidiPort>(deviceInfo.name, true);
                 port->setMidiInput(std::move(input));
 
                 // Store reference for device lookup
