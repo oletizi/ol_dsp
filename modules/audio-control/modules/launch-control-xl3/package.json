@@ -50,6 +50,7 @@
     "test:control-name": "tsx utils/test-control-name-send.ts",
     "test:simple-write": "tsx utils/test-simple-write.ts",
     "test:issue-36": "tsx utils/test-issue-36-fix.ts",
+    "test:playwright:slot-fix": "playwright test test/integration/slot-selection.playwright.test.ts",
     "web-automation:basic": "tsx utils/test-web-automation.ts --mode=basic --screenshots",
     "web-automation:device": "tsx utils/test-web-automation.ts --mode=device --screenshots",
     "web-automation:actions": "tsx utils/test-web-automation.ts --mode=actions --screenshots",
@@ -87,7 +88,6 @@
     "node": ">=18"
   },
   "dependencies": {
-    "@julusian/midi": "^3.6.1",
     "@types/axios": "^0.9.36",
     "@types/js-yaml": "^4.0.9",
     "axios": "^1.12.2",
@@ -111,8 +111,8 @@
     "tsx": "^4.7.0",
     "typescript": "^5.3.3",
     "vite": "^5.0.0",
-    "vitest": "^1.2.0",
-    "vite-plugin-dts": "^4.5.4"
+    "vite-plugin-dts": "^4.5.4",
+    "vitest": "^1.2.0"
   },
   "peerDependencies": {
     "midi": "^2.0.0"
