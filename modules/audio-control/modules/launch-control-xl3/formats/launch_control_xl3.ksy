@@ -18,6 +18,7 @@ doc: |
   Empirically discovered format through MIDI traffic analysis.
 
   Version History:
+  - v1.6 (2025-10-16): Corrected mode name length limit documentation from 8 to 18 characters
   - v1.5 (2025-10-11): Documented parser bug fix - 0x40 appears as data in minValue field, not as control marker
   - v1.4 (2025-10-09): Corrected to 2 pages (0x00, 0x03), not 3 pages. Updated to reflect working code.
   - v1.3 (2025-09-30): Documented read slot byte behavior for DAW port integration
@@ -77,7 +78,7 @@ types:
         contents: [0x06, 0x20]
       - id: name_length
         type: u1
-        doc: Length of mode name (0-8 characters)
+        doc: Length of mode name (0-18 characters)
       - id: name_bytes
         size: name_length
         type: str
@@ -92,6 +93,9 @@ types:
 
       Discovery: Web editor MIDI capture (2025-09-30)
       Example: 20 08 43 48 41 4E 54 45 53 54 = "CHANTEST" (8 chars)
+
+      Note: The device supports mode names up to 18 characters.
+      Earlier documentation incorrectly stated 8 characters as the maximum.
 
   control_definition:
     doc: |

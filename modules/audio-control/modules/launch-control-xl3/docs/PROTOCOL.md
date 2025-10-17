@@ -1,6 +1,6 @@
 # Launch Control XL3 Protocol Specification
 
-**Version:** 2.0
+**Version:** 2.1
 **Last Updated:** 2025-10-16
 **Status:** Verified with hardware
 
@@ -309,6 +309,8 @@ See `DeviceManager.writeCustomMode()` at line 785-878 for implementation.
 
 **Validation:** 2025-09-30 - Verified with Novation Components web editor v1.60.0
 
+**Note:** The device supports mode names up to 18 characters, though the examples above show 8-character names. Earlier documentation incorrectly stated 8 characters as the maximum.
+
 ### Known Issue: Mode Name Truncation
 
 **Discovery Date:** 2025-10-16
@@ -406,7 +408,7 @@ Offset | Type | Field        | Values
 **Format:** `06 20 [length] [name_bytes...]`
 
 - `06 20` - Fixed marker
-- `length` - Number of characters (0-8)
+- `length` - Number of characters (0-18)
 - `name_bytes` - ASCII characters
 
 **Example:**
@@ -415,6 +417,8 @@ Offset | Type | Field        | Values
       ↑  C  H  A  N  N  E  V  E
       └─ length = 8 chars
 ```
+
+**Note:** The device supports mode names up to 18 characters. Earlier documentation incorrectly stated 8 characters as the maximum.
 
 ### Control Label Encoding
 
@@ -446,7 +450,7 @@ After SysEx parsing, the `DeviceManager.readCustomMode()` returns data in one of
 ### Array Format (Legacy/Fallback)
 ```javascript
 {
-  name: "MODE_NAME",  // String, max 8 characters
+  name: "MODE_NAME",  // String, max 18 characters
   controls: [
     {
       controlId: 0x10,       // number: 0x10-0x3F main controls, 0x68-0x6F side buttons
@@ -525,7 +529,7 @@ Label with control ID 0x19 (25) maps to actual control ID 26:
 68 19 4C 6F 77 20 46 72 65 71
 │  │  L  o  w     F  r  e  q
 │  └─ Label ID 0x19 → maps to control 26
-└─ Marker 0x68 = 8 chars
+└─ Marker 0x68 = 0x60 + 8 → 8 characters
 ```
 
 **Mapping rule:**
@@ -646,6 +650,12 @@ console.assert(ackStatus === expected, 'Slot mismatch in acknowledgement');
 5. Documented write acknowledgement slot encoding discovery
 6. Added verification results to PROTOCOL.md and MAINTENANCE.md
 
+### Phase 8: Documentation Correction
+1. **Discovery (2025-10-16):** Mode name length limit was incorrectly documented as 8 characters
+2. **Reality:** The device actually supports mode names up to 18 characters
+3. **Correction:** Updated all documentation to reflect the correct 18-character limit
+4. **Impact:** This was a documentation error only - the protocol and device always supported 18 characters
+
 ---
 
 ## DAW Port Protocol (DEPRECATED)
@@ -732,6 +742,7 @@ The parser follows the protocol specification exactly:
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 2.1 | 2025-10-16 | **Documentation Correction:** Updated mode name length limit from 8 to 18 characters. This was a documentation error - the device always supported 18 characters. Updated: PROTOCOL.md lines 409, 449, and associated examples. No protocol or code changes required. |
 | 2.0 | 2025-10-16 | **VERIFIED:** Write acknowledgement status byte is slot identifier. Confirmed with successful test run writing to slot 3. Control CC numbers, channels verified to persist correctly (10/11 changes successful). Issue #36 RESOLVED - bug was in library, not firmware. Added Known Issue: mode name truncation ("TESTMOD" → "M"). |
 | 1.9 | 2025-10-16 | **CRITICAL:** Documented write acknowledgement status byte as slot identifier, not success indicator. Status byte uses CC 30 slot encoding (slots 0-3: 0x06+slot, slots 4-14: 0x0E+slot). Acknowledgement arrival indicates success; timeout indicates failure. Fixed Issue #36. Evidence from raw MIDI testing with multiple slots. |
 | 1.8 | 2025-10-11 | **Parser Bug Fix:** Removed incorrect 0x40 parsing in READ responses. The byte 0x40 appears as **data within 0x48 control structures** (minValue field at offset +7), not as a control marker. This caused wrong CC numbers, missing custom labels, and fake controls with CC 0. Only 0x48 markers are used for READ responses. Reference: GitHub issue #32 |
@@ -761,3 +772,4 @@ The parser follows the protocol specification exactly:
 11. **Acknowledgement arrival = success; timeout = failure** - the status byte confirms which slot was written, not whether it succeeded
 12. **Test with multiple slots, not just slot 0** - important patterns emerge when testing slots 1-14
 13. **Mode name field has limitations** - names may truncate on read-back; under investigation
+14. **Mode name maximum length is 18 characters** - earlier documentation incorrectly stated 8 characters
