@@ -1,6 +1,6 @@
 # Launch Control XL3 Protocol Specification
 
-**Version:** 1.9
+**Version:** 2.0
 **Last Updated:** 2025-10-16
 **Status:** Verified with hardware
 
@@ -145,9 +145,10 @@ Writing a custom mode to the device uses command `0x45` with a multi-page protoc
 
 **Discovery Method:** Playwright browser automation + CoreMIDI spy, observing [DEST] and [SRC] traffic during web editor write operations.
 
-### Critical Discovery: Write Acknowledgement Status Byte is Slot Identifier
+### Critical Discovery: Write Acknowledgement Status Byte is Slot Identifier (VERIFIED)
 
 **Discovery Date:** 2025-10-16
+**Verification Date:** 2025-10-16
 
 **The Problem:** Previous implementations incorrectly interpreted the "status" byte in write acknowledgement messages as a success/failure indicator, checking for `status === 0x06`. This caused writes to all slots except slot 0 to fail.
 
@@ -213,6 +214,15 @@ F0 00 20 29 02 15 05 00 15 00 13 F7
                               ↑
                               0x13 = slot 5 (0x0E + 5)
 ```
+
+**Verification Evidence (2025-10-16):**
+
+Test run with `utils/test-valid-mode-changes.ts` successfully wrote to slot 3 and verified:
+- ✅ **Write successful** - No firmware rejection
+- ✅ **Control CC numbers persisted correctly** - All 5 test controls changed from (13,14,15,16,17) to (23,24,25,26,27)
+- ✅ **Control channels persisted correctly** - All channel values verified
+- ✅ **Issue #36 RESOLVED** - The problem was library bug, not firmware rejection
+- ✅ **10/11 changes verified successfully** (see Known Issues for mode name limitation)
 
 **Implications:**
 
@@ -298,6 +308,25 @@ See `DeviceManager.writeCustomMode()` at line 785-878 for implementation.
 3. Pattern identified: `0x20` prefix, length byte, raw ASCII
 
 **Validation:** 2025-09-30 - Verified with Novation Components web editor v1.60.0
+
+### Known Issue: Mode Name Truncation
+
+**Discovery Date:** 2025-10-16
+
+**Observation:** Mode names written to the device may be truncated on read-back.
+
+**Test Evidence:**
+- Written name: "TESTMOD" (7 characters)
+- Read-back name: "M" (1 character!)
+
+**Hypothesis:**
+1. The mode name field may have an undocumented length limit
+2. There may be a serialization bug in the name field
+3. The device firmware may truncate/modify mode names in specific ways
+
+**Impact:** Mode name verification in round-trip tests cannot reliably confirm name persistence.
+
+**Status:** Under investigation. This does not affect control data persistence, which is verified to work correctly.
 
 ### Example: Complete Write Sequence with Acknowledgements
 
@@ -595,12 +624,27 @@ console.assert(ackStatus === expected, 'Slot mismatch in acknowledgement');
 **Discovery Date:** 2025-10-16
 **Method:** Raw MIDI testing with systematic slot writes and acknowledgement analysis
 
-### Phase 6: Documentation
+### Phase 6: Verification
+1. **Fix Implementation:** Updated DeviceManager.ts to accept any acknowledgement as success
+2. **Test Execution:** Ran `utils/test-valid-mode-changes.ts` targeting slot 3
+3. **Results:**
+   - ✅ Write to slot 3 succeeded (no firmware rejection)
+   - ✅ Control CC numbers persisted correctly (changed from 13,14,15,16,17 to 23,24,25,26,27)
+   - ✅ Control channels persisted correctly
+   - ✅ 10/11 changes verified successfully
+   - ❌ Mode name truncated ("TESTMOD" → "M") - under investigation
+4. **Conclusion:** Issue #36 resolved - problem was library bug, not firmware limitation
+
+**Verification Date:** 2025-10-16
+**Method:** Empirical round-trip test with real hardware targeting non-zero slot
+
+### Phase 7: Documentation
 1. Created Kaitai Struct specification (`.ksy` file)
 2. Validated spec by generating parser and comparing output
 3. Documented control ID mapping exception (25-28 → 26-29)
 4. Updated all documentation to reflect slot selection discovery
 5. Documented write acknowledgement slot encoding discovery
+6. Added verification results to PROTOCOL.md and MAINTENANCE.md
 
 ---
 
@@ -688,6 +732,7 @@ The parser follows the protocol specification exactly:
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 2.0 | 2025-10-16 | **VERIFIED:** Write acknowledgement status byte is slot identifier. Confirmed with successful test run writing to slot 3. Control CC numbers, channels verified to persist correctly (10/11 changes successful). Issue #36 RESOLVED - bug was in library, not firmware. Added Known Issue: mode name truncation ("TESTMOD" → "M"). |
 | 1.9 | 2025-10-16 | **CRITICAL:** Documented write acknowledgement status byte as slot identifier, not success indicator. Status byte uses CC 30 slot encoding (slots 0-3: 0x06+slot, slots 4-14: 0x0E+slot). Acknowledgement arrival indicates success; timeout indicates failure. Fixed Issue #36. Evidence from raw MIDI testing with multiple slots. |
 | 1.8 | 2025-10-11 | **Parser Bug Fix:** Removed incorrect 0x40 parsing in READ responses. The byte 0x40 appears as **data within 0x48 control structures** (minValue field at offset +7), not as a control marker. This caused wrong CC numbers, missing custom labels, and fake controls with CC 0. Only 0x48 markers are used for READ responses. Reference: GitHub issue #32 |
 | 1.7 | 2025-10-09 | **MAJOR UPDATE:** Corrected page mapping documentation. Logical pages 0 and 1 map to SysEx page bytes 0x00 and 0x03. Removed extensive DAW port protocol documentation (deprecated). Clarified that slot selection uses SysEx slot byte directly. Updated all examples to reflect working code. |
@@ -714,3 +759,5 @@ The parser follows the protocol specification exactly:
 9. **DO NOT scan for 0x40 bytes** - they appear as data in minValue fields, not as control markers
 10. **Write acknowledgement status byte is slot identifier** - use CC 30 encoding to verify, or simply accept any acknowledgement as success
 11. **Acknowledgement arrival = success; timeout = failure** - the status byte confirms which slot was written, not whether it succeeded
+12. **Test with multiple slots, not just slot 0** - important patterns emerge when testing slots 1-14
+13. **Mode name field has limitations** - names may truncate on read-back; under investigation

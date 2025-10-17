@@ -111,7 +111,7 @@ doc: |
 
 ## Recent Protocol Discoveries
 
-### Write Acknowledgement Status Byte (2025-10-16)
+### Write Acknowledgement Status Byte (2025-10-16) - VERIFIED
 
 **Discovery:** The "status" byte in write acknowledgement messages is NOT a success/failure indicator - it's the **SLOT IDENTIFIER** using CC 30 slot encoding.
 
@@ -133,11 +133,46 @@ doc: |
 
 **Method:** Raw MIDI testing with `utils/test-round-trip-validation.ts`
 
+**Verification (2025-10-16):**
+
+Test run with `utils/test-valid-mode-changes.ts` successfully confirmed the fix:
+- ✅ **Write to slot 3 succeeded** - No firmware rejection (Issue #36 was library bug)
+- ✅ **Control CC numbers persisted correctly** - All 5 test controls changed from (13,14,15,16,17) to (23,24,25,26,27)
+- ✅ **Control channels persisted correctly** - All channel values verified
+- ✅ **10/11 changes verified successfully**
+
+**Status:** VERIFIED - Issue #36 RESOLVED
+
 **Documentation:**
-- Updated PROTOCOL.md v1.9 with new section "Critical Discovery: Write Acknowledgement Status Byte is Slot Identifier"
-- Added slot encoding table with all 15 slots
-- Provided byte-level examples and verification code
-- Updated version history with discovery details
+- Updated PROTOCOL.md v2.0 with verification results
+- Added "Known Issue: Mode Name Truncation" section
+- Updated version history with verification evidence
+- Confirmed fix works on real hardware
+
+### Mode Name Truncation (2025-10-16) - UNDER INVESTIGATION
+
+**Discovery:** Mode names written to the device may be truncated on read-back.
+
+**Evidence:**
+- Written name: "TESTMOD" (7 characters)
+- Read-back name: "M" (1 character!)
+
+**Hypothesis:**
+1. The mode name field may have an undocumented length limit
+2. There may be a serialization bug in the name field
+3. The device firmware may truncate/modify mode names in specific ways
+
+**Impact:**
+- Mode name verification in round-trip tests cannot reliably confirm name persistence
+- Does NOT affect control data persistence (verified to work correctly)
+
+**Status:** Under investigation - needs further testing with different name patterns
+
+**Next Steps:**
+- Test various name lengths (1-8 characters)
+- Test different character patterns (alphanumeric, spaces, special chars)
+- Compare with web editor behavior
+- Capture MIDI traffic during name write/read
 
 ---
 
@@ -359,6 +394,11 @@ Success is indicated by acknowledgement arrival.
 Failure is indicated by timeout (no acknowledgement).
 ```
 
+**Verified (2025-10-16):**
+- Test with slot 3 write succeeded
+- Control data persisted correctly
+- Issue #36 resolved - bug was in library, not firmware
+
 **Key lesson:** Test with multiple slots, not just slot 0!
 
 ---
@@ -440,6 +480,20 @@ npx tsx utils/test-round-trip-validation.ts
 # Slot 1 → ACK status 0x07
 # Slot 5 → ACK status 0x13
 # Conclusion: Status byte is slot identifier, not success flag
+```
+
+**Example from Issue #36 verification:**
+```bash
+# Test valid mode changes to non-zero slot
+npx tsx utils/test-valid-mode-changes.ts
+
+# Results:
+# ✅ Write to slot 3 succeeded
+# ✅ Control CC numbers changed correctly (13→23, 14→24, etc.)
+# ✅ Control channels persisted
+# ✅ 10/11 changes verified
+# ❌ Mode name truncated ("TESTMOD" → "M")
+# Conclusion: Issue #36 resolved, new issue discovered
 ```
 
 ### Anti-Patterns to Avoid
