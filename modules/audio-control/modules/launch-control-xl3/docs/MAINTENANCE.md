@@ -109,6 +109,38 @@ doc: |
 
 ---
 
+## Recent Protocol Discoveries
+
+### Write Acknowledgement Status Byte (2025-10-16)
+
+**Discovery:** The "status" byte in write acknowledgement messages is NOT a success/failure indicator - it's the **SLOT IDENTIFIER** using CC 30 slot encoding.
+
+**Evidence:**
+- Writing to slot 0 → response status: 0x06
+- Writing to slot 1 → response status: 0x07
+- Writing to slot 3 → response status: 0x09
+- Writing to slot 5 → response status: 0x13
+
+**Pattern:**
+- Slots 0-3: 0x06 + slot
+- Slots 4-14: 0x0E + slot
+
+**Impact:**
+- Fixed Issue #36 (DeviceManager.ts line 448-451 bug)
+- Changed from `if (ack.status === 0x06)` to accepting any acknowledgement as success
+- Acknowledgement arrival = success; timeout = failure
+- Status byte can be used to verify correct slot was written
+
+**Method:** Raw MIDI testing with `utils/test-round-trip-validation.ts`
+
+**Documentation:**
+- Updated PROTOCOL.md v1.9 with new section "Critical Discovery: Write Acknowledgement Status Byte is Slot Identifier"
+- Added slot encoding table with all 15 slots
+- Provided byte-level examples and verification code
+- Updated version history with discovery details
+
+---
+
 ## Discovery Methodology Documentation
 
 **Every non-obvious protocol detail MUST explain how it was discovered.**
@@ -302,6 +334,33 @@ If Novation's official documentation conflicts:
 **Implementation uses:** Actual behavior (empirical)
 ```
 
+### Status Byte Misinterpretation Example
+
+**Original (incorrect) interpretation:**
+```markdown
+### Write Acknowledgement
+
+Format: F0 00 20 29 02 15 05 00 15 [page] [status] F7
+Status byte: 0x06 = success, other values = failure
+```
+
+**Corrected interpretation (2025-10-16):**
+```markdown
+### Write Acknowledgement
+
+Format: F0 00 20 29 02 15 05 00 15 [page] [slot_identifier] F7
+
+The byte at position 10 is NOT a success/failure indicator.
+It's the SLOT IDENTIFIER using CC 30 encoding:
+- Slots 0-3: 0x06 + slot
+- Slots 4-14: 0x0E + slot
+
+Success is indicated by acknowledgement arrival.
+Failure is indicated by timeout (no acknowledgement).
+```
+
+**Key lesson:** Test with multiple slots, not just slot 0!
+
 ---
 
 ## Test Data Requirements
@@ -361,17 +420,41 @@ const fixtureData = JSON.parse(await fs.readFile(join(backupDir, latestFixture),
 3. Verify parser handles all captured data
 4. Compare with web editor behavior (if changes affect mapping)
 
+### Raw MIDI Testing for Protocol Discovery
+
+**When investigating device behavior:**
+
+Use `utils/test-round-trip-validation.ts` or similar raw MIDI scripts to:
+1. Send specific SysEx messages directly
+2. Capture exact device responses with byte-level precision
+3. Test systematic patterns (e.g., all slots 0-14, not just slot 0)
+4. Verify assumptions against real hardware
+
+**Example from Issue #36 discovery:**
+```bash
+# Test write acknowledgements across multiple slots
+npx tsx utils/test-round-trip-validation.ts
+
+# Observed pattern:
+# Slot 0 → ACK status 0x06
+# Slot 1 → ACK status 0x07
+# Slot 5 → ACK status 0x13
+# Conclusion: Status byte is slot identifier, not success flag
+```
+
 ### Anti-Patterns to Avoid
 
 ❌ **DON'T** create hand-crafted mock data without validation
 ❌ **DON'T** assume array format - device may return objects
 ❌ **DON'T** commit changes without real device testing
 ❌ **DON'T** skip fixture capture before protocol changes
+❌ **DON'T** test only slot 0 - patterns may emerge with other slots
 
 ✅ **DO** use real fixtures from `backup/` directory
 ✅ **DO** test both array and object formats
 ✅ **DO** validate against protocol specifications
 ✅ **DO** document data source (real vs synthetic)
+✅ **DO** test across all slots when discovering slot-related behavior
 
 ---
 
@@ -410,5 +493,5 @@ const fixtureData = JSON.parse(await fs.readFile(join(backupDir, latestFixture),
 
 ---
 
-**Last Updated:** 2025-09-30
+**Last Updated:** 2025-10-16
 **Maintained By:** See git history for contributors
