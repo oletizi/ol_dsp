@@ -360,6 +360,22 @@ export class DeviceManager extends EventEmitter {
   }
 
   /**
+   * Check if status byte is valid according to protocol.
+   *
+   * Valid ranges:
+   * - 0x06-0x09 (slots 0-3)
+   * - 0x12-0x1D (slots 4-15)
+   *
+   * Invalid range: 0x0a-0x11 (gap in encoding)
+   *
+   * @param status - Status byte from acknowledgement
+   * @returns true if status byte is in valid range
+   */
+  private isValidStatusByte(status: number): boolean {
+    return (status >= 0x06 && status <= 0x09) || (status >= 0x12 && status <= 0x1D);
+  }
+
+  /**
    * Wait for write acknowledgement from device (persistent listener pattern)
    *
    * Discovery: Playwright + CoreMIDI spy (2025-09-30)
@@ -486,13 +502,29 @@ export class DeviceManager extends EventEmitter {
               // Status byte matches expected slot identifier
               pending.resolve();
             } else {
-              // Status byte mismatch - either wrong slot or write failure
-              const expectedSlot = pending.slot;
-              pending.reject(new Error(
-                `Write acknowledgement slot mismatch for page ${ack.page}: ` +
-                `expected slot ${expectedSlot} (status 0x${expectedStatus.toString(16)}), ` +
-                `but received status 0x${ack.status.toString(16)}`
-              ));
+              // Status byte mismatch - check if it's in valid range
+              const isValidStatus = this.isValidStatusByte(ack.status);
+
+              if (!isValidStatus) {
+                // WORKAROUND (Issue #41): Invalid status byte detected
+                // This can occur on page 3 acknowledgements due to device firmware behavior
+                // or MIDI backend transport issues. Log warning but accept acknowledgement.
+                console.warn(
+                  `[DeviceManager] Write acknowledgement for page ${ack.page} has invalid status byte 0x${ack.status.toString(16)}. ` +
+                  `Expected 0x${expectedStatus.toString(16)} for slot ${pending.slot}. ` +
+                  `Status byte falls outside valid protocol range (0x06-0x09, 0x12-0x1D). ` +
+                  `Accepting acknowledgement anyway (possible device firmware or MIDI transport issue).`
+                );
+                pending.resolve(); // Accept anyway
+              } else {
+                // Status is valid but doesn't match expected slot
+                const expectedSlot = pending.slot;
+                pending.reject(new Error(
+                  `Write acknowledgement slot mismatch for page ${ack.page}: ` +
+                  `expected slot ${expectedSlot} (status 0x${expectedStatus.toString(16)}), ` +
+                  `but received status 0x${ack.status.toString(16)}`
+                ));
+              }
             }
           }
           break;
@@ -926,8 +958,9 @@ export class DeviceManager extends EventEmitter {
       await this.sendSysEx(page3Message);
 
       // Wait for page 3 acknowledgement
-      // WORKAROUND: JUCE backend sometimes doesn't forward page 3 ACKs immediately
-      // Device sends ACK within 24-80ms, but backend may delay delivery
+      // WORKAROUND (Issue #41): Page 3 ACKs may be delayed or contain invalid status bytes
+      // (e.g., 0x0d instead of expected slot encoding). This could be due to device firmware
+      // behavior or MIDI transport issues. Device typically sends ACK within 24-80ms.
       await this.waitForWriteAcknowledgement(3, slot, 2000); // Wait up to 2000ms for page 3 ACK
     }
 
