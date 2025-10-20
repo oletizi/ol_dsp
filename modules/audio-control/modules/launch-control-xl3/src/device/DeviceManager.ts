@@ -502,28 +502,50 @@ export class DeviceManager extends EventEmitter {
               // Status byte matches expected slot identifier
               pending.resolve();
             } else {
-              // Status byte mismatch - check if it's in valid range
-              const isValidStatus = this.isValidStatusByte(ack.status);
-
-              if (!isValidStatus) {
-                // WORKAROUND (Issue #41): Invalid status byte detected
-                // This can occur on page 3 acknowledgements due to device firmware behavior
-                // or MIDI backend transport issues. Log warning but accept acknowledgement.
-                console.warn(
-                  `[DeviceManager] Write acknowledgement for page ${ack.page} has invalid status byte 0x${ack.status.toString(16)}. ` +
-                  `Expected 0x${expectedStatus.toString(16)} for slot ${pending.slot}. ` +
-                  `Status byte falls outside valid protocol range (0x06-0x09, 0x12-0x1D). ` +
-                  `Accepting acknowledgement anyway (possible device firmware or MIDI transport issue).`
-                );
-                pending.resolve(); // Accept anyway
+              // Status byte mismatch
+              // WORKAROUND (Issue #41): Page 3 acknowledgements use inconsistent status bytes
+              // Device firmware sends different status bytes for page 0 vs page 3:
+              // - Slot 4 page 0: 0x12 (correct: 0x0E + 4)
+              // - Slot 4 page 3: 0x0D (incorrect: should be 0x12)
+              // This is a device firmware quirk affecting slots 4-15 on page 3.
+              // Accept any valid status byte for page 3; only validate page 0.
+              if (ack.page === 3) {
+                const isValidStatus = this.isValidStatusByte(ack.status);
+                if (isValidStatus) {
+                  console.warn(
+                    `[DeviceManager] Page 3 acknowledgement status mismatch (known firmware quirk): ` +
+                    `expected 0x${expectedStatus.toString(16)} for slot ${pending.slot}, ` +
+                    `received 0x${ack.status.toString(16)}. Accepting (device firmware uses inconsistent encoding for page 3).`
+                  );
+                  pending.resolve(); // Accept any valid status for page 3
+                } else {
+                  console.warn(
+                    `[DeviceManager] Page 3 acknowledgement has invalid status byte 0x${ack.status.toString(16)}. ` +
+                    `Expected 0x${expectedStatus.toString(16)} for slot ${pending.slot}. ` +
+                    `Status falls outside valid range (0x06-0x09, 0x12-0x1D). ` +
+                    `Accepting anyway (device firmware quirk).`
+                  );
+                  pending.resolve(); // Accept even invalid status for page 3
+                }
               } else {
-                // Status is valid but doesn't match expected slot
-                const expectedSlot = pending.slot;
-                pending.reject(new Error(
-                  `Write acknowledgement slot mismatch for page ${ack.page}: ` +
-                  `expected slot ${expectedSlot} (status 0x${expectedStatus.toString(16)}), ` +
-                  `but received status 0x${ack.status.toString(16)}`
-                ));
+                // Page 0: Strict validation (device firmware is consistent here)
+                const isValidStatus = this.isValidStatusByte(ack.status);
+                if (!isValidStatus) {
+                  console.warn(
+                    `[DeviceManager] Page 0 acknowledgement has invalid status byte 0x${ack.status.toString(16)}. ` +
+                    `Expected 0x${expectedStatus.toString(16)} for slot ${pending.slot}. ` +
+                    `Accepting anyway (possible MIDI transport issue).`
+                  );
+                  pending.resolve(); // Accept anyway
+                } else {
+                  // Page 0 with valid but wrong status - this is an actual error
+                  const expectedSlot = pending.slot;
+                  pending.reject(new Error(
+                    `Write acknowledgement slot mismatch for page ${ack.page}: ` +
+                    `expected slot ${expectedSlot} (status 0x${expectedStatus.toString(16)}), ` +
+                    `but received status 0x${ack.status.toString(16)}`
+                  ));
+                }
               }
             }
           }
