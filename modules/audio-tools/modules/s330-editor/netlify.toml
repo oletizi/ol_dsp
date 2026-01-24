@@ -1,0 +1,36 @@
+# Netlify configuration for S-330 Editor
+# This is a monorepo package - Netlify needs special handling for workspace dependencies
+#
+# SETUP INSTRUCTIONS:
+# 1. In Netlify UI, set Base Directory to: modules/audio-tools/modules/s330-editor
+# 2. Set Production Branch to: main (or your preferred branch)
+# 3. The build command below handles workspace dependencies automatically
+
+[build]
+  # Build command navigates to workspace root, installs deps, builds with all dependencies
+  command = "cd ../.. && pnpm install --frozen-lockfile && pnpm --filter @oletizi/s330-editor... build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "20"
+  PNPM_VERSION = "8.15.1"
+
+# SPA routing - redirect all paths to index.html for React Router
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Security headers
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+
+# Cache static assets
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
