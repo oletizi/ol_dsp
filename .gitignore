@@ -9,3 +9,6 @@
 node_modules/
 .submodule_cache/
 make.log.*
+
+# Local Netlify folder
+.netlify
