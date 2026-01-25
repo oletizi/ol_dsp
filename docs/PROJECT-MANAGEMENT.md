@@ -684,6 +684,63 @@ gh api graphql -f query="
 - Web MIDI API integration
 ```
 
+### jv1080-editor Module (Web Application)
+
+**Documentation location:** `modules/audio-tools/docs/<version>/<feature-slug>/` (under audio-tools)
+
+**GitHub Project:** [JV-1080 Editor](https://github.com/users/oletizi/projects/2)
+
+**REQUIRED: All GitHub issues and milestones for work in the jv1080-editor module MUST be added to the JV-1080 Editor GitHub Project.**
+
+**Additional requirements:**
+
+- All issues must be added to the JV-1080 Editor project board
+- Use `[jv1080-editor]` or `[audio-tools]` prefix for issue titles
+- Document Web MIDI API requirements
+- Include browser compatibility notes
+- Reference existing code in `sampler-attic/src/midi/roland-jv-1080.ts`
+
+**Adding issues to the project via CLI:**
+
+```bash
+# Get project and issue IDs
+PROJECT_ID=$(gh api graphql -f query='
+  query { user(login: "oletizi") { projectV2(number: 2) { id } } }
+' --jq '.data.user.projectV2.id')
+
+ISSUE_ID=$(gh api graphql -f query='
+  query { repository(owner: "oletizi", name: "ol_dsp") { issue(number: ISSUE_NUM) { id } } }
+' --jq '.data.repository.issue.id')
+
+# Add issue to project
+gh api graphql -f query="
+  mutation {
+    addProjectV2ItemById(input: {
+      projectId: \"$PROJECT_ID\"
+      contentId: \"$ISSUE_ID\"
+    }) { item { id } }
+  }
+"
+```
+
+**README.md tracking section:**
+
+```markdown
+## Tracking Links
+
+**GitHub Project:** [JV-1080 Editor](https://github.com/users/oletizi/projects/2)
+**GitHub Milestone:** [Week of Jan 27-31](https://github.com/oletizi/ol_dsp/milestone/N)
+**Affected Sub-modules:** jv1080-editor, sampler-devices/jv1080
+
+## Module Changes
+
+**jv1080-editor:**
+
+- Web-based patch/effects editor
+- Web MIDI API integration
+- 40 FX types supported
+```
+
 ### audio-control Module
 
 **Documentation location:** `modules/audio-control/docs/<version>/<feature-slug>/`
@@ -735,6 +792,7 @@ gh api graphql -f query="
 - [ ] Implementation issue descriptions include acceptance criteria
 - [ ] Issues assigned to milestone with appropriate labels
 - [ ] **For s330-editor work:** All issues added to [S330 Editor project](https://github.com/users/oletizi/projects/1)
+- [ ] **For jv1080-editor work:** All issues added to [JV-1080 Editor project](https://github.com/users/oletizi/projects/2)
 - [ ] workplan.md updated with GitHub issue links
 - [ ] README.md updated with milestone link
 
