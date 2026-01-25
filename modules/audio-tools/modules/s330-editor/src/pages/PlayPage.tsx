@@ -217,6 +217,40 @@ export function PlayPage() {
     }
   };
 
+  // Reload data from hardware
+  const handleReload = async () => {
+    if (!clientRef.current || isFetchingGlobal) return;
+
+    isFetchingGlobal = true;
+    try {
+      setLoading(true, 'Reloading...');
+
+      // Fetch patches
+      const names = await clientRef.current.requestAllPatchNames();
+      setPatchNames(names);
+
+      // Fetch function parameters
+      const configs = await clientRef.current.requestFunctionParameters();
+      setParts((prev) =>
+        prev.map((part, i) => ({
+          ...part,
+          channel: configs[i]?.channel ?? i,
+          patchIndex: configs[i]?.patchIndex ?? null,
+          output: configs[i]?.output ?? 1,
+          level: configs[i]?.level ?? 127,
+        }))
+      );
+
+      setLoading(false);
+    } catch (err) {
+      console.error('[PlayPage] Error reloading:', err);
+      setError(err instanceof Error ? err.message : 'Failed to reload');
+      setLoading(false);
+    } finally {
+      isFetchingGlobal = false;
+    }
+  };
+
   if (!isConnected) {
     return (
       <div className="card text-center py-12">
@@ -233,6 +267,20 @@ export function PlayPage() {
 
   return (
     <div className="space-y-4">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-bold text-s330-text">Play</h2>
+        <div className="flex gap-2">
+          <button
+            onClick={handleReload}
+            disabled={isLoading}
+            className={cn('btn btn-secondary', isLoading && 'opacity-50')}
+          >
+            {isLoading ? 'Loading...' : 'Refresh'}
+          </button>
+        </div>
+      </div>
+
       {/* Parts Grid */}
       <div className="bg-s330-panel border border-s330-accent rounded-md overflow-hidden">
         {/* Parts Grid */}
