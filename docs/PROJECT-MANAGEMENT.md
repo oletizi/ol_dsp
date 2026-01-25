@@ -798,6 +798,63 @@ gh api graphql -f query="
 - Up to 99 keygroups per program
 ```
 
+### s5000-editor Module (Web Application)
+
+**Documentation location:** `modules/audio-tools/docs/<version>/<feature-slug>/` (under audio-tools)
+
+**GitHub Project:** [S5000/S6000 Editor](https://github.com/users/oletizi/projects/4)
+
+**REQUIRED: All GitHub issues and milestones for work in the s5000-editor module MUST be added to the S5000/S6000 Editor GitHub Project.**
+
+**Additional requirements:**
+
+- All issues must be added to the S5000/S6000 Editor project board
+- Use `[s5000-editor]` or `[audio-tools]` prefix for issue titles
+- Document file format specifications
+- Reference existing code in `sampler-devices/src/devices/s56k*.ts` (1,812 lines)
+- Note: File-based workflow (not MIDI), uses Browser File API
+
+**Adding issues to the project via CLI:**
+
+```bash
+# Get project and issue IDs
+PROJECT_ID=$(gh api graphql -f query='
+  query { user(login: "oletizi") { projectV2(number: 4) { id } } }
+' --jq '.data.user.projectV2.id')
+
+ISSUE_ID=$(gh api graphql -f query='
+  query { repository(owner: "oletizi", name: "ol_dsp") { issue(number: ISSUE_NUM) { id } } }
+' --jq '.data.repository.issue.id')
+
+# Add issue to project
+gh api graphql -f query="
+  mutation {
+    addProjectV2ItemById(input: {
+      projectId: \"$PROJECT_ID\"
+      contentId: \"$ISSUE_ID\"
+    }) { item { id } }
+  }
+"
+```
+
+**README.md tracking section:**
+
+```markdown
+## Tracking Links
+
+**GitHub Project:** [S5000/S6000 Editor](https://github.com/users/oletizi/projects/4)
+**GitHub Milestone:** [Week of Jan 27-31](https://github.com/oletizi/ol_dsp/milestone/N)
+**Affected Sub-modules:** s5000-editor, sampler-devices/s56k
+
+## Module Changes
+
+**s5000-editor:**
+
+- Web-based program/keygroup editor
+- File import/export (.akp format)
+- Up to 128 keygroups, 4 zones each
+```
+
 ### audio-control Module
 
 **Documentation location:** `modules/audio-control/docs/<version>/<feature-slug>/`
@@ -851,6 +908,7 @@ gh api graphql -f query="
 - [ ] **For s330-editor work:** All issues added to [S330 Editor project](https://github.com/users/oletizi/projects/1)
 - [ ] **For jv1080-editor work:** All issues added to [JV-1080 Editor project](https://github.com/users/oletizi/projects/2)
 - [ ] **For s3000xl-editor work:** All issues added to [S3000XL Editor project](https://github.com/users/oletizi/projects/3)
+- [ ] **For s5000-editor work:** All issues added to [S5000/S6000 Editor project](https://github.com/users/oletizi/projects/4)
 - [ ] workplan.md updated with GitHub issue links
 - [ ] README.md updated with milestone link
 
