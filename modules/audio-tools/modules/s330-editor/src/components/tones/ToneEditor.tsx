@@ -11,7 +11,7 @@
  */
 
 import type { S330Tone, S330Envelope } from '@oletizi/sampler-devices/s330';
-import { midiNoteToName, formatPercent, cn } from '@/lib/utils';
+import { midiNoteToName, formatPercent, cn, formatS330Number } from '@/lib/utils';
 import { ParameterSlider } from '@/components/ui/ParameterSlider';
 import { EnvelopeEditor } from '@/components/ui/EnvelopeEditor';
 
@@ -39,7 +39,7 @@ export function ToneEditor({ tone, index, onUpdate, onCommit }: ToneEditorProps)
             {/* Header */}
             <div className="card">
                 <div className="mb-4">
-                    <label className="text-sm text-s330-muted">Tone T{index + 11}</label>
+                    <label className="text-sm text-s330-muted">Tone T{formatS330Number(index)}</label>
                     <input
                         type="text"
                         value={tone.name}

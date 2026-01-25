@@ -3,7 +3,7 @@
  */
 
 import type { PatchNameInfo } from '@/core/midi/S330Client';
-import { cn } from '@/lib/utils';
+import { cn, formatS330Number } from '@/lib/utils';
 
 interface PatchListProps {
   patchNames: PatchNameInfo[];
@@ -38,7 +38,7 @@ export function PatchList({ patchNames, selectedIndex, onSelect }: PatchListProp
           >
             <div className="flex items-center justify-between">
               <span className="font-mono">
-                P{String(patch.index + 11).padStart(2, '0')}
+                P{formatS330Number(patch.index)}
               </span>
               <span className={cn(
                 'flex-1 mx-3 truncate',

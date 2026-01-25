@@ -8,7 +8,7 @@ import type { S330ClientInterface } from '@/core/midi/S330Client';
 import { createS330Client } from '@/core/midi/S330Client';
 import { useMidiStore } from '@/stores/midiStore';
 import { useS330Store } from '@/stores/s330Store';
-import { formatPercent, cn } from '@/lib/utils';
+import { formatPercent, cn, formatS330Number } from '@/lib/utils';
 import { ParameterSlider } from '@/components/ui/ParameterSlider';
 import { ToneZoneEditor } from './ToneZoneEditor';
 
@@ -230,7 +230,7 @@ export function PatchEditor({ patch, index }: PatchEditorProps) {
       {/* Header */}
       <div className="card">
         <div className="mb-4">
-          <span className="text-sm text-s330-muted">Patch P{String(index + 11).padStart(2, '0')}</span>
+          <span className="text-sm text-s330-muted">Patch P{formatS330Number(index)}</span>
           {editingName ? (
             <input
               type="text"

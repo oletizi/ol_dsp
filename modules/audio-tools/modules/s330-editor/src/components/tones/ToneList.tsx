@@ -3,7 +3,7 @@
  */
 
 import type { ToneNameInfo } from '@/core/midi/S330Client';
-import { cn } from '@/lib/utils';
+import { cn, formatS330Number } from '@/lib/utils';
 
 interface ToneListProps {
   toneNames: ToneNameInfo[];
@@ -38,7 +38,7 @@ export function ToneList({ toneNames, selectedIndex, onSelect }: ToneListProps) 
           >
             <div className="flex items-center justify-between">
               <span className="font-mono">
-                T{tone.index + 11}
+                T{formatS330Number(tone.index)}
               </span>
               <span className={cn(
                 'flex-1 mx-3 truncate',

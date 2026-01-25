@@ -11,7 +11,7 @@ import { useMidiStore } from '@/stores/midiStore';
 import { useS330Store } from '@/stores/s330Store';
 import { createS330Client } from '@/core/midi/S330Client';
 import type { S330ClientInterface } from '@/core/midi/S330Client';
-import { cn } from '@/lib/utils';
+import { cn, formatS330Number } from '@/lib/utils';
 
 // Global flag to prevent React Strict Mode from running effects twice
 // This is necessary because MIDI requests can't be safely run concurrently
@@ -353,7 +353,7 @@ export function PlayPage() {
                   </option>
                   {patchNames.map((patch) => (
                     <option key={patch.index} value={patch.index}>
-                      P{String(patch.index + 11).padStart(2, '0')} {patch.isEmpty ? '(empty)' : patch.name}
+                      P{formatS330Number(patch.index)} {patch.isEmpty ? '(empty)' : patch.name}
                     </option>
                   ))}
                 </select>
@@ -426,12 +426,12 @@ export function PlayPage() {
               {part.patchIndex !== null ? (
                 <>
                   <span className="text-s330-muted">P</span>
-                  {String(part.patchIndex + 11).padStart(2, '0')}{' '}
+                  {formatS330Number(part.patchIndex)}{' '}
                   <span className="text-s330-highlight">{part.patchName}</span>
                 </>
               ) : (
                 <span className="text-s330-muted">
-                  P{String(part.patchIndex !== null ? part.patchIndex + 11 : 11).padStart(2, '0')}
+                  P{formatS330Number(part.patchIndex ?? 0)}
                 </span>
               )}
             </div>
