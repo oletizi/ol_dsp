@@ -2,53 +2,64 @@
  * Patch list component
  */
 
-import type { PatchNameInfo } from '@/core/midi/S330Client';
+import type { S330Patch } from '@/core/midi/S330Client';
 import { cn, formatS330Number } from '@/lib/utils';
 
 interface PatchListProps {
-  patchNames: PatchNameInfo[];
+  patches: S330Patch[];
   selectedIndex: number | null;
   onSelect: (index: number | null) => void;
 }
 
-export function PatchList({ patchNames, selectedIndex, onSelect }: PatchListProps) {
-  const namedCount = patchNames.filter((p) => !p.isEmpty).length;
+/**
+ * Check if a patch is considered "empty" (no meaningful data)
+ */
+function isPatchEmpty(patch: S330Patch): boolean {
+  const name = patch.common.name.trim();
+  return name === '' || name === '            ';
+}
+
+export function PatchList({ patches, selectedIndex, onSelect }: PatchListProps) {
+  const namedCount = patches.filter((p) => !isPatchEmpty(p)).length;
 
   return (
     <div className="card p-2">
       <div className="flex items-center justify-between px-2 py-1 mb-2">
         <span className="text-sm font-medium text-s330-text">
-          Patches ({namedCount} of {patchNames.length} used)
+          Patches ({namedCount} of {patches.length} used)
         </span>
       </div>
       <div className="max-h-[500px] overflow-y-auto space-y-1">
-        {patchNames.map((patch) => (
-          <button
-            key={patch.index}
-            onClick={() => onSelect(patch.index === selectedIndex ? null : patch.index)}
-            className={cn(
-              'w-full px-3 py-2 rounded text-left text-sm transition-colors',
-              'hover:bg-s330-accent/50',
-              patch.index === selectedIndex
-                ? 'bg-s330-highlight text-white'
-                : patch.isEmpty
-                  ? 'text-s330-muted/50'
-                  : 'text-s330-text'
-            )}
-          >
-            <div className="flex items-center justify-between">
-              <span className="font-mono">
-                P{formatS330Number(patch.index)}
-              </span>
-              <span className={cn(
-                'flex-1 mx-3 truncate',
-                patch.isEmpty && 'italic'
-              )}>
-                {patch.isEmpty ? '(empty)' : patch.name}
-              </span>
-            </div>
-          </button>
-        ))}
+        {patches.map((patch, index) => {
+          const isEmpty = isPatchEmpty(patch);
+          return (
+            <button
+              key={index}
+              onClick={() => onSelect(index === selectedIndex ? null : index)}
+              className={cn(
+                'w-full px-3 py-2 rounded text-left text-sm transition-colors',
+                'hover:bg-s330-accent/50',
+                index === selectedIndex
+                  ? 'bg-s330-highlight text-white'
+                  : isEmpty
+                    ? 'text-s330-muted/50'
+                    : 'text-s330-text'
+              )}
+            >
+              <div className="flex items-center justify-between">
+                <span className="font-mono">
+                  P{formatS330Number(index)}
+                </span>
+                <span className={cn(
+                  'flex-1 mx-3 truncate',
+                  isEmpty && 'italic'
+                )}>
+                  {isEmpty ? '(empty)' : patch.common.name}
+                </span>
+              </div>
+            </button>
+          );
+        })}
       </div>
     </div>
   );

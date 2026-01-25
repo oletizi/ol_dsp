@@ -65,7 +65,19 @@ import {
     encodeAftertouchAssign,
     encodeKeyAssign,
     encodeSignedValue,
+    createEmptyPatchCommon,
 } from './s330-params.js';
+
+// =============================================================================
+// Module-Level Cache
+// =============================================================================
+
+/**
+ * Module-level cache for patch and tone data.
+ * Shared across all client instances - the cache is tied to the hardware state.
+ */
+let patchCache: S330Patch[] | null = null;
+let toneCache: S330Tone[] | null = null;
 
 // =============================================================================
 // Data Types
@@ -201,6 +213,9 @@ function nibblize(bytes: number[]): number[] {
  *
  * This interface provides semantic methods for interacting with the S-330.
  * All address calculations and protocol details are handled internally.
+ *
+ * Data is cached at the module level - all reads go through the cache,
+ * and writes update both cache and hardware.
  */
 export interface S330ClientInterface {
     connect(): Promise<boolean>;
@@ -208,17 +223,19 @@ export interface S330ClientInterface {
     isConnected(): boolean;
     getDeviceId(): number;
 
-    // Patch operations
-    requestAllPatchNames(): Promise<PatchNameInfo[]>;
-    requestPatchData(patchIndex: number): Promise<S330Patch | null>;
-    sendPatchData(patchIndex: number, patch: S330PatchCommon): Promise<void>;
+    // Patch operations (cached, single source of truth)
+    getAllPatches(): Promise<S330Patch[]>;
+    getPatch(patchIndex: number): Promise<S330Patch | null>;
+    setPatch(patchIndex: number, patch: S330PatchCommon): Promise<void>;
+    invalidatePatchCache(): void;
 
-    // Tone operations
-    requestAllToneNames(): Promise<ToneNameInfo[]>;
-    requestToneData(toneIndex: number): Promise<S330Tone | null>;
-    sendToneData(toneIndex: number, tone: S330Tone): Promise<void>;
+    // Tone operations (cached, single source of truth)
+    getAllTones(): Promise<S330Tone[]>;
+    getTone(toneIndex: number): Promise<S330Tone | null>;
+    setTone(toneIndex: number, tone: S330Tone): Promise<void>;
+    invalidateToneCache(): void;
 
-    // Multi mode configuration
+    // Multi mode configuration (not cached)
     requestFunctionParameters(): Promise<MultiPartConfig[]>;
     setMultiChannel(part: number, channel: number): Promise<void>;
     setMultiPatch(part: number, patchIndex: number | null): Promise<void>;
@@ -228,7 +245,7 @@ export interface S330ClientInterface {
     // MIDI panic - send All Notes Off / All Sound Off on all channels
     panic(): void;
 
-    // Individual patch parameter setters
+    // Individual patch parameter setters (update cache + hardware)
     setPatchName(patchIndex: number, name: string): Promise<void>;
     setPatchKeyMode(
         patchIndex: number,
@@ -702,157 +719,168 @@ export function createS330Client(
             console.log('[S330Client] Panic: sent All Sound Off and All Notes Off on all channels');
         },
 
-        /**
-         * Request all patch names from the S-330
-         * Serialized to prevent concurrent request interference
-         *
-         * Patch names are stored in bank 00 00 (Patch parameters).
-         * Address format: 00 00 (pp*4) 00 where pp = patch number 0-63
-         * Name is the first 12 bytes (24 nibbles) at each patch address.
-         */
-        async requestAllPatchNames(): Promise<PatchNameInfo[]> {
-            return serialize(async () => {
-                const patches: PatchNameInfo[] = [];
+        // =====================================================================
+        // Patch Operations (Cached)
+        // =====================================================================
 
-                // Request each patch name individually
-                // Patch address: 00 00 (pp*4) 00 - each patch has stride of 4
-                // Name is 12 bytes at offset 0
+        /**
+         * Get all patches from the S-330, using cache if available.
+         * Fetches full patch data for all 64 patches and caches the result.
+         */
+        async getAllPatches(): Promise<S330Patch[]> {
+            if (patchCache) {
+                return patchCache;
+            }
+
+            return serialize(async () => {
+                // Double-check inside serialize in case another request populated it
+                if (patchCache) {
+                    return patchCache;
+                }
+
+                console.log('[S330Client] Fetching all patches...');
+                const patches: S330Patch[] = [];
+
                 for (let i = 0; i < MAX_PATCHES; i++) {
                     try {
                         const address = [0x00, 0x00, i * 4, 0x00];
-                        const data = await requestDataWithAddress(address, 12);
-
-                        const name = parseName(data, 0, 12);
-                        const isEmpty =
-                            name === '' || name === '            ' || data.every((b) => b === 0);
-
-                        patches.push({ index: i, name, isEmpty });
-                    } catch (err) {
-                        // If we get RJC, the patch slot is empty
-                        patches.push({ index: i, name: '', isEmpty: true });
+                        const data = await requestDataWithAddress(address, PATCH_TOTAL_SIZE);
+                        const common = parsePatchCommon(data);
+                        patches.push({ common });
+                    } catch {
+                        // Create placeholder for failed reads
+                        const placeholder = createEmptyPatchCommon(i);
+                        placeholder.name = '!ERROR!';
+                        patches.push({ common: placeholder });
                     }
                 }
 
+                console.log('[S330Client] Cached', patches.length, 'patches');
+                patchCache = patches;
                 return patches;
             });
         },
 
         /**
-         * Request all tone names from the S-330
-         * Serialized to prevent concurrent request interference
+         * Get a single patch by index, using cache.
          */
-        async requestAllToneNames(): Promise<ToneNameInfo[]> {
-            return serialize(async () => {
-                const tones: ToneNameInfo[] = [];
+        async getPatch(patchIndex: number): Promise<S330Patch | null> {
+            if (patchIndex < 0 || patchIndex >= MAX_PATCHES) {
+                throw new Error(`Invalid patch index: ${patchIndex}`);
+            }
 
-                // Request each tone name individually
-                // Tone address: [0x00, 0x03, toneIndex * 4, 0x00]
-                // Name is 8 bytes at offset 0
+            const patches = await this.getAllPatches();
+            return patches[patchIndex] ?? null;
+        },
+
+        /**
+         * Set a patch - updates cache AND writes to hardware.
+         */
+        async setPatch(patchIndex: number, patch: S330PatchCommon): Promise<void> {
+            if (patchIndex < 0 || patchIndex >= MAX_PATCHES) {
+                throw new Error(`Invalid patch index: ${patchIndex}`);
+            }
+
+            // Update cache first (if it exists)
+            if (patchCache) {
+                patchCache[patchIndex] = { common: patch };
+            }
+
+            // Then write to hardware
+            const address = [0x00, 0x00, patchIndex * 4, 0x00];
+            const patchBytes = encodePatchCommon(patch);
+            return bufferWrite(address, patchBytes);
+        },
+
+        /**
+         * Invalidate the patch cache, forcing a reload on next access.
+         */
+        invalidatePatchCache(): void {
+            console.log('[S330Client] Invalidating patch cache');
+            patchCache = null;
+        },
+
+        // =====================================================================
+        // Tone Operations (Cached)
+        // =====================================================================
+
+        /**
+         * Get all tones from the S-330, using cache if available.
+         * Fetches full tone data for all 32 tones and caches the result.
+         */
+        async getAllTones(): Promise<S330Tone[]> {
+            if (toneCache) {
+                return toneCache;
+            }
+
+            return serialize(async () => {
+                // Double-check inside serialize in case another request populated it
+                if (toneCache) {
+                    return toneCache;
+                }
+
+                console.log('[S330Client] Fetching all tones...');
+                const tones: S330Tone[] = [];
+
                 for (let i = 0; i < MAX_TONES; i++) {
                     try {
-                        const byte2 = i * 4;
+                        const byte2 = i * 2;
                         const address = [0x00, 0x03, byte2, 0x00];
-                        const data = await requestDataWithAddress(address, 8);
-
-                        const name = parseName(data, 0, 8);
-                        const isEmpty =
-                            name === '' || name === '        ' || data.every((b) => b === 0);
-
-                        tones.push({ index: i, name, isEmpty });
-                    } catch (err) {
-                        // If we get RJC, the tone slot is empty
-                        tones.push({ index: i, name: '', isEmpty: true });
+                        const data = await requestDataWithAddress(address, TONE_BLOCK_SIZE);
+                        const tone = parseTone(data);
+                        tones.push(tone);
+                    } catch {
+                        // Create placeholder for failed reads
+                        const placeholder = parseTone(new Array(TONE_BLOCK_SIZE).fill(0));
+                        placeholder.name = '!ERROR!';
+                        tones.push(placeholder);
                     }
                 }
 
+                console.log('[S330Client] Cached', tones.length, 'tones');
+                toneCache = tones;
                 return tones;
             });
         },
 
         /**
-         * Request full patch data for a specific patch
-         * Serialized to prevent concurrent request interference
+         * Get a single tone by index, using cache.
          */
-        async requestPatchData(patchIndex: number): Promise<S330Patch | null> {
-            if (patchIndex < 0 || patchIndex >= MAX_PATCHES) {
-                throw new Error(`Invalid patch index: ${patchIndex}`);
-            }
-
-            return serialize(async () => {
-                try {
-                    // Request full patch data (512 bytes total)
-                    // Patches are in bank 00 00 with stride of 4: 00 00 (pp*4) 00
-                    const address = [0x00, 0x00, patchIndex * 4, 0x00];
-                    const data = await requestDataWithAddress(address, PATCH_TOTAL_SIZE);
-
-                    // Parse patch using the parsePatchCommon function from sampler-devices
-                    const common = parsePatchCommon(data);
-
-                    return { common };
-                } catch {
-                    // Return null for errors (timeout, rejection, no data, etc.)
-                    // This provides graceful degradation when patch data is unavailable
-                    return null;
-                }
-            });
-        },
-
-        /**
-         * Request full tone data for a specific tone
-         * Serialized to prevent concurrent request interference
-         *
-         * Tone data is 256 bytes (512 nibbles) and includes:
-         * - Basic info (name, output, sample rate, original key)
-         * - Wave parameters (start/end/loop points)
-         * - LFO parameters
-         * - 8-point TVA envelope with sustain/end points
-         * - 8-point TVF envelope with sustain/end points
-         * - Various switches and recording parameters
-         */
-        async requestToneData(toneIndex: number): Promise<S330Tone | null> {
+        async getTone(toneIndex: number): Promise<S330Tone | null> {
             if (toneIndex < 0 || toneIndex >= MAX_TONES) {
                 throw new Error(`Invalid tone index: ${toneIndex}`);
             }
 
-            return serialize(async () => {
-                try {
-                    // Request full tone data (256 bytes)
-                    // Tone address: [0x00, 0x03, toneIndex * 4, 0x00]
-                    const byte2 = toneIndex * 4;
-                    const address = [0x00, 0x03, byte2, 0x00];
-                    const data = await requestDataWithAddress(address, TONE_BLOCK_SIZE);
-
-                    // Use parseTone from s330-params.ts for proper 8-point envelope parsing
-                    return parseTone(data);
-                } catch (err) {
-                    return null;
-                }
-            });
+            const tones = await this.getAllTones();
+            return tones[toneIndex] ?? null;
         },
 
         /**
-         * Send tone data to S-330
-         * Uses WSD/DAT/EOD protocol to write complete tone block.
-         * Writes are buffered and rate-limited to prevent flooding the device.
-         *
-         * @param toneIndex - Tone number (0-31)
-         * @param tone - Complete tone data structure
-         * @returns Promise that resolves when tone is written
+         * Set a tone - updates cache AND writes to hardware.
          */
-        async sendToneData(toneIndex: number, tone: S330Tone): Promise<void> {
+        async setTone(toneIndex: number, tone: S330Tone): Promise<void> {
             if (toneIndex < 0 || toneIndex >= MAX_TONES) {
                 throw new Error(`Invalid tone index: ${toneIndex}`);
             }
 
-            // Encode tone to binary format
-            const toneBytes = encodeTone(tone);
+            // Update cache first (if it exists)
+            if (toneCache) {
+                toneCache[toneIndex] = tone;
+            }
 
-            // Tone address: [0x00, 0x03, toneIndex * 4, 0x00]
-            const byte2 = toneIndex * 4;
+            // Then write to hardware
+            const byte2 = toneIndex * 2;
             const address = [0x00, 0x03, byte2, 0x00];
-
-            // Buffer write - collapses rapid updates, rate-limits device communication
+            const toneBytes = encodeTone(tone);
             return bufferWrite(address, toneBytes);
+        },
+
+        /**
+         * Invalidate the tone cache, forcing a reload on next access.
+         */
+        invalidateToneCache(): void {
+            console.log('[S330Client] Invalidating tone cache');
+            toneCache = null;
         },
 
         /**
@@ -1363,28 +1391,5 @@ export function createS330Client(
             });
         },
 
-        /**
-         * Send complete patch data to S-330
-         * Uses WSD/DAT/EOD protocol to write patch common section.
-         * Writes are buffered and rate-limited to prevent flooding the device.
-         *
-         * @param patchIndex - Patch number (0-63)
-         * @param patch - Complete patch common data structure
-         * @returns Promise that resolves when patch is written
-         */
-        async sendPatchData(patchIndex: number, patch: S330PatchCommon): Promise<void> {
-            if (patchIndex < 0 || patchIndex >= MAX_PATCHES) {
-                throw new Error(`Invalid patch index: ${patchIndex}`);
-            }
-
-            // Encode patch to binary format
-            const patchBytes = encodePatchCommon(patch);
-
-            // Calculate patch address: [0x00, 0x00, patchIndex * 4, 0x00]
-            const address = [0x00, 0x00, patchIndex * 4, 0x00];
-
-            // Buffer write - collapses rapid updates, rate-limits device communication
-            return bufferWrite(address, patchBytes);
-        },
     };
 }

@@ -188,6 +188,9 @@ export {
     parsePatchCommon,
     parseTone,
 
+    // Structure creation
+    createEmptyPatchCommon,
+
     // Structure encoding
     encodeSystemParams,
     encodePatchCommon,

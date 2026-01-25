@@ -2,12 +2,11 @@
  * Patch editor component
  */
 
-import { useRef, useState, useCallback } from 'react';
-import type { S330Patch, S330KeyMode } from '@/core/midi/S330Client';
+import { useRef, useState, useCallback, useEffect } from 'react';
+import type { S330Patch, S330Tone, S330KeyMode } from '@/core/midi/S330Client';
 import type { S330ClientInterface } from '@/core/midi/S330Client';
 import { createS330Client } from '@/core/midi/S330Client';
 import { useMidiStore } from '@/stores/midiStore';
-import { useS330Store } from '@/stores/s330Store';
 import { formatPercent, cn, formatS330Number } from '@/lib/utils';
 import { ParameterSlider } from '@/components/ui/ParameterSlider';
 import { ToneZoneEditor } from './ToneZoneEditor';
@@ -15,24 +14,32 @@ import { ToneZoneEditor } from './ToneZoneEditor';
 interface PatchEditorProps {
   patch: S330Patch;
   index: number;
+  tones: S330Tone[];
+  onUpdate?: (index: number, patch: S330Patch) => void;
 }
 
-export function PatchEditor({ patch, index }: PatchEditorProps) {
+export function PatchEditor({ patch, index, tones, onUpdate }: PatchEditorProps) {
   const { common } = patch;
   const { adapter, deviceId } = useMidiStore();
-  const { toneNames, setPatchData } = useS330Store();
 
-  // Helper to update both store and device
+  // Helper to update both local state and notify parent
   const updatePatch = useCallback((updatedCommon: typeof common) => {
-    // Update store immediately for responsive UI
-    setPatchData(index, { common: updatedCommon });
-  }, [index, setPatchData]);
+    onUpdate?.(index, { common: updatedCommon });
+  }, [index, onUpdate]);
+
   const clientRef = useRef<S330ClientInterface | null>(null);
   const [editingName, setEditingName] = useState(false);
   const [nameValue, setNameValue] = useState(common.name);
   const [toneMappingExpanded, setToneMappingExpanded] = useState(false);
   const [toneLayer1, setToneLayer1] = useState(common.toneLayer1);
   const [toneLayer2, setToneLayer2] = useState(common.toneLayer2);
+
+  // Sync name value when patch changes
+  useEffect(() => {
+    setNameValue(common.name);
+    setToneLayer1(common.toneLayer1);
+    setToneLayer2(common.toneLayer2);
+  }, [common.name, common.toneLayer1, common.toneLayer2]);
 
   // Initialize client if not already created
   if (adapter && !clientRef.current) {
@@ -53,7 +60,7 @@ export function PatchEditor({ patch, index }: PatchEditorProps) {
     setEditingName(false);
   };
 
-  // Parameter update handlers - update store first, then send to device
+  // Parameter update handlers - update local state first, then send to device
   const handleKeyModeChange = async (keyMode: 'normal' | 'v-sw' | 'x-fade' | 'v-mix' | 'unison') => {
     updatePatch({ ...common, keyMode });
     if (clientRef.current) {
@@ -201,7 +208,7 @@ export function PatchEditor({ patch, index }: PatchEditorProps) {
           toneLayer1: data,
           toneLayer2,
         };
-        await clientRef.current.sendPatchData(index, updatedPatch);
+        await clientRef.current.setPatch(index, updatedPatch);
       } catch (err) {
         console.error('[PatchEditor] Failed to update tone layer 1:', err);
       }
@@ -218,12 +225,15 @@ export function PatchEditor({ patch, index }: PatchEditorProps) {
           toneLayer1,
           toneLayer2: data,
         };
-        await clientRef.current.sendPatchData(index, updatedPatch);
+        await clientRef.current.setPatch(index, updatedPatch);
       } catch (err) {
         console.error('[PatchEditor] Failed to update tone layer 2:', err);
       }
     }
   }, [common, toneLayer1, index]);
+
+  // Count non-empty tones for display
+  const nonEmptyToneCount = tones.filter(t => t.name.trim() && t.name.trim() !== '        ').length;
 
   return (
     <div className="space-y-6">
@@ -460,7 +470,7 @@ export function PatchEditor({ patch, index }: PatchEditorProps) {
           <h4 className="font-medium text-s330-text">
             Tone Mapping
             <span className="ml-2 text-xs text-s330-muted">
-              ({toneNames?.length ?? 0} tones, {toneNames?.filter(t => !t.isEmpty).length ?? 0} with names)
+              ({tones.length} tones, {nonEmptyToneCount} with names)
             </span>
           </h4>
           <button
@@ -482,7 +492,7 @@ export function PatchEditor({ patch, index }: PatchEditorProps) {
               layer={1}
               toneData={toneLayer1}
               keyMode={common.keyMode as S330KeyMode}
-              toneNames={toneNames}
+              tones={tones}
               onUpdate={handleToneLayer1Update}
             />
 
@@ -491,7 +501,7 @@ export function PatchEditor({ patch, index }: PatchEditorProps) {
               layer={2}
               toneData={toneLayer2}
               keyMode={common.keyMode as S330KeyMode}
-              toneNames={toneNames}
+              tones={tones}
               onUpdate={handleToneLayer2Update}
             />
           </div>

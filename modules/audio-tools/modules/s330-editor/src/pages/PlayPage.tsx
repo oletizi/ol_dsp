@@ -5,12 +5,12 @@
  * output routing, and levels.
  */
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useMidiStore } from '@/stores/midiStore';
 import { useS330Store } from '@/stores/s330Store';
 import { createS330Client } from '@/core/midi/S330Client';
-import type { S330ClientInterface } from '@/core/midi/S330Client';
+import type { S330ClientInterface, S330Patch } from '@/core/midi/S330Client';
 import { cn, formatS330Number } from '@/lib/utils';
 
 // Global flag to prevent React Strict Mode from running effects twice
@@ -30,15 +30,25 @@ interface MidiPart {
 
 const PART_LABELS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
 
+/**
+ * Check if a patch is considered "empty" (no meaningful data)
+ */
+function isPatchEmpty(patch: S330Patch): boolean {
+  const name = patch.common.name.trim();
+  return name === '' || name === '            ';
+}
+
 export function PlayPage() {
   const { adapter, deviceId, status } = useMidiStore();
-  const { patchNames, setPatchNames, setLoading, setError, isLoading, error } =
-    useS330Store();
+  const { setLoading, setError, isLoading, error } = useS330Store();
 
   const isConnected = status === 'connected' && adapter !== null;
 
   // Keep a ref to the S330 client for sending parameter updates
   const clientRef = useRef<S330ClientInterface | null>(null);
+
+  // Local state for patches (cached in client, mirrored here for display)
+  const [patches, setPatches] = useState<S330Patch[]>([]);
 
   // MIDI parts - loaded from S-330 function parameters
   const [parts, setParts] = useState<MidiPart[]>(
@@ -53,6 +63,46 @@ export function PlayPage() {
     }))
   );
 
+  // Fetch all data using the cached API
+  const fetchData = useCallback(async () => {
+    if (!adapter || isFetchingGlobal) return;
+
+    isFetchingGlobal = true;
+    try {
+      setLoading(true, 'Loading patches...');
+
+      const client = createS330Client(adapter, { deviceId });
+      clientRef.current = client;
+      await client.connect();
+
+      // Fetch patches using cached API
+      const allPatches = await client.getAllPatches();
+      setPatches(allPatches);
+
+      // Then fetch function parameters
+      setLoading(true, 'Loading multi mode configuration...');
+      const configs = await client.requestFunctionParameters();
+
+      // Update parts with loaded configuration
+      setParts((prev) =>
+        prev.map((part, i) => ({
+          ...part,
+          channel: configs[i]?.channel ?? i,
+          patchIndex: configs[i]?.patchIndex ?? null,
+          output: configs[i]?.output ?? 1,
+          level: configs[i]?.level ?? 127,
+        }))
+      );
+
+      setLoading(false);
+    } catch (err) {
+      console.error('[PlayPage] Error fetching data:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load data');
+      setLoading(false);
+    } finally {
+      isFetchingGlobal = false;
+    }
+  }, [adapter, deviceId, setLoading, setError]);
 
   // Initialize client and fetch data when adapter is available
   useEffect(() => {
@@ -61,90 +111,31 @@ export function PlayPage() {
       return;
     }
 
-    // Create client
-    const client = createS330Client(adapter, { deviceId });
-    clientRef.current = client;
-
-    // Skip if already fetching (React Strict Mode protection)
-    if (isFetchingGlobal) {
-      console.log('[PlayPage] Already fetching (React Strict Mode double-mount), skipping');
+    // Skip if already fetching or data already loaded
+    if (isFetchingGlobal || patches.length > 0) {
       return;
     }
-
-    // Skip if data already loaded
-    if (patchNames.length > 0) {
-      console.log('[PlayPage] Data already loaded, skipping fetch');
-      return;
-    }
-
-    isFetchingGlobal = true;
-
-    // Fetch all data sequentially using the same client
-    const fetchData = async () => {
-      try {
-        // Fetch patches first
-        setLoading(true, 'Loading patches...');
-        console.log('[PlayPage] Fetching patch names...');
-        const names = await client.requestAllPatchNames();
-        console.log('[PlayPage] Got', names.length, 'patches,', names.filter(n => !n.isEmpty).length, 'non-empty');
-        console.log('[PlayPage] Non-empty:', names.filter(n => !n.isEmpty).map(n => `${n.index}:${n.name}`).join(', '));
-        setPatchNames(names);
-
-        // Then fetch function parameters
-        setLoading(true, 'Loading multi mode configuration...');
-        console.log('[PlayPage] Fetching function parameters...');
-        const configs = await client.requestFunctionParameters();
-        console.log('[PlayPage] Got function parameters:');
-        configs.forEach((c, i) => {
-          console.log(`  Part ${i}: channel=${c.channel}, patchIndex=${c.patchIndex}, output=${c.output}, level=${c.level}`);
-        });
-
-        // Update parts with loaded configuration
-        setParts((prev) =>
-          prev.map((part, i) => ({
-            ...part,
-            channel: configs[i]?.channel ?? i,
-            patchIndex: configs[i]?.patchIndex ?? null,
-            output: configs[i]?.output ?? 1,
-            level: configs[i]?.level ?? 127,
-          }))
-        );
-
-        setLoading(false);
-      } catch (err) {
-        console.error('[PlayPage] Error fetching data:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load data');
-        setLoading(false);
-      } finally {
-        isFetchingGlobal = false;
-      }
-    };
 
     fetchData();
-  }, [adapter, deviceId, patchNames.length, setPatchNames, setLoading, setError]);
-
-  // Debug: log patchNames changes
-  useEffect(() => {
-    console.log('[PlayPage] patchNames updated:', patchNames.length, 'total,', patchNames.filter(p => !p.isEmpty).length, 'non-empty');
-  }, [patchNames]);
+  }, [adapter, patches.length, fetchData]);
 
   // Update patch names based on patchIndex loaded from function parameters
   useEffect(() => {
-    if (patchNames.length === 0) return;
+    if (patches.length === 0) return;
 
     // Look up patch names based on patchIndex from function parameters
     setParts((prev) =>
       prev.map((part) => {
-        if (part.patchIndex !== null) {
-          const patch = patchNames.find((p) => p.index === part.patchIndex);
-          if (patch && !patch.isEmpty) {
-            return { ...part, patchName: patch.name };
+        if (part.patchIndex !== null && part.patchIndex < patches.length) {
+          const patch = patches[part.patchIndex];
+          if (!isPatchEmpty(patch)) {
+            return { ...part, patchName: patch.common.name };
           }
         }
         return { ...part, patchName: '' };
       })
     );
-  }, [patchNames]);
+  }, [patches]);
 
   // Handle field updates
   const updatePart = (partIndex: number, updates: Partial<MidiPart>) => {
@@ -170,10 +161,10 @@ export function PlayPage() {
   };
 
   const handlePatchChange = (partIndex: number, patchIndex: number | null) => {
-    const patch = patchIndex !== null ? patchNames.find((p) => p.index === patchIndex) : null;
+    const patch = patchIndex !== null && patchIndex < patches.length ? patches[patchIndex] : null;
     updatePart(partIndex, {
       patchIndex,
-      patchName: patch?.name ?? '',
+      patchName: patch && !isPatchEmpty(patch) ? patch.common.name : '',
     });
 
     // Send parameter update to hardware
@@ -219,36 +210,11 @@ export function PlayPage() {
 
   // Reload data from hardware
   const handleReload = async () => {
-    if (!clientRef.current || isFetchingGlobal) return;
+    if (!clientRef.current) return;
 
-    isFetchingGlobal = true;
-    try {
-      setLoading(true, 'Reloading...');
-
-      // Fetch patches
-      const names = await clientRef.current.requestAllPatchNames();
-      setPatchNames(names);
-
-      // Fetch function parameters
-      const configs = await clientRef.current.requestFunctionParameters();
-      setParts((prev) =>
-        prev.map((part, i) => ({
-          ...part,
-          channel: configs[i]?.channel ?? i,
-          patchIndex: configs[i]?.patchIndex ?? null,
-          output: configs[i]?.output ?? 1,
-          level: configs[i]?.level ?? 127,
-        }))
-      );
-
-      setLoading(false);
-    } catch (err) {
-      console.error('[PlayPage] Error reloading:', err);
-      setError(err instanceof Error ? err.message : 'Failed to reload');
-      setLoading(false);
-    } finally {
-      isFetchingGlobal = false;
-    }
+    // Invalidate cache and refetch
+    clientRef.current.invalidatePatchCache();
+    await fetchData();
   };
 
   if (!isConnected) {
@@ -351,9 +317,9 @@ export function PlayPage() {
                   <option value={-1} className="text-s330-muted">
                     ---
                   </option>
-                  {patchNames.map((patch) => (
-                    <option key={patch.index} value={patch.index}>
-                      P{formatS330Number(patch.index)} {patch.isEmpty ? '(empty)' : patch.name}
+                  {patches.map((patch, patchIndex) => (
+                    <option key={patchIndex} value={patchIndex}>
+                      P{formatS330Number(patchIndex)} {isPatchEmpty(patch) ? '(empty)' : patch.common.name}
                     </option>
                   ))}
                 </select>

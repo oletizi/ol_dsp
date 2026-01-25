@@ -1,28 +1,13 @@
 /**
- * Zustand store for S-330 device data
+ * Zustand store for S-330 UI state
  *
- * Uses a two-tier approach:
- * - Name lists for quick browsing (fetched with requestAllPatchNames/requestAllToneNames)
- * - Full data fetched on demand when a patch/tone is selected
+ * Data caching is handled by the S330 client - this store only manages
+ * UI state like selection and loading indicators.
  */
 
 import { create } from 'zustand';
-import type {
-  S330Patch,
-  S330Tone,
-  PatchNameInfo,
-  ToneNameInfo,
-} from '@/core/midi/S330Client';
 
 interface S330State {
-  // Name lists for browsing (lightweight)
-  patchNames: PatchNameInfo[];
-  toneNames: ToneNameInfo[];
-
-  // Full data (fetched on demand)
-  patches: Map<number, S330Patch>;
-  tones: Map<number, S330Tone>;
-
   // Selection state
   selectedPatchIndex: number | null;
   selectedToneIndex: number | null;
@@ -34,14 +19,6 @@ interface S330State {
 }
 
 interface S330Actions {
-  // Name list actions
-  setPatchNames: (names: PatchNameInfo[]) => void;
-  setToneNames: (names: ToneNameInfo[]) => void;
-
-  // Full data actions
-  setPatchData: (index: number, patch: S330Patch) => void;
-  setToneData: (index: number, tone: S330Tone) => void;
-
   // Selection
   selectPatch: (index: number | null) => void;
   selectTone: (index: number | null) => void;
@@ -56,33 +33,11 @@ type S330Store = S330State & S330Actions;
 
 export const useS330Store = create<S330Store>((set) => ({
   // Initial state
-  patchNames: [],
-  toneNames: [],
-  patches: new Map(),
-  tones: new Map(),
   selectedPatchIndex: null,
   selectedToneIndex: null,
   isLoading: false,
   loadingMessage: null,
   error: null,
-
-  setPatchNames: (names) => set({ patchNames: names }),
-
-  setToneNames: (names) => set({ toneNames: names }),
-
-  setPatchData: (index, patch) =>
-    set((state) => {
-      const newPatches = new Map(state.patches);
-      newPatches.set(index, patch);
-      return { patches: newPatches };
-    }),
-
-  setToneData: (index, tone) =>
-    set((state) => {
-      const newTones = new Map(state.tones);
-      newTones.set(index, tone);
-      return { tones: newTones };
-    }),
 
   selectPatch: (index) => set({ selectedPatchIndex: index }),
 
@@ -95,10 +50,6 @@ export const useS330Store = create<S330Store>((set) => ({
 
   clear: () =>
     set({
-      patchNames: [],
-      toneNames: [],
-      patches: new Map(),
-      tones: new Map(),
       selectedPatchIndex: null,
       selectedToneIndex: null,
       error: null,
