@@ -66,7 +66,7 @@ export function HomePage() {
   };
 
   const handleContinue = () => {
-    navigate('/patches');
+    navigate('/play');
   };
 
   // Show browser compatibility warning
@@ -145,7 +145,7 @@ export function HomePage() {
                 Disconnect
               </button>
               <button onClick={handleContinue} className="btn btn-primary">
-                Continue to Patches
+                Continue to "Play"
               </button>
             </>
           ) : (
@@ -197,6 +197,23 @@ export function HomePage() {
             className="rounded-md w-full max-w-md mx-auto"
           />
         </div>
+      </div>
+
+      {/* Video Capture Setup */}
+      <div className="card">
+        <h3 className="font-medium text-s330-text mb-3">Video Capture (Optional)</h3>
+        <p className="text-sm text-s330-muted mb-4">
+          See the S-330's display in your browser using a USB video capture device:
+        </p>
+        <ol className="text-sm text-s330-muted space-y-2 mb-4 list-decimal list-inside">
+          <li>Connect a USB video capture device to your computer</li>
+          <li>Connect the S-330's <code className="text-s330-text">S-VIDEO</code> or <code className="text-s330-text">MONOCHROME</code> (RCA jack) output to the capture device</li>
+          <li>Click the <code className="text-s330-text">Video</code> button in the lower-right corner of this editor</li>
+          <li>Select your capture device and grant camera permission when prompted</li>
+        </ol>
+        <p className="text-sm text-s330-muted">
+          The video panel can be dragged and resized. Your position preferences are saved automatically.
+        </p>
       </div>
 
       {/* Help Card */}
