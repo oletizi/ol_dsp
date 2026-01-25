@@ -173,7 +173,7 @@ export function HomePage() {
         <h3 className="font-medium text-s330-text mb-3">Device ID</h3>
         <p className="text-sm text-s330-muted mb-3">
           Enter the Device ID shown on your S-330 screen (MIDI → Device ID).
-          The S-330 displays 1-17, which maps to protocol values 0-16.
+          The S-330 displays 1-16, which maps to protocol values 0-15.
         </p>
         <DeviceIdSelector />
       </div>
@@ -185,10 +185,10 @@ export function HomePage() {
           To enable communication with this editor, configure your S-330's MIDI settings:
         </p>
         <ol className="text-sm text-s330-muted space-y-2 mb-4 list-decimal list-inside">
-          <li>Press <strong className="text-s330-text">MENU</strong> then select <strong className="text-s330-text">COM</strong></li>
-          <li>Navigate to <strong className="text-s330-text">MIDI-Message</strong></li>
-          <li>Set <strong className="text-s330-text">Exclusive</strong> to <strong className="text-s330-highlight">On</strong></li>
-          <li>Set <strong className="text-s330-text">Device ID</strong> to <strong className="text-s330-highlight">1</strong> (or match the value above)</li>
+          <li>Press the front panel <code className="text-s330-text">MODE</code> button, then select <code className="text-s330-text">MIDI</code>, then select <code className="text-s330-text">MESSAGES</code></li>
+          <li>If using the front-panel cursor buttons, navigate to the second column, <code className="text-s330-text">B-*</code>, then down to the <code className="text-s330-text">Exclusive</code> row </li>
+          <li>Set <code className="text-s330-text">Exclusive</code> to <code className="text-s330-highlight">On</code></li>
+          <li>Ensure <code className="text-s330-text">Device ID</code> matches the value in the Device ID field above</li>
         </ol>
         <div className="bg-s330-bg rounded-md p-2">
           <img
@@ -209,15 +209,11 @@ export function HomePage() {
           </li>
           <li>
             <strong className="text-s330-text">Port Names:</strong> Look for port names
-            containing "S-330", "Roland", or your MIDI interface name
+            containing your MIDI interface name
           </li>
           <li>
             <strong className="text-s330-text">SysEx:</strong> This editor uses System
             Exclusive messages. Ensure your MIDI interface supports SysEx.
-          </li>
-          <li>
-            <strong className="text-s330-text">Device ID:</strong> Must match the setting
-            on your S-330 (System → Device ID)
           </li>
         </ul>
       </div>
