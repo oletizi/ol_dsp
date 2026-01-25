@@ -12,11 +12,13 @@ interface ToneListProps {
 }
 
 export function ToneList({ toneNames, selectedIndex, onSelect }: ToneListProps) {
+  const namedCount = toneNames.filter((t) => !t.isEmpty).length;
+
   return (
     <div className="card p-2">
       <div className="flex items-center justify-between px-2 py-1 mb-2">
         <span className="text-sm font-medium text-s330-text">
-          Tones ({toneNames.length})
+          Tones ({namedCount} of {toneNames.length} used)
         </span>
       </div>
       <div className="max-h-[500px] overflow-y-auto space-y-1">
@@ -29,15 +31,20 @@ export function ToneList({ toneNames, selectedIndex, onSelect }: ToneListProps) 
               'hover:bg-s330-accent/50',
               tone.index === selectedIndex
                 ? 'bg-s330-highlight text-white'
-                : 'text-s330-text'
+                : tone.isEmpty
+                  ? 'text-s330-muted/50'
+                  : 'text-s330-text'
             )}
           >
             <div className="flex items-center justify-between">
-              <span className="font-mono text-s330-muted">
+              <span className="font-mono">
                 T{tone.index + 11}
               </span>
-              <span className="flex-1 mx-3 truncate">
-                {tone.name || '(unnamed)'}
+              <span className={cn(
+                'flex-1 mx-3 truncate',
+                tone.isEmpty && 'italic'
+              )}>
+                {tone.isEmpty ? '(empty)' : tone.name}
               </span>
             </div>
           </button>

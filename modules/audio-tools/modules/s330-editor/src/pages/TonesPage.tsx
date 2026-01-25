@@ -128,8 +128,6 @@ export function TonesPage() {
     }
   }, [selectedToneIndex, isConnected, fetchSelectedToneData]);
 
-  // Filter to only show non-empty tones
-  const nonEmptyTones = toneNames.filter((t) => !t.isEmpty);
   const selectedTone = selectedToneIndex !== null ? tones.get(selectedToneIndex) : null;
 
   if (!isConnected) {
@@ -178,11 +176,11 @@ export function TonesPage() {
       )}
 
       {/* Content */}
-      {!isLoading && nonEmptyTones.length > 0 && (
+      {!isLoading && toneNames.length > 0 && (
         <div className="grid gap-6 lg:grid-cols-3">
           <div className="lg:col-span-1">
             <ToneList
-              toneNames={nonEmptyTones}
+              toneNames={toneNames}
               selectedIndex={selectedToneIndex}
               onSelect={selectTone}
             />
@@ -209,20 +207,13 @@ export function TonesPage() {
         </div>
       )}
 
-      {/* Empty State */}
+      {/* Empty State - no tones scanned yet */}
       {!isLoading && toneNames.length === 0 && !error && (
         <div className="card text-center py-12">
           <p className="text-s330-muted mb-4">No tones loaded</p>
           <button onClick={fetchToneNames} className="btn btn-primary">
             Scan Tones
           </button>
-        </div>
-      )}
-
-      {/* No tones found */}
-      {!isLoading && toneNames.length > 0 && nonEmptyTones.length === 0 && (
-        <div className="card text-center py-12">
-          <p className="text-s330-muted">No tones found on device</p>
         </div>
       )}
     </div>
