@@ -1,6 +1,6 @@
 # JV-1080 Editor - Workplan
 
-**GitHub Project:** [S330 Editor](https://github.com/users/oletizi/projects/1)
+**GitHub Project:** [JV-1080 Editor](https://github.com/users/oletizi/projects/2)
 **GitHub Milestone:** [Week of Jan 26-30](https://github.com/oletizi/ol_dsp/milestone/1)
 **GitHub Issues:**
 
