@@ -63,31 +63,17 @@ The Roland S-330 is a classic 12-bit sampler from 1987 that lacks modern editing
 
 ## Technical Notes
 
-### S-330 MIDI Implementation
+For detailed S-330 MIDI protocol documentation including SysEx message formats, address maps, and parameter definitions, see the authoritative reference:
 
-The S-330 uses Roland's proprietary SysEx format with:
-- Device ID: 0x10 (default, configurable 0x10-0x1F)
-- Model ID: 0x10 (S-330 identifier)
-- Address format: 4 bytes (AA BB CC DD)
-- Data format: 7-bit encoded values
-- Checksum: Roland checksum algorithm
-
-### Key Address Ranges
-
-- System parameters: 0x00 0x00 xx xx
-- Patch parameters: 0x00 0x01 xx xx (64 patches across 8 banks)
-- Tone parameters: 0x00 0x03 xx xx (128 tones across 16 banks)
+**[S-330 SysEx Documentation](../s330_sysex.md)**
 
 ## Open Questions
 
-- [x] Correct base address for tone parameters (resolved: 0x00 0x03 xx xx)
 - [ ] Complete list of all editable parameters
 - [ ] Optimal polling interval for device state refresh
 
-## Appendix
+## References
 
-### References
-
+- [S-330 SysEx Documentation](../s330_sysex.md) - Protocol and address map reference
 - Roland S-330 Owner's Manual
-- Roland S-330 Service Notes (SysEx documentation)
 - Web MIDI API specification: https://webaudio.github.io/web-midi-api/

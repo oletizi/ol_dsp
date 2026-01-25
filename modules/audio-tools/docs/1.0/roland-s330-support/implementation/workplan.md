@@ -54,6 +54,10 @@
 3. **Zustand for state**: Lightweight state management for MIDI connection and device state
 4. **Bank/slot navigation**: UI organized around S-330's bank/slot memory structure
 
+### Protocol Reference
+
+For S-330 SysEx protocol details (address maps, message formats, checksum calculation), see [S-330 SysEx Documentation](../../s330_sysex.md).
+
 ## Implementation Phases
 
 ### Phase 1: Device Client Library (Complete)
@@ -128,7 +132,7 @@
 **Goal:** Fix discovered issues and improve reliability
 
 **Tasks:**
-- [x] Fix tone parameter base address (0x00 0x03 xx xx)
+- [x] Fix tone parameter base address to match SysEx documentation
 - [x] Correct bank+slot numbering for patches and tones
 - [x] Remove unused UI elements (MODE/MENU buttons)
 - [x] Centralize data caching in S330Client

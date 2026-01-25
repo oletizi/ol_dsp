@@ -27,6 +27,7 @@ Web-based editor for the Roland S-330 12-bit sampler, providing modern patch and
 
 - [PRD](./prd.md) - Product Requirements Document
 - [Workplan](./implementation/workplan.md) - Implementation plan and task breakdown
+- [S-330 SysEx Reference](../s330_sysex.md) - Authoritative protocol documentation
 
 ## Quick Links
 

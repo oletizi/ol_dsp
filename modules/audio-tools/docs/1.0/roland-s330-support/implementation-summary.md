@@ -13,26 +13,13 @@ This document summarizes the implementation of Roland S-330 support, including a
 
 Added comprehensive S-330 support to the sampler-devices module:
 
-- **s330-client.ts**: Main client class with:
-  - Web MIDI connection management
-  - Centralized data caching (patches, tones)
-  - Batch read/write operations
-  - Parameter-level access methods
-
-- **s330-addresses.ts**: SysEx address calculations:
-  - System parameter addresses
-  - Patch parameter addresses (64 patches, 8 banks × 8 slots)
-  - Tone parameter addresses (128 tones, 16 banks × 8 slots)
-  - Correct base address handling (tone base: 0x00 0x03 xx xx)
-
-- **s330-messages.ts**: SysEx message handling:
-  - Roland SysEx encoding/decoding
-  - Checksum calculation
-  - Request/data message construction
-
-- **s330-types.ts**: TypeScript interfaces for all S-330 data structures
-
+- **s330-client.ts**: Main client class with Web MIDI connection, caching, and parameter access
+- **s330-addresses.ts**: SysEx address calculations
+- **s330-messages.ts**: SysEx message encoding/decoding
+- **s330-types.ts**: TypeScript interfaces for S-330 data structures
 - **s330-params.ts**: Parameter definitions and metadata
+
+For S-330 protocol details (address maps, message formats, checksum calculation), see [S-330 SysEx Documentation](../s330_sysex.md).
 
 ### S-330 Editor Web Application (new module)
 
@@ -80,10 +67,6 @@ Created `@oletizi/s330-editor` web application:
 - Faster UI responsiveness
 - Single source of truth for device state
 - Enables batch operations
-
-### Address Calculation Approach
-
-The S-330 uses a 4-byte address scheme. Key insight: tone parameters start at base address 0x00 0x03 xx xx (not 0x00 0x01 as initially assumed). This was discovered through SysEx analysis and testing.
 
 ## Known Limitations
 
