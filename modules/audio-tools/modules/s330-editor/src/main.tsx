@@ -14,10 +14,20 @@ const queryClient = new QueryClient({
   },
 });
 
+// Auto-detect base path for proxy deployments (e.g., /s330/)
+const getBasename = () => {
+  const path = window.location.pathname;
+  // Check if we're at a known subpath
+  if (path.startsWith('/s330')) {
+    return '/s330';
+  }
+  return '/';
+};
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
+      <BrowserRouter basename={getBasename()}>
         <App />
       </BrowserRouter>
     </QueryClientProvider>
