@@ -178,6 +178,27 @@ export function HomePage() {
         <DeviceIdSelector />
       </div>
 
+      {/* S-330 Setup Instructions */}
+      <div className="card">
+        <h3 className="font-medium text-s330-text mb-3">S-330 MIDI Setup</h3>
+        <p className="text-sm text-s330-muted mb-4">
+          To enable communication with this editor, configure your S-330's MIDI settings:
+        </p>
+        <ol className="text-sm text-s330-muted space-y-2 mb-4 list-decimal list-inside">
+          <li>Press <strong className="text-s330-text">MENU</strong> then select <strong className="text-s330-text">COM</strong></li>
+          <li>Navigate to <strong className="text-s330-text">MIDI-Message</strong></li>
+          <li>Set <strong className="text-s330-text">Exclusive</strong> to <strong className="text-s330-highlight">On</strong></li>
+          <li>Set <strong className="text-s330-text">Device ID</strong> to <strong className="text-s330-highlight">1</strong> (or match the value above)</li>
+        </ol>
+        <div className="bg-s330-bg rounded-md p-2">
+          <img
+            src="./s330-midi-setup.jpg"
+            alt="S-330 MIDI-Message screen showing Exclusive: On and Device ID: 1"
+            className="rounded-md w-full max-w-md mx-auto"
+          />
+        </div>
+      </div>
+
       {/* Help Card */}
       <div className="card">
         <h3 className="font-medium text-s330-text mb-3">Connection Help</h3>
