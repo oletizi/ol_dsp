@@ -741,6 +741,63 @@ gh api graphql -f query="
 - 40 FX types supported
 ```
 
+### s3000xl-editor Module (Web Application)
+
+**Documentation location:** `modules/audio-tools/docs/<version>/<feature-slug>/` (under audio-tools)
+
+**GitHub Project:** [S3000XL Editor](https://github.com/users/oletizi/projects/3)
+
+**REQUIRED: All GitHub issues and milestones for work in the s3000xl-editor module MUST be added to the S3000XL Editor GitHub Project.**
+
+**Additional requirements:**
+
+- All issues must be added to the S3000XL Editor project board
+- Use `[s3000xl-editor]` or `[audio-tools]` prefix for issue titles
+- Document Web MIDI API requirements
+- Include browser compatibility notes
+- Reference existing code in `sampler-devices/src/devices/s3000xl.ts` (4,868 lines)
+
+**Adding issues to the project via CLI:**
+
+```bash
+# Get project and issue IDs
+PROJECT_ID=$(gh api graphql -f query='
+  query { user(login: "oletizi") { projectV2(number: 3) { id } } }
+' --jq '.data.user.projectV2.id')
+
+ISSUE_ID=$(gh api graphql -f query='
+  query { repository(owner: "oletizi", name: "ol_dsp") { issue(number: ISSUE_NUM) { id } } }
+' --jq '.data.repository.issue.id')
+
+# Add issue to project
+gh api graphql -f query="
+  mutation {
+    addProjectV2ItemById(input: {
+      projectId: \"$PROJECT_ID\"
+      contentId: \"$ISSUE_ID\"
+    }) { item { id } }
+  }
+"
+```
+
+**README.md tracking section:**
+
+```markdown
+## Tracking Links
+
+**GitHub Project:** [S3000XL Editor](https://github.com/users/oletizi/projects/3)
+**GitHub Milestone:** [Week of Jan 27-31](https://github.com/oletizi/ol_dsp/milestone/N)
+**Affected Sub-modules:** s3000xl-editor, sampler-devices/s3000xl
+
+## Module Changes
+
+**s3000xl-editor:**
+
+- Web-based program/keygroup editor
+- Web MIDI API integration
+- Up to 99 keygroups per program
+```
+
 ### audio-control Module
 
 **Documentation location:** `modules/audio-control/docs/<version>/<feature-slug>/`
@@ -793,6 +850,7 @@ gh api graphql -f query="
 - [ ] Issues assigned to milestone with appropriate labels
 - [ ] **For s330-editor work:** All issues added to [S330 Editor project](https://github.com/users/oletizi/projects/1)
 - [ ] **For jv1080-editor work:** All issues added to [JV-1080 Editor project](https://github.com/users/oletizi/projects/2)
+- [ ] **For s3000xl-editor work:** All issues added to [S3000XL Editor project](https://github.com/users/oletizi/projects/3)
 - [ ] workplan.md updated with GitHub issue links
 - [ ] README.md updated with milestone link
 
