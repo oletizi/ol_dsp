@@ -198,11 +198,12 @@ This enables **real-time parameter monitoring** - a software editor can track ch
 | Down | Cursor moves down |
 | Up | Cursor moves up |
 | Right | Cursor moves right |
-| Left | Cursor moves left (assumed, mirrors right) |
+| Left | Cursor moves left |
 | Inc | Value increments |
 | Dec | Value decrements |
 | MODE | Opens mode menu |
 | Execute | Confirms/executes selection |
+| SUB MENU | Opens/closes context-specific submenu (e.g., tone selector) |
 | menu-down | Navigates down in menu context |
 | menu-right | Navigates right in menu context |
 | menu-left | Navigates left in menu context |
