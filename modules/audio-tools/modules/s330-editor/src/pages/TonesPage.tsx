@@ -3,6 +3,7 @@
  *
  * Parameter changes are sent to the device in real-time.
  * Data is cached in the S330 client - this page only manages UI state.
+ * Loads first bank (16 tones) by default for faster startup.
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -14,6 +15,10 @@ import { ToneList } from '@/components/tones/ToneList';
 import { ToneEditor } from '@/components/tones/ToneEditor';
 import { cn } from '@/lib/utils';
 
+// Constants for bank loading (S-330 uses banks of 8)
+const TONES_PER_BANK = 8;
+const TOTAL_TONES = 32;
+
 export function TonesPage() {
   const { adapter, deviceId, status } = useMidiStore();
   const {
@@ -21,8 +26,6 @@ export function TonesPage() {
     isLoading,
     loadingMessage,
     loadingProgress,
-    loadingCurrent,
-    loadingTotal,
     error,
     selectTone,
     setLoading,
@@ -36,8 +39,9 @@ export function TonesPage() {
   // Keep a ref to the S330 client
   const clientRef = useRef<S330ClientInterface | null>(null);
 
-  // Local state for tones (cached in client, mirrored here for display)
-  const [tones, setTones] = useState<S330Tone[]>([]);
+  // Local state for tones (sparse array - undefined = not loaded)
+  const [tones, setTones] = useState<(S330Tone | undefined)[]>([]);
+  const [loadedBanks, setLoadedBanks] = useState<Set<number>>(new Set());
 
   // Initialize client when adapter changes
   useEffect(() => {
@@ -47,6 +51,56 @@ export function TonesPage() {
     }
     clientRef.current = createS330Client(adapter, { deviceId });
   }, [adapter, deviceId]);
+
+  // Load a specific bank of tones
+  const loadToneBank = useCallback(async (bankIndex: number) => {
+    if (!clientRef.current) return;
+
+    const startIndex = bankIndex * TONES_PER_BANK;
+    const count = TONES_PER_BANK;
+
+    try {
+      setLoading(true, `Loading tones ${startIndex + 1}-${startIndex + count}...`);
+      setError(null);
+
+      await clientRef.current.connect();
+      const loadedTones = await clientRef.current.loadToneRange(startIndex, count, (current, total) => {
+        setProgress(current, total);
+      });
+
+      // Update local state with loaded tones
+      setTones((prev) => {
+        const updated = [...prev];
+        // Ensure array is large enough
+        while (updated.length < TOTAL_TONES) updated.push(undefined);
+        loadedTones.forEach((tone, i) => {
+          updated[startIndex + i] = tone;
+        });
+        return updated;
+      });
+      setLoadedBanks((prev) => new Set([...prev, bankIndex]));
+
+      clearProgress();
+      setLoading(false);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to load tones';
+      setError(message);
+      clearProgress();
+      setLoading(false);
+    }
+  }, [setLoading, setError, setProgress, clearProgress]);
+
+  // Load initial data (first bank)
+  const loadInitialData = useCallback(async () => {
+    await loadToneBank(0);
+  }, [loadToneBank]);
+
+  // Load remaining bank
+  const loadRemainingTones = useCallback(async () => {
+    if (!loadedBanks.has(1)) {
+      await loadToneBank(1);
+    }
+  }, [loadToneBank, loadedBanks]);
 
   // Handle tone parameter updates - local state update for responsive UI
   const handleToneUpdate = useCallback((updatedTone: S330Tone) => {
@@ -72,52 +126,27 @@ export function TonesPage() {
     });
   }, [selectedToneIndex, tones, setError]);
 
-  // Fetch all tones with progress tracking
-  const fetchTones = useCallback(async () => {
-    if (!adapter) {
-      setError('Not connected to device');
-      return;
-    }
-
-    try {
-      setLoading(true, 'Loading tones from S-330...');
-      setError(null);
-
-      const client = createS330Client(adapter, { deviceId });
-      await client.connect();
-
-      // Fetch all tones with progress callback (uses cache if available)
-      const allTones = await client.getAllTones((current, total) => {
-        setProgress(current, total);
-      });
-
-      setTones(allTones);
-      clearProgress();
-      setLoading(false);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to fetch tones';
-      setError(message);
-      clearProgress();
-      setLoading(false);
-    }
-  }, [adapter, deviceId, setLoading, setError, setProgress, clearProgress]);
-
-  // Refresh: invalidate cache and refetch
+  // Refresh: invalidate cache and reload first bank
   const handleRefresh = useCallback(async () => {
     if (!clientRef.current) return;
 
     clientRef.current.invalidateToneCache();
-    await fetchTones();
-  }, [fetchTones]);
+    setTones([]);
+    setLoadedBanks(new Set());
+    await loadInitialData();
+  }, [loadInitialData]);
 
-  // Auto-fetch tones when connected
+  // Auto-load initial data when connected
   useEffect(() => {
     if (isConnected && tones.length === 0 && !isLoading) {
-      fetchTones();
+      loadInitialData();
     }
-  }, [isConnected, tones.length, isLoading, fetchTones]);
+  }, [isConnected, tones.length, isLoading, loadInitialData]);
 
+  // Filter to only show loaded tones
+  const loadedTonesArray = tones.filter((t): t is S330Tone => t !== undefined);
   const selectedTone = selectedToneIndex !== null ? tones[selectedToneIndex] : null;
+  const allTonesLoaded = loadedBanks.has(0) && loadedBanks.has(1);
 
   if (!isConnected) {
     return (
@@ -137,8 +166,22 @@ export function TonesPage() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold text-s330-text">Tones</h2>
+        <div className="flex items-center gap-4">
+          <h2 className="text-xl font-bold text-s330-text">Tones</h2>
+          <span className="text-sm text-s330-muted">
+            {loadedTonesArray.length} of {TOTAL_TONES} loaded
+          </span>
+        </div>
         <div className="flex gap-2">
+          {!allTonesLoaded && (
+            <button
+              onClick={loadRemainingTones}
+              disabled={isLoading}
+              className={cn('btn btn-primary', isLoading && 'opacity-50')}
+            >
+              Load All Tones
+            </button>
+          )}
           <button
             onClick={handleRefresh}
             disabled={isLoading}
@@ -170,7 +213,7 @@ export function TonesPage() {
                 </div>
               </div>
               <p className="text-s330-muted">
-                Loading tone {loadingCurrent} of {loadingTotal}...
+                {loadingMessage}
               </p>
             </>
           ) : (
@@ -183,7 +226,7 @@ export function TonesPage() {
       )}
 
       {/* Content */}
-      {!isLoading && tones.length > 0 && (
+      {!isLoading && loadedTonesArray.length > 0 && (
         <div className="grid gap-6 lg:grid-cols-3">
           <div className="lg:col-span-1">
             <ToneList
@@ -210,10 +253,10 @@ export function TonesPage() {
       )}
 
       {/* Empty State - no tones loaded yet */}
-      {!isLoading && tones.length === 0 && !error && (
+      {!isLoading && loadedTonesArray.length === 0 && !error && (
         <div className="card text-center py-12">
           <p className="text-s330-muted mb-4">No tones loaded</p>
-          <button onClick={fetchTones} className="btn btn-primary">
+          <button onClick={loadInitialData} className="btn btn-primary">
             Load Tones
           </button>
         </div>

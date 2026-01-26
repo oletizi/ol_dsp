@@ -252,8 +252,8 @@ export const PATCH_PARAMS = {
 /** Number of tone mapping entries per layer (MIDI notes 21-127) */
 export const TONE_MAP_ENTRIES = 109;
 
-/** Maximum patches in memory */
-export const MAX_PATCHES = 64;
+/** Maximum patches in memory (2 banks of 8) */
+export const MAX_PATCHES = 16;
 
 // =============================================================================
 // Tone Parameter Offsets

@@ -3,6 +3,7 @@
  *
  * Shows 8 MIDI parts (A-H) with their patch assignments,
  * output routing, and levels.
+ * Loads first bank (32 patches) by default for faster startup.
  */
 
 import { useEffect, useState, useRef, useCallback } from 'react';
@@ -16,6 +17,10 @@ import { cn, formatS330Number } from '@/lib/utils';
 // Global flag to prevent React Strict Mode from running effects twice
 // This is necessary because MIDI requests can't be safely run concurrently
 let isFetchingGlobal = false;
+
+// Constants for bank loading (S-330 uses banks of 8)
+const PATCHES_PER_BANK = 8;
+const TOTAL_PATCHES = 16;  // 2 banks of 8
 
 // MIDI Part configuration (A-H = channels 1-8)
 interface MidiPart {
@@ -47,8 +52,7 @@ export function PlayPage() {
     clearProgress,
     isLoading,
     loadingProgress,
-    loadingCurrent,
-    loadingTotal,
+    loadingMessage,
     error,
   } = useS330Store();
 
@@ -57,8 +61,9 @@ export function PlayPage() {
   // Keep a ref to the S330 client for sending parameter updates
   const clientRef = useRef<S330ClientInterface | null>(null);
 
-  // Local state for patches (cached in client, mirrored here for display)
-  const [patches, setPatches] = useState<S330Patch[]>([]);
+  // Local state for patches (sparse array - undefined = not loaded)
+  const [patches, setPatches] = useState<(S330Patch | undefined)[]>([]);
+  const [loadedPatchBanks, setLoadedPatchBanks] = useState<Set<number>>(new Set());
 
   // MIDI parts - loaded from S-330 function parameters
   const [parts, setParts] = useState<MidiPart[]>(
@@ -72,30 +77,65 @@ export function PlayPage() {
       active: true,
     }))
   );
+  const [partsLoaded, setPartsLoaded] = useState(false);
 
-  // Fetch all data with progress tracking
-  const fetchData = useCallback(async () => {
-    if (!adapter || isFetchingGlobal) return;
+  // Initialize client when adapter changes
+  useEffect(() => {
+    if (!adapter) {
+      clientRef.current = null;
+      return;
+    }
+    clientRef.current = createS330Client(adapter, { deviceId });
+  }, [adapter, deviceId]);
 
-    const TOTAL_PATCHES = 64;
+  // Load a specific bank of patches
+  const loadPatchBank = useCallback(async (bankIndex: number) => {
+    if (!clientRef.current) return;
 
-    isFetchingGlobal = true;
+    const startIndex = bankIndex * PATCHES_PER_BANK;
+    const count = PATCHES_PER_BANK;
+
     try {
-      setLoading(true, 'Loading patches...');
+      setLoading(true, `Loading patches ${startIndex + 1}-${startIndex + count}...`);
+      setError(null);
 
-      const client = createS330Client(adapter, { deviceId });
-      clientRef.current = client;
-      await client.connect();
-
-      // Fetch all patches with progress callback (uses cache if available)
-      const allPatches = await client.getAllPatches((current, total) => {
-        setProgress(current, TOTAL_PATCHES + 1); // +1 for function params
+      await clientRef.current.connect();
+      const loadedPatches = await clientRef.current.loadPatchRange(startIndex, count, (current, total) => {
+        setProgress(current, total);
       });
-      setPatches(allPatches);
 
-      // Then fetch function parameters
-      setProgress(TOTAL_PATCHES + 1, TOTAL_PATCHES + 1);
-      const configs = await client.requestFunctionParameters();
+      // Update local state with loaded patches
+      setPatches((prev) => {
+        const updated = [...prev];
+        // Ensure array is large enough
+        while (updated.length < TOTAL_PATCHES) updated.push(undefined);
+        loadedPatches.forEach((patch, i) => {
+          updated[startIndex + i] = patch;
+        });
+        return updated;
+      });
+      setLoadedPatchBanks((prev) => new Set([...prev, bankIndex]));
+
+      clearProgress();
+      setLoading(false);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to load patches';
+      setError(message);
+      clearProgress();
+      setLoading(false);
+    }
+  }, [setLoading, setError, setProgress, clearProgress]);
+
+  // Load function parameters (multi-mode configuration)
+  const loadFunctionParams = useCallback(async () => {
+    if (!clientRef.current) return;
+
+    try {
+      setLoading(true, 'Loading multi-mode configuration...');
+      setError(null);
+
+      await clientRef.current.connect();
+      const configs = await clientRef.current.requestFunctionParameters();
 
       // Update parts with loaded configuration
       setParts((prev) =>
@@ -107,20 +147,39 @@ export function PlayPage() {
           level: configs[i]?.level ?? 127,
         }))
       );
+      setPartsLoaded(true);
 
       clearProgress();
       setLoading(false);
     } catch (err) {
-      console.error('[PlayPage] Error fetching data:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load data');
+      const message = err instanceof Error ? err.message : 'Failed to load configuration';
+      setError(message);
       clearProgress();
       setLoading(false);
+    }
+  }, [setLoading, setError, clearProgress]);
+
+  // Load initial data (function params + first bank of 8 patches)
+  const loadInitialData = useCallback(async () => {
+    if (isFetchingGlobal) return;
+    isFetchingGlobal = true;
+
+    try {
+      await loadFunctionParams();
+      await loadPatchBank(0);
     } finally {
       isFetchingGlobal = false;
     }
-  }, [adapter, deviceId, setLoading, setError, setProgress, clearProgress]);
+  }, [loadFunctionParams, loadPatchBank]);
 
-  // Initialize client and fetch data when adapter is available
+  // Load remaining patches
+  const loadRemainingPatches = useCallback(async () => {
+    if (!loadedPatchBanks.has(1)) {
+      await loadPatchBank(1);
+    }
+  }, [loadPatchBank, loadedPatchBanks]);
+
+  // Auto-load initial data when connected
   useEffect(() => {
     if (!adapter) {
       clientRef.current = null;
@@ -128,22 +187,23 @@ export function PlayPage() {
     }
 
     // Skip if already fetching or data already loaded
-    if (isFetchingGlobal || patches.length > 0) {
+    if (isFetchingGlobal || partsLoaded) {
       return;
     }
 
-    fetchData();
-  }, [adapter, patches.length, fetchData]);
+    loadInitialData();
+  }, [adapter, partsLoaded, loadInitialData]);
 
   // Update patch names based on patchIndex loaded from function parameters
   useEffect(() => {
-    if (patches.length === 0) return;
+    const loadedPatches = patches.filter((p): p is S330Patch => p !== undefined);
+    if (loadedPatches.length === 0) return;
 
     // Look up patch names based on patchIndex from function parameters
     setParts((prev) =>
       prev.map((part) => {
-        if (part.patchIndex !== null && part.patchIndex < patches.length) {
-          const patch = patches[part.patchIndex];
+        if (part.patchIndex !== null && patches[part.patchIndex] !== undefined) {
+          const patch = patches[part.patchIndex]!;
           if (!isPatchEmpty(patch)) {
             return { ...part, patchName: patch.common.name };
           }
@@ -177,7 +237,7 @@ export function PlayPage() {
   };
 
   const handlePatchChange = (partIndex: number, patchIndex: number | null) => {
-    const patch = patchIndex !== null && patchIndex < patches.length ? patches[patchIndex] : null;
+    const patch = patchIndex !== null ? patches[patchIndex] : undefined;
     updatePart(partIndex, {
       patchIndex,
       patchName: patch && !isPatchEmpty(patch) ? patch.common.name : '',
@@ -225,13 +285,19 @@ export function PlayPage() {
   };
 
   // Reload data from hardware
-  const handleReload = async () => {
+  const handleReload = useCallback(async () => {
     if (!clientRef.current) return;
 
-    // Invalidate cache and refetch
+    // Invalidate cache and reset state
     clientRef.current.invalidatePatchCache();
-    await fetchData();
-  };
+    setPatches([]);
+    setLoadedPatchBanks(new Set());
+    setPartsLoaded(false);
+    await loadInitialData();
+  }, [loadInitialData]);
+
+  const loadedPatchCount = patches.filter(p => p !== undefined).length;
+  const allPatchesLoaded = loadedPatchBanks.has(0) && loadedPatchBanks.has(1);
 
   if (!isConnected) {
     return (
@@ -251,8 +317,22 @@ export function PlayPage() {
     <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold text-s330-text">Play</h2>
+        <div className="flex items-center gap-4">
+          <h2 className="text-xl font-bold text-s330-text">Play</h2>
+          <span className="text-sm text-s330-muted">
+            {loadedPatchCount} of {TOTAL_PATCHES} patches loaded
+          </span>
+        </div>
         <div className="flex gap-2">
+          {!allPatchesLoaded && loadedPatchCount > 0 && (
+            <button
+              onClick={loadRemainingPatches}
+              disabled={isLoading}
+              className={cn('btn btn-primary', isLoading && 'opacity-50')}
+            >
+              Load More Patches
+            </button>
+          )}
           <button
             onClick={handleReload}
             disabled={isLoading}
@@ -333,11 +413,15 @@ export function PlayPage() {
                   <option value={-1} className="text-s330-muted">
                     ---
                   </option>
-                  {patches.map((patch, patchIndex) => (
-                    <option key={patchIndex} value={patchIndex}>
-                      P{formatS330Number(patchIndex)} {isPatchEmpty(patch) ? '(empty)' : patch.common.name}
-                    </option>
-                  ))}
+                  {Array.from({ length: TOTAL_PATCHES }, (_, patchIndex) => {
+                    const patch = patches[patchIndex];
+                    const isLoaded = patch !== undefined;
+                    return (
+                      <option key={patchIndex} value={patchIndex} disabled={!isLoaded}>
+                        P{formatS330Number(patchIndex)} {!isLoaded ? '(not loaded)' : isPatchEmpty(patch) ? '(empty)' : patch.common.name}
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
 
@@ -442,9 +526,7 @@ export function PlayPage() {
                 </div>
               </div>
               <p className="text-s330-muted text-sm">
-                {loadingCurrent <= 64
-                  ? `Loading patch ${loadingCurrent} of 64...`
-                  : 'Loading multi mode configuration...'}
+                {loadingMessage}
               </p>
             </>
           ) : (
