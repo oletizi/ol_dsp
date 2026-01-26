@@ -20,10 +20,15 @@ export function TonesPage() {
     selectedToneIndex,
     isLoading,
     loadingMessage,
+    loadingProgress,
+    loadingCurrent,
+    loadingTotal,
     error,
     selectTone,
     setLoading,
     setError,
+    setProgress,
+    clearProgress,
   } = useS330Store();
 
   const isConnected = status === 'connected' && adapter !== null;
@@ -67,7 +72,7 @@ export function TonesPage() {
     });
   }, [selectedToneIndex, tones, setError]);
 
-  // Fetch all tones using cached API
+  // Fetch all tones with progress tracking
   const fetchTones = useCallback(async () => {
     if (!adapter) {
       setError('Not connected to device');
@@ -81,15 +86,21 @@ export function TonesPage() {
       const client = createS330Client(adapter, { deviceId });
       await client.connect();
 
-      const allTones = await client.getAllTones();
+      // Fetch all tones with progress callback (uses cache if available)
+      const allTones = await client.getAllTones((current, total) => {
+        setProgress(current, total);
+      });
+
       setTones(allTones);
+      clearProgress();
       setLoading(false);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to fetch tones';
       setError(message);
+      clearProgress();
       setLoading(false);
     }
-  }, [adapter, deviceId, setLoading, setError]);
+  }, [adapter, deviceId, setLoading, setError, setProgress, clearProgress]);
 
   // Refresh: invalidate cache and refetch
   const handleRefresh = useCallback(async () => {
@@ -148,8 +159,26 @@ export function TonesPage() {
       {/* Loading State */}
       {isLoading && (
         <div className="card text-center py-8">
-          <div className="animate-spin w-8 h-8 border-2 border-s330-highlight border-t-transparent rounded-full mx-auto mb-4" />
-          <p className="text-s330-muted">{loadingMessage ?? 'Loading...'}</p>
+          {loadingProgress !== null ? (
+            <>
+              <div className="w-full max-w-md mx-auto mb-4">
+                <div className="h-2 bg-s330-bg rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-s330-highlight transition-all duration-150 ease-out"
+                    style={{ width: `${loadingProgress}%` }}
+                  />
+                </div>
+              </div>
+              <p className="text-s330-muted">
+                Loading tone {loadingCurrent} of {loadingTotal}...
+              </p>
+            </>
+          ) : (
+            <>
+              <div className="animate-spin w-8 h-8 border-2 border-s330-highlight border-t-transparent rounded-full mx-auto mb-4" />
+              <p className="text-s330-muted">{loadingMessage ?? 'Loading...'}</p>
+            </>
+          )}
         </div>
       )}
 

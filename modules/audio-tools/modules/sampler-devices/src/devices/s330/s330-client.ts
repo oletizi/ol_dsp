@@ -209,6 +209,11 @@ function nibblize(bytes: number[]): number[] {
 // =============================================================================
 
 /**
+ * Progress callback for batch operations
+ */
+export type ProgressCallback = (current: number, total: number) => void;
+
+/**
  * S-330 client interface for MIDI communication
  *
  * This interface provides semantic methods for interacting with the S-330.
@@ -224,13 +229,13 @@ export interface S330ClientInterface {
     getDeviceId(): number;
 
     // Patch operations (cached, single source of truth)
-    getAllPatches(): Promise<S330Patch[]>;
+    getAllPatches(onProgress?: ProgressCallback): Promise<S330Patch[]>;
     getPatch(patchIndex: number): Promise<S330Patch | null>;
     setPatch(patchIndex: number, patch: S330PatchCommon): Promise<void>;
     invalidatePatchCache(): void;
 
     // Tone operations (cached, single source of truth)
-    getAllTones(): Promise<S330Tone[]>;
+    getAllTones(onProgress?: ProgressCallback): Promise<S330Tone[]>;
     getTone(toneIndex: number): Promise<S330Tone | null>;
     setTone(toneIndex: number, tone: S330Tone): Promise<void>;
     invalidateToneCache(): void;
@@ -726,8 +731,9 @@ export function createS330Client(
         /**
          * Get all patches from the S-330, using cache if available.
          * Fetches full patch data for all 64 patches and caches the result.
+         * @param onProgress - Optional callback for progress updates (current, total)
          */
-        async getAllPatches(): Promise<S330Patch[]> {
+        async getAllPatches(onProgress?: ProgressCallback): Promise<S330Patch[]> {
             if (patchCache) {
                 return patchCache;
             }
@@ -742,6 +748,7 @@ export function createS330Client(
                 const patches: S330Patch[] = [];
 
                 for (let i = 0; i < MAX_PATCHES; i++) {
+                    onProgress?.(i + 1, MAX_PATCHES);
                     try {
                         const address = [0x00, 0x00, i * 4, 0x00];
                         const data = await requestDataWithAddress(address, PATCH_TOTAL_SIZE);
@@ -807,8 +814,9 @@ export function createS330Client(
         /**
          * Get all tones from the S-330, using cache if available.
          * Fetches full tone data for all 32 tones and caches the result.
+         * @param onProgress - Optional callback for progress updates (current, total)
          */
-        async getAllTones(): Promise<S330Tone[]> {
+        async getAllTones(onProgress?: ProgressCallback): Promise<S330Tone[]> {
             if (toneCache) {
                 return toneCache;
             }
@@ -823,6 +831,7 @@ export function createS330Client(
                 const tones: S330Tone[] = [];
 
                 for (let i = 0; i < MAX_TONES; i++) {
+                    onProgress?.(i + 1, MAX_TONES);
                     try {
                         const byte2 = i * 2;
                         const address = [0x00, 0x03, byte2, 0x00];

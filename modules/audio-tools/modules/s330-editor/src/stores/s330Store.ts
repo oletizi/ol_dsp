@@ -16,6 +16,11 @@ interface S330State {
   isLoading: boolean;
   loadingMessage: string | null;
   error: string | null;
+
+  // Progress tracking
+  loadingProgress: number | null; // 0-100, null when not tracking progress
+  loadingCurrent: number;
+  loadingTotal: number;
 }
 
 interface S330Actions {
@@ -26,6 +31,8 @@ interface S330Actions {
   // UI state
   setLoading: (isLoading: boolean, message?: string | null) => void;
   setError: (error: string | null) => void;
+  setProgress: (current: number, total: number) => void;
+  clearProgress: () => void;
   clear: () => void;
 }
 
@@ -38,6 +45,9 @@ export const useS330Store = create<S330Store>((set) => ({
   isLoading: false,
   loadingMessage: null,
   error: null,
+  loadingProgress: null,
+  loadingCurrent: 0,
+  loadingTotal: 0,
 
   selectPatch: (index) => set({ selectedPatchIndex: index }),
 
@@ -48,10 +58,27 @@ export const useS330Store = create<S330Store>((set) => ({
 
   setError: (error) => set({ error }),
 
+  setProgress: (current, total) =>
+    set({
+      loadingCurrent: current,
+      loadingTotal: total,
+      loadingProgress: total > 0 ? Math.round((current / total) * 100) : null,
+    }),
+
+  clearProgress: () =>
+    set({
+      loadingProgress: null,
+      loadingCurrent: 0,
+      loadingTotal: 0,
+    }),
+
   clear: () =>
     set({
       selectedPatchIndex: null,
       selectedToneIndex: null,
       error: null,
+      loadingProgress: null,
+      loadingCurrent: 0,
+      loadingTotal: 0,
     }),
 }));

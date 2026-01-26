@@ -40,7 +40,17 @@ function isPatchEmpty(patch: S330Patch): boolean {
 
 export function PlayPage() {
   const { adapter, deviceId, status } = useMidiStore();
-  const { setLoading, setError, isLoading, error } = useS330Store();
+  const {
+    setLoading,
+    setError,
+    setProgress,
+    clearProgress,
+    isLoading,
+    loadingProgress,
+    loadingCurrent,
+    loadingTotal,
+    error,
+  } = useS330Store();
 
   const isConnected = status === 'connected' && adapter !== null;
 
@@ -63,9 +73,11 @@ export function PlayPage() {
     }))
   );
 
-  // Fetch all data using the cached API
+  // Fetch all data with progress tracking
   const fetchData = useCallback(async () => {
     if (!adapter || isFetchingGlobal) return;
+
+    const TOTAL_PATCHES = 64;
 
     isFetchingGlobal = true;
     try {
@@ -75,12 +87,14 @@ export function PlayPage() {
       clientRef.current = client;
       await client.connect();
 
-      // Fetch patches using cached API
-      const allPatches = await client.getAllPatches();
+      // Fetch all patches with progress callback (uses cache if available)
+      const allPatches = await client.getAllPatches((current, total) => {
+        setProgress(current, TOTAL_PATCHES + 1); // +1 for function params
+      });
       setPatches(allPatches);
 
       // Then fetch function parameters
-      setLoading(true, 'Loading multi mode configuration...');
+      setProgress(TOTAL_PATCHES + 1, TOTAL_PATCHES + 1);
       const configs = await client.requestFunctionParameters();
 
       // Update parts with loaded configuration
@@ -94,15 +108,17 @@ export function PlayPage() {
         }))
       );
 
+      clearProgress();
       setLoading(false);
     } catch (err) {
       console.error('[PlayPage] Error fetching data:', err);
       setError(err instanceof Error ? err.message : 'Failed to load data');
+      clearProgress();
       setLoading(false);
     } finally {
       isFetchingGlobal = false;
     }
-  }, [adapter, deviceId, setLoading, setError]);
+  }, [adapter, deviceId, setLoading, setError, setProgress, clearProgress]);
 
   // Initialize client and fetch data when adapter is available
   useEffect(() => {
@@ -414,8 +430,26 @@ export function PlayPage() {
 
       {/* Loading indicator */}
       {isLoading && (
-        <div className="text-center py-4">
-          <div className="animate-spin w-6 h-6 border-2 border-s330-highlight border-t-transparent rounded-full mx-auto" />
+        <div className="card text-center py-6">
+          {loadingProgress !== null ? (
+            <>
+              <div className="w-full max-w-md mx-auto mb-4">
+                <div className="h-2 bg-s330-bg rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-s330-highlight transition-all duration-150 ease-out"
+                    style={{ width: `${loadingProgress}%` }}
+                  />
+                </div>
+              </div>
+              <p className="text-s330-muted text-sm">
+                {loadingCurrent <= 64
+                  ? `Loading patch ${loadingCurrent} of 64...`
+                  : 'Loading multi mode configuration...'}
+              </p>
+            </>
+          ) : (
+            <div className="animate-spin w-6 h-6 border-2 border-s330-highlight border-t-transparent rounded-full mx-auto" />
+          )}
         </div>
       )}
     </div>

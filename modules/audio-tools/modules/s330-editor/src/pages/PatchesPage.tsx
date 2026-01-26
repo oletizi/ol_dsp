@@ -19,10 +19,15 @@ export function PatchesPage() {
     selectedPatchIndex,
     isLoading,
     loadingMessage,
+    loadingProgress,
+    loadingCurrent,
+    loadingTotal,
     error,
     selectPatch,
     setLoading,
     setError,
+    setProgress,
+    clearProgress,
   } = useS330Store();
 
   const isConnected = status === 'connected' && adapter !== null;
@@ -43,12 +48,16 @@ export function PatchesPage() {
     clientRef.current = createS330Client(adapter, { deviceId });
   }, [adapter, deviceId]);
 
-  // Fetch all patches using cached API
+  // Fetch all patches with progress tracking
   const fetchPatches = useCallback(async () => {
     if (!adapter) {
       setError('Not connected to device');
       return;
     }
+
+    const TOTAL_PATCHES = 64;
+    const TOTAL_TONES = 32;
+    const TOTAL_ITEMS = TOTAL_PATCHES + TOTAL_TONES;
 
     try {
       setLoading(true, 'Loading patches from S-330...');
@@ -57,21 +66,27 @@ export function PatchesPage() {
       const client = createS330Client(adapter, { deviceId });
       await client.connect();
 
-      const allPatches = await client.getAllPatches();
+      // Fetch all patches with progress callback (uses cache if available)
+      const allPatches = await client.getAllPatches((current, total) => {
+        setProgress(current, TOTAL_ITEMS);
+      });
       setPatches(allPatches);
 
       // Also fetch tones for the tone mapping display
-      setLoading(true, 'Loading tones for mapping...');
-      const allTones = await client.getAllTones();
+      const allTones = await client.getAllTones((current, total) => {
+        setProgress(TOTAL_PATCHES + current, TOTAL_ITEMS);
+      });
       setTones(allTones);
 
+      clearProgress();
       setLoading(false);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to fetch patches';
       setError(message);
+      clearProgress();
       setLoading(false);
     }
-  }, [adapter, deviceId, setLoading, setError]);
+  }, [adapter, deviceId, setLoading, setError, setProgress, clearProgress]);
 
   // Refresh: invalidate cache and refetch
   const handleRefresh = useCallback(async () => {
@@ -140,8 +155,28 @@ export function PatchesPage() {
       {/* Loading State */}
       {isLoading && (
         <div className="card text-center py-8">
-          <div className="animate-spin w-8 h-8 border-2 border-s330-highlight border-t-transparent rounded-full mx-auto mb-4" />
-          <p className="text-s330-muted">{loadingMessage ?? 'Loading...'}</p>
+          {loadingProgress !== null ? (
+            <>
+              <div className="w-full max-w-md mx-auto mb-4">
+                <div className="h-2 bg-s330-bg rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-s330-highlight transition-all duration-150 ease-out"
+                    style={{ width: `${loadingProgress}%` }}
+                  />
+                </div>
+              </div>
+              <p className="text-s330-muted">
+                {loadingCurrent <= 64
+                  ? `Loading patch ${loadingCurrent} of 64...`
+                  : `Loading tone ${loadingCurrent - 64} of 32...`}
+              </p>
+            </>
+          ) : (
+            <>
+              <div className="animate-spin w-8 h-8 border-2 border-s330-highlight border-t-transparent rounded-full mx-auto mb-4" />
+              <p className="text-s330-muted">{loadingMessage ?? 'Loading...'}</p>
+            </>
+          )}
         </div>
       )}
 
