@@ -38,9 +38,13 @@ const BUTTONS: Record<string, { category: number; press: number; release?: numbe
   execute: { category: 0x01, press: 0x0F },
   exe:     { category: 0x01, press: 0x0F },
 
-  // Category 01 - Menu navigation events
-  'menu-up':   { category: 0x01, press: 0x02 },
-  'menu-down': { category: 0x01, press: 0x03 },
+  // Category 01 - Menu navigation events (mirror category 09 codes)
+  'menu-right': { category: 0x01, press: 0x00 },
+  'menu-left':  { category: 0x01, press: 0x01 },
+  'menu-up':    { category: 0x01, press: 0x02 },
+  'menu-down':  { category: 0x01, press: 0x03 },
+  'menu-inc':   { category: 0x01, press: 0x04 },
+  'menu-dec':   { category: 0x01, press: 0x05 },
 };
 
 /**
@@ -99,8 +103,8 @@ async function main() {
     console.log('Function buttons (single message):');
     console.log('  mode, menu, submenu, com, execute');
     console.log('');
-    console.log('Menu navigation events:');
-    console.log('  menu-up, menu-down');
+    console.log('Menu navigation events (for use within menus):');
+    console.log('  menu-right, menu-left, menu-up, menu-down, menu-inc, menu-dec');
     console.log('');
     console.log('Options:');
     console.log('  device-id  Device ID (default: 0, displays as 1 on S-330)');

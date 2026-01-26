@@ -51,6 +51,7 @@ The address `00 04 00 00` is an **undocumented UI state area** not listed in the
 - `00 00 xx xx` - Patch parameters
 - `00 01 xx xx` - Function parameters
 - `00 02 xx xx` - Tone/MIDI parameters
+- `00 03 xx xx` - Tone parameters (used for parameter change broadcasts)
 
 ## Button Categories
 
@@ -75,20 +76,26 @@ Category `01` contains two ranges of codes:
 
 #### Menu Navigation Events (`01 00-05`)
 
-When navigation buttons are pressed **within a menu context**, an additional message is sent with category `01` before the normal `09` release message. These indicate menu-specific cursor movement.
+When navigation buttons are pressed **within a menu context**, an additional message is sent with category `01` before the normal `09` release message. These codes **mirror the category `09` navigation codes**:
 
 | Event | Code | Data | Notes |
 |-------|------|------|-------|
-| Blocked/no-op | `00` | `01 00` | Nav button has no effect in current context |
-| Menu right | `01` | `01 01` | Cursor right in menu (unconfirmed) |
+| Menu right | `00` | `01 00` | Cursor right in menu |
+| Menu left | `01` | `01 01` | Cursor left in menu |
 | Menu up | `02` | `01 02` | Cursor up in menu |
 | Menu down | `03` | `01 03` | Cursor down in menu |
 | Menu inc | `04` | `01 04` | Increment in menu (unconfirmed) |
 | Menu dec | `05` | `01 05` | Decrement in menu (unconfirmed) |
 
+**Note:** These events are sent regardless of whether the navigation has a visible effect. For example, pressing right in a single-column menu still sends `01 00` even though the cursor doesn't move.
+
 **Example sequence for DOWN in MODE menu:**
 1. `01 03` - Menu cursor down event
 2. `09 0B` - Down arrow release
+
+**Example sequence for RIGHT in EDIT menu (two columns):**
+1. `01 00` - Menu cursor right event
+2. `09 08` - Right arrow release
 
 #### Function Buttons (`01 0B-0F`)
 
@@ -134,11 +141,44 @@ F0 41 00 1E 12 00 04 00 00 01 03 78 F7  (menu cursor down)
 F0 41 00 1E 12 00 04 00 00 09 0B 68 F7  (down arrow release)
 ```
 
+## Context-Specific Behavior
+
+### Popup Menus vs Parameter Screens
+
+Button behavior differs based on context:
+
+**In popup menus** (MODE menu, EDIT menu, etc.):
+- Navigation sends category `01` menu event + category `09` release
+- Example: DOWN in MODE menu → `01 03` then `09 0B`
+
+**In parameter editing screens** (EDIT-LFO, EDIT-TVF, etc.):
+- Navigation sends only category `09` press + release (no `01` events)
+- Example: RIGHT in LFO screen → `09 00` then `09 08`
+
+### Parameter Change Broadcasts
+
+When Inc/Dec buttons change a parameter value, the S-330 broadcasts the new value:
+
+**Sequence for INC on LFO Rate parameter:**
+1. `09 04` - Inc press (address `00 04 00 00`)
+2. **Parameter update** - New value sent to parameter address (e.g., `00 03 04 38`)
+3. `09 0C` - Inc release (address `00 04 00 00`)
+
+**Example: LFO Rate changed from 0 to 1:**
+```
+F0 41 00 1E 12 00 04 00 00 09 04 6F F7  (Inc press)
+F0 41 00 1E 12 00 03 04 38 00 01 40 F7  (Rate = 1, tone parameter address)
+F0 41 00 1E 12 00 04 00 00 09 0C 67 F7  (Inc release)
+```
+
+This enables **real-time parameter monitoring** - a software editor can track changes made on the hardware by watching for DT1 messages to parameter addresses (`00 00 xx xx` for patches, `00 03 xx xx` for tones, etc.).
+
 ## Timing
 
 - Navigation buttons (category `09`): ~120-170ms between press and release messages
 - Function buttons (category `01`): Single message only
 - Menu navigation: `01` event followed by `09` release within ~40ms
+- Parameter changes: Value update sent between button press and release (~4ms after press)
 
 ## Potential Uses
 
@@ -158,11 +198,15 @@ F0 41 00 1E 12 00 04 00 00 09 0B 68 F7  (down arrow release)
 | Down | Cursor moves down |
 | Up | Cursor moves up |
 | Right | Cursor moves right |
-| Left | Cursor moves left |
+| Left | Cursor moves left (assumed, mirrors right) |
 | Inc | Value increments |
-| Dec | Value decrements (assumed) |
-| MODE | Opens mode menu (untested) |
-| Execute | Confirms selection (untested) |
+| Dec | Value decrements |
+| MODE | Opens mode menu |
+| Execute | Confirms/executes selection |
+| menu-down | Navigates down in menu context |
+| menu-right | Navigates right in menu context |
+| menu-left | Navigates left in menu context |
+| menu-up | Navigates up in menu context |
 
 ### Remote Control Message Format
 
