@@ -27,14 +27,14 @@ export function PatchesPage() {
     isLoading,
     loadingMessage,
     loadingProgress,
-    loadingCurrent,
-    loadingTotal,
     error,
     selectPatch,
     setLoading,
     setError,
     setProgress,
     clearProgress,
+    hardwareChangeVersion,
+    lastHardwareChange,
   } = useS330Store();
 
   const isConnected = status === 'connected' && adapter !== null;
@@ -48,14 +48,37 @@ export function PatchesPage() {
   const [loadedPatchBanks, setLoadedPatchBanks] = useState<Set<number>>(new Set());
   const [loadedToneBanks, setLoadedToneBanks] = useState<Set<number>>(new Set());
 
+  // Track last processed hardware change to prevent refetch loops
+  const lastProcessedChangeRef = useRef<number>(0);
+
+  // Debounce timer for hardware change refetch
+  // Delay refetch until user releases button to avoid feedback loop
+  const refetchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const REFETCH_DEBOUNCE_MS = 500; // Wait 500ms after last change before refetch
+
+  // Get notifyHardwareChange from store
+  const notifyHardwareChange = useS330Store((state) => state.notifyHardwareChange);
+
   // Initialize client when adapter changes
   useEffect(() => {
     if (!adapter) {
       clientRef.current = null;
       return;
     }
-    clientRef.current = createS330Client(adapter, { deviceId });
-  }, [adapter, deviceId]);
+    const client = createS330Client(adapter, { deviceId });
+    clientRef.current = client;
+
+    // Start listening for hardware parameter changes
+    client.startListening();
+    client.onParameterChange((event) => {
+      console.log('[PatchesPage] Hardware parameter change:', event.type, 'index:', event.index);
+      notifyHardwareChange(event.type, event.index);
+    });
+
+    return () => {
+      client.stopListening();
+    };
+  }, [adapter, deviceId, notifyHardwareChange]);
 
   // Sync loaded state from client cache on mount
   useEffect(() => {
@@ -230,6 +253,75 @@ export function PatchesPage() {
       loadInitialData();
     }
   }, [isConnected, patches.length, isLoading, loadInitialData]);
+
+  // Handle hardware parameter changes with debounced refetch
+  // Wait for user to release button before refetching to avoid feedback loop
+  useEffect(() => {
+    // Skip if we've already processed this change
+    if (hardwareChangeVersion <= lastProcessedChangeRef.current) {
+      return;
+    }
+
+    // Skip if no change or not relevant type
+    if (lastHardwareChange.type !== 'patch' && lastHardwareChange.type !== 'tone') {
+      return;
+    }
+
+    const itemIndex = lastHardwareChange.index;
+    if (itemIndex === null || itemIndex < 0) {
+      return;
+    }
+
+    // Mark this change as processed
+    lastProcessedChangeRef.current = hardwareChangeVersion;
+
+    console.log(`[PatchesPage] Hardware changed ${lastHardwareChange.type} ${itemIndex} - scheduling debounced refetch`);
+
+    // Clear any pending refetch
+    if (refetchTimerRef.current) {
+      clearTimeout(refetchTimerRef.current);
+    }
+
+    // Schedule debounced refetch - wait for user to release button
+    const changeType = lastHardwareChange.type;
+    refetchTimerRef.current = setTimeout(async () => {
+      if (!clientRef.current) return;
+
+      console.log(`[PatchesPage] Refetching ${changeType} ${itemIndex} after debounce`);
+      try {
+        if (changeType === 'patch') {
+          // Force reload just this one patch
+          await clientRef.current.loadPatchRange(itemIndex, 1, undefined, (index, patch) => {
+            setPatches((prev) => {
+              const updated = [...prev];
+              updated[index] = patch;
+              return updated;
+            });
+          }, true);
+        } else if (changeType === 'tone') {
+          // Force reload just this one tone
+          await clientRef.current.loadToneRange(itemIndex, 1, undefined, (index, tone) => {
+            setTones((prev) => {
+              const updated = [...prev];
+              updated[index] = tone;
+              return updated;
+            });
+          }, true);
+        }
+      } catch (err) {
+        console.error(`[PatchesPage] Failed to refetch ${changeType} ${itemIndex}:`, err);
+      }
+    }, REFETCH_DEBOUNCE_MS);
+  }, [hardwareChangeVersion, lastHardwareChange]);
+
+  // Cleanup refetch timer on unmount
+  useEffect(() => {
+    return () => {
+      if (refetchTimerRef.current) {
+        clearTimeout(refetchTimerRef.current);
+      }
+    };
+  }, []);
 
   // Filter to only show loaded patches
   const loadedPatches = patches.filter((p): p is S330Patch => p !== undefined);

@@ -17,6 +17,8 @@ export type {
     ToneNameInfo,
     MultiPartConfig,
     S330DataType,
+    ParameterChangeCallback,
+    ParameterChangeEvent,
 } from '@oletizi/sampler-devices/s330';
 
 export {

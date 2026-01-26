@@ -1,5 +1,8 @@
 /**
  * React hook for S-330 device operations
+ *
+ * This hook manages the S330 client lifecycle and wires up hardware
+ * parameter change listening for real-time UI synchronization.
  */
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
@@ -9,7 +12,9 @@ import {
   type S330ClientInterface,
   type S330Patch,
   type S330Tone,
+  type ParameterChangeEvent,
 } from '@/core/midi/S330Client';
+import { useS330Store } from '@/stores/s330Store';
 
 export interface UseS330State {
   isConnected: boolean;
@@ -56,6 +61,9 @@ export function useS330(
     });
   }, [adapter, deviceId, options.timeoutMs]);
 
+  // Get notifyHardwareChange from store
+  const notifyHardwareChange = useS330Store((state) => state.notifyHardwareChange);
+
   // Connect client when it's created
   useEffect(() => {
     if (client) {
@@ -67,6 +75,28 @@ export function useS330(
       }
     };
   }, [client]);
+
+  // Set up hardware parameter change listening
+  useEffect(() => {
+    if (!client) return;
+
+    // Handler for parameter change events from hardware
+    const handleParameterChange = (event: ParameterChangeEvent) => {
+      console.log('[useS330] Hardware parameter change:', event.type, 'index:', event.index);
+      // Notify store - this increments version and triggers re-renders
+      notifyHardwareChange(event.type, event.index);
+    };
+
+    // Start listening and register our callback
+    client.startListening();
+    client.onParameterChange(handleParameterChange);
+
+    // Cleanup: stop listening and remove callback
+    return () => {
+      client.removeParameterChangeListener(handleParameterChange);
+      client.stopListening();
+    };
+  }, [client, notifyHardwareChange]);
 
   const setDeviceId = useCallback((id: number) => {
     if (id >= 0 && id <= 31) {

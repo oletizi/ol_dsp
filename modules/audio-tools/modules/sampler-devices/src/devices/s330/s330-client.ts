@@ -68,6 +68,11 @@ import {
     createEmptyPatchCommon,
 } from './s330-params.js';
 
+import {
+    parseDT1Message,
+    type ParameterChangeEvent,
+} from './s330-parameter-listener.js';
+
 // =============================================================================
 // Module-Level Cache
 // =============================================================================
@@ -227,6 +232,14 @@ export type PatchLoadedCallback = (index: number, patch: S330Patch) => void;
 export type ToneLoadedCallback = (index: number, tone: S330Tone) => void;
 
 /**
+ * Callback for when a parameter changes on the hardware (front panel edits)
+ */
+export type ParameterChangeCallback = (event: ParameterChangeEvent) => void;
+
+// Re-export the event type for consumers
+export type { ParameterChangeEvent } from './s330-parameter-listener.js';
+
+/**
  * S-330 client interface for MIDI communication
  *
  * This interface provides semantic methods for interacting with the S-330.
@@ -283,6 +296,36 @@ export interface S330ClientInterface {
     setPatchVelocityThreshold(patchIndex: number, threshold: number): Promise<void>;
     setPatchVelocityMixRatio(patchIndex: number, ratio: number): Promise<void>;
     setPatchOctaveShift(patchIndex: number, shift: number): Promise<void>;
+
+    // Hardware parameter change listening (for front panel sync)
+    /**
+     * Start listening for parameter changes from the hardware front panel.
+     * When the user changes parameters on the S-330, DT1 messages are broadcast.
+     * This method registers a listener to parse those messages and emit events.
+     */
+    startListening(): void;
+
+    /**
+     * Stop listening for parameter changes from the hardware.
+     */
+    stopListening(): void;
+
+    /**
+     * Check if currently listening for hardware parameter changes
+     */
+    isListening(): boolean;
+
+    /**
+     * Register a callback to be notified when parameters change on the hardware.
+     * @param callback - Function to call with the parameter change event
+     */
+    onParameterChange(callback: ParameterChangeCallback): void;
+
+    /**
+     * Remove a previously registered parameter change callback.
+     * @param callback - The callback function to remove
+     */
+    removeParameterChangeListener(callback: ParameterChangeCallback): void;
 }
 
 // =============================================================================
@@ -704,6 +747,47 @@ export function createS330Client(
 
             midiAdapter.send(wsdMessage);
         });
+    }
+
+    // =========================================================================
+    // Parameter Change Listening
+    // =========================================================================
+
+    /**
+     * Registered callbacks for parameter change events
+     */
+    const parameterListeners = new Set<ParameterChangeCallback>();
+
+    /**
+     * Whether we're currently listening for hardware parameter changes
+     */
+    let listening = false;
+
+    /**
+     * The SysEx listener function for parameter changes
+     * Stored so we can remove it when stopListening() is called
+     */
+    function parameterSysExListener(message: number[]) {
+        // Log incoming message for debugging
+        console.log('[S330Client] parameterSysExListener received:', message.length, 'bytes',
+            message.slice(0, 10).map(b => b.toString(16).padStart(2, '0')).join(' '));
+
+        // Parse the message to see if it's a DT1 from the S-330
+        const result = parseDT1Message(message, deviceId);
+
+        console.log('[S330Client] parseDT1Message result:', result.valid, result.reason || '');
+
+        if (result.valid && result.event) {
+            console.log('[S330Client] Valid DT1 event:', result.event.type, 'index:', result.event.index);
+            // Notify all registered listeners
+            for (const callback of parameterListeners) {
+                try {
+                    callback(result.event);
+                } catch (err) {
+                    console.error('[S330Client] Parameter change callback error:', err);
+                }
+            }
+        }
     }
 
     return {
@@ -1514,6 +1598,56 @@ export function createS330Client(
                 // Write 8 bytes back
                 await sendData(address, newData);
             });
+        },
+
+        // =====================================================================
+        // Hardware Parameter Change Listening
+        // =====================================================================
+
+        /**
+         * Start listening for parameter changes from the hardware front panel.
+         * When the user changes parameters on the S-330, DT1 messages are broadcast.
+         */
+        startListening(): void {
+            if (listening) return;
+
+            midiAdapter.onSysEx(parameterSysExListener);
+            listening = true;
+            console.log('[S330Client] Started listening for hardware parameter changes');
+        },
+
+        /**
+         * Stop listening for parameter changes from the hardware.
+         */
+        stopListening(): void {
+            if (!listening) return;
+
+            midiAdapter.removeSysExListener(parameterSysExListener);
+            listening = false;
+            console.log('[S330Client] Stopped listening for hardware parameter changes');
+        },
+
+        /**
+         * Check if currently listening for hardware parameter changes
+         */
+        isListening(): boolean {
+            return listening;
+        },
+
+        /**
+         * Register a callback to be notified when parameters change on the hardware.
+         * @param callback - Function to call with the parameter change event
+         */
+        onParameterChange(callback: ParameterChangeCallback): void {
+            parameterListeners.add(callback);
+        },
+
+        /**
+         * Remove a previously registered parameter change callback.
+         * @param callback - The callback function to remove
+         */
+        removeParameterChangeListener(callback: ParameterChangeCallback): void {
+            parameterListeners.delete(callback);
         },
 
     };

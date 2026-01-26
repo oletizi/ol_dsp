@@ -54,6 +54,9 @@ export function PlayPage() {
     loadingProgress,
     loadingMessage,
     error,
+    hardwareChangeVersion,
+    lastHardwareChange,
+    notifyHardwareChange,
   } = useS330Store();
 
   const isConnected = status === 'connected' && adapter !== null;
@@ -64,6 +67,14 @@ export function PlayPage() {
   // Local state for patches (sparse array - undefined = not loaded)
   const [patches, setPatches] = useState<(S330Patch | undefined)[]>([]);
   const [loadedPatchBanks, setLoadedPatchBanks] = useState<Set<number>>(new Set());
+
+  // Track last processed hardware change to prevent refetch loops
+  const lastProcessedChangeRef = useRef<number>(0);
+
+  // Debounce timer for hardware change refetch
+  // Delay refetch until user releases button to avoid feedback loop
+  const refetchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const REFETCH_DEBOUNCE_MS = 500; // Wait 500ms after last change before refetch
 
   // MIDI parts - loaded from S-330 function parameters
   const [parts, setParts] = useState<MidiPart[]>(
@@ -85,8 +96,20 @@ export function PlayPage() {
       clientRef.current = null;
       return;
     }
-    clientRef.current = createS330Client(adapter, { deviceId });
-  }, [adapter, deviceId]);
+    const client = createS330Client(adapter, { deviceId });
+    clientRef.current = client;
+
+    // Start listening for hardware parameter changes
+    client.startListening();
+    client.onParameterChange((event) => {
+      console.log('[PlayPage] Hardware parameter change:', event.type, 'index:', event.index);
+      notifyHardwareChange(event.type, event.index);
+    });
+
+    return () => {
+      client.stopListening();
+    };
+  }, [adapter, deviceId, notifyHardwareChange]);
 
   // Sync loaded state from client cache on mount
   useEffect(() => {
@@ -216,6 +239,74 @@ export function PlayPage() {
 
     loadInitialData();
   }, [adapter, partsLoaded, loadInitialData]);
+
+  // Handle hardware parameter changes with debounced refetch
+  // Wait for user to release button before refetching to avoid feedback loop
+  useEffect(() => {
+    // Skip if we've already processed this change
+    if (hardwareChangeVersion <= lastProcessedChangeRef.current) {
+      return;
+    }
+
+    // Skip if no change
+    if (lastHardwareChange.type === null) {
+      return;
+    }
+
+    // Mark this change as processed
+    lastProcessedChangeRef.current = hardwareChangeVersion;
+
+    const changeType = lastHardwareChange.type;
+    const itemIndex = lastHardwareChange.index;
+
+    console.log(`[PlayPage] Hardware changed ${changeType}${itemIndex !== null ? ` ${itemIndex}` : ''} - scheduling debounced refetch`);
+
+    // Clear any pending refetch
+    if (refetchTimerRef.current) {
+      clearTimeout(refetchTimerRef.current);
+    }
+
+    // Schedule debounced refetch - wait for user to release button
+    refetchTimerRef.current = setTimeout(async () => {
+      if (!clientRef.current) return;
+
+      try {
+        if (changeType === 'function') {
+          console.log('[PlayPage] Refetching function parameters after debounce');
+          const configs = await clientRef.current.requestFunctionParameters();
+          setParts((prev) =>
+            prev.map((part, i) => ({
+              ...part,
+              channel: configs[i]?.channel ?? i,
+              patchIndex: configs[i]?.patchIndex ?? null,
+              output: configs[i]?.output ?? 1,
+              level: configs[i]?.level ?? 127,
+            }))
+          );
+        } else if (changeType === 'patch' && itemIndex !== null && itemIndex >= 0) {
+          console.log(`[PlayPage] Refetching patch ${itemIndex} after debounce`);
+          await clientRef.current.loadPatchRange(itemIndex, 1, undefined, (index, patch) => {
+            setPatches((prev) => {
+              const updated = [...prev];
+              updated[index] = patch;
+              return updated;
+            });
+          }, true);
+        }
+      } catch (err) {
+        console.error(`[PlayPage] Failed to refetch after hardware change:`, err);
+      }
+    }, REFETCH_DEBOUNCE_MS);
+  }, [hardwareChangeVersion, lastHardwareChange]);
+
+  // Cleanup refetch timer on unmount
+  useEffect(() => {
+    return () => {
+      if (refetchTimerRef.current) {
+        clearTimeout(refetchTimerRef.current);
+      }
+    };
+  }, []);
 
   // Update patch names based on patchIndex loaded from function parameters
   useEffect(() => {

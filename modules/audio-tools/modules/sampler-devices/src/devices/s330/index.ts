@@ -241,6 +241,8 @@ export type {
     ToneNameInfo,
     MultiPartConfig,
     S330DataType,
+    ParameterChangeCallback,
+    ParameterChangeEvent,
 } from './s330-client.js';
 
 export {
@@ -251,3 +253,18 @@ export {
     S330_DATA_TYPES,
     S330_FUNCTION_ADDRESSES,
 } from './s330-client.js';
+
+// =============================================================================
+// Parameter Listener Exports
+// =============================================================================
+
+export type {
+    ParameterChangeType,
+    ParseResult,
+} from './s330-parameter-listener.js';
+
+export {
+    parseDT1Message,
+    isDT1Message,
+    isUIStateAddress,
+} from './s330-parameter-listener.js';
