@@ -2,7 +2,7 @@
  * Patches page - View and edit S-330 patches
  *
  * Data is cached in the S330 client - this page only manages UI state.
- * Loads first bank (32 patches) by default for faster startup.
+ * Loads first bank (8 patches) by default for faster startup.
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -57,7 +57,7 @@ export function PatchesPage() {
     clientRef.current = createS330Client(adapter, { deviceId });
   }, [adapter, deviceId]);
 
-  // Load a specific range of patches
+  // Load a specific range of patches (updates UI progressively)
   const loadPatchBank = useCallback(async (bankIndex: number) => {
     if (!clientRef.current) return;
 
@@ -68,23 +68,30 @@ export function PatchesPage() {
       setLoading(true, `Loading patches ${startIndex + 1}-${startIndex + count}...`);
       setError(null);
 
-      await clientRef.current.connect();
-      const loadedPatches = await clientRef.current.loadPatchRange(startIndex, count, (current, total) => {
-        setProgress(current, total);
-      });
-
-      // Update local state with loaded patches
+      // Ensure array is large enough before loading
       setPatches((prev) => {
+        if (prev.length >= TOTAL_PATCHES) return prev;
         const updated = [...prev];
-        // Ensure array is large enough
         while (updated.length < TOTAL_PATCHES) updated.push(undefined);
-        loadedPatches.forEach((patch, i) => {
-          updated[startIndex + i] = patch;
-        });
         return updated;
       });
-      setLoadedPatchBanks((prev) => new Set([...prev, bankIndex]));
 
+      await clientRef.current.connect();
+      await clientRef.current.loadPatchRange(
+        startIndex,
+        count,
+        (current, total) => setProgress(current, total),
+        // Update UI immediately when each patch is loaded
+        (index, patch) => {
+          setPatches((prev) => {
+            const updated = [...prev];
+            updated[index] = patch;
+            return updated;
+          });
+        }
+      );
+
+      setLoadedPatchBanks((prev) => new Set([...prev, bankIndex]));
       clearProgress();
       setLoading(false);
     } catch (err) {
@@ -95,7 +102,7 @@ export function PatchesPage() {
     }
   }, [setLoading, setError, setProgress, clearProgress]);
 
-  // Load a specific range of tones
+  // Load a specific range of tones (updates UI progressively)
   const loadToneBank = useCallback(async (bankIndex: number) => {
     if (!clientRef.current) return;
 
@@ -106,21 +113,29 @@ export function PatchesPage() {
       setLoading(true, `Loading tones ${startIndex + 1}-${startIndex + count}...`);
       setError(null);
 
-      await clientRef.current.connect();
-      const loadedTones = await clientRef.current.loadToneRange(startIndex, count, (current, total) => {
-        setProgress(current, total);
-      });
-
-      // Update local state with loaded tones
+      // Ensure array is large enough before loading
       setTones((prev) => {
+        if (prev.length >= TOTAL_TONES) return prev;
         const updated = [...prev];
-        // Ensure array is large enough
         while (updated.length < TOTAL_TONES) updated.push(undefined);
-        loadedTones.forEach((tone, i) => {
-          updated[startIndex + i] = tone;
-        });
         return updated;
       });
+
+      await clientRef.current.connect();
+      await clientRef.current.loadToneRange(
+        startIndex,
+        count,
+        (current, total) => setProgress(current, total),
+        // Update UI immediately when each tone is loaded
+        (index, tone) => {
+          setTones((prev) => {
+            const updated = [...prev];
+            updated[index] = tone;
+            return updated;
+          });
+        }
+      );
+
       setLoadedToneBanks((prev) => new Set([...prev, bankIndex]));
 
       clearProgress();
@@ -249,34 +264,21 @@ export function PatchesPage() {
         </div>
       )}
 
-      {/* Loading State */}
-      {isLoading && (
-        <div className="card text-center py-8">
-          {loadingProgress !== null ? (
-            <>
-              <div className="w-full max-w-md mx-auto mb-4">
-                <div className="h-2 bg-s330-bg rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-s330-highlight transition-all duration-150 ease-out"
-                    style={{ width: `${loadingProgress}%` }}
-                  />
-                </div>
-              </div>
-              <p className="text-s330-muted">
-                {loadingMessage}
-              </p>
-            </>
-          ) : (
-            <>
-              <div className="animate-spin w-8 h-8 border-2 border-s330-highlight border-t-transparent rounded-full mx-auto mb-4" />
-              <p className="text-s330-muted">{loadingMessage ?? 'Loading...'}</p>
-            </>
-          )}
+      {/* Loading Progress (inline) */}
+      {isLoading && loadingProgress !== null && (
+        <div className="w-full max-w-md">
+          <div className="h-2 bg-s330-bg rounded-full overflow-hidden">
+            <div
+              className="h-full bg-s330-highlight transition-all duration-150 ease-out"
+              style={{ width: `${loadingProgress}%` }}
+            />
+          </div>
+          <p className="text-s330-muted text-sm mt-1">{loadingMessage}</p>
         </div>
       )}
 
-      {/* Content */}
-      {!isLoading && loadedPatches.length > 0 && (
+      {/* Content - show while loading for progressive updates */}
+      {patches.length > 0 && (
         <div className="grid gap-6 lg:grid-cols-3">
           <div className="lg:col-span-1">
             <PatchList

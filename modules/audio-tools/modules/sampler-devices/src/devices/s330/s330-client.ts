@@ -217,6 +217,16 @@ function nibblize(bytes: number[]): number[] {
 export type ProgressCallback = (current: number, total: number) => void;
 
 /**
+ * Callback for when an individual patch is loaded
+ */
+export type PatchLoadedCallback = (index: number, patch: S330Patch) => void;
+
+/**
+ * Callback for when an individual tone is loaded
+ */
+export type ToneLoadedCallback = (index: number, tone: S330Tone) => void;
+
+/**
  * S-330 client interface for MIDI communication
  *
  * This interface provides semantic methods for interacting with the S-330.
@@ -232,16 +242,16 @@ export interface S330ClientInterface {
     getDeviceId(): number;
 
     // Patch operations (cached, single source of truth)
-    getAllPatches(onProgress?: ProgressCallback): Promise<S330Patch[]>;
-    loadPatchRange(startIndex: number, count: number, onProgress?: ProgressCallback): Promise<S330Patch[]>;
+    getAllPatches(onProgress?: ProgressCallback, onPatchLoaded?: PatchLoadedCallback): Promise<S330Patch[]>;
+    loadPatchRange(startIndex: number, count: number, onProgress?: ProgressCallback, onPatchLoaded?: PatchLoadedCallback): Promise<S330Patch[]>;
     getLoadedPatches(): (S330Patch | undefined)[];
     getPatch(patchIndex: number): Promise<S330Patch | null>;
     setPatch(patchIndex: number, patch: S330PatchCommon): Promise<void>;
     invalidatePatchCache(): void;
 
     // Tone operations (cached, single source of truth)
-    getAllTones(onProgress?: ProgressCallback): Promise<S330Tone[]>;
-    loadToneRange(startIndex: number, count: number, onProgress?: ProgressCallback): Promise<S330Tone[]>;
+    getAllTones(onProgress?: ProgressCallback, onToneLoaded?: ToneLoadedCallback): Promise<S330Tone[]>;
+    loadToneRange(startIndex: number, count: number, onProgress?: ProgressCallback, onToneLoaded?: ToneLoadedCallback): Promise<S330Tone[]>;
     getLoadedTones(): (S330Tone | undefined)[];
     getTone(toneIndex: number): Promise<S330Tone | null>;
     setTone(toneIndex: number, tone: S330Tone): Promise<void>;
@@ -742,7 +752,7 @@ export function createS330Client(
          * @param count - Number of patches to load
          * @param onProgress - Optional callback for progress updates (current, total)
          */
-        async loadPatchRange(startIndex: number, count: number, onProgress?: ProgressCallback): Promise<S330Patch[]> {
+        async loadPatchRange(startIndex: number, count: number, onProgress?: ProgressCallback, onPatchLoaded?: PatchLoadedCallback): Promise<S330Patch[]> {
             const endIndex = Math.min(startIndex + count, MAX_PATCHES);
             const actualCount = endIndex - startIndex;
 
@@ -754,29 +764,31 @@ export function createS330Client(
                 for (let i = startIndex; i < endIndex; i++) {
                     // Skip if already cached
                     if (patchCache[i] !== undefined) {
-                        result.push(patchCache[i]!);
+                        const patch = patchCache[i]!;
+                        result.push(patch);
                         loaded++;
                         onProgress?.(loaded, actualCount);
+                        onPatchLoaded?.(i, patch);
                         continue;
                     }
 
+                    let patch: S330Patch;
                     try {
                         const address = [0x00, 0x00, i * 4, 0x00];
                         const data = await requestDataWithAddress(address, PATCH_TOTAL_SIZE);
                         const common = parsePatchCommon(data);
-                        const patch = { common };
-                        patchCache[i] = patch;
-                        result.push(patch);
+                        patch = { common };
                     } catch {
                         // Create placeholder for failed reads
                         const placeholder = createEmptyPatchCommon(i);
                         placeholder.name = '!ERROR!';
-                        const patch = { common: placeholder };
-                        patchCache[i] = patch;
-                        result.push(patch);
+                        patch = { common: placeholder };
                     }
+                    patchCache[i] = patch;
+                    result.push(patch);
                     loaded++;
                     onProgress?.(loaded, actualCount);
+                    onPatchLoaded?.(i, patch);
                 }
 
                 patchCacheInitialized = true;
@@ -787,10 +799,11 @@ export function createS330Client(
 
         /**
          * Get all patches from the S-330, using cache if available.
-         * Fetches full patch data for all 64 patches.
+         * Fetches full patch data for all patches.
          * @param onProgress - Optional callback for progress updates (current, total)
+         * @param onPatchLoaded - Optional callback called after each patch is loaded
          */
-        async getAllPatches(onProgress?: ProgressCallback): Promise<S330Patch[]> {
+        async getAllPatches(onProgress?: ProgressCallback, onPatchLoaded?: PatchLoadedCallback): Promise<S330Patch[]> {
             // Check if all patches are cached
             const allCached = patchCacheInitialized && patchCache.every(p => p !== undefined);
             if (allCached) {
@@ -798,7 +811,7 @@ export function createS330Client(
             }
 
             // Load all patches
-            await this.loadPatchRange(0, MAX_PATCHES, onProgress);
+            await this.loadPatchRange(0, MAX_PATCHES, onProgress, onPatchLoaded);
             return patchCache as S330Patch[];
         },
 
@@ -864,8 +877,9 @@ export function createS330Client(
          * @param startIndex - Starting tone index (0-31)
          * @param count - Number of tones to load
          * @param onProgress - Optional callback for progress updates (current, total)
+         * @param onToneLoaded - Optional callback called after each tone is loaded
          */
-        async loadToneRange(startIndex: number, count: number, onProgress?: ProgressCallback): Promise<S330Tone[]> {
+        async loadToneRange(startIndex: number, count: number, onProgress?: ProgressCallback, onToneLoaded?: ToneLoadedCallback): Promise<S330Tone[]> {
             const endIndex = Math.min(startIndex + count, MAX_TONES);
             const actualCount = endIndex - startIndex;
 
@@ -877,28 +891,30 @@ export function createS330Client(
                 for (let i = startIndex; i < endIndex; i++) {
                     // Skip if already cached
                     if (toneCache[i] !== undefined) {
-                        result.push(toneCache[i]!);
+                        const tone = toneCache[i]!;
+                        result.push(tone);
                         loaded++;
                         onProgress?.(loaded, actualCount);
+                        onToneLoaded?.(i, tone);
                         continue;
                     }
 
+                    let tone: S330Tone;
                     try {
                         const byte2 = i * 2;
                         const address = [0x00, 0x03, byte2, 0x00];
                         const data = await requestDataWithAddress(address, TONE_BLOCK_SIZE);
-                        const tone = parseTone(data);
-                        toneCache[i] = tone;
-                        result.push(tone);
+                        tone = parseTone(data);
                     } catch {
                         // Create placeholder for failed reads
-                        const placeholder = parseTone(new Array(TONE_BLOCK_SIZE).fill(0));
-                        placeholder.name = '!ERROR!';
-                        toneCache[i] = placeholder;
-                        result.push(placeholder);
+                        tone = parseTone(new Array(TONE_BLOCK_SIZE).fill(0));
+                        tone.name = '!ERROR!';
                     }
+                    toneCache[i] = tone;
+                    result.push(tone);
                     loaded++;
                     onProgress?.(loaded, actualCount);
+                    onToneLoaded?.(i, tone);
                 }
 
                 toneCacheInitialized = true;
@@ -911,8 +927,9 @@ export function createS330Client(
          * Get all tones from the S-330, using cache if available.
          * Fetches full tone data for all 32 tones.
          * @param onProgress - Optional callback for progress updates (current, total)
+         * @param onToneLoaded - Optional callback called after each tone is loaded
          */
-        async getAllTones(onProgress?: ProgressCallback): Promise<S330Tone[]> {
+        async getAllTones(onProgress?: ProgressCallback, onToneLoaded?: ToneLoadedCallback): Promise<S330Tone[]> {
             // Check if all tones are cached
             const allCached = toneCacheInitialized && toneCache.every(t => t !== undefined);
             if (allCached) {
@@ -920,7 +937,7 @@ export function createS330Client(
             }
 
             // Load all tones
-            await this.loadToneRange(0, MAX_TONES, onProgress);
+            await this.loadToneRange(0, MAX_TONES, onProgress, onToneLoaded);
             return toneCache as S330Tone[];
         },
 

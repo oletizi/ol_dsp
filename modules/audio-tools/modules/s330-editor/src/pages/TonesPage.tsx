@@ -3,7 +3,7 @@
  *
  * Parameter changes are sent to the device in real-time.
  * Data is cached in the S330 client - this page only manages UI state.
- * Loads first bank (16 tones) by default for faster startup.
+ * Loads first bank (8 tones) by default for faster startup.
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -52,7 +52,7 @@ export function TonesPage() {
     clientRef.current = createS330Client(adapter, { deviceId });
   }, [adapter, deviceId]);
 
-  // Load a specific bank of tones
+  // Load a specific bank of tones (updates UI progressively)
   const loadToneBank = useCallback(async (bankIndex: number) => {
     if (!clientRef.current) return;
 
@@ -63,23 +63,30 @@ export function TonesPage() {
       setLoading(true, `Loading tones ${startIndex + 1}-${startIndex + count}...`);
       setError(null);
 
-      await clientRef.current.connect();
-      const loadedTones = await clientRef.current.loadToneRange(startIndex, count, (current, total) => {
-        setProgress(current, total);
-      });
-
-      // Update local state with loaded tones
+      // Ensure array is large enough before loading
       setTones((prev) => {
+        if (prev.length >= TOTAL_TONES) return prev;
         const updated = [...prev];
-        // Ensure array is large enough
         while (updated.length < TOTAL_TONES) updated.push(undefined);
-        loadedTones.forEach((tone, i) => {
-          updated[startIndex + i] = tone;
-        });
         return updated;
       });
-      setLoadedBanks((prev) => new Set([...prev, bankIndex]));
 
+      await clientRef.current.connect();
+      await clientRef.current.loadToneRange(
+        startIndex,
+        count,
+        (current, total) => setProgress(current, total),
+        // Update UI immediately when each tone is loaded
+        (index, tone) => {
+          setTones((prev) => {
+            const updated = [...prev];
+            updated[index] = tone;
+            return updated;
+          });
+        }
+      );
+
+      setLoadedBanks((prev) => new Set([...prev, bankIndex]));
       clearProgress();
       setLoading(false);
     } catch (err) {
@@ -199,34 +206,21 @@ export function TonesPage() {
         </div>
       )}
 
-      {/* Loading State */}
-      {isLoading && (
-        <div className="card text-center py-8">
-          {loadingProgress !== null ? (
-            <>
-              <div className="w-full max-w-md mx-auto mb-4">
-                <div className="h-2 bg-s330-bg rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-s330-highlight transition-all duration-150 ease-out"
-                    style={{ width: `${loadingProgress}%` }}
-                  />
-                </div>
-              </div>
-              <p className="text-s330-muted">
-                {loadingMessage}
-              </p>
-            </>
-          ) : (
-            <>
-              <div className="animate-spin w-8 h-8 border-2 border-s330-highlight border-t-transparent rounded-full mx-auto mb-4" />
-              <p className="text-s330-muted">{loadingMessage ?? 'Loading...'}</p>
-            </>
-          )}
+      {/* Loading Progress (inline) */}
+      {isLoading && loadingProgress !== null && (
+        <div className="w-full max-w-md">
+          <div className="h-2 bg-s330-bg rounded-full overflow-hidden">
+            <div
+              className="h-full bg-s330-highlight transition-all duration-150 ease-out"
+              style={{ width: `${loadingProgress}%` }}
+            />
+          </div>
+          <p className="text-s330-muted text-sm mt-1">{loadingMessage}</p>
         </div>
       )}
 
-      {/* Content */}
-      {!isLoading && loadedTonesArray.length > 0 && (
+      {/* Content - show while loading for progressive updates */}
+      {tones.length > 0 && (
         <div className="grid gap-6 lg:grid-cols-3">
           <div className="lg:col-span-1">
             <ToneList

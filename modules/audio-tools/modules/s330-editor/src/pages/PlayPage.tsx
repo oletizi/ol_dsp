@@ -3,7 +3,7 @@
  *
  * Shows 8 MIDI parts (A-H) with their patch assignments,
  * output routing, and levels.
- * Loads first bank (32 patches) by default for faster startup.
+ * Loads first bank (8 patches) by default for faster startup.
  */
 
 import { useEffect, useState, useRef, useCallback } from 'react';
@@ -88,7 +88,7 @@ export function PlayPage() {
     clientRef.current = createS330Client(adapter, { deviceId });
   }, [adapter, deviceId]);
 
-  // Load a specific bank of patches
+  // Load a specific bank of patches (updates UI progressively)
   const loadPatchBank = useCallback(async (bankIndex: number) => {
     if (!clientRef.current) return;
 
@@ -99,23 +99,30 @@ export function PlayPage() {
       setLoading(true, `Loading patches ${startIndex + 1}-${startIndex + count}...`);
       setError(null);
 
-      await clientRef.current.connect();
-      const loadedPatches = await clientRef.current.loadPatchRange(startIndex, count, (current, total) => {
-        setProgress(current, total);
-      });
-
-      // Update local state with loaded patches
+      // Ensure array is large enough before loading
       setPatches((prev) => {
+        if (prev.length >= TOTAL_PATCHES) return prev;
         const updated = [...prev];
-        // Ensure array is large enough
         while (updated.length < TOTAL_PATCHES) updated.push(undefined);
-        loadedPatches.forEach((patch, i) => {
-          updated[startIndex + i] = patch;
-        });
         return updated;
       });
-      setLoadedPatchBanks((prev) => new Set([...prev, bankIndex]));
 
+      await clientRef.current.connect();
+      await clientRef.current.loadPatchRange(
+        startIndex,
+        count,
+        (current, total) => setProgress(current, total),
+        // Update UI immediately when each patch is loaded
+        (index, patch) => {
+          setPatches((prev) => {
+            const updated = [...prev];
+            updated[index] = patch;
+            return updated;
+          });
+        }
+      );
+
+      setLoadedPatchBanks((prev) => new Set([...prev, bankIndex]));
       clearProgress();
       setLoading(false);
     } catch (err) {
@@ -343,6 +350,26 @@ export function PlayPage() {
         </div>
       </div>
 
+      {/* Error Display */}
+      {error && (
+        <div className="bg-red-500/20 border border-red-500 rounded-md p-3">
+          <p className="text-red-200 text-sm">{error}</p>
+        </div>
+      )}
+
+      {/* Loading Progress (inline) */}
+      {isLoading && loadingProgress !== null && (
+        <div className="w-full max-w-md">
+          <div className="h-2 bg-s330-bg rounded-full overflow-hidden">
+            <div
+              className="h-full bg-s330-highlight transition-all duration-150 ease-out"
+              style={{ width: `${loadingProgress}%` }}
+            />
+          </div>
+          <p className="text-s330-muted text-sm mt-1">{loadingMessage}</p>
+        </div>
+      )}
+
       {/* Parts Grid */}
       <div className="bg-s330-panel border border-s330-accent rounded-md overflow-hidden">
         {/* Parts Grid */}
@@ -505,35 +532,6 @@ export function PlayPage() {
         </div>
       </div>
 
-      {/* Error display */}
-      {error && (
-        <div className="bg-red-500/20 border border-red-500 rounded-md p-3">
-          <p className="text-red-200 text-sm">{error}</p>
-        </div>
-      )}
-
-      {/* Loading indicator */}
-      {isLoading && (
-        <div className="card text-center py-6">
-          {loadingProgress !== null ? (
-            <>
-              <div className="w-full max-w-md mx-auto mb-4">
-                <div className="h-2 bg-s330-bg rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-s330-highlight transition-all duration-150 ease-out"
-                    style={{ width: `${loadingProgress}%` }}
-                  />
-                </div>
-              </div>
-              <p className="text-s330-muted text-sm">
-                {loadingMessage}
-              </p>
-            </>
-          ) : (
-            <div className="animate-spin w-6 h-6 border-2 border-s330-highlight border-t-transparent rounded-full mx-auto" />
-          )}
-        </div>
-      )}
     </div>
   );
 }
