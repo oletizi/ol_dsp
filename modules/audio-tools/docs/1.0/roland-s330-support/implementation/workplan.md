@@ -8,6 +8,9 @@
 - [#46 - Complete S-330 parameter coverage audit](https://github.com/oletizi/ol_dsp/issues/46)
 - [#47 - Improve S-330 editor error handling](https://github.com/oletizi/ol_dsp/issues/47)
 - [#48 - Write S-330 editor user documentation](https://github.com/oletizi/ol_dsp/issues/48)
+- [#66 - Virtual Front Panel](https://github.com/oletizi/ol_dsp/issues/66) (Phase 7)
+  - [#67 - Create S330 front panel controller](https://github.com/oletizi/ol_dsp/issues/67)
+  - [#68 - Create virtual front panel React components](https://github.com/oletizi/ol_dsp/issues/68)
 
 ## Technical Approach
 
@@ -23,17 +26,19 @@
 │  - ToneList          │  - UI state     │                    │
 │  - ToneEditor        │                 │                    │
 │  - PlayPage          │                 │                    │
+│  - VirtualFrontPanel │                 │                    │
+│  - VideoCapture      │                 │                    │
 └──────────────────────┴─────────────────┴────────────────────┘
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────┐
 │              sampler-devices/s330 (Library)                  │
 ├─────────────────────────────────────────────────────────────┤
-│  S330Client          │  Messages       │  Addresses         │
-│  - connect()         │  - encode()     │  - PATCH_BASE      │
-│  - getPatches()      │  - decode()     │  - TONE_BASE       │
-│  - getTones()        │  - checksum()   │  - SYSTEM_BASE     │
-│  - writeParam()      │                 │                    │
+│  S330Client          │  Messages       │  FrontPanel        │
+│  - connect()         │  - encode()     │  - pressButton()   │
+│  - getPatches()      │  - decode()     │  - NAV_BUTTONS     │
+│  - getTones()        │  - checksum()   │  - FUNC_BUTTONS    │
+│  - writeParam()      │                 │  - buildMessage()  │
 └──────────────────────┴─────────────────┴────────────────────┘
                               │
                               ▼
@@ -161,6 +166,73 @@ For S-330 SysEx protocol details (address maps, message formats, checksum calcul
 - Known limitations documented
 - Release artifacts created
 
+### Phase 7: Virtual Front Panel (Pending)
+
+**Goal:** Add clickable virtual front panel that mirrors S-330's physical controls and sends SysEx button messages
+
+**Reference:** [S-330 Front Panel SysEx Documentation](../../s330_front_panel_sysex.md)
+
+**Tasks:**
+- [ ] Create `s330-front-panel.ts` controller in sampler-devices with button constants and DT1 message building
+- [ ] Add unit tests for front panel message encoding and checksum
+- [ ] Create `useFrontPanel` hook wired to midiStore adapter
+- [ ] Create `FrontPanelButton` component with press feedback
+- [ ] Create `NavigationPad` component (D-pad: Up/Down/Left/Right)
+- [ ] Create `ValueButtons` component (Inc/Dec)
+- [ ] Create `FunctionButtonRow` component (MODE, MENU, SUB MENU, COM, Execute)
+- [ ] Create `VirtualFrontPanel` floating panel container (draggable, resizable)
+- [ ] Integrate into Layout.tsx alongside VideoCapture
+- [ ] Manual testing with hardware
+
+**Technical Details:**
+
+Button Message Format:
+```
+F0 41 [dev] 1E 12 00 04 00 00 [cat] [code] [checksum] F7
+```
+
+Navigation Buttons (Category `0x09`) - Press + 150ms delay + Release:
+| Button | Press | Release |
+|--------|-------|---------|
+| Right  | 09 00 | 09 08   |
+| Left   | 09 01 | 09 09   |
+| Up     | 09 02 | 09 0A   |
+| Down   | 09 03 | 09 0B   |
+| Inc    | 09 04 | 09 0C   |
+| Dec    | 09 05 | 09 0D   |
+
+Function Buttons (Category `0x01`) - Single Message:
+| Button    | Code  |
+|-----------|-------|
+| MODE      | 01 0B |
+| MENU      | 01 0C |
+| SUB MENU  | 01 0D |
+| COM       | 01 0E |
+| Execute   | 01 0F |
+
+**UI Layout:**
+```
+┌─────────────────────────────────────────────────┐
+│ S-330 Controls                          [_] [X] │
+├─────────────────────────────────────────────────┤
+│  [ MODE ] [ MENU ] [ SUB ] [ COM ] [Execute]    │
+│              ┌─────┐                            │
+│              │  ↑  │                            │
+│        ┌─────┼─────┼─────┐                      │
+│        │  ←  │     │  →  │     [ Dec ] [ Inc ]  │
+│        └─────┼─────┼─────┘                      │
+│              │  ↓  │                            │
+│              └─────┘                            │
+└─────────────────────────────────────────────────┘
+```
+
+**Success Criteria:**
+- Virtual buttons send correct SysEx messages to hardware
+- S-330 responds to button presses (verified with video capture)
+- Panel is draggable/resizable with position persistence
+- Buttons disabled when MIDI not connected
+- Visual press feedback during button activation
+
 ## Dependencies
 
 | Dependency | Type | Status |
@@ -187,3 +259,4 @@ For S-330 SysEx protocol details (address maps, message formats, checksum calcul
 | Phase 4: Deployment | Complete | Live on Netlify |
 | Phase 5: Bug Fixes | In Progress | Address fixes done |
 | Phase 6: Documentation | Pending | Target: next milestone |
+| Phase 7: Virtual Front Panel | Pending | New feature - remote control |

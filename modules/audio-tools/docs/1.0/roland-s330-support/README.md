@@ -17,6 +17,9 @@ Web-based editor for the Roland S-330 12-bit sampler, providing modern patch and
 - [#46 - Complete S-330 parameter coverage audit](https://github.com/oletizi/ol_dsp/issues/46)
 - [#47 - Improve S-330 editor error handling](https://github.com/oletizi/ol_dsp/issues/47)
 - [#48 - Write S-330 editor user documentation](https://github.com/oletizi/ol_dsp/issues/48)
+- [#66 - Virtual Front Panel](https://github.com/oletizi/ol_dsp/issues/66) (New Feature)
+  - [#67 - Create S330 front panel controller in sampler-devices](https://github.com/oletizi/ol_dsp/issues/67)
+  - [#68 - Create virtual front panel React components](https://github.com/oletizi/ol_dsp/issues/68)
 
 ## Affected Modules
 
@@ -28,6 +31,7 @@ Web-based editor for the Roland S-330 12-bit sampler, providing modern patch and
 - [PRD](./prd.md) - Product Requirements Document
 - [Workplan](./implementation/workplan.md) - Implementation plan and task breakdown
 - [S-330 SysEx Reference](../s330_sysex.md) - Authoritative protocol documentation
+- [S-330 Front Panel SysEx](../s330_front_panel_sysex.md) - Remote control button messages (undocumented feature)
 
 ## Quick Links
 
@@ -43,6 +47,8 @@ New web application module providing:
 - Patch list and editor interfaces
 - Tone list and editor interfaces
 - Play mode with device monitoring
+- Video capture panel for viewing S-330's physical display
+- Virtual Front Panel for remote control via SysEx button messages (planned)
 - Netlify deployment configuration
 
 ### @oletizi/sampler-devices
@@ -54,3 +60,4 @@ Additions to existing module:
   - `s330-params.ts` - Parameter definitions
   - `s330-messages.ts` - Message encoding/decoding
   - `s330-types.ts` - TypeScript type definitions
+  - `s330-front-panel.ts` - Front panel button controller (planned)

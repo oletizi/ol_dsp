@@ -19,6 +19,7 @@ The Roland S-330 is a classic 12-bit sampler from 1987 that lacks modern editing
 - As a musician, I want to see all patch parameters at once so that I can quickly understand and modify my sounds
 - As a live performer, I want a "Play" mode where I can trigger and monitor the sampler's state
 - As a vintage gear collector, I want to back up and document my S-330 sounds
+- As a user with a video capture setup, I want a virtual front panel next to the video feed so I can control the S-330's native interface remotely via mouse clicks
 
 ## Success Criteria
 
@@ -33,6 +34,7 @@ The Roland S-330 is a classic 12-bit sampler from 1987 that lacks modern editing
 - [ ] Complete parameter coverage for all S-330 SysEx addresses
 - [ ] Comprehensive error handling for MIDI disconnections
 - [ ] User documentation and setup guide
+- [ ] Virtual Front Panel with remote control capabilities
 
 ## Scope
 
@@ -43,6 +45,8 @@ The Roland S-330 is a classic 12-bit sampler from 1987 that lacks modern editing
 - SysEx message encoding/decoding for S-330 protocol
 - Patch and tone editing interfaces
 - Play mode for triggering and monitoring
+- Virtual Front Panel for remote control via SysEx button messages
+- Video capture display for viewing S-330's physical screen
 - Netlify deployment configuration
 - Basic MIDI setup instructions
 
@@ -66,6 +70,17 @@ The Roland S-330 is a classic 12-bit sampler from 1987 that lacks modern editing
 For detailed S-330 MIDI protocol documentation including SysEx message formats, address maps, and parameter definitions, see the authoritative reference:
 
 **[S-330 SysEx Documentation](../s330_sysex.md)**
+
+### Front Panel Remote Control
+
+The S-330 accepts DT1 SysEx messages to address `00 04 00 00` that simulate physical button presses. This undocumented feature (discovered January 2026) enables full remote control of the S-330's native UI:
+
+**[S-330 Front Panel SysEx Documentation](../s330_front_panel_sysex.md)**
+
+Supported controls:
+- Navigation: Up, Down, Left, Right arrows
+- Value: Inc (increment), Dec (decrement)
+- Function: MODE, MENU, SUB MENU, COM, Execute
 
 ## Open Questions
 
