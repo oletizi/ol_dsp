@@ -34,7 +34,7 @@ const FUNCTION_BUTTONS: { button: FunctionButton; label: string }[] = [
  */
 export function FunctionButtonRow({ onPress, activeButton, disabled = false }: FunctionButtonRowProps) {
     return (
-        <div className="flex gap-1 flex-wrap">
+        <div className="flex gap-1">
             {FUNCTION_BUTTONS.map(({ button, label }) => (
                 <FrontPanelButton
                     key={button}
@@ -44,6 +44,7 @@ export function FunctionButtonRow({ onPress, activeButton, disabled = false }: F
                     isActive={activeButton === button}
                     disabled={disabled}
                     size="sm"
+                    className="flex-1 px-1"
                 />
             ))}
         </div>
