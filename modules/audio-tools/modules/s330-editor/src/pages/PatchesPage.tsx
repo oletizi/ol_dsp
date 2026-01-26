@@ -57,6 +57,42 @@ export function PatchesPage() {
     clientRef.current = createS330Client(adapter, { deviceId });
   }, [adapter, deviceId]);
 
+  // Sync loaded state from client cache on mount
+  useEffect(() => {
+    if (!clientRef.current) return;
+
+    // Check patch banks
+    const cachedPatches = clientRef.current.getLoadedPatches();
+    const patchBanksWithData = new Set<number>();
+    for (let bank = 0; bank < 2; bank++) {
+      const startIndex = bank * PATCHES_PER_BANK;
+      const hasData = cachedPatches.slice(startIndex, startIndex + PATCHES_PER_BANK).some(p => p !== undefined);
+      if (hasData) {
+        patchBanksWithData.add(bank);
+      }
+    }
+
+    // Check tone banks
+    const cachedTones = clientRef.current.getLoadedTones();
+    const toneBanksWithData = new Set<number>();
+    for (let bank = 0; bank < 4; bank++) {
+      const startIndex = bank * TONES_PER_BANK;
+      const hasData = cachedTones.slice(startIndex, startIndex + TONES_PER_BANK).some(t => t !== undefined);
+      if (hasData) {
+        toneBanksWithData.add(bank);
+      }
+    }
+
+    if (patchBanksWithData.size > 0) {
+      setLoadedPatchBanks(patchBanksWithData);
+      setPatches(cachedPatches);
+    }
+    if (toneBanksWithData.size > 0) {
+      setLoadedToneBanks(toneBanksWithData);
+      setTones(cachedTones);
+    }
+  }, [adapter, deviceId]);
+
   // Load a specific range of patches (updates UI progressively)
   const loadPatchBank = useCallback(async (bankIndex: number, forceReload = false) => {
     if (!clientRef.current) return;
@@ -104,14 +140,14 @@ export function PatchesPage() {
   }, [setLoading, setError, setProgress, clearProgress]);
 
   // Load a specific range of tones (updates UI progressively)
-  const loadToneBank = useCallback(async (bankIndex: number) => {
+  const loadToneBank = useCallback(async (bankIndex: number, forceReload = false) => {
     if (!clientRef.current) return;
 
     const startIndex = bankIndex * TONES_PER_BANK;
     const count = TONES_PER_BANK;
 
     try {
-      setLoading(true, `Loading tones ${startIndex + 1}-${startIndex + count}...`);
+      setLoading(true, `${forceReload ? 'Reloading' : 'Loading'} tones ${startIndex + 1}-${startIndex + count}...`);
       setError(null);
 
       // Ensure array is large enough before loading
@@ -134,7 +170,8 @@ export function PatchesPage() {
             updated[index] = tone;
             return updated;
           });
-        }
+        },
+        forceReload
       );
 
       setLoadedToneBanks((prev) => new Set([...prev, bankIndex]));
@@ -156,7 +193,8 @@ export function PatchesPage() {
   }, [loadPatchBank, loadToneBank]);
 
   // Refresh: invalidate cache and reload first bank
-  const handleRefresh = useCallback(async () => {
+  // Load all patches and tones
+  const loadAll = useCallback(async () => {
     if (!clientRef.current) return;
 
     clientRef.current.invalidatePatchCache();
@@ -165,8 +203,17 @@ export function PatchesPage() {
     setTones([]);
     setLoadedPatchBanks(new Set());
     setLoadedToneBanks(new Set());
-    await loadInitialData();
-  }, [loadInitialData]);
+
+    // Load all 2 patch banks
+    for (let bank = 0; bank < 2; bank++) {
+      await loadPatchBank(bank, true);
+    }
+
+    // Load all 4 tone banks
+    for (let bank = 0; bank < 4; bank++) {
+      await loadToneBank(bank, true);
+    }
+  }, [loadPatchBank, loadToneBank]);
 
   // Handle patch updates from the editor
   const handlePatchUpdate = useCallback((index: number, patch: S330Patch) => {
@@ -227,27 +274,56 @@ export function PatchesPage() {
               <p className="text-s330-muted text-xs mt-0.5 truncate">{loadingMessage}</p>
             </div>
           )}
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-s330-muted">(Re)load:</span>
             <button
-              onClick={() => loadPatchBank(0, loadedPatchBanks.has(0))}
+              onClick={() => loadPatchBank(0, true)}
               disabled={isLoading}
-              className={cn('btn btn-primary', isLoading && 'opacity-50')}
+              className={cn('btn', loadedPatchBanks.has(0) ? 'btn-secondary' : 'btn-primary', isLoading && 'opacity-50')}
             >
-              {loadedPatchBanks.has(0) ? 'Reload' : 'Load'} Patches 1-8
+              P11-P18
             </button>
             <button
-              onClick={() => loadPatchBank(1, loadedPatchBanks.has(1))}
+              onClick={() => loadPatchBank(1, true)}
               disabled={isLoading}
-              className={cn('btn btn-primary', isLoading && 'opacity-50')}
+              className={cn('btn', loadedPatchBanks.has(1) ? 'btn-secondary' : 'btn-primary', isLoading && 'opacity-50')}
             >
-              {loadedPatchBanks.has(1) ? 'Reload' : 'Load'} Patches 9-16
+              P21-P28
             </button>
             <button
-              onClick={handleRefresh}
+              onClick={() => loadToneBank(0, true)}
+              disabled={isLoading}
+              className={cn('btn', loadedToneBanks.has(0) ? 'btn-secondary' : 'btn-primary', isLoading && 'opacity-50')}
+            >
+              T11-T18
+            </button>
+            <button
+              onClick={() => loadToneBank(1, true)}
+              disabled={isLoading}
+              className={cn('btn', loadedToneBanks.has(1) ? 'btn-secondary' : 'btn-primary', isLoading && 'opacity-50')}
+            >
+              T21-T28
+            </button>
+            <button
+              onClick={() => loadToneBank(2, true)}
+              disabled={isLoading}
+              className={cn('btn', loadedToneBanks.has(2) ? 'btn-secondary' : 'btn-primary', isLoading && 'opacity-50')}
+            >
+              T31-T38
+            </button>
+            <button
+              onClick={() => loadToneBank(3, true)}
+              disabled={isLoading}
+              className={cn('btn', loadedToneBanks.has(3) ? 'btn-secondary' : 'btn-primary', isLoading && 'opacity-50')}
+            >
+              T41-T48
+            </button>
+            <button
+              onClick={loadAll}
               disabled={isLoading}
               className={cn('btn btn-secondary', isLoading && 'opacity-50')}
             >
-              {isLoading ? 'Loading...' : 'Refresh All'}
+              All
             </button>
           </div>
         </div>

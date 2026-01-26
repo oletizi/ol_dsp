@@ -52,6 +52,28 @@ export function TonesPage() {
     clientRef.current = createS330Client(adapter, { deviceId });
   }, [adapter, deviceId]);
 
+  // Sync loaded state from client cache on mount
+  useEffect(() => {
+    if (!clientRef.current) return;
+
+    const cachedTones = clientRef.current.getLoadedTones();
+    const banksWithData = new Set<number>();
+
+    // Check each bank to see if it has cached data
+    for (let bank = 0; bank < 4; bank++) {
+      const startIndex = bank * TONES_PER_BANK;
+      const hasData = cachedTones.slice(startIndex, startIndex + TONES_PER_BANK).some(t => t !== undefined);
+      if (hasData) {
+        banksWithData.add(bank);
+      }
+    }
+
+    if (banksWithData.size > 0) {
+      setLoadedBanks(banksWithData);
+      setTones(cachedTones);
+    }
+  }, [adapter, deviceId]);
+
   // Load a specific bank of tones (updates UI progressively)
   const loadToneBank = useCallback(async (bankIndex: number, forceReload = false) => {
     if (!clientRef.current) return;
@@ -128,14 +150,19 @@ export function TonesPage() {
   }, [selectedToneIndex, tones, setError]);
 
   // Refresh: invalidate cache and reload first bank
-  const handleRefresh = useCallback(async () => {
+  // Load all tone banks
+  const loadAllTones = useCallback(async () => {
     if (!clientRef.current) return;
 
     clientRef.current.invalidateToneCache();
     setTones([]);
     setLoadedBanks(new Set());
-    await loadInitialData();
-  }, [loadInitialData]);
+
+    // Load all 4 tone banks sequentially
+    for (let bank = 0; bank < 4; bank++) {
+      await loadToneBank(bank, true);
+    }
+  }, [loadToneBank]);
 
   // Auto-load initial data when connected
   useEffect(() => {
@@ -185,41 +212,42 @@ export function TonesPage() {
               <p className="text-s330-muted text-xs mt-0.5 truncate">{loadingMessage}</p>
             </div>
           )}
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-s330-muted">(Re)load:</span>
             <button
-              onClick={() => loadToneBank(0, loadedBanks.has(0))}
+              onClick={() => loadToneBank(0, true)}
               disabled={isLoading}
-              className={cn('btn btn-primary', isLoading && 'opacity-50')}
+              className={cn('btn', loadedBanks.has(0) ? 'btn-secondary' : 'btn-primary', isLoading && 'opacity-50')}
             >
-              {loadedBanks.has(0) ? 'Reload' : 'Load'} 1-8
+              T11-T18
             </button>
             <button
-              onClick={() => loadToneBank(1, loadedBanks.has(1))}
+              onClick={() => loadToneBank(1, true)}
               disabled={isLoading}
-              className={cn('btn btn-primary', isLoading && 'opacity-50')}
+              className={cn('btn', loadedBanks.has(1) ? 'btn-secondary' : 'btn-primary', isLoading && 'opacity-50')}
             >
-              {loadedBanks.has(1) ? 'Reload' : 'Load'} 9-16
+              T21-T28
             </button>
             <button
-              onClick={() => loadToneBank(2, loadedBanks.has(2))}
+              onClick={() => loadToneBank(2, true)}
               disabled={isLoading}
-              className={cn('btn btn-primary', isLoading && 'opacity-50')}
+              className={cn('btn', loadedBanks.has(2) ? 'btn-secondary' : 'btn-primary', isLoading && 'opacity-50')}
             >
-              {loadedBanks.has(2) ? 'Reload' : 'Load'} 17-24
+              T31-T38
             </button>
             <button
-              onClick={() => loadToneBank(3, loadedBanks.has(3))}
+              onClick={() => loadToneBank(3, true)}
               disabled={isLoading}
-              className={cn('btn btn-primary', isLoading && 'opacity-50')}
+              className={cn('btn', loadedBanks.has(3) ? 'btn-secondary' : 'btn-primary', isLoading && 'opacity-50')}
             >
-              {loadedBanks.has(3) ? 'Reload' : 'Load'} 25-32
+              T41-T48
             </button>
             <button
-              onClick={handleRefresh}
+              onClick={loadAllTones}
               disabled={isLoading}
               className={cn('btn btn-secondary', isLoading && 'opacity-50')}
             >
-              {isLoading ? 'Loading...' : 'Refresh All'}
+              All
             </button>
           </div>
         </div>

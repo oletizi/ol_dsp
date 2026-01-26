@@ -88,6 +88,28 @@ export function PlayPage() {
     clientRef.current = createS330Client(adapter, { deviceId });
   }, [adapter, deviceId]);
 
+  // Sync loaded state from client cache on mount
+  useEffect(() => {
+    if (!clientRef.current) return;
+
+    const cachedPatches = clientRef.current.getLoadedPatches();
+    const banksWithData = new Set<number>();
+
+    // Check each bank to see if it has cached data
+    for (let bank = 0; bank < 2; bank++) {
+      const startIndex = bank * PATCHES_PER_BANK;
+      const hasData = cachedPatches.slice(startIndex, startIndex + PATCHES_PER_BANK).some(p => p !== undefined);
+      if (hasData) {
+        banksWithData.add(bank);
+      }
+    }
+
+    if (banksWithData.size > 0) {
+      setLoadedPatchBanks(banksWithData);
+      setPatches(cachedPatches);
+    }
+  }, [adapter, deviceId]);
+
   // Load a specific bank of patches (updates UI progressively)
   const loadPatchBank = useCallback(async (bankIndex: number, forceReload = false) => {
     if (!clientRef.current) return;
@@ -286,7 +308,8 @@ export function PlayPage() {
   };
 
   // Reload data from hardware
-  const handleReload = useCallback(async () => {
+  // Load all patch banks
+  const loadAllPatches = useCallback(async () => {
     if (!clientRef.current) return;
 
     // Invalidate cache and reset state
@@ -294,8 +317,15 @@ export function PlayPage() {
     setPatches([]);
     setLoadedPatchBanks(new Set());
     setPartsLoaded(false);
-    await loadInitialData();
-  }, [loadInitialData]);
+
+    // Reload function params first
+    await loadFunctionParams();
+
+    // Load all 2 patch banks sequentially
+    for (let bank = 0; bank < 2; bank++) {
+      await loadPatchBank(bank, true);
+    }
+  }, [loadFunctionParams, loadPatchBank]);
 
   const loadedPatchCount = patches.filter(p => p !== undefined).length;
 
@@ -336,27 +366,28 @@ export function PlayPage() {
               <p className="text-s330-muted text-xs mt-0.5 truncate">{loadingMessage}</p>
             </div>
           )}
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-s330-muted">(Re)load:</span>
             <button
-              onClick={() => loadPatchBank(0, loadedPatchBanks.has(0))}
+              onClick={() => loadPatchBank(0, true)}
               disabled={isLoading}
-              className={cn('btn btn-primary', isLoading && 'opacity-50')}
+              className={cn('btn', loadedPatchBanks.has(0) ? 'btn-secondary' : 'btn-primary', isLoading && 'opacity-50')}
             >
-              {loadedPatchBanks.has(0) ? 'Reload' : 'Load'} 1-8
+              P11-P18
             </button>
             <button
-              onClick={() => loadPatchBank(1, loadedPatchBanks.has(1))}
+              onClick={() => loadPatchBank(1, true)}
               disabled={isLoading}
-              className={cn('btn btn-primary', isLoading && 'opacity-50')}
+              className={cn('btn', loadedPatchBanks.has(1) ? 'btn-secondary' : 'btn-primary', isLoading && 'opacity-50')}
             >
-              {loadedPatchBanks.has(1) ? 'Reload' : 'Load'} 9-16
+              P21-P28
             </button>
             <button
-              onClick={handleReload}
+              onClick={loadAllPatches}
               disabled={isLoading}
               className={cn('btn btn-secondary', isLoading && 'opacity-50')}
             >
-              {isLoading ? 'Loading...' : 'Refresh All'}
+              All
             </button>
           </div>
         </div>
