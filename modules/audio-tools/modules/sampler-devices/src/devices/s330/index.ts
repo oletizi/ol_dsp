@@ -268,3 +268,24 @@ export {
     isDT1Message,
     isUIStateAddress,
 } from './s330-parameter-listener.js';
+
+// =============================================================================
+// Front Panel Exports
+// =============================================================================
+
+export type {
+    NavigationButton,
+    FunctionButton,
+    FrontPanelButton,
+    FrontPanelControllerOptions,
+    FrontPanelController,
+} from './s330-front-panel.js';
+
+export {
+    FRONT_PANEL_ADDRESS,
+    NAVIGATION_CODES,
+    FUNCTION_CODES,
+    isNavigationButton,
+    buildFrontPanelMessage,
+    createFrontPanelController,
+} from './s330-front-panel.js';

@@ -6,6 +6,7 @@ import { ReactNode, useEffect, useCallback } from 'react';
 import { NavLink } from 'react-router-dom';
 import { MidiStatus } from '@/components/midi/MidiStatus';
 import { VideoCapture } from '@/components/video/VideoCapture';
+import { VirtualFrontPanel } from '@/components/front-panel/VirtualFrontPanel';
 import { useMidiStore } from '@/stores/midiStore';
 import { cn } from '@/lib/utils';
 
@@ -118,8 +119,9 @@ export function Layout({ children }: LayoutProps) {
         </div>
       </footer>
 
-      {/* Video Capture Panel */}
+      {/* Floating Panels */}
       <VideoCapture />
+      <VirtualFrontPanel />
     </div>
   );
 }
