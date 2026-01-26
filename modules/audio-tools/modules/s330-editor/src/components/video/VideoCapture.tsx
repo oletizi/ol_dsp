@@ -8,10 +8,15 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { cn } from '@/lib/utils';
+import { useFrontPanel, type NavigationButton, type FunctionButton } from '@/hooks/useFrontPanel';
+import { NavigationPad } from '@/components/front-panel/NavigationPad';
+import { ValueButtons } from '@/components/front-panel/ValueButtons';
+import { FunctionButtonRow } from '@/components/front-panel/FunctionButtonRow';
 
 const STORAGE_KEY_DEVICE = 's330-video-device';
 const STORAGE_KEY_POSITION = 's330-video-position';
 const STORAGE_KEY_SIZE = 's330-video-size';
+const STORAGE_KEY_CONTROLS = 's330-video-controls-expanded';
 
 const DEFAULT_WIDTH = 400;
 const DEFAULT_HEIGHT = 300;
@@ -40,6 +45,13 @@ export function VideoCapture() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
+  const [controlsExpanded, setControlsExpanded] = useState(() => {
+    const saved = localStorage.getItem(STORAGE_KEY_CONTROLS);
+    return saved === 'true';
+  });
+
+  // Front panel hook
+  const { pressButton, isConnected, isPressing, activeButton } = useFrontPanel();
 
   // Position and size state
   const [position, setPosition] = useState<Position>(() => {
@@ -285,6 +297,67 @@ export function VideoCapture() {
     }
   }, [isExpanded, selectedDeviceId, hasPermission, isStreaming, startStream, stopStream]);
 
+  // Persist controls expanded state
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY_CONTROLS, String(controlsExpanded));
+  }, [controlsExpanded]);
+
+  // Keyboard shortcut handler for front panel
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    // Only handle shortcuts when panel and controls are expanded
+    if (!isExpanded || !controlsExpanded || !isConnected || isPressing) return;
+
+    // Don't capture keys when typing in an input
+    const target = e.target as HTMLElement;
+    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT') {
+      return;
+    }
+
+    // Map keys to navigation buttons
+    const navKeyMap: Record<string, NavigationButton> = {
+      'ArrowUp': 'up',
+      'ArrowDown': 'down',
+      'ArrowLeft': 'left',
+      'ArrowRight': 'right',
+      '+': 'inc',
+      '=': 'inc',
+      '-': 'dec',
+      '_': 'dec',
+    };
+
+    // Map F-keys and Enter to function buttons
+    const funcKeyMap: Record<string, FunctionButton> = {
+      'F1': 'mode',
+      'F2': 'menu',
+      'F3': 'sub-menu',
+      'F4': 'com',
+      'F5': 'execute',
+      'Enter': 'execute',
+    };
+
+    const navButton = navKeyMap[e.key];
+    if (navButton) {
+      e.preventDefault();
+      pressButton(navButton);
+      return;
+    }
+
+    const funcButton = funcKeyMap[e.key];
+    if (funcButton) {
+      e.preventDefault();
+      pressButton(funcButton);
+      return;
+    }
+  }, [isExpanded, controlsExpanded, isConnected, isPressing, pressButton]);
+
+  // Register keyboard event listener
+  useEffect(() => {
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [handleKeyDown]);
+
   return (
     <div className="fixed bottom-4 right-4 z-50">
       {/* Collapsed button */}
@@ -336,6 +409,33 @@ export function VideoCapture() {
                   Live
                 </span>
               )}
+              {/* MIDI connection indicator */}
+              <span
+                className={cn(
+                  'w-2 h-2 rounded-full',
+                  isConnected ? 'bg-green-400' : 'bg-s330-muted'
+                )}
+                title={isConnected ? 'MIDI connected' : 'MIDI disconnected'}
+              />
+              {/* Controls toggle button */}
+              <button
+                onClick={() => setControlsExpanded(!controlsExpanded)}
+                className={cn(
+                  'p-1 text-s330-muted hover:text-s330-text',
+                  controlsExpanded && 'text-s330-highlight'
+                )}
+                title={controlsExpanded ? 'Hide controls' : 'Show controls'}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"
+                  />
+                </svg>
+              </button>
+              {/* Close button */}
               <button
                 onClick={() => setIsExpanded(false)}
                 className="p-1 text-s330-muted hover:text-s330-text"
@@ -438,6 +538,47 @@ export function VideoCapture() {
                 >
                   Stop
                 </button>
+              )}
+            </div>
+          )}
+
+          {/* Front Panel Controls */}
+          {controlsExpanded && (
+            <div className="p-3 border-t border-s330-accent space-y-3">
+              {/* Function buttons row */}
+              <FunctionButtonRow
+                onPress={pressButton}
+                activeButton={activeButton}
+                disabled={!isConnected || isPressing}
+              />
+
+              {/* Navigation and value controls */}
+              <div className="flex items-center justify-between gap-2">
+                {/* Navigation D-pad */}
+                <NavigationPad
+                  onPress={pressButton}
+                  activeButton={activeButton}
+                  disabled={!isConnected || isPressing}
+                />
+
+                {/* Inc/Dec buttons */}
+                <ValueButtons
+                  onPress={pressButton}
+                  activeButton={activeButton}
+                  disabled={!isConnected || isPressing}
+                />
+              </div>
+
+              {/* Shortcuts hint */}
+              <div className="text-xs text-s330-muted text-center opacity-70">
+                Keys: Arrows, +/-, Enter, F1-F5
+              </div>
+
+              {/* Disconnected message */}
+              {!isConnected && (
+                <div className="text-xs text-s330-muted text-center">
+                  Connect MIDI to use controls
+                </div>
               )}
             </div>
           )}
