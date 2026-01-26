@@ -318,7 +318,7 @@ export function ToneEditor({ tone, index, onUpdate, onCommit }: ToneEditorProps)
                             className="rounded"
                         />
                         <label htmlFor="lfoPolarity" className="text-sm text-s330-text">
-                            Peak Hold
+                            Polarity
                         </label>
                     </div>
                 </div>
