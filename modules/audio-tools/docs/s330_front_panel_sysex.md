@@ -202,8 +202,10 @@ This enables **real-time parameter monitoring** - a software editor can track ch
 | Inc | Value increments |
 | Dec | Value decrements |
 | MODE | Opens mode menu |
-| Execute | Confirms/executes selection |
+| MENU | Opens context menu (e.g., EDIT menu) |
 | SUB MENU | Opens/closes context-specific submenu (e.g., tone selector) |
+| COM | Opens/closes command menu |
+| Execute | Confirms/executes selection |
 | menu-down | Navigates down in menu context |
 | menu-right | Navigates right in menu context |
 | menu-left | Navigates left in menu context |
