@@ -53,14 +53,14 @@ export function TonesPage() {
   }, [adapter, deviceId]);
 
   // Load a specific bank of tones (updates UI progressively)
-  const loadToneBank = useCallback(async (bankIndex: number) => {
+  const loadToneBank = useCallback(async (bankIndex: number, forceReload = false) => {
     if (!clientRef.current) return;
 
     const startIndex = bankIndex * TONES_PER_BANK;
     const count = TONES_PER_BANK;
 
     try {
-      setLoading(true, `Loading tones ${startIndex + 1}-${startIndex + count}...`);
+      setLoading(true, `${forceReload ? 'Reloading' : 'Loading'} tones ${startIndex + 1}-${startIndex + count}...`);
       setError(null);
 
       // Ensure array is large enough before loading
@@ -83,7 +83,8 @@ export function TonesPage() {
             updated[index] = tone;
             return updated;
           });
-        }
+        },
+        forceReload
       );
 
       setLoadedBanks((prev) => new Set([...prev, bankIndex]));
@@ -101,13 +102,6 @@ export function TonesPage() {
   const loadInitialData = useCallback(async () => {
     await loadToneBank(0);
   }, [loadToneBank]);
-
-  // Load remaining bank
-  const loadRemainingTones = useCallback(async () => {
-    if (!loadedBanks.has(1)) {
-      await loadToneBank(1);
-    }
-  }, [loadToneBank, loadedBanks]);
 
   // Handle tone parameter updates - local state update for responsive UI
   const handleToneUpdate = useCallback((updatedTone: S330Tone) => {
@@ -153,7 +147,6 @@ export function TonesPage() {
   // Filter to only show loaded tones
   const loadedTonesArray = tones.filter((t): t is S330Tone => t !== undefined);
   const selectedTone = selectedToneIndex !== null ? tones[selectedToneIndex] : null;
-  const allTonesLoaded = loadedBanks.has(0) && loadedBanks.has(1);
 
   if (!isConnected) {
     return (
@@ -172,30 +165,63 @@ export function TonesPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <h2 className="text-xl font-bold text-s330-text">Tones</h2>
           <span className="text-sm text-s330-muted">
             {loadedTonesArray.length} of {TOTAL_TONES} loaded
           </span>
         </div>
-        <div className="flex gap-2">
-          {!allTonesLoaded && (
+        <div className="flex items-center gap-4 flex-1 justify-end">
+          {/* Loading Progress (inline with buttons) */}
+          {isLoading && loadingProgress !== null && (
+            <div className="flex-1 max-w-xs">
+              <div className="h-2 bg-s330-bg rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-s330-highlight transition-all duration-150 ease-out"
+                  style={{ width: `${loadingProgress}%` }}
+                />
+              </div>
+              <p className="text-s330-muted text-xs mt-0.5 truncate">{loadingMessage}</p>
+            </div>
+          )}
+          <div className="flex gap-2">
             <button
-              onClick={loadRemainingTones}
+              onClick={() => loadToneBank(0, loadedBanks.has(0))}
               disabled={isLoading}
               className={cn('btn btn-primary', isLoading && 'opacity-50')}
             >
-              Load All Tones
+              {loadedBanks.has(0) ? 'Reload' : 'Load'} 1-8
             </button>
-          )}
-          <button
-            onClick={handleRefresh}
-            disabled={isLoading}
-            className={cn('btn btn-secondary', isLoading && 'opacity-50')}
-          >
-            {isLoading ? 'Loading...' : 'Refresh'}
-          </button>
+            <button
+              onClick={() => loadToneBank(1, loadedBanks.has(1))}
+              disabled={isLoading}
+              className={cn('btn btn-primary', isLoading && 'opacity-50')}
+            >
+              {loadedBanks.has(1) ? 'Reload' : 'Load'} 9-16
+            </button>
+            <button
+              onClick={() => loadToneBank(2, loadedBanks.has(2))}
+              disabled={isLoading}
+              className={cn('btn btn-primary', isLoading && 'opacity-50')}
+            >
+              {loadedBanks.has(2) ? 'Reload' : 'Load'} 17-24
+            </button>
+            <button
+              onClick={() => loadToneBank(3, loadedBanks.has(3))}
+              disabled={isLoading}
+              className={cn('btn btn-primary', isLoading && 'opacity-50')}
+            >
+              {loadedBanks.has(3) ? 'Reload' : 'Load'} 25-32
+            </button>
+            <button
+              onClick={handleRefresh}
+              disabled={isLoading}
+              className={cn('btn btn-secondary', isLoading && 'opacity-50')}
+            >
+              {isLoading ? 'Loading...' : 'Refresh All'}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -203,19 +229,6 @@ export function TonesPage() {
       {error && (
         <div className="bg-red-500/20 border border-red-500 rounded-md p-3">
           <p className="text-red-200 text-sm">{error}</p>
-        </div>
-      )}
-
-      {/* Loading Progress (inline) */}
-      {isLoading && loadingProgress !== null && (
-        <div className="w-full max-w-md">
-          <div className="h-2 bg-s330-bg rounded-full overflow-hidden">
-            <div
-              className="h-full bg-s330-highlight transition-all duration-150 ease-out"
-              style={{ width: `${loadingProgress}%` }}
-            />
-          </div>
-          <p className="text-s330-muted text-sm mt-1">{loadingMessage}</p>
         </div>
       )}
 

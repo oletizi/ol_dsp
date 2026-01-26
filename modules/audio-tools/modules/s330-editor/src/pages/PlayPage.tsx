@@ -89,14 +89,14 @@ export function PlayPage() {
   }, [adapter, deviceId]);
 
   // Load a specific bank of patches (updates UI progressively)
-  const loadPatchBank = useCallback(async (bankIndex: number) => {
+  const loadPatchBank = useCallback(async (bankIndex: number, forceReload = false) => {
     if (!clientRef.current) return;
 
     const startIndex = bankIndex * PATCHES_PER_BANK;
     const count = PATCHES_PER_BANK;
 
     try {
-      setLoading(true, `Loading patches ${startIndex + 1}-${startIndex + count}...`);
+      setLoading(true, `${forceReload ? 'Reloading' : 'Loading'} patches ${startIndex + 1}-${startIndex + count}...`);
       setError(null);
 
       // Ensure array is large enough before loading
@@ -119,7 +119,8 @@ export function PlayPage() {
             updated[index] = patch;
             return updated;
           });
-        }
+        },
+        forceReload
       );
 
       setLoadedPatchBanks((prev) => new Set([...prev, bankIndex]));
@@ -178,13 +179,6 @@ export function PlayPage() {
       isFetchingGlobal = false;
     }
   }, [loadFunctionParams, loadPatchBank]);
-
-  // Load remaining patches
-  const loadRemainingPatches = useCallback(async () => {
-    if (!loadedPatchBanks.has(1)) {
-      await loadPatchBank(1);
-    }
-  }, [loadPatchBank, loadedPatchBanks]);
 
   // Auto-load initial data when connected
   useEffect(() => {
@@ -304,7 +298,6 @@ export function PlayPage() {
   }, [loadInitialData]);
 
   const loadedPatchCount = patches.filter(p => p !== undefined).length;
-  const allPatchesLoaded = loadedPatchBanks.has(0) && loadedPatchBanks.has(1);
 
   if (!isConnected) {
     return (
@@ -323,30 +316,49 @@ export function PlayPage() {
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <h2 className="text-xl font-bold text-s330-text">Play</h2>
           <span className="text-sm text-s330-muted">
             {loadedPatchCount} of {TOTAL_PATCHES} patches loaded
           </span>
         </div>
-        <div className="flex gap-2">
-          {!allPatchesLoaded && loadedPatchCount > 0 && (
+        <div className="flex items-center gap-4 flex-1 justify-end">
+          {/* Loading Progress (inline with buttons) */}
+          {isLoading && loadingProgress !== null && (
+            <div className="flex-1 max-w-xs">
+              <div className="h-2 bg-s330-bg rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-s330-highlight transition-all duration-150 ease-out"
+                  style={{ width: `${loadingProgress}%` }}
+                />
+              </div>
+              <p className="text-s330-muted text-xs mt-0.5 truncate">{loadingMessage}</p>
+            </div>
+          )}
+          <div className="flex gap-2">
             <button
-              onClick={loadRemainingPatches}
+              onClick={() => loadPatchBank(0, loadedPatchBanks.has(0))}
               disabled={isLoading}
               className={cn('btn btn-primary', isLoading && 'opacity-50')}
             >
-              Load More Patches
+              {loadedPatchBanks.has(0) ? 'Reload' : 'Load'} 1-8
             </button>
-          )}
-          <button
-            onClick={handleReload}
-            disabled={isLoading}
-            className={cn('btn btn-secondary', isLoading && 'opacity-50')}
-          >
-            {isLoading ? 'Loading...' : 'Refresh'}
-          </button>
+            <button
+              onClick={() => loadPatchBank(1, loadedPatchBanks.has(1))}
+              disabled={isLoading}
+              className={cn('btn btn-primary', isLoading && 'opacity-50')}
+            >
+              {loadedPatchBanks.has(1) ? 'Reload' : 'Load'} 9-16
+            </button>
+            <button
+              onClick={handleReload}
+              disabled={isLoading}
+              className={cn('btn btn-secondary', isLoading && 'opacity-50')}
+            >
+              {isLoading ? 'Loading...' : 'Refresh All'}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -354,19 +366,6 @@ export function PlayPage() {
       {error && (
         <div className="bg-red-500/20 border border-red-500 rounded-md p-3">
           <p className="text-red-200 text-sm">{error}</p>
-        </div>
-      )}
-
-      {/* Loading Progress (inline) */}
-      {isLoading && loadingProgress !== null && (
-        <div className="w-full max-w-md">
-          <div className="h-2 bg-s330-bg rounded-full overflow-hidden">
-            <div
-              className="h-full bg-s330-highlight transition-all duration-150 ease-out"
-              style={{ width: `${loadingProgress}%` }}
-            />
-          </div>
-          <p className="text-s330-muted text-sm mt-1">{loadingMessage}</p>
         </div>
       )}
 

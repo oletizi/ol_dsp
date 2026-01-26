@@ -58,14 +58,14 @@ export function PatchesPage() {
   }, [adapter, deviceId]);
 
   // Load a specific range of patches (updates UI progressively)
-  const loadPatchBank = useCallback(async (bankIndex: number) => {
+  const loadPatchBank = useCallback(async (bankIndex: number, forceReload = false) => {
     if (!clientRef.current) return;
 
     const startIndex = bankIndex * PATCHES_PER_BANK;
     const count = PATCHES_PER_BANK;
 
     try {
-      setLoading(true, `Loading patches ${startIndex + 1}-${startIndex + count}...`);
+      setLoading(true, `${forceReload ? 'Reloading' : 'Loading'} patches ${startIndex + 1}-${startIndex + count}...`);
       setError(null);
 
       // Ensure array is large enough before loading
@@ -88,7 +88,8 @@ export function PatchesPage() {
             updated[index] = patch;
             return updated;
           });
-        }
+        },
+        forceReload
       );
 
       setLoadedPatchBanks((prev) => new Set([...prev, bankIndex]));
@@ -154,19 +155,6 @@ export function PatchesPage() {
     await loadToneBank(0);
   }, [loadPatchBank, loadToneBank]);
 
-  // Load remaining banks
-  const loadRemainingPatches = useCallback(async () => {
-    if (!loadedPatchBanks.has(1)) {
-      await loadPatchBank(1);
-    }
-  }, [loadPatchBank, loadedPatchBanks]);
-
-  const loadRemainingTones = useCallback(async () => {
-    if (!loadedToneBanks.has(1)) {
-      await loadToneBank(1);
-    }
-  }, [loadToneBank, loadedToneBanks]);
-
   // Refresh: invalidate cache and reload first bank
   const handleRefresh = useCallback(async () => {
     if (!clientRef.current) return;
@@ -201,8 +189,6 @@ export function PatchesPage() {
   const loadedTonesArray = tones.filter((t): t is S330Tone => t !== undefined);
 
   const selectedPatch = selectedPatchIndex !== null ? patches[selectedPatchIndex] : null;
-  const allPatchesLoaded = loadedPatchBanks.has(0) && loadedPatchBanks.has(1);
-  const allTonesLoaded = loadedToneBanks.has(0) && loadedToneBanks.has(1);
 
   if (!isConnected) {
     return (
@@ -221,39 +207,49 @@ export function PatchesPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <h2 className="text-xl font-bold text-s330-text">Patches</h2>
           <span className="text-sm text-s330-muted">
             {loadedPatches.length} of {TOTAL_PATCHES} loaded
           </span>
         </div>
-        <div className="flex gap-2">
-          {!allPatchesLoaded && (
+        <div className="flex items-center gap-4 flex-1 justify-end">
+          {/* Loading Progress (inline with buttons) */}
+          {isLoading && loadingProgress !== null && (
+            <div className="flex-1 max-w-xs">
+              <div className="h-2 bg-s330-bg rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-s330-highlight transition-all duration-150 ease-out"
+                  style={{ width: `${loadingProgress}%` }}
+                />
+              </div>
+              <p className="text-s330-muted text-xs mt-0.5 truncate">{loadingMessage}</p>
+            </div>
+          )}
+          <div className="flex gap-2">
             <button
-              onClick={loadRemainingPatches}
+              onClick={() => loadPatchBank(0, loadedPatchBanks.has(0))}
               disabled={isLoading}
               className={cn('btn btn-primary', isLoading && 'opacity-50')}
             >
-              Load All Patches
+              {loadedPatchBanks.has(0) ? 'Reload' : 'Load'} Patches 1-8
             </button>
-          )}
-          {!allTonesLoaded && loadedPatchBanks.size > 0 && (
             <button
-              onClick={loadRemainingTones}
+              onClick={() => loadPatchBank(1, loadedPatchBanks.has(1))}
+              disabled={isLoading}
+              className={cn('btn btn-primary', isLoading && 'opacity-50')}
+            >
+              {loadedPatchBanks.has(1) ? 'Reload' : 'Load'} Patches 9-16
+            </button>
+            <button
+              onClick={handleRefresh}
               disabled={isLoading}
               className={cn('btn btn-secondary', isLoading && 'opacity-50')}
             >
-              Load All Tones
+              {isLoading ? 'Loading...' : 'Refresh All'}
             </button>
-          )}
-          <button
-            onClick={handleRefresh}
-            disabled={isLoading}
-            className={cn('btn btn-secondary', isLoading && 'opacity-50')}
-          >
-            {isLoading ? 'Loading...' : 'Refresh'}
-          </button>
+          </div>
         </div>
       </div>
 
@@ -261,19 +257,6 @@ export function PatchesPage() {
       {error && (
         <div className="bg-red-500/20 border border-red-500 rounded-md p-3">
           <p className="text-red-200 text-sm">{error}</p>
-        </div>
-      )}
-
-      {/* Loading Progress (inline) */}
-      {isLoading && loadingProgress !== null && (
-        <div className="w-full max-w-md">
-          <div className="h-2 bg-s330-bg rounded-full overflow-hidden">
-            <div
-              className="h-full bg-s330-highlight transition-all duration-150 ease-out"
-              style={{ width: `${loadingProgress}%` }}
-            />
-          </div>
-          <p className="text-s330-muted text-sm mt-1">{loadingMessage}</p>
         </div>
       )}
 
