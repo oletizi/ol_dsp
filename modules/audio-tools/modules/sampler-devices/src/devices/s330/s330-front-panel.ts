@@ -75,18 +75,29 @@ export interface FrontPanelController {
 export const FRONT_PANEL_ADDRESS = [0x00, 0x04, 0x00, 0x00];
 
 /**
- * Category 01 - Navigation button codes (single message)
+ * Category 01 - Arrow button codes (single message)
  *
  * These codes work in all contexts (menus and parameter screens).
  */
-export const NAVIGATION_CODES = {
+export const ARROW_CODES = {
     right: [0x01, 0x00],
     left: [0x01, 0x01],
     up: [0x01, 0x02],
     down: [0x01, 0x03],
-    inc: [0x01, 0x04],
-    dec: [0x01, 0x05],
 } as const;
+
+/**
+ * Category 09 - Inc/Dec button codes (press + delay + release)
+ *
+ * Inc/Dec require press/release pairs with category 09.
+ */
+export const VALUE_CODES = {
+    inc: { press: [0x09, 0x04], release: [0x09, 0x0c] },
+    dec: { press: [0x09, 0x05], release: [0x09, 0x0d] },
+} as const;
+
+/** Default delay between press and release for inc/dec buttons */
+export const VALUE_BUTTON_DELAY_MS = 50;
 
 /**
  * Category 01 - Function button codes (single message)
@@ -109,10 +120,41 @@ export const FUNCTION_CODES = {
 const NAVIGATION_BUTTONS: Set<string> = new Set(['up', 'down', 'left', 'right', 'inc', 'dec']);
 
 /**
+ * Set of arrow button names
+ */
+const ARROW_BUTTONS: Set<string> = new Set(['up', 'down', 'left', 'right']);
+
+/**
+ * Set of value button names (inc/dec)
+ */
+const VALUE_BUTTONS: Set<string> = new Set(['inc', 'dec']);
+
+/**
  * Check if a button is a navigation button
  */
 export function isNavigationButton(button: FrontPanelButton): button is NavigationButton {
     return NAVIGATION_BUTTONS.has(button);
+}
+
+/**
+ * Check if a button is an arrow button
+ */
+export function isArrowButton(button: NavigationButton): button is 'up' | 'down' | 'left' | 'right' {
+    return ARROW_BUTTONS.has(button);
+}
+
+/**
+ * Check if a button is a value button (inc/dec)
+ */
+export function isValueButton(button: NavigationButton): button is 'inc' | 'dec' {
+    return VALUE_BUTTONS.has(button);
+}
+
+/**
+ * Delay helper
+ */
+function delay(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 /**
@@ -173,9 +215,20 @@ export function createFrontPanelController(
 
     return {
         async pressNavigation(button: NavigationButton): Promise<void> {
-            const code = NAVIGATION_CODES[button];
-            const message = buildFrontPanelMessage(deviceId, code as [number, number]);
-            midiAdapter.send(message);
+            if (isArrowButton(button)) {
+                // Arrow buttons use category 01 single message
+                const code = ARROW_CODES[button];
+                const message = buildFrontPanelMessage(deviceId, code as [number, number]);
+                midiAdapter.send(message);
+            } else if (isValueButton(button)) {
+                // Inc/Dec use category 09 press + delay + release
+                const codes = VALUE_CODES[button];
+                const pressMessage = buildFrontPanelMessage(deviceId, codes.press as [number, number]);
+                const releaseMessage = buildFrontPanelMessage(deviceId, codes.release as [number, number]);
+                midiAdapter.send(pressMessage);
+                await delay(VALUE_BUTTON_DELAY_MS);
+                midiAdapter.send(releaseMessage);
+            }
         },
 
         async pressFunction(button: FunctionButton): Promise<void> {

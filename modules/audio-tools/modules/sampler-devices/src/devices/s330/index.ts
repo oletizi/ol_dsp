@@ -283,9 +283,13 @@ export type {
 
 export {
     FRONT_PANEL_ADDRESS,
-    NAVIGATION_CODES,
+    ARROW_CODES,
+    VALUE_CODES,
+    VALUE_BUTTON_DELAY_MS,
     FUNCTION_CODES,
     isNavigationButton,
+    isArrowButton,
+    isValueButton,
     buildFrontPanelMessage,
     createFrontPanelController,
 } from './s330-front-panel.js';
