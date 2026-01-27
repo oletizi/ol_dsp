@@ -1,6 +1,6 @@
 # Claude AI Agent Guidelines for OL_DSP
 
-This document provides guidelines for AI agents (including Claude Code) working on the ol_dsp project. It ensures consistency with the project's architectural principles, quality standards, and development patterns.
+	This document provides guidelines for AI agents (including Claude Code) working on the ol_dsp project. It ensures consistency with the project's architectural principles, quality standards, and development patterns.
 
 ## Overview
 
@@ -239,6 +239,7 @@ try {
 ❌ **NEVER use dynamic memory allocation** in real-time audio callbacks  
 ❌ **NEVER ignore sample rate or bit depth** when processing audio  
 ❌ **NEVER modify proprietary format specs** without documentation  
+   **NEVER add a "Coauthored by Claude" attribution to commit messages
 
 ## Success Criteria
 
