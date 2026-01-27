@@ -855,6 +855,65 @@ gh api graphql -f query="
 - Up to 128 keygroups, 4 zones each
 ```
 
+### web-synth Module (Web Application)
+
+**Documentation location:** `modules/audio-tools/docs/<version>/<feature-slug>/` (under audio-tools)
+
+**GitHub Project:** [Web Synth](https://github.com/users/oletizi/projects/5)
+
+**REQUIRED: All GitHub issues and milestones for work in the web-synth module MUST be added to the Web Synth GitHub Project.**
+
+**Additional requirements:**
+
+- All issues must be added to the Web Synth project board
+- Use `[web-synth]` or `[audio-tools]` prefix for issue titles
+- Document Emscripten/WASM build requirements
+- Document AudioWorklet integration details
+- Note browser compatibility (WebAssembly, AudioWorklet, Web MIDI)
+- Reference source DSP code in `modules/synthlib/`, `modules/fxlib/`, `libs/dattorro-verb/`
+
+**Adding issues to the project via CLI:**
+
+```bash
+# Get project and issue IDs
+PROJECT_ID=$(gh api graphql -f query='
+  query { user(login: "oletizi") { projectV2(number: 5) { id } } }
+' --jq '.data.user.projectV2.id')
+
+ISSUE_ID=$(gh api graphql -f query='
+  query { repository(owner: "oletizi", name: "ol_dsp") { issue(number: ISSUE_NUM) { id } } }
+' --jq '.data.repository.issue.id')
+
+# Add issue to project
+gh api graphql -f query="
+  mutation {
+    addProjectV2ItemById(input: {
+      projectId: \"$PROJECT_ID\"
+      contentId: \"$ISSUE_ID\"
+    }) { item { id } }
+  }
+"
+```
+
+**README.md tracking section:**
+
+```markdown
+## Tracking Links
+
+**GitHub Project:** [Web Synth](https://github.com/users/oletizi/projects/5)
+**GitHub Milestone:** [Week of Jan 27-31](https://github.com/oletizi/ol_dsp/milestone/N)
+**Affected Sub-modules:** web-synth, wasm-dsp
+
+## Module Changes
+
+**web-synth:**
+
+- Browser-based synthesizer
+- WASM-compiled DSP (oscillator, filter, envelope, reverb)
+- AudioWorklet for real-time processing
+- Web MIDI API support
+```
+
 ### audio-control Module
 
 **Documentation location:** `modules/audio-control/docs/<version>/<feature-slug>/`
@@ -909,6 +968,7 @@ gh api graphql -f query="
 - [ ] **For jv1080-editor work:** All issues added to [JV-1080 Editor project](https://github.com/users/oletizi/projects/2)
 - [ ] **For s3000xl-editor work:** All issues added to [S3000XL Editor project](https://github.com/users/oletizi/projects/3)
 - [ ] **For s5000-editor work:** All issues added to [S5000/S6000 Editor project](https://github.com/users/oletizi/projects/4)
+- [ ] **For web-synth work:** All issues added to [Web Synth project](https://github.com/users/oletizi/projects/5)
 - [ ] workplan.md updated with GitHub issue links
 - [ ] README.md updated with milestone link
 
