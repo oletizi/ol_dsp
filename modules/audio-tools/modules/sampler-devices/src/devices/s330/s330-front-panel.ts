@@ -52,9 +52,11 @@ export interface FrontPanelControllerOptions {
  */
 export interface FrontPanelController {
     /**
-     * Press a navigation button (single category 01 message)
+     * Press a navigation button
+     * @param button - The navigation button to press
+     * @param mode - Navigation mode: 'menu' for most screens, 'sampling' for sampling screen
      */
-    pressNavigation(button: NavigationButton): Promise<void>;
+    pressNavigation(button: NavigationButton, mode?: NavigationMode): Promise<void>;
 
     /**
      * Press a function button (single category 01 message)
@@ -63,8 +65,10 @@ export interface FrontPanelController {
 
     /**
      * Press any front panel button (auto-detects type)
+     * @param button - The button to press
+     * @param mode - Navigation mode for arrow buttons: 'menu' or 'sampling'
      */
-    press(button: FrontPanelButton): Promise<void>;
+    press(button: FrontPanelButton, mode?: NavigationMode): Promise<void>;
 }
 
 // =============================================================================
@@ -75,29 +79,50 @@ export interface FrontPanelController {
 export const FRONT_PANEL_ADDRESS = [0x00, 0x04, 0x00, 0x00];
 
 /**
- * Category 01 - Arrow button codes (single message)
+ * Navigation mode for arrow buttons
+ * - 'menu': Category 01 single messages (works in menus and parameter screens)
+ * - 'sampling': Category 09 press/release pairs (intended for sampling screen)
  *
- * These codes work in all contexts (menus and parameter screens).
+ * NOTE: Category 09 mode was reverse-engineered from hardware button presses
+ * observed on the sampling/record screen, but remote control via SysEx does
+ * not work on that screen. The S-330 may require physical button input or
+ * additional undiscovered protocol elements for sampling screen control.
  */
-export const ARROW_CODES = {
+export type NavigationMode = 'menu' | 'sampling';
+
+/**
+ * Category 01 - Arrow button codes (single message)
+ * Works in menus and parameter editing screens, but NOT on sampling screen.
+ */
+export const ARROW_CODES_CAT01 = {
     right: [0x01, 0x00],
-    left: [0x01, 0x01],
-    up: [0x01, 0x02],
-    down: [0x01, 0x03],
+    left:  [0x01, 0x01],
+    up:    [0x01, 0x02],
+    down:  [0x01, 0x03],
+} as const;
+
+/**
+ * Category 09 - Arrow button codes (press + delay + release)
+ * Works on sampling screen. Release code = press code + 8.
+ */
+export const ARROW_CODES_CAT09 = {
+    right: { press: [0x09, 0x00], release: [0x09, 0x08] },
+    left:  { press: [0x09, 0x01], release: [0x09, 0x09] },
+    up:    { press: [0x09, 0x02], release: [0x09, 0x0a] },
+    down:  { press: [0x09, 0x03], release: [0x09, 0x0b] },
 } as const;
 
 /**
  * Category 09 - Inc/Dec button codes (press + delay + release)
- *
- * Inc/Dec require press/release pairs with category 09.
+ * Inc/Dec always use category 09 press/release pairs.
  */
 export const VALUE_CODES = {
     inc: { press: [0x09, 0x04], release: [0x09, 0x0c] },
     dec: { press: [0x09, 0x05], release: [0x09, 0x0d] },
 } as const;
 
-/** Default delay between press and release for inc/dec buttons */
-export const VALUE_BUTTON_DELAY_MS = 50;
+/** Default delay between press and release */
+export const NAVIGATION_DELAY_MS = 50;
 
 /**
  * Category 01 - Function button codes (single message)
@@ -214,19 +239,29 @@ export function createFrontPanelController(
     const deviceId = options.deviceId ?? 0;
 
     return {
-        async pressNavigation(button: NavigationButton): Promise<void> {
+        async pressNavigation(button: NavigationButton, mode: NavigationMode = 'menu'): Promise<void> {
             if (isArrowButton(button)) {
-                // Arrow buttons use category 01 single message
-                const code = ARROW_CODES[button];
-                const message = buildFrontPanelMessage(deviceId, code as [number, number]);
-                midiAdapter.send(message);
+                if (mode === 'menu') {
+                    // Category 01 single message for menus/parameter screens
+                    const code = ARROW_CODES_CAT01[button];
+                    const message = buildFrontPanelMessage(deviceId, code as [number, number]);
+                    midiAdapter.send(message);
+                } else {
+                    // Category 09 press/release for sampling screen
+                    const codes = ARROW_CODES_CAT09[button];
+                    const pressMessage = buildFrontPanelMessage(deviceId, codes.press as [number, number]);
+                    const releaseMessage = buildFrontPanelMessage(deviceId, codes.release as [number, number]);
+                    midiAdapter.send(pressMessage);
+                    await delay(NAVIGATION_DELAY_MS);
+                    midiAdapter.send(releaseMessage);
+                }
             } else if (isValueButton(button)) {
-                // Inc/Dec use category 09 press + delay + release
+                // Inc/Dec always use category 09 press/release
                 const codes = VALUE_CODES[button];
                 const pressMessage = buildFrontPanelMessage(deviceId, codes.press as [number, number]);
                 const releaseMessage = buildFrontPanelMessage(deviceId, codes.release as [number, number]);
                 midiAdapter.send(pressMessage);
-                await delay(VALUE_BUTTON_DELAY_MS);
+                await delay(NAVIGATION_DELAY_MS);
                 midiAdapter.send(releaseMessage);
             }
         },
@@ -237,9 +272,9 @@ export function createFrontPanelController(
             midiAdapter.send(message);
         },
 
-        async press(button: FrontPanelButton): Promise<void> {
+        async press(button: FrontPanelButton, mode: NavigationMode = 'menu'): Promise<void> {
             if (isNavigationButton(button)) {
-                await this.pressNavigation(button);
+                await this.pressNavigation(button, mode);
             } else {
                 await this.pressFunction(button);
             }

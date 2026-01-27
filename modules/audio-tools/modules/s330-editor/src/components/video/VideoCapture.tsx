@@ -51,7 +51,7 @@ export function VideoCapture() {
   });
 
   // Front panel hook
-  const { pressButton, isConnected, isPressing, activeButton } = useFrontPanel();
+  const { pressButton, isConnected, isPressing, activeButton, navigationMode, setNavigationMode } = useFrontPanel();
 
   // Position and size state
   const [position, setPosition] = useState<Position>(() => {
@@ -567,6 +567,25 @@ export function VideoCapture() {
                   activeButton={activeButton}
                   disabled={!isConnected || isPressing}
                 />
+              </div>
+
+              {/* Mode toggle */}
+              <div className="flex items-center justify-center gap-2">
+                <span className="text-xs text-s330-muted">Arrow category:</span>
+                <button
+                  onClick={() => setNavigationMode(navigationMode === 'menu' ? 'sampling' : 'menu')}
+                  className={cn(
+                    'px-2 py-0.5 text-xs font-mono rounded border transition-colors',
+                    navigationMode === 'menu'
+                      ? 'bg-s330-accent border-s330-accent text-s330-text'
+                      : 'bg-s330-highlight border-s330-highlight text-white'
+                  )}
+                  title={navigationMode === 'menu'
+                    ? 'Category 01: works in menus and parameter screens'
+                    : 'Category 09: works on sampling screen'}
+                >
+                  {navigationMode === 'menu' ? '01' : '09'}
+                </button>
               </div>
 
               {/* Shortcuts hint */}

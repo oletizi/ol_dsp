@@ -281,11 +281,14 @@ export type {
     FrontPanelController,
 } from './s330-front-panel.js';
 
+export type { NavigationMode } from './s330-front-panel.js';
+
 export {
     FRONT_PANEL_ADDRESS,
-    ARROW_CODES,
+    ARROW_CODES_CAT01,
+    ARROW_CODES_CAT09,
     VALUE_CODES,
-    VALUE_BUTTON_DELAY_MS,
+    NAVIGATION_DELAY_MS,
     FUNCTION_CODES,
     isNavigationButton,
     isArrowButton,

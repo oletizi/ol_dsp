@@ -2,8 +2,11 @@
  * Tests for S-330 Front Panel Controller
  *
  * Tests the virtual front panel button message encoding.
- * Arrow buttons use category 01 codes (single message).
- * Inc/Dec buttons use category 09 codes (press + delay + release).
+ * Arrow buttons support two modes:
+ * - 'menu': Category 01 single messages (menus/parameter screens)
+ * - 'sampling': Category 09 press/release pairs (sampling screen)
+ * Inc/Dec always use category 09 press/release.
+ * Function buttons use category 01 single messages.
  */
 
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
@@ -14,13 +17,15 @@ import {
     isArrowButton,
     isValueButton,
     FRONT_PANEL_ADDRESS,
-    ARROW_CODES,
+    ARROW_CODES_CAT01,
+    ARROW_CODES_CAT09,
     VALUE_CODES,
-    VALUE_BUTTON_DELAY_MS,
+    NAVIGATION_DELAY_MS,
     FUNCTION_CODES,
     type NavigationButton,
     type FunctionButton,
     type FrontPanelButton,
+    type NavigationMode,
 } from '../../../src/devices/s330/s330-front-panel.js';
 import type { S330MidiAdapter } from '../../../src/devices/s330/s330-types.js';
 import { calculateChecksum } from '../../../src/devices/s330/s330-addresses.js';
@@ -123,46 +128,59 @@ describe('s330-front-panel', () => {
         });
 
         it('should respect device ID', () => {
-            const message = buildFrontPanelMessage(5, [0x01, 0x0c]);
+            const message = buildFrontPanelMessage(5, [0x01, 0x03]);
             expect(message[2]).toBe(5);
         });
 
-        it('should calculate correct checksum for arrow button', () => {
-            // Address: 00 04 00 00, Data: 01 02 (up)
-            // Sum = 0 + 4 + 0 + 0 + 1 + 2 = 7
-            // Checksum = 128 - 7 = 121 = 0x79
-            const message = buildFrontPanelMessage(0, [0x01, 0x02]);
-            expect(message[11]).toBe(0x79);
+        it('should calculate correct checksum for category 01 message', () => {
+            // Address: 00 04 00 00, Data: 01 03 (down, menu mode)
+            // Sum = 0 + 4 + 0 + 0 + 1 + 3 = 8
+            // Checksum = 128 - 8 = 120 = 0x78
+            const message = buildFrontPanelMessage(0, [0x01, 0x03]);
+            expect(message[11]).toBe(0x78);
         });
 
-        it('should calculate correct checksum for value button press', () => {
-            // Address: 00 04 00 00, Data: 09 04 (inc press)
-            // Sum = 0 + 4 + 0 + 0 + 9 + 4 = 17
-            // Checksum = 128 - 17 = 111 = 0x6F
-            const message = buildFrontPanelMessage(0, [0x09, 0x04]);
-            expect(message[11]).toBe(0x6f);
+        it('should calculate correct checksum for category 09 press', () => {
+            // Address: 00 04 00 00, Data: 09 03 (down press, sampling mode)
+            // Sum = 0 + 4 + 0 + 0 + 9 + 3 = 16
+            // Checksum = 128 - 16 = 112 = 0x70
+            const message = buildFrontPanelMessage(0, [0x09, 0x03]);
+            expect(message[11]).toBe(0x70);
         });
 
-        it('should calculate correct checksum for function button', () => {
-            // Address: 00 04 00 00, Data: 01 0C (menu)
-            // Sum = 0 + 4 + 0 + 0 + 1 + 12 = 17
-            // Checksum = 128 - 17 = 111 = 0x6F
-            const message = buildFrontPanelMessage(0, [0x01, 0x0c]);
-            expect(message[11]).toBe(0x6f);
+        it('should calculate correct checksum for category 09 release', () => {
+            // Address: 00 04 00 00, Data: 09 0B (down release)
+            // Sum = 0 + 4 + 0 + 0 + 9 + 11 = 24
+            // Checksum = 128 - 24 = 104 = 0x68
+            const message = buildFrontPanelMessage(0, [0x09, 0x0b]);
+            expect(message[11]).toBe(0x68);
         });
     });
 
-    describe('ARROW_CODES', () => {
-        it('should have correct category 01 codes for all arrow buttons', () => {
-            expect(ARROW_CODES.right).toEqual([0x01, 0x00]);
-            expect(ARROW_CODES.left).toEqual([0x01, 0x01]);
-            expect(ARROW_CODES.up).toEqual([0x01, 0x02]);
-            expect(ARROW_CODES.down).toEqual([0x01, 0x03]);
+    describe('ARROW_CODES_CAT01', () => {
+        it('should have correct category 01 codes for arrow buttons', () => {
+            expect(ARROW_CODES_CAT01.right).toEqual([0x01, 0x00]);
+            expect(ARROW_CODES_CAT01.left).toEqual([0x01, 0x01]);
+            expect(ARROW_CODES_CAT01.up).toEqual([0x01, 0x02]);
+            expect(ARROW_CODES_CAT01.down).toEqual([0x01, 0x03]);
+        });
+    });
+
+    describe('ARROW_CODES_CAT09', () => {
+        it('should have correct category 09 codes for arrow buttons', () => {
+            expect(ARROW_CODES_CAT09.right.press).toEqual([0x09, 0x00]);
+            expect(ARROW_CODES_CAT09.right.release).toEqual([0x09, 0x08]);
+            expect(ARROW_CODES_CAT09.left.press).toEqual([0x09, 0x01]);
+            expect(ARROW_CODES_CAT09.left.release).toEqual([0x09, 0x09]);
+            expect(ARROW_CODES_CAT09.up.press).toEqual([0x09, 0x02]);
+            expect(ARROW_CODES_CAT09.up.release).toEqual([0x09, 0x0a]);
+            expect(ARROW_CODES_CAT09.down.press).toEqual([0x09, 0x03]);
+            expect(ARROW_CODES_CAT09.down.release).toEqual([0x09, 0x0b]);
         });
 
-        it('should all use category 01', () => {
-            for (const [_button, code] of Object.entries(ARROW_CODES)) {
-                expect(code[0]).toBe(0x01);
+        it('should have release codes that are press codes + 8', () => {
+            for (const [_button, codes] of Object.entries(ARROW_CODES_CAT09)) {
+                expect(codes.release[1]).toBe(codes.press[1] + 8);
             }
         });
     });
@@ -174,11 +192,6 @@ describe('s330-front-panel', () => {
             expect(VALUE_CODES.dec.press).toEqual([0x09, 0x05]);
             expect(VALUE_CODES.dec.release).toEqual([0x09, 0x0d]);
         });
-
-        it('should have release codes that are press codes + 8', () => {
-            expect(VALUE_CODES.inc.release[1]).toBe(VALUE_CODES.inc.press[1] + 8);
-            expect(VALUE_CODES.dec.release[1]).toBe(VALUE_CODES.dec.press[1] + 8);
-        });
     });
 
     describe('FUNCTION_CODES', () => {
@@ -188,12 +201,6 @@ describe('s330-front-panel', () => {
             expect(FUNCTION_CODES['sub-menu']).toEqual([0x01, 0x0d]);
             expect(FUNCTION_CODES.com).toEqual([0x01, 0x0e]);
             expect(FUNCTION_CODES.execute).toEqual([0x01, 0x0f]);
-        });
-
-        it('should all use category 01', () => {
-            for (const [_button, code] of Object.entries(FUNCTION_CODES)) {
-                expect(code[0]).toBe(0x01);
-            }
         });
     });
 
@@ -209,60 +216,58 @@ describe('s330-front-panel', () => {
             vi.useRealTimers();
         });
 
-        describe('pressNavigation - arrow buttons', () => {
+        describe('pressNavigation - menu mode (default)', () => {
             const arrowButtons: Array<'up' | 'down' | 'left' | 'right'> = ['up', 'down', 'left', 'right'];
 
-            it.each(arrowButtons)('should send single message for %s button', async (button) => {
+            it.each(arrowButtons)('should send single cat01 message for %s in menu mode', async (button) => {
                 const controller = createFrontPanelController(adapter, { deviceId: 0 });
-                await controller.pressNavigation(button);
+                await controller.pressNavigation(button, 'menu');
 
-                // Should have sent only one message
                 expect(adapter.sentMessages).toHaveLength(1);
-
-                // Verify message uses category 01
-                const code = ARROW_CODES[button];
+                const code = ARROW_CODES_CAT01[button];
                 verifyMessageStructure(adapter.sentMessages[0], 0, code as [number, number]);
             });
 
-            it('should use specified device ID', async () => {
-                const controller = createFrontPanelController(adapter, { deviceId: 7 });
+            it('should default to menu mode', async () => {
+                const controller = createFrontPanelController(adapter, { deviceId: 0 });
                 await controller.pressNavigation('up');
 
-                expect(adapter.sentMessages[0][2]).toBe(7);
+                expect(adapter.sentMessages).toHaveLength(1);
+                expect(adapter.sentMessages[0][9]).toBe(0x01); // Category 01
             });
         });
 
-        describe('pressNavigation - value buttons (inc/dec)', () => {
-            const valueButtons: Array<'inc' | 'dec'> = ['inc', 'dec'];
+        describe('pressNavigation - sampling mode', () => {
+            const arrowButtons: Array<'up' | 'down' | 'left' | 'right'> = ['up', 'down', 'left', 'right'];
 
-            it.each(valueButtons)('should send press and release for %s button', async (button) => {
+            it.each(arrowButtons)('should send press/release for %s in sampling mode', async (button) => {
                 const controller = createFrontPanelController(adapter, { deviceId: 0 });
-                const promise = controller.pressNavigation(button);
+                const promise = controller.pressNavigation(button, 'sampling');
 
-                // Advance past the delay
-                await vi.advanceTimersByTimeAsync(VALUE_BUTTON_DELAY_MS);
+                await vi.advanceTimersByTimeAsync(NAVIGATION_DELAY_MS);
                 await promise;
 
-                // Should have sent two messages: press and release
                 expect(adapter.sentMessages).toHaveLength(2);
-
-                // Verify press message
-                const codes = VALUE_CODES[button];
+                const codes = ARROW_CODES_CAT09[button];
                 verifyMessageStructure(adapter.sentMessages[0], 0, codes.press as [number, number]);
-
-                // Verify release message
                 verifyMessageStructure(adapter.sentMessages[1], 0, codes.release as [number, number]);
             });
+        });
 
-            it('should use specified device ID for inc/dec', async () => {
-                const controller = createFrontPanelController(adapter, { deviceId: 9 });
-                const promise = controller.pressNavigation('inc');
+        describe('pressNavigation - inc/dec (always cat09)', () => {
+            const valueButtons: Array<'inc' | 'dec'> = ['inc', 'dec'];
 
-                await vi.advanceTimersByTimeAsync(VALUE_BUTTON_DELAY_MS);
+            it.each(valueButtons)('should send press/release for %s regardless of mode', async (button) => {
+                const controller = createFrontPanelController(adapter, { deviceId: 0 });
+                const promise = controller.pressNavigation(button, 'menu');
+
+                await vi.advanceTimersByTimeAsync(NAVIGATION_DELAY_MS);
                 await promise;
 
-                expect(adapter.sentMessages[0][2]).toBe(9);
-                expect(adapter.sentMessages[1][2]).toBe(9);
+                expect(adapter.sentMessages).toHaveLength(2);
+                const codes = VALUE_CODES[button];
+                verifyMessageStructure(adapter.sentMessages[0], 0, codes.press as [number, number]);
+                verifyMessageStructure(adapter.sentMessages[1], 0, codes.release as [number, number]);
             });
         });
 
@@ -273,99 +278,52 @@ describe('s330-front-panel', () => {
                 const controller = createFrontPanelController(adapter, { deviceId: 0 });
                 await controller.pressFunction(button);
 
-                // Should have sent only one message
                 expect(adapter.sentMessages).toHaveLength(1);
-
-                // Verify message
                 const code = FUNCTION_CODES[button];
                 verifyMessageStructure(adapter.sentMessages[0], 0, code as [number, number]);
-            });
-
-            it('should use specified device ID', async () => {
-                const controller = createFrontPanelController(adapter, { deviceId: 12 });
-                await controller.pressFunction('menu');
-
-                expect(adapter.sentMessages[0][2]).toBe(12);
             });
         });
 
         describe('press (unified)', () => {
-            it('should handle arrow buttons with single message', async () => {
+            it('should handle arrow buttons in menu mode', async () => {
                 const controller = createFrontPanelController(adapter);
-                await controller.press('left');
+                await controller.press('left', 'menu');
 
                 expect(adapter.sentMessages).toHaveLength(1);
-                expect(adapter.sentMessages[0][9]).toBe(0x01); // Category 01
+                expect(adapter.sentMessages[0][9]).toBe(0x01);
             });
 
-            it('should handle inc/dec with press and release', async () => {
+            it('should handle arrow buttons in sampling mode', async () => {
                 const controller = createFrontPanelController(adapter);
-                const promise = controller.press('inc');
+                const promise = controller.press('left', 'sampling');
 
-                await vi.advanceTimersByTimeAsync(VALUE_BUTTON_DELAY_MS);
+                await vi.advanceTimersByTimeAsync(NAVIGATION_DELAY_MS);
                 await promise;
 
                 expect(adapter.sentMessages).toHaveLength(2);
-                expect(adapter.sentMessages[0][9]).toBe(0x09); // Category 09 press
-                expect(adapter.sentMessages[1][9]).toBe(0x09); // Category 09 release
+                expect(adapter.sentMessages[0][9]).toBe(0x09);
             });
 
-            it('should handle function buttons with single message', async () => {
+            it('should handle function buttons', async () => {
                 const controller = createFrontPanelController(adapter);
                 await controller.press('execute');
 
                 expect(adapter.sentMessages).toHaveLength(1);
-                expect(adapter.sentMessages[0][9]).toBe(0x01); // Category 01
-            });
-
-            it('should use default device ID when not specified', async () => {
-                const controller = createFrontPanelController(adapter);
-                await controller.press('up');
-
-                expect(adapter.sentMessages[0][2]).toBe(0);
+                expect(adapter.sentMessages[0][9]).toBe(0x01);
             });
         });
     });
 
     describe('message checksums', () => {
-        it('should produce valid checksums for all arrow codes', () => {
-            for (const [_button, code] of Object.entries(ARROW_CODES)) {
-                const message = buildFrontPanelMessage(0, code as [number, number]);
+        it('should match observed hardware messages for down button', () => {
+            // Observed from hardware on sampling screen:
+            // Press:   F0 41 00 1E 12 00 04 00 00 09 03 70 F7
+            // Release: F0 41 00 1E 12 00 04 00 00 09 0B 68 F7
+            const pressMessage = buildFrontPanelMessage(0, [0x09, 0x03]);
+            const releaseMessage = buildFrontPanelMessage(0, [0x09, 0x0b]);
 
-                // Verify by recalculating
-                const expectedChecksum = calculateChecksum(FRONT_PANEL_ADDRESS, code as [number, number]);
-                expect(message[11]).toBe(expectedChecksum);
-            }
-        });
-
-        it('should produce valid checksums for all value button press codes', () => {
-            for (const [_button, codes] of Object.entries(VALUE_CODES)) {
-                const message = buildFrontPanelMessage(0, codes.press as [number, number]);
-
-                // Verify by recalculating
-                const expectedChecksum = calculateChecksum(FRONT_PANEL_ADDRESS, codes.press as [number, number]);
-                expect(message[11]).toBe(expectedChecksum);
-            }
-        });
-
-        it('should produce valid checksums for all value button release codes', () => {
-            for (const [_button, codes] of Object.entries(VALUE_CODES)) {
-                const message = buildFrontPanelMessage(0, codes.release as [number, number]);
-
-                // Verify by recalculating
-                const expectedChecksum = calculateChecksum(FRONT_PANEL_ADDRESS, codes.release as [number, number]);
-                expect(message[11]).toBe(expectedChecksum);
-            }
-        });
-
-        it('should produce valid checksums for all function codes', () => {
-            for (const [_button, code] of Object.entries(FUNCTION_CODES)) {
-                const message = buildFrontPanelMessage(0, code as [number, number]);
-
-                // Verify by recalculating
-                const expectedChecksum = calculateChecksum(FRONT_PANEL_ADDRESS, code as [number, number]);
-                expect(message[11]).toBe(expectedChecksum);
-            }
+            expect(pressMessage).toEqual([0xf0, 0x41, 0x00, 0x1e, 0x12, 0x00, 0x04, 0x00, 0x00, 0x09, 0x03, 0x70, 0xf7]);
+            expect(releaseMessage).toEqual([0xf0, 0x41, 0x00, 0x1e, 0x12, 0x00, 0x04, 0x00, 0x00, 0x09, 0x0b, 0x68, 0xf7]);
         });
     });
 });

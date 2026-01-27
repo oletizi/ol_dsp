@@ -13,6 +13,7 @@ import {
     type NavigationButton,
     type FunctionButton,
     type FrontPanelController,
+    type NavigationMode,
 } from '@oletizi/sampler-devices/s330';
 
 export interface UseFrontPanelState {
@@ -24,23 +25,34 @@ export interface UseFrontPanelState {
     lastError: string | null;
     /** The active button being pressed, if any */
     activeButton: FrontPanelButton | null;
+    /** Current navigation mode */
+    navigationMode: NavigationMode;
 }
 
 export interface UseFrontPanelActions {
     /**
      * Press any front panel button
+     * @param button - The button to press
+     * @param mode - Optional mode override (uses current navigationMode if not specified)
      */
-    pressButton: (button: FrontPanelButton) => Promise<void>;
+    pressButton: (button: FrontPanelButton, mode?: NavigationMode) => Promise<void>;
 
     /**
      * Press a navigation button
+     * @param button - The navigation button to press
+     * @param mode - Optional mode override (uses current navigationMode if not specified)
      */
-    pressNavigation: (button: NavigationButton) => Promise<void>;
+    pressNavigation: (button: NavigationButton, mode?: NavigationMode) => Promise<void>;
 
     /**
      * Press a function button
      */
     pressFunction: (button: FunctionButton) => Promise<void>;
+
+    /**
+     * Set the navigation mode
+     */
+    setNavigationMode: (mode: NavigationMode) => void;
 
     /**
      * Clear the last error
@@ -56,15 +68,20 @@ export type UseFrontPanelReturn = UseFrontPanelState & UseFrontPanelActions;
  * @example
  * ```tsx
  * function NavigationButtons() {
- *   const { pressButton, isPressing, isConnected } = useFrontPanel();
+ *   const { pressButton, isPressing, isConnected, navigationMode, setNavigationMode } = useFrontPanel();
  *
  *   return (
- *     <button
- *       onClick={() => pressButton('up')}
- *       disabled={!isConnected || isPressing}
- *     >
- *       Up
- *     </button>
+ *     <>
+ *       <button onClick={() => setNavigationMode(navigationMode === 'menu' ? 'sampling' : 'menu')}>
+ *         Mode: {navigationMode}
+ *       </button>
+ *       <button
+ *         onClick={() => pressButton('up')}
+ *         disabled={!isConnected || isPressing}
+ *       >
+ *         Up
+ *       </button>
+ *     </>
  *   );
  * }
  * ```
@@ -73,6 +90,7 @@ export function useFrontPanel(): UseFrontPanelReturn {
     const [isPressing, setIsPressing] = useState(false);
     const [lastError, setLastError] = useState<string | null>(null);
     const [activeButton, setActiveButton] = useState<FrontPanelButton | null>(null);
+    const [navigationMode, setNavigationMode] = useState<NavigationMode>('menu');
 
     // Get MIDI state from store
     const adapter = useMidiStore((state) => state.adapter);
@@ -90,7 +108,7 @@ export function useFrontPanel(): UseFrontPanelReturn {
     /**
      * Press any button (auto-detects type)
      */
-    const pressButton = useCallback(async (button: FrontPanelButton): Promise<void> => {
+    const pressButton = useCallback(async (button: FrontPanelButton, mode?: NavigationMode): Promise<void> => {
         if (!controller) {
             setLastError('Not connected to MIDI device');
             return;
@@ -100,7 +118,7 @@ export function useFrontPanel(): UseFrontPanelReturn {
             setIsPressing(true);
             setActiveButton(button);
             setLastError(null);
-            await controller.press(button);
+            await controller.press(button, mode ?? navigationMode);
         } catch (err) {
             const message = err instanceof Error ? err.message : 'Failed to send button press';
             setLastError(message);
@@ -109,12 +127,12 @@ export function useFrontPanel(): UseFrontPanelReturn {
             setIsPressing(false);
             setActiveButton(null);
         }
-    }, [controller]);
+    }, [controller, navigationMode]);
 
     /**
      * Press a navigation button
      */
-    const pressNavigation = useCallback(async (button: NavigationButton): Promise<void> => {
+    const pressNavigation = useCallback(async (button: NavigationButton, mode?: NavigationMode): Promise<void> => {
         if (!controller) {
             setLastError('Not connected to MIDI device');
             return;
@@ -124,7 +142,7 @@ export function useFrontPanel(): UseFrontPanelReturn {
             setIsPressing(true);
             setActiveButton(button);
             setLastError(null);
-            await controller.pressNavigation(button);
+            await controller.pressNavigation(button, mode ?? navigationMode);
         } catch (err) {
             const message = err instanceof Error ? err.message : 'Failed to send navigation button';
             setLastError(message);
@@ -133,7 +151,7 @@ export function useFrontPanel(): UseFrontPanelReturn {
             setIsPressing(false);
             setActiveButton(null);
         }
-    }, [controller]);
+    }, [controller, navigationMode]);
 
     /**
      * Press a function button
@@ -171,12 +189,14 @@ export function useFrontPanel(): UseFrontPanelReturn {
         isPressing,
         lastError,
         activeButton,
+        navigationMode,
         pressButton,
         pressNavigation,
         pressFunction,
+        setNavigationMode,
         clearError,
     };
 }
 
 // Re-export button types for convenience
-export type { FrontPanelButton, NavigationButton, FunctionButton };
+export type { FrontPanelButton, NavigationButton, FunctionButton, NavigationMode };
