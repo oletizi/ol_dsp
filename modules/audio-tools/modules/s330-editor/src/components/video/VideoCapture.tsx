@@ -22,6 +22,7 @@ const DEFAULT_WIDTH = 400;
 const DEFAULT_HEIGHT = 300;
 const MIN_WIDTH = 200;
 const MIN_HEIGHT = 150;
+const CONTROLS_HEIGHT = 180; // Approximate height of front panel controls
 
 interface VideoDevice {
   deviceId: string;
@@ -79,8 +80,9 @@ export function VideoCapture() {
   const panelRef = useRef<HTMLDivElement>(null);
   const isDragging = useRef(false);
   const isResizing = useRef(false);
+  const resizeDirection = useRef<string | null>(null);
   const dragOffset = useRef({ x: 0, y: 0 });
-  const resizeStart = useRef({ x: 0, y: 0, width: 0, height: 0 });
+  const resizeStart = useRef({ x: 0, y: 0, width: 0, height: 0, posX: 0, posY: 0 });
 
   // Enumerate available video devices
   const enumerateDevices = useCallback(async () => {
@@ -192,10 +194,11 @@ export function VideoCapture() {
 
   const handleDragMove = useCallback((e: MouseEvent) => {
     if (!isDragging.current) return;
+    const totalHeight = size.height + (controlsExpanded ? CONTROLS_HEIGHT : 0);
     const newX = Math.max(0, Math.min(window.innerWidth - size.width, e.clientX - dragOffset.current.x));
-    const newY = Math.max(0, Math.min(window.innerHeight - size.height, e.clientY - dragOffset.current.y));
+    const newY = Math.max(0, Math.min(window.innerHeight - totalHeight, e.clientY - dragOffset.current.y));
     setPosition({ x: newX, y: newY });
-  }, [size]);
+  }, [size, controlsExpanded]);
 
   const handleDragEnd = useCallback(() => {
     if (isDragging.current) {
@@ -205,33 +208,73 @@ export function VideoCapture() {
   }, [position]);
 
   // Resize handlers
-  const handleResizeStart = useCallback((e: React.MouseEvent) => {
+  const handleResizeStart = useCallback((direction: string) => (e: React.MouseEvent) => {
     isResizing.current = true;
+    resizeDirection.current = direction;
     resizeStart.current = {
       x: e.clientX,
       y: e.clientY,
       width: size.width,
       height: size.height,
+      posX: position.x,
+      posY: position.y,
     };
     e.preventDefault();
     e.stopPropagation();
-  }, [size]);
+  }, [size, position]);
 
   const handleResizeMove = useCallback((e: MouseEvent) => {
-    if (!isResizing.current) return;
+    if (!isResizing.current || !resizeDirection.current) return;
+
     const deltaX = e.clientX - resizeStart.current.x;
     const deltaY = e.clientY - resizeStart.current.y;
-    const newWidth = Math.max(MIN_WIDTH, resizeStart.current.width + deltaX);
-    const newHeight = Math.max(MIN_HEIGHT, resizeStart.current.height + deltaY);
+    const dir = resizeDirection.current;
+
+    let newWidth = resizeStart.current.width;
+    let newHeight = resizeStart.current.height;
+    let newX = resizeStart.current.posX;
+    let newY = resizeStart.current.posY;
+
+    // Handle horizontal resizing
+    if (dir.includes('e')) {
+      newWidth = Math.max(MIN_WIDTH, resizeStart.current.width + deltaX);
+    }
+    if (dir.includes('w')) {
+      const proposedWidth = resizeStart.current.width - deltaX;
+      if (proposedWidth >= MIN_WIDTH) {
+        newWidth = proposedWidth;
+        newX = resizeStart.current.posX + deltaX;
+      }
+    }
+
+    // Handle vertical resizing
+    if (dir.includes('s')) {
+      newHeight = Math.max(MIN_HEIGHT, resizeStart.current.height + deltaY);
+    }
+    if (dir.includes('n')) {
+      const proposedHeight = resizeStart.current.height - deltaY;
+      if (proposedHeight >= MIN_HEIGHT) {
+        newHeight = proposedHeight;
+        newY = resizeStart.current.posY + deltaY;
+      }
+    }
+
+    // Keep window on screen
+    newX = Math.max(0, Math.min(window.innerWidth - newWidth, newX));
+    newY = Math.max(0, newY);
+
     setSize({ width: newWidth, height: newHeight });
+    setPosition({ x: newX, y: newY });
   }, []);
 
   const handleResizeEnd = useCallback(() => {
     if (isResizing.current) {
       isResizing.current = false;
+      resizeDirection.current = null;
       localStorage.setItem(STORAGE_KEY_SIZE, JSON.stringify(size));
+      localStorage.setItem(STORAGE_KEY_POSITION, JSON.stringify(position));
     }
-  }, [size]);
+  }, [size, position]);
 
   // Global mouse event listeners for drag and resize
   useEffect(() => {
@@ -297,10 +340,19 @@ export function VideoCapture() {
     }
   }, [isExpanded, selectedDeviceId, hasPermission, isStreaming, startStream, stopStream]);
 
-  // Persist controls expanded state
+  // Persist controls expanded state and adjust position if needed
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY_CONTROLS, String(controlsExpanded));
-  }, [controlsExpanded]);
+
+    // If controls are expanded and window would go off-screen, adjust position
+    if (controlsExpanded) {
+      const totalHeight = size.height + CONTROLS_HEIGHT;
+      const maxY = window.innerHeight - totalHeight;
+      if (position.y > maxY) {
+        setPosition(prev => ({ ...prev, y: Math.max(0, maxY) }));
+      }
+    }
+  }, [controlsExpanded, size.height, position.y]);
 
   // Keyboard shortcut handler for front panel
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
@@ -389,7 +441,7 @@ export function VideoCapture() {
             left: position.x,
             top: position.y,
             width: size.width,
-            height: size.height,
+            height: size.height + (controlsExpanded ? CONTROLS_HEIGHT : 0),
           }}
           className={cn(
             'bg-s330-panel border border-s330-accent rounded-lg shadow-xl',
@@ -602,16 +654,43 @@ export function VideoCapture() {
             </div>
           )}
 
-          {/* Resize handle */}
+          {/* Resize handles - corners */}
           <div
-            onMouseDown={handleResizeStart}
-            className={cn(
-              'absolute bottom-0 right-0 w-4 h-4 cursor-se-resize',
-              'hover:bg-s330-highlight/30 transition-colors'
-            )}
+            onMouseDown={handleResizeStart('nw')}
+            className="absolute top-0 left-0 w-3 h-3 cursor-nw-resize hover:bg-s330-highlight/30"
+          />
+          <div
+            onMouseDown={handleResizeStart('ne')}
+            className="absolute top-0 right-0 w-3 h-3 cursor-ne-resize hover:bg-s330-highlight/30"
+          />
+          <div
+            onMouseDown={handleResizeStart('sw')}
+            className="absolute bottom-0 left-0 w-3 h-3 cursor-sw-resize hover:bg-s330-highlight/30"
+          />
+          <div
+            onMouseDown={handleResizeStart('se')}
+            className="absolute bottom-0 right-0 w-3 h-3 cursor-se-resize hover:bg-s330-highlight/30"
             style={{
               background: 'linear-gradient(135deg, transparent 50%, rgba(233, 69, 96, 0.5) 50%)',
             }}
+          />
+
+          {/* Resize handles - edges */}
+          <div
+            onMouseDown={handleResizeStart('n')}
+            className="absolute top-0 left-3 right-3 h-1 cursor-n-resize hover:bg-s330-highlight/30"
+          />
+          <div
+            onMouseDown={handleResizeStart('s')}
+            className="absolute bottom-0 left-3 right-3 h-1 cursor-s-resize hover:bg-s330-highlight/30"
+          />
+          <div
+            onMouseDown={handleResizeStart('w')}
+            className="absolute left-0 top-3 bottom-3 w-1 cursor-w-resize hover:bg-s330-highlight/30"
+          />
+          <div
+            onMouseDown={handleResizeStart('e')}
+            className="absolute right-0 top-3 bottom-3 w-1 cursor-e-resize hover:bg-s330-highlight/30"
           />
         </div>
       )}

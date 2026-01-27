@@ -153,6 +153,12 @@ ol_dsp/
 └── scripts/             # Build and utility scripts
 ```
 
+## Branch Naming
+
+Deploy branches follow the pattern `deploy/<component>`:
+
+- **s330-editor**: `deploy/s330-editor` — deploys to audiocontrol.org/s330
+
 ## DSP-Specific Guidelines
 
 ### Memory Management
