@@ -80,49 +80,56 @@ overlays:
         in: "00:40"
       - text: "Or a control surface"
         in: "00:44"
-#
-#  # Lower-third - slides up from bottom
-#  - id: presenter
-#    type: lower-third
-#    text: "Your Name"
-#    subtitle: "Your Title"
-#    in: "0:06.000"
-#    out: "0:12.000"
-#    position: bottom-left
-#    transition:
-#      in: slide-up
-#      out: slide-down
-#      duration: 0.3
-#
-#  # Callout with arrow - points to something on screen
-#  - id: highlight
-#    type: callout
-#    text: "Look here!"
-#    in: "0:15.000"
-#    out: "0:20.000"
-#    position: [800, 300]
-#    arrow: true
-#    arrow_target: [600, 400]
-#
-#  # Code block - syntax highlighted
-#  - id: code-example
-#    type: code
-#    text: |
-#      function hello(name: string) {
-#        console.log(`Hello, ${name}!`);
-#      }
-#    in: "0:25.000"
-#    out: "0:35.000"
-#    position: center
-#    syntax: typescript
-#
-#  # Parameter display - for showing values
-#  - id: param-display
-#    type: parameter
-#    label: "Threshold"
-#    value: "-18"
-#    unit: "dB"
-#    text: "Threshold: -18 dB"
-#    in: "0:40.000"
-#    out: "0:50.000"
-#    position: [100, 100]
+  - id: play-page
+    type: lower-third
+    position: bottom-right
+    title: "Play Page"
+    in: "00:57"
+    out: "01:08"
+    transition:
+      in: fade
+      out: fade
+      duration: 0.5
+    sections:
+      - text: "Channel patch level"
+        in: "00:57"
+      - text: "Patches auto-load"
+        in: "01:00"
+  - id: patch-editor
+    type: lower-third
+    position: bottom-right
+    title: "Patch Editor"
+    in: "01:08"
+    out: "01:34"
+    transition:
+      in: fade
+      out: fade
+      duration: 0.5
+    sections:
+      - text: "Edit patch names"
+        in: "01:08"
+      - text: "Patch level"
+        in: "01:13"
+      - text: "Map sample zones across keyboard"
+        in: "01:29"
+  - id: tone-editor
+    type: lower-third
+    position: bottom-right
+    title: "Tone Editor"
+    in: "02:21"
+    out: "02:40"
+    transition:
+      in: fade
+      out: fade
+      duration: 0.5
+    sections:
+      - text: "Edit name"
+        in: "02:22"
+      - text: "Filter"
+        in: "02:24"
+      - text: "LFO"
+        in: "02:26"
+      - text: "Envelopes"
+        in: "02:29"
+      - text: "All on one page"
+        in: "02:35"
