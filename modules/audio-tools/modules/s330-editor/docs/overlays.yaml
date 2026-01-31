@@ -133,3 +133,49 @@ overlays:
         in: "02:29"
       - text: "All on one page"
         in: "02:35"
+  - id: comparison-01
+    type: lower-third
+    position: bottom-center
+    title: "Sound Check"
+    subtitle: "Original audio"
+    in: "03:15"
+    out: "03:20"
+    transition:
+      in: fade
+      out: fade
+      duration: 0.5
+  - id: comparison-02
+    type: lower-third
+    position: bottom-center
+    title: "Sound Check"
+    subtitle: "S330 sampled at 30 KHz"
+    in: "03:20"
+    out: "03:25"
+  - id: comparison-03
+    type: lower-third
+    position: bottom-center
+    title: "Sound Check"
+    subtitle: "Played at 45 RPM, sampled at 30 Khz, pitched down to match tempo"
+    in: "03:25"
+    out: "03:30"
+  - id: comparison-04
+    type: lower-third
+    position: bottom-center
+    title: "Sound Check"
+    subtitle: "Normal speed at 15 KHz"
+    in: "03:30"
+    out: "03:35"
+  - id: comparison-05
+    type: lower-third
+    position: bottom-center
+    title: "Sound Check"
+    subtitle: "2X speed at 30 KHz"
+    in: "03:35"
+    out: "03:40"
+  - id: comparison-06
+    type: lower-third
+    position: bottom-center
+    title: "Sound Check"
+    subtitle: "2X speed, 30 KHz, filtered"
+    in: "03:40"
+    out: "03:45"
