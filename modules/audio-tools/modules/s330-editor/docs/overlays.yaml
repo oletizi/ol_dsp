@@ -40,10 +40,6 @@ overlays:
     sections:
       - text: "Choose MIDI in and out ports"
         in: "00:00"
-      - text: "Do some other cool thing"
-        in: "00:02"
-      - text: "And yet another cool thing"
-        in: "00:04"
   - id: video
     type: lower-third
     position: bottom-right
@@ -63,6 +59,27 @@ overlays:
         in: "00:22"
       - text: "Connect"
         in: "00:27"
+  - id: virtual-front-panel
+    type: lower-third
+    position: bottom-right
+    title: "Virtual Front Panel"
+    in: "00:31"
+    out: "00:51"
+    transition:
+      in: fade
+      out: fade
+      duration: 0.5
+    sections:
+      - text: "Open menus"
+        in: "00:31"
+      - text: "Navigate with arrows"
+        in: "00:34"
+      - text: "Change values with +/-"
+        in: "00:37"
+      - text: "Use keyboard shortcuts"
+        in: "00:40"
+      - text: "Or a control surface"
+        in: "00:44"
 #
 #  # Lower-third - slides up from bottom
 #  - id: presenter
