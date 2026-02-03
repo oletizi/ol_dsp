@@ -1,6 +1,0 @@
- ERR_PNPM_NO_SCRIPT  Missing script: plugin:generate-batch2
-
-Command "plugin:generate-batch2" not found. Did you mean "pnpm run plugin:generate-batch"?
- ERR_PNPM_NO_SCRIPT  Missing script: plugin:generate-batch2
-
-Command "plugin:generate-batch2" not found. Did you mean "pnpm run plugin:generate-batch"?
